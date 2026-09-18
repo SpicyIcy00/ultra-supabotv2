@@ -140,13 +140,24 @@ FUNCTIONS = {"get_sales": get_sales, "get_stock": get_stock,
              "get_purchasing": get_purchasing}
 
 
-def _run(tool: str, arguments: dict, name: str, says: str) -> dict:
-    """Build the section and remember the exact call, so a tile can re-run it."""
+def _run(tool: str, arguments: dict, name: str, says: str,
+         left_out: Any = None) -> dict:
+    """
+    Build the section and remember the exact call, so a tile can re-run it.
+
+    `left_out` — the categories a person said to leave out (P2S.11) — goes to
+    the reads whose declaration names them (metrics.yaml settings.declared
+    .left_out_categories.participates_in), and never into the remembered call:
+    it is the person's binding, not an argument of the question.
+    """
+    extra = ({"left_out": left_out} if left_out and tool in
+             req(load_defs(), "settings.declared.left_out_categories.participates_in")
+             else {})
     return _section(name, says, {"tool": tool, "arguments": arguments},
-                    lambda: FUNCTIONS[tool](**arguments))
+                    lambda: FUNCTIONS[tool](**arguments, **extra))
 
 
-def _run_all(specs: list[tuple[str, dict, str, str]]) -> list[dict]:
+def _run_all(specs: list[tuple[str, dict, str, str]], left_out: Any = None) -> list[dict]:
     """
     Every section at once, returned in the order asked for.
 
@@ -156,9 +167,9 @@ def _run_all(specs: list[tuple[str, dict, str, str]]) -> list[dict]:
     view every time.
     """
     if len(specs) == 1:
-        return [_run(*specs[0])]
+        return [_run(*specs[0], left_out=left_out)]
     with ThreadPoolExecutor(max_workers=MAX_PARALLEL) as pool:
-        return list(pool.map(lambda spec: _run(*spec), specs))
+        return list(pool.map(lambda spec: _run(*spec, left_out=left_out), specs))
 
 
 def _resolve_product(name: str, says: dict) -> tuple[dict, Optional[str], Optional[dict]]:
@@ -217,7 +228,7 @@ def _resolve_product(name: str, says: dict) -> tuple[dict, Optional[str], Option
 
 
 def get_object(kind: str, name: str,
-               date_range: Optional[str] = None) -> dict:
+               date_range: Optional[str] = None, *, left_out: Any = None) -> dict:
     """
     Open one thing up: a shop, a product, a supplier or an order.
 
@@ -248,6 +259,10 @@ def get_object(kind: str, name: str,
         failed or unresolved per section, and a failed one names its reason:
         half an object is worth more than an error, and a section that vanished
         would read as "there is nothing here".
+
+    `left_out` is supplied by the loop or the web process, never the model:
+    the categories a person said to leave out (P2S.11). Each section's read
+    applies it as that read does, and its own receipt says so.
     """
     defs = load_defs()
     kinds = _kinds(defs)
@@ -274,7 +289,7 @@ def get_object(kind: str, name: str,
             # better than five refusals that look like breakage.
             sections = _run_all([("get_stock", {
                 "store": store, "state": "out_of_stock", "top_n": top_n,
-            }, "shelf", says["shelf"])])
+            }, "shelf", says["shelf"])], left_out=left_out)
             ambiguity = {
                 "kind": "object_has_no_sales",
                 "message": (
@@ -326,7 +341,7 @@ def get_object(kind: str, name: str,
                 "metric": "net_sales", "group_by": "hour", "date_range": "last_30_days",
                 "filters": {"store": store},
             }, "hours", says["hours"]))
-            sections = _run_all(specs)
+            sections = _run_all(specs, left_out=left_out)
 
     elif kind == "product":
         # IDENTITY FIRST, and everything else waits on it: a SKU is what the
@@ -358,7 +373,7 @@ def get_object(kind: str, name: str,
             # cap is per series and 690 rows of it is a report, not a way in.
             specs.append(("get_cost_history", {"sku": sku, "top_n": top_n},
                           "cost", says["cost"]))
-            sections.extend(_run_all(specs))
+            sections.extend(_run_all(specs, left_out=left_out))
 
     elif kind == "supplier":
         sections = _run_all([("get_purchasing", {

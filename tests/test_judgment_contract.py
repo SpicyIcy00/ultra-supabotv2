@@ -105,6 +105,10 @@ def test_the_stances_are_a_closed_set(j):
         # behind it and a correction has none. It is here rather than in the
         # five because it names its own ground: metrics.yaml judgment.taught.
         "means",
+        # THE SEVENTH, 2026-09-18 (P2S.11): also something a person told him,
+        # and the first stance that changes what is READ — it binds
+        # settings.declared.left_out_categories, which the reads apply.
+        "leave_out",
     }
 
 

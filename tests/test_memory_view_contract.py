@@ -234,4 +234,5 @@ def test_the_count_moves_with_the_block_and_never_costs_a_turn():
     # turn's: the block is what comes back either way.
     counting = src[src.index("mark_applied("):]
     assert "except SQLAlchemyError" in counting and "rollback" in counting
-    assert any(line.strip() == "return block" for line in src.splitlines())
+    # The block comes back either way — beside what the views bound (P2S.11).
+    assert any(line.strip() == "return block, bound" for line in src.splitlines())

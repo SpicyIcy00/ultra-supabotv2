@@ -55,7 +55,9 @@ import psycopg
 
 from ._common import (
     DICT_ROW,
+    LEFT_OUT as _LEFT_OUT,
     connect as _connect,
+    left_out as _left_out,
     load_defs as _load_defs,
     req as _req,
     resolve_store as _resolve_store_in,
@@ -118,6 +120,7 @@ WHERE p.run_date = %(run_date)s
   AND p.store_id = ANY(%(store_ids)s)
   {product_predicate}
   {wanting_predicate}
+  {left_out_predicate}
 ORDER BY {order_by}
 LIMIT {limit}
 """
@@ -164,6 +167,8 @@ def get_replenishment(
     wanting_stock_only: bool = True,
     rank_by: str = "most_requested",
     top_n: Optional[int] = None,
+    *,
+    left_out: Any = None,
 ) -> dict:
     """
     The replenishment plan: what the engine wants shipped to each shop, and why.
@@ -352,6 +357,13 @@ def get_replenishment(
             product_predicate = ""
             sku_resolution: Optional[dict] = None
             params: dict[str, Any] = {"run_date": run_date, "store_ids": store_ids}
+            # What a person said to leave out (P2S.11): the plan's lines are a
+            # list of products; the summary per shop is a total and stays
+            # whole. The products table is `pr` in the plan's statement.
+            left = _left_out(defs, left_out, lists=view == "plan",
+                             names_product=sku is not None, alias="pr")
+            params.update(left["params"])
+            filters.extend(left["filters_applied"])
             if sku is not None:
                 cur.execute(
                     "SELECT p.id, p.sku, p.name FROM products p "
@@ -395,6 +407,8 @@ def get_replenishment(
                     _SELECT_PLAN.format(
                         product_predicate=product_predicate,
                         wanting_predicate=wanting,
+                        left_out_predicate=(f"AND {left['predicate']}"
+                                            if left["predicate"] else ""),
                         order_by=rank_modes[rank_by],
                         limit=limit,
                     ),
@@ -564,6 +578,8 @@ def get_replenishment(
         meta["days_of_stock_rankable"] = _req(_req(rep, "days_of_stock"), "rankable")
     if sku_resolution:
         meta["sku_resolution"] = sku_resolution
+    if left["setting"] is not None:
+        meta["settings"] = {_LEFT_OUT: left["setting"]}
     if notice:
         meta["notice"] = notice
 

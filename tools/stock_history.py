@@ -49,7 +49,9 @@ from typing import Any, Optional
 from ._common import (
     DICT_ROW,
     DEFAULT_MAX_ROWS as _MAX_ROWS,
+    LEFT_OUT as _LEFT_OUT,
     connect as _connect,
+    left_out as _left_out,
     load_defs as _load_defs,
     req as _req,
     resolve_store as _resolve_store_in,
@@ -162,6 +164,7 @@ FROM agg a
 LEFT JOIN runstat rs ON rs.store_id = a.store_id AND rs.product_id = a.product_id
 LEFT JOIN products p ON p.id = a.product_id
 WHERE a.days_out_of_stock >= %(min_days)s
+  {left_out_predicate}
 ORDER BY {order_by}
 LIMIT {limit}
 """
@@ -217,6 +220,8 @@ def get_stock_history(
     rank_by: str = "longest_out",
     min_days_out: int = 1,
     top_n: Optional[int] = None,
+    *,
+    left_out: Any = None,
 ) -> dict:
     """
     Stock levels over time: how long products have been out of stock, and when.
@@ -254,6 +259,11 @@ def get_stock_history(
         filters_applied, snapshot_timestamp and `coverage`. A non-empty
         meta["notice"] MUST be surfaced to the user; it means the result is not
         what it appears.
+
+    `left_out` is supplied by the loop, never the model: the categories a
+    person said to leave out (metrics.yaml settings.declared
+    .left_out_categories). The stockouts view leaves them out and its
+    receipt says so; one product's series and the coverage view do not.
     """
     defs = _load_defs()
     hist = _hist(defs)
@@ -304,6 +314,11 @@ def get_stock_history(
         f"store_id IN ({len(store_ids)}: {', '.join(store_labels)})"
         f"   # metrics.yaml: inventory.scope_store_ids"
     )
+    # What a person said to leave out (P2S.11): the stockouts view is a list
+    # of products; a series of one product and the coverage view are not.
+    left = _left_out(defs, left_out, lists=view == "stockouts",
+                     names_product=sku is not None)
+    filters.extend(left["filters_applied"])
 
     with _connect() as conn:
         with conn.cursor(row_factory=DICT_ROW) as cur:
@@ -367,6 +382,7 @@ def get_stock_history(
             params: dict[str, Any] = {
                 "start": start, "end": end, "store_ids": store_ids,
                 "min_days": max(0, int(min_days_out)),
+                **left["params"],
             }
             if sku is not None:
                 cur.execute(
@@ -459,6 +475,8 @@ def get_stock_history(
                     out_of_stock=out_of_stock_sql,
                     run_break=run_break_sql,
                     product_predicate=product_predicate,
+                    left_out_predicate=(f"AND {left['predicate']}"
+                                        if left["predicate"] else ""),
                     order_by=rank_modes[rank_by],
                     limit=limit,
                 )
@@ -538,6 +556,8 @@ def get_stock_history(
         meta["ranked_by"] = rank_by
     if sku_resolution:
         meta["sku_resolution"] = sku_resolution
+    if left["setting"] is not None:
+        meta["settings"] = {_LEFT_OUT: left["setting"]}
     if notice:
         meta["notice"] = notice
 

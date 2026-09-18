@@ -29,8 +29,10 @@ from ._common import (
     DICT_ROW,
     DEFAULT_MAX_ROWS as _MAX_ROWS,
     DEFS_PATH as _DEFS_PATH,
+    LEFT_OUT as _LEFT_OUT,
     connect as _connect,
     label_store as _label_store,
+    left_out as _left_out,
     load_defs as _load_defs,
     req as _req,
     resolve_store as _resolve_store_in,
@@ -62,6 +64,7 @@ FROM inventory i
 LEFT JOIN products p ON p.id = i.product_id
 WHERE i.store_id = ANY(%(store_ids)s)
   AND {stock_predicate}
+  {left_out_predicate}
   AND NOT EXISTS (
         SELECT 1 FROM sold
         WHERE sold.store_id = i.store_id AND sold.product_id = i.product_id
@@ -82,6 +85,8 @@ def get_dead_stock(
     store: Optional[str] = None,
     window: Any = "last_30_days",
     top_n: Optional[int] = None,
+    *,
+    left_out: Any = None,
 ) -> dict:
     """
     Products a store is holding that recorded no sale in the window.
@@ -102,6 +107,12 @@ def get_dead_stock(
         {"rows": [...], "meta": {...}}. Stock is live and sales are a window, so
         the two sides are read at different times — meta says so explicitly
         rather than implying a single consistent snapshot.
+
+    `left_out` is supplied by the loop, never the model: the categories a
+    person said to leave out (metrics.yaml settings.declared
+    .left_out_categories). Every row here is a product, so they are left out
+    of the rows AND of the count of products held they are read against —
+    a share of two different scopes would be no share at all.
     """
     defs = _load_defs()
     top_n = _validate_top_n(defs, top_n)
@@ -121,6 +132,9 @@ def get_dead_stock(
 
     win_start, win_end, win_params, window_meta = _resolve_window(defs, window)
 
+    left = _left_out(defs, left_out, lists=True)
+    left_sql = f"AND {left['predicate']}" if left["predicate"] else ""
+
     guard = [
         _req(defs, "filters.cancelled.sql"),
         _req(defs, "filters.returns.sale_sql"),
@@ -133,9 +147,10 @@ def get_dead_stock(
         win_end=win_end,
         category=_req(defs, "products.category_normalization.sql"),
         stock_predicate=_req(defs, "dead_stock.stock_predicate"),
+        left_out_predicate=left_sql,
         limit=top_n or _MAX_ROWS,
     )
-    params: dict[str, Any] = {"store_ids": store_ids, **win_params}
+    params: dict[str, Any] = {"store_ids": store_ids, **win_params, **left["params"]}
 
     with _connect() as conn:
         with conn.cursor(row_factory=DICT_ROW) as cur:
@@ -161,9 +176,10 @@ def get_dead_stock(
             # against "of 1,204 held" rather than floating free.
             cur.execute(
                 f"SELECT COUNT(*) AS n FROM inventory i "
+                f"LEFT JOIN products p ON p.id = i.product_id "
                 f"WHERE i.store_id = ANY(%(store_ids)s) "
-                f"AND {_req(defs, 'dead_stock.stock_predicate')}",
-                {"store_ids": store_ids},
+                f"AND {_req(defs, 'dead_stock.stock_predicate')} {left_sql}",
+                {"store_ids": store_ids, **left["params"]},
             )
             held_total = cur.fetchone()["n"]
 
@@ -185,6 +201,7 @@ def get_dead_stock(
             f"{_req(defs, 'filters.returns.sale_sql')}   # metrics.yaml: filters.returns",
             f"no sale within {window_meta.get('start')} .. {window_meta.get('end')} "
             f"(Asia/Manila, half-open)   # metrics.yaml: sales_day",
+            *left["filters_applied"],
         ],
         "snapshot_timestamp": snapshot_timestamp.isoformat(),
         "definitions_version": _req(defs, "version"),
@@ -221,6 +238,9 @@ def get_dead_stock(
             ),
         },
     }
+
+    if left["setting"] is not None:
+        meta["settings"] = {_LEFT_OUT: left["setting"]}
 
     if rows and full_row_count and held_total:
         meta["notice"] = {

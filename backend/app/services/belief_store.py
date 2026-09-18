@@ -56,10 +56,21 @@ from typing import Any, Optional
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-#: How many current beliefs reach the prompt. A view of the business somebody
-#: can hold in their head is a handful, not a register; past this the block
-#: stops being context and starts being a document.
+#: How many of HIS current views reach the prompt. A view of the business
+#: somebody can hold in their head is a handful, not a register; past this the
+#: block stops being context and starts being a document.
 MAX_IN_PROMPT = 12
+
+#: How many views a person TOLD him reach the prompt — their own list, never
+#: pushed out by his (P2S.11). Until 2026-09-18 the two shared the twelve,
+#: newest-confirmed first, and George re-confirms his own views every few
+#: turns, so "leave per gram out" would have slid off within about a day. A
+#: bound all the same, because a list that only grows is a document.
+MAX_TOLD_IN_PROMPT = 24
+
+
+def _told(row: dict[str, Any]) -> bool:
+    return bool(str(row.get("told") or "").strip())
 
 
 async def current(session: AsyncSession) -> list[dict[str, Any]]:
@@ -78,7 +89,13 @@ async def current(session: AsyncSession) -> list[dict[str, Any]]:
         WHERE superseded_by IS NULL AND forgotten_at IS NULL
         ORDER BY confirmed_at DESC
     """))
-    return [dict(r) for r in rows.mappings()]
+    # WHAT THEY TOLD HIM FIRST, then his own views, each newest-confirmed
+    # first (a stable sort keeps the order inside each). Every reader of this
+    # list — the prompt block, the memory screen's first twenty — cuts from
+    # the top, and a told view must never be the one that falls off (P2S.11).
+    held = [dict(r) for r in rows.mappings()]
+    held.sort(key=lambda r: not _told(r))
+    return held
 
 
 async def latest_data_at(session: AsyncSession) -> Optional[datetime]:
@@ -280,6 +297,11 @@ def as_block(rows: list[dict[str, Any]], latest_data: Optional[datetime] = None,
     unconfirmed mark — which would be the block asking George to re-read his
     way to a fact no read contains.
 
+    WHAT THEY TOLD HIM IS ITS OWN LIST (P2S.11): every told view, up to
+    MAX_TOLD_IN_PROMPT, then the newest MAX_IN_PROMPT of his own. His views
+    are re-confirmed constantly and a told one is not, so sharing one cap by
+    recency is how "leave per gram out" would have lapsed in a day.
+
     Returns None when George believes nothing, so the first ever conversation
     carries no empty scaffolding.
     """
@@ -288,7 +310,7 @@ def as_block(rows: list[dict[str, Any]], latest_data: Optional[datetime] = None,
     now = now or datetime.now(timezone.utc)
 
     lines: list[str] = []
-    for row in rows[:MAX_IN_PROMPT]:
+    for row in _carried(rows):
         held = _days(row.get("held_since"), now)
         confirmed = row.get("confirmed_at")
         age = f"held {held}" if held else "held since today"
@@ -319,7 +341,9 @@ def as_block(rows: list[dict[str, Any]], latest_data: Optional[datetime] = None,
         "on it, and if a read contradicts one of these, say so and record the "
         "change with its id. A line saying YOU WERE TOLD is not a reading and "
         "is not up for re-checking: it is what this person means, so scope and "
-        "word the answer their way from here on.]\n"
+        "word the answer their way from here on. A [leave_out] category is "
+        "already left out of every ranking and breakdown the reads return, "
+        "and their receipts say so: do not bring it back in words.]\n"
         + "\n".join(lines) + tail
     )
 
@@ -333,7 +357,51 @@ def in_prompt(rows: list[dict[str, Any]]) -> list[str]:
     applications that did not happen is exactly the kind of unmeasured figure
     this repo refuses everywhere else.
     """
-    return [str(r["id"]) for r in rows[:MAX_IN_PROMPT] if r.get("id")]
+    return [str(r["id"]) for r in _carried(rows) if r.get("id")]
+
+
+def _carried(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Every told view up to its own cap, then the newest of his own (P2S.11)."""
+    told = [r for r in rows if _told(r)][:MAX_TOLD_IN_PROMPT]
+    own = [r for r in rows if not _told(r)][:MAX_IN_PROMPT]
+    return told + own
+
+
+def bound_settings(rows: list[dict[str, Any]], defs: dict) -> dict[str, list[dict]]:
+    """
+    What the views that stand have BOUND, as {setting: value} for the loop.
+
+    metrics.yaml settings.declared.<name>.bound_by says which told stance
+    binds which setting and about what kind of subject; each view of that
+    stance contributes its subject, their words and the Manila date they were
+    first said — the date the receipt names ("left out at your instruction,
+    <date>"). Forgotten and superseded views are not in `rows` (current()),
+    so Forget and "include it again" unbind by construction.
+
+    Bounded by the declaration's max_items, told-first order kept. Nothing
+    bound is an empty dict, so a turn with no setting passes none.
+    """
+    from zoneinfo import ZoneInfo
+    manila = ZoneInfo(str(defs["timezone"]["name"]))
+    out: dict[str, list[dict]] = {}
+    for name, decl in ((defs.get("settings") or {}).get("declared") or {}).items():
+        by = decl.get("bound_by") or {}
+        kind = by.get("subject_kind")
+        values = []
+        for r in rows:
+            if r.get("stance") != by.get("stance") or r.get("subject_kind") != kind:
+                continue
+            if not _told(r):
+                continue
+            since = r.get("held_since") or r.get("confirmed_at")
+            on = (since.astimezone(manila).date().isoformat()
+                  if isinstance(since, datetime) else None)
+            values.append({kind: r["subject"], "told": str(r["told"]).strip(), "on": on,
+                           "id": str(r.get("id")) if r.get("id") else None})
+        limit = int((decl.get("bounds") or {}).get("max_items") or len(values))
+        if values:
+            out[name] = values[:limit]
+    return out
 
 
 def _days(since: Any, now: datetime) -> Optional[str]:

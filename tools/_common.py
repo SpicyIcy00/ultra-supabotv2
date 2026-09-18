@@ -423,3 +423,109 @@ def validate_top_n(defs: dict, top_n: Optional[int]) -> Optional[int]:
 def label_store(catalog: dict[str, dict], store_id: str) -> str:
     entry = catalog.get(store_id, {})
     return entry.get("display_name") or entry.get("name") or store_id
+
+
+# --------------------------------------------------------------------------
+# A setting a person bound — the categories they said to leave out (P2S.11)
+#
+# The owner, 2026-09-18: "if i tell it some info like dont focus on [per gram]
+# ... will it remeber it and actually use that info?" Until this, no read could
+# leave a category out, so a told view changed George's words while every
+# ranking still led with per-gram lines.
+#
+# ONE COPY, for the same reason the connection guard has one: each read that
+# takes the setting builds its predicate and its receipt here, so "left out at
+# your instruction" means the same thing on every read that says it. The value
+# arrives as a keyword-only argument the loop supplies from what the person
+# told George (metrics.yaml settings.declared.left_out_categories); the model
+# can neither see it nor set it.
+#
+# LISTS, NEVER TOTALS. A read that is a total says in meta.settings that the
+# setting was not applied and why, and its figures are untouched.
+# --------------------------------------------------------------------------
+
+LEFT_OUT = "left_out_categories"
+
+
+def _left_out_entries(bound: Any, decl: Mapping[str, Any]) -> list[dict]:
+    """The bound value as [{category, told, on}], bounded by its declaration."""
+    if isinstance(bound, Mapping):
+        bound = [bound]
+    if not isinstance(bound, (list, tuple)):
+        return []
+    out: list[dict] = []
+    for e in bound:
+        if isinstance(e, str):
+            e = {"category": e}
+        if not isinstance(e, Mapping) or not str(e.get("category") or "").strip():
+            continue
+        out.append({"category": str(e["category"]).strip(),
+                    "told": str(e.get("told") or "").strip() or None,
+                    "on": str(e.get("on") or "").strip() or None})
+    return out[: int(req(decl, "bounds.max_items"))]
+
+
+def left_out(defs: dict, bound: Any, *, lists: bool, alias: str = "p",
+             asked_category: Optional[str] = None, names_product: bool = False) -> dict:
+    """
+    What the categories a person said to leave out do to one read.
+
+    Returns {"predicate", "params", "filters_applied", "setting"}:
+      predicate        a clause to AND into the read's WHERE, or None
+      params           its bound parameter
+      filters_applied  one receipt line per category, for meta.filters_applied
+      setting          for meta.settings — what was bound, what was left out,
+                       and why not when it was not. None when nothing is bound,
+                       so a read with no setting says nothing about one.
+
+    `lists` is whether this read lists products or categories (the rankings
+    the setting is for); a total passes False. `asked_category` is a category
+    the read narrows to by name, and `names_product` a read of one product:
+    neither is a list of rivals, so neither leaves anything out, and the
+    receipt says so (settings.declared.left_out_categories.asked_for_by_name).
+    `alias` is the products table's alias in the read's SQL.
+    """
+    none = {"predicate": None, "params": {}, "filters_applied": [], "setting": None}
+    if not bound:
+        return none
+    decl = req(defs, f"settings.declared.{LEFT_OUT}")
+    entries = _left_out_entries(bound, decl)
+    if not entries:
+        return none
+    source = f"metrics.yaml: settings.declared.{LEFT_OUT}"
+    setting: dict[str, Any] = {"name": LEFT_OUT, "bound": entries,
+                               "left_out": [], "source": source}
+    if not lists or names_product:
+        setting["not_applied"] = (
+            "this read names one product, which is not a list of its rivals"
+            if names_product and lists else
+            f"this read is a total, and the setting leaves categories out of "
+            f"{req(decl, 'leaves_out_of')}, never out of {req(decl, 'never_out_of')}"
+        )
+        return {**none, "setting": setting}
+
+    template = str(req(decl, "receipt"))
+    asked = (asked_category or "").strip().lower()
+    applied = [e for e in entries if e["category"].lower() != asked]
+    lines = [f"{template.format(category=e['category'], date=e['on'] or 'date not recorded')}"
+             f"   # {source}" for e in applied]
+    lines += [f"{e['category']} asked for by name, so not left out of this read "
+              f"(left out elsewhere at your instruction, {e['on'] or 'date not recorded'})"
+              f"   # {source}" for e in entries if e not in applied]
+    if not applied:
+        setting["not_applied"] = "this read names the category it would leave out"
+        return {**none, "filters_applied": lines, "setting": setting}
+
+    # The normalized category, exactly as every other read spells it, with the
+    # products table under whatever alias this read gave it.
+    cat_sql = str(req(defs, "products.category_normalization.sql"))
+    if alias != "p":
+        import re as _re
+        cat_sql = _re.sub(r"\bp\.", f"{alias}.", cat_sql)
+    setting["left_out"] = [e["category"] for e in applied]
+    return {
+        "predicate": f"lower({cat_sql}) <> ALL(%(left_out_categories)s)",
+        "params": {"left_out_categories": [e["category"].lower() for e in applied]},
+        "filters_applied": lines,
+        "setting": setting,
+    }

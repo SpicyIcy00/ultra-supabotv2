@@ -4664,3 +4664,11 @@ The owner's own 30 days (78 turns that read, 351 calls) asked the same reads pie
 **`get_change` takes a category and the morning's comparison.** Otherwise two of the three target questions (the morning, "analyze") could not have used it. With a category the list changes: net sales cannot be cut to a category, and stock history has no category filter.
 **The convergence cap, the prompt's budgets and the eval's trust row count CALLS now**, with a call asked as one counting once. A `get_change` is seven reads and one decision. The cap exists to stop a subject being read one call at a time, and a declared list of reads is not that. `executed_calls` still counts the reads.
 **The estimate, said plainly:** about 22–31 s a turn on the three target questions. Being "15–25% cheaper" is at risk on the broad turn, because the round it saves costs about what its bigger result adds.
+
+## 2026-09-18 · P2S.11: what he is told to leave out is a setting the reads apply
+
+**A seventh stance, `leave_out`, binds the first `settings.declared` entry (`left_out_categories`).** It is taught like `means` — their words in `told`, no calls — so the table's one-ground check already fits and there is no migration. The category is checked against the catalogue when told.
+**Told views are their own list** (up to 24), attached before his newest 12, so "leave per gram out" can no longer slide off behind his re-confirmed views.
+**Lists, never totals.** A list of products or categories leaves the category out and its receipt says *"per gram left out at your instruction, <date>"*. A total — a shop, a day, the estate — stays the till's figure, because leaving a category out of it would be a different number under the same name. A read that names the category or one product leaves nothing out and says so.
+**The loop hands the value to the reads the declaration names, as a keyword-only argument the model never sees, and drops one he sends.** He records what he was told; only a person binds.
+**Not done:** a pin or a workflow step re-runs its stored call without the setting. The prompt is now exactly at its 1,800-word budget.

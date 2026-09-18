@@ -29,7 +29,9 @@ from ._common import (
     validate_top_n as _validate_top_n,
     DEFAULT_MAX_ROWS as _MAX_ROWS,
     DEFS_PATH as _DEFS_PATH,
+    LEFT_OUT as _LEFT_OUT,
     connect as _connect,
+    left_out as _left_out,
     label_store as _label_store,
     load_defs as _load_defs,
     req as _req,
@@ -173,7 +175,8 @@ def _denominator_label(defs: dict, mdef: dict) -> str:
 
 
 def _reconcile(cur, defs: dict, metric: str, filters: dict, where_sql: str,
-               params: dict, notices: list[dict], window_label: Optional[str]) -> dict:
+               params: dict, notices: list[dict], window_label: Optional[str],
+               left_out_applied: bool = False) -> dict:
     """
     The net_sales / product_revenue reconciliation over ONE window.
 
@@ -198,6 +201,17 @@ def _reconcile(cur, defs: dict, metric: str, filters: dict, where_sql: str,
                 "a product-level filter is active, so net_sales (which "
                 "cannot be filtered by product) is not comparable to "
                 "product_revenue for this window."
+            ),
+        }
+    if left_out_applied:
+        # The same reason in a person's words: a category left out at their
+        # instruction is a product-level filter too (P2S.11).
+        return {
+            "applicable": False,
+            "reason": (
+                "a category is left out at the person's instruction, so these "
+                "rows do not cover the whole till and are not comparable to "
+                "net_sales for this window."
             ),
         }
     cur.execute(
@@ -440,6 +454,8 @@ def get_sales(
     top_n: Optional[int] = None,
     compare_to: Optional[str] = None,
     rank_by: Optional[str] = None,
+    *,
+    left_out: Any = None,
 ) -> dict:
     """
     Sales figures grouped as requested.
@@ -511,6 +527,12 @@ def get_sales(
     Returns:
         {"rows": [...], "meta": {...}}. A non-empty meta["notice"] MUST be
         surfaced to the user; it means the result is not what it appears.
+
+    `left_out` is not the model's: it is the categories a person told George
+    to leave out (metrics.yaml settings.declared.left_out_categories),
+    supplied by the loop. Grouped by product or category they are left out
+    and meta.filters_applied says so; any other grouping is a total and is
+    untouched, with meta.settings saying why.
     """
     defs = _load_defs()
 
@@ -815,6 +837,21 @@ def get_sales(
             f"p.tags ILIKE '%{filters['tag']}%'   # business_rules.yaml:1260"
         )
 
+    # ---- what a person said to leave out (P2S.11) -------------------------
+    # Only a LIST of products or categories: every such grouping has the
+    # products table joined already (needs_products above), and a total —
+    # a shop, a day, the estate — is the till's figure and stays whole.
+    left = _left_out(
+        defs, left_out,
+        lists=bool(_PRODUCT_GROUPINGS & set(group_by)),
+        asked_category=filters.get("category"),
+        names_product=bool({"sku", "product_id"} & set(filters)),
+    )
+    if left["predicate"]:
+        predicates.append(left["predicate"])
+        params.update(left["params"])
+    filters_applied.extend(left["filters_applied"])
+
     metric_sql = _req(mdef, "sql")
 
     # ---- execute ---------------------------------------------------------
@@ -1089,11 +1126,13 @@ def get_sales(
             # one: a comparison whose baseline month is one of the divergent
             # 2024 windows must say so about THAT window.
             recon = _reconcile(cur, defs, metric, filters, where_sql, params, notices,
-                               window_label="current" if cdef is not None else None)
+                               window_label="current" if cdef is not None else None,
+                               left_out_applied=bool(left["predicate"]))
             baseline_recon: Optional[dict] = None
             if cdef is not None:
                 baseline_recon = _reconcile(cur, defs, metric, filters, where_sql,
-                                            base_params, notices, window_label="baseline")
+                                            base_params, notices, window_label="baseline",
+                                            left_out_applied=bool(left["predicate"]))
 
             # ---- derived-metric diagnostics ------------------------------
             # A ratio is only as honest as its denominator, so a derived
@@ -1333,6 +1372,8 @@ def get_sales(
         meta["data_quality"] = data_quality
     if sku_resolution is not None:
         meta["sku_resolution"] = sku_resolution
+    if left["setting"] is not None:
+        meta["settings"] = {_LEFT_OUT: left["setting"]}
     if notices:
         meta["notice"] = notices[0] if len(notices) == 1 else {
             "kind": "multiple",

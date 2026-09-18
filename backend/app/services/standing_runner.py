@@ -146,9 +146,11 @@ def _automations_reader(owner: str):
     return read
 
 
-async def _beliefs_block() -> Optional[str]:
+async def _beliefs_block() -> tuple[Optional[str], dict]:
     """
-    What he already thinks, as the frame the question is read in.
+    What he already thinks, as the frame the question is read in — and what
+    those views have bound (P2S.11), so a scheduled question leaves out what
+    a typed one would.
 
     Never fatal: a lookup that fails costs the block, not the morning. George
     without his beliefs is the George of a fortnight ago, which is worse than
@@ -161,6 +163,8 @@ async def _beliefs_block() -> Optional[str]:
             rows = await beliefs_service.current(session)
             latest = await beliefs_service.latest_data_at(session)
             block = beliefs_service.as_block(rows, latest_data=latest)
+            from tools._common import load_defs
+            bound = beliefs_service.bound_settings(rows, load_defs())
             # A SCHEDULED QUESTION IS A QUESTION (P2.f). The count means "how
             # many questions this view was attached to", and a standing one
             # attaches it exactly as a typed one does — counting only the
@@ -171,10 +175,10 @@ async def _beliefs_block() -> Optional[str]:
                         session, beliefs_service.in_prompt(rows))
                 except Exception:  # noqa: BLE001 - never at the morning's expense
                     await session.rollback()
-        return block
+        return block, bound
     except Exception as exc:  # noqa: BLE001 - a missing frame must not cost the answer
         print(f"[standing] beliefs unavailable: {type(exc).__name__}: {exc}")
-        return None
+        return None, {}
 
 
 def silent_in(event: Optional[str], data: dict) -> bool:
@@ -235,13 +239,15 @@ async def ask(row: GeorgeStandingQuestion, *, slot: datetime,
     calls = 0
     silent = False
 
+    held, bound = await _beliefs_block()
     try:
         async for frame in george_loop.run(
             row.question,
             user_id=row.owner,
             history=[],
             standing=standing,
-            beliefs=await _beliefs_block(),
+            beliefs=held,
+            bound_settings=bound or None,
             belief_store=_belief_store(row.owner),
             memory_reader=_memory_reader(row.owner),
             automations_reader=_automations_reader(row.owner),

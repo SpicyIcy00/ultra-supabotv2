@@ -28,8 +28,10 @@ from ._common import (
     validate_top_n as _validate_top_n,
     DEFAULT_MAX_ROWS as _MAX_ROWS,
     DEFS_PATH as _DEFS_PATH,
+    LEFT_OUT as _LEFT_OUT,
     connect as _connect,
     label_store as _label_store,
+    left_out as _left_out,
     load_defs as _load_defs,
     req as _req,
     resolve_store as _resolve_store_in,
@@ -128,6 +130,8 @@ def get_stock(
     top_n: Optional[int] = None,
     direction: str = "lowest",
     group_by: Any = None,
+    *,
+    left_out: Any = None,
 ) -> dict:
     """
     Stock levels by store, product and state.
@@ -156,6 +160,11 @@ def get_stock(
         {"rows": [...], "meta": {...}} — meta always carries source_table,
         filters_applied and snapshot_timestamp. A non-empty meta["notice"] MUST
         be surfaced to the user; it means the result is not what it appears.
+
+    `left_out` is supplied by the loop, never the model: the categories a
+    person said to leave out (metrics.yaml settings.declared
+    .left_out_categories). A list of products, or a breakdown by category,
+    leaves them out and says so; a count per shop or state stays whole.
     """
     defs = _load_defs()
     catalog = _store_catalog(defs)
@@ -331,6 +340,17 @@ def get_stock(
             predicates = ["i.store_id = ANY(%(store_ids)s)"]
             params: dict[str, Any] = {"store_ids": store_ids, "as_of": as_of}
 
+            # What a person said to leave out (P2S.11). Products listed, or a
+            # breakdown by category, are lists; a count per shop or per state
+            # is a total and stays whole.
+            left = _left_out(defs, left_out,
+                             lists=(not group_by) or "category" in group_by,
+                             names_product=sku is not None)
+            if left["predicate"]:
+                predicates.append(left["predicate"])
+                params.update(left["params"])
+            filters.extend(left["filters_applied"])
+
             if product_ids is not None:
                 predicates.append("i.product_id = ANY(%(product_ids)s)")
                 params["product_ids"] = product_ids
@@ -478,6 +498,8 @@ def get_stock(
             }
     if coverage is not None:
         meta["snapshot_coverage"] = coverage
+    if left["setting"] is not None:
+        meta["settings"] = {_LEFT_OUT: left["setting"]}
     if notice is not None:
         meta["notice"] = notice
 

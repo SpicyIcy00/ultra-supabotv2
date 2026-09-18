@@ -46,6 +46,7 @@ logic nobody approved.
 from __future__ import annotations
 
 import asyncio
+import functools
 import json
 import sys
 import uuid
@@ -996,10 +997,21 @@ async def open_object(
     a 400 with the tool's own sentence, because that sentence already names
     what to do instead.
     """
+    # WHAT A PERSON SAID TO LEAVE OUT applies to a tap as to a question
+    # (P2S.11): the same object, the same lists, the same receipts. A lookup
+    # that fails opens the object whole — its receipts then say nothing was
+    # left out, which is true.
+    try:
+        bound = beliefs_service.bound_settings(
+            await beliefs_service.current(db), _load_defs())
+    except SQLAlchemyError:
+        await db.rollback()
+        bound = {}
     try:
         opened = await asyncio.to_thread(
-            objects_tool.get_object, request.kind, request.name,
-            request.date_range,
+            functools.partial(objects_tool.get_object, request.kind, request.name,
+                              request.date_range,
+                              left_out=bound.get("left_out_categories")),
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -2320,9 +2332,12 @@ def _belief_store(username: str, conversation_id: Optional[str]):
     return _Store()
 
 
-async def _beliefs_for() -> Optional[str]:
+async def _beliefs_for() -> tuple[Optional[str], dict]:
     """
-    What George currently believes, as the block attached to the question.
+    What George currently believes, as the block attached to the question —
+    and what those views have BOUND (P2S.11), as {setting: value} for the
+    loop to hand the reads. One read of george.beliefs serves both, so the
+    block and the setting can never describe two different registers.
 
     UNLIKE RECALL, THIS IS SENT ON EVERY TURN. Recall is a nicety that stops
     being useful once the conversation has its own history; a view is the frame
@@ -2340,6 +2355,7 @@ async def _beliefs_for() -> Optional[str]:
             rows = await beliefs_service.current(session)
             latest = await beliefs_service.latest_data_at(session)
             block = beliefs_service.as_block(rows, latest_data=latest)
+            bound = beliefs_service.bound_settings(rows, _load_defs())
             # COUNT WHAT WAS ACTUALLY HANDED OVER (P2.f). The views that reach
             # the question are the ones the block carries, and `in_prompt` is
             # the one place that decides which — so the count cannot drift
@@ -2352,9 +2368,9 @@ async def _beliefs_for() -> Optional[str]:
                 except SQLAlchemyError:
                     # A turn is never lost to a counter.
                     await session.rollback()
-        return block
+        return block, bound
     except SQLAlchemyError:
-        return None
+        return None, {}
 
 
 async def _recall_for(username: str, history: list[dict],
@@ -2402,7 +2418,8 @@ async def _safe_stream(question: str, user_id: Optional[str],
                        decisions_reader=None,
                        standing_writer=None,
                        watch_writer=None,
-                       desk: Optional[dict] = None) -> AsyncIterator[str]:
+                       desk: Optional[dict] = None,
+                       bound_settings: Optional[dict] = None) -> AsyncIterator[str]:
     """
     Wrap the loop so a crash still closes the stream cleanly.
 
@@ -2434,6 +2451,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
             standing_writer=standing_writer,
             watch_writer=watch_writer,
             desk=desk,
+            bound_settings=bound_settings,
         ):
             yield frame
     except Exception as exc:  # noqa: BLE001
@@ -2521,7 +2539,7 @@ async def ask(
     # failure can still be handled as something other than an error frame.
     recall = await _recall_for(user.username, history, thread)
     # Every turn, unlike recall: a view is the frame a question is read in.
-    held_beliefs = await _beliefs_for()
+    held_beliefs, bound_settings = await _beliefs_for()
     # Lightweight owner-scoped discovery: no pin replay or business query.
     async with AsyncSessionLocal() as session:
         page_references = [
@@ -2563,6 +2581,9 @@ async def ask(
             watch_writer=_watch_writer(user.username),
             # The desk, bounded by the model above; an empty one is nothing.
             desk=request.desk.model_dump(exclude_none=True) if request.desk else None,
+            # What a person told him to leave out, bound (P2S.11): the reads
+            # apply it and say so; the model never sees the value.
+            bound_settings=bound_settings or None,
             # Always: every signed-in caller may build and edit their own
             # pages. "This page" is the resolved scope, or nothing.
             page_writer=_PageWriter(

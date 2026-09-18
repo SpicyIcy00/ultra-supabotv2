@@ -5995,7 +5995,14 @@ judgment:
     unexplained: "it moved and I cannot establish why"
     not_visible: "I cannot see this at all"
     waiting: "nothing to say until something arrives"
-    means: "what a person told you they mean, not a reading of data"
+    means: "what a person told you they mean"
+    # THE SEVENTH, 2026-09-18 (P2S.11), and the first that CHANGES WHAT IS
+    # READ rather than how it is worded. "Don't focus on per gram, they don't
+    # matter" was a `means` view at best — kept as words he talked around
+    # while every ranking still led with per-gram lines. A `leave_out` view
+    # binds settings.declared.left_out_categories: the reads leave that
+    # category out of their lists and their receipts say so.
+    leave_out: "a category they said to leave out"
 
   # WHAT A PERSON TEACHES HIM, and why it is a belief rather than a setting.
   #
@@ -6010,7 +6017,10 @@ judgment:
   # would let a sentence a person typed borrow a read's authority, and the
   # table refuses it too (alembic x8y9z0a1b2c3).
   taught:
-    stance: means
+    # Every stance that rests on a person rather than on a read. `leave_out`
+    # joined `means` 2026-09-18: both are what somebody SAID, so both name
+    # `told` and no calls, and the table's one-ground check already holds.
+    stances: [means, leave_out]
     rests_on: "what the person said, in their own words"
     max_words: 40
     prompted_by: "not what I meant"
@@ -7842,10 +7852,10 @@ systems:
 # formula, replace a calculation with reasoning, or change a value without
 # saying so.
 #
-# NOTHING IS DECLARED YET. `declared` is empty in this phase: the first
-# declarations arrive with the purchasing definitions (a later phase). A
-# contract test holds the contract keys and refuses any declaration that
-# omits one of the five required fields.
+# ONE IS DECLARED, since 2026-09-18 (P2S.11): `left_out_categories`, bound
+# by what a person told George rather than by a control. A contract test
+# holds the contract keys and refuses any declaration that omits one of the
+# five required fields.
 # =============================================================================
 settings:
   introduced: "2026-09-09"
@@ -7862,7 +7872,53 @@ settings:
     - change_a_setting_silently
   versioned: true
   provenance: "the bound value is recorded on the version that used it and on every run's receipts"
-  declared: {}
+  declared:
+    # THE FIRST DECLARATION, 2026-09-18 (P2S.11). The owner: "if i tell it
+    # some info like dont focus on [per gram] beacause its per gram products
+    # cause they kinda dont matter and product categories too will it remeber
+    # it and actually use that info?" Checked the same day: it would not. No
+    # read could leave a category out, so a told view changed his words while
+    # every ranking still led with per-gram lines.
+    #
+    # BOUND BY A PERSON, THROUGH A TOLD VIEW. George records what they said as
+    # a `leave_out` view about the category (judgment.taught); the web
+    # process reads the views that stand and hands the loop the bound value;
+    # the loop gives it to the reads below as `argument`, a keyword-only
+    # parameter that is never in the model's schema — he cannot set it, only
+    # record what he was told. Forget on the memory screen, or a told view
+    # that supersedes it, unbinds it.
+    #
+    # LISTS, NEVER TOTALS. A shop's net sales is the till's figure and stays
+    # it: leaving per gram out of a total would be a different number wearing
+    # the same name. What leaves the category out is every read that LISTS
+    # products or categories — the rankings the owner was complaining about.
+    left_out_categories:
+      meaning: >
+        Product categories a person told George to leave out of what he ranks,
+        lists and breaks down, because they do not matter to them.
+      type: list of category names, spelled as products.category_normalization spells them
+      bounds:
+        values: "a category the catalogue carries (products.category_normalization); any other is refused when it is told"
+        max_items: 5
+      default: []
+      bound_by:
+        stance: leave_out
+        subject_kind: category
+        unbound_by: "Forget on the memory screen, or a told view that supersedes it"
+      argument: left_out
+      participates_in:
+        get_sales: "grouped by product or category; a total, a shop, a day or an hour stays whole"
+        get_stock: "listed by product, or grouped by category; a count per shop or state stays whole"
+        get_stock_history: "the stockouts view; one product's series and the coverage view stay whole"
+        get_replenishment: "the plan view's lines; the summary per shop stays whole"
+        get_dead_stock: "every row, and the count of products held it is read against"
+        get_object: "each section, as the read behind it applies it"
+      leaves_out_of: lists
+      never_out_of: totals
+      # A read that names the category, or names one product, is not a list of
+      # its rivals: "how did per gram do" is asked for BY NAME and is answered.
+      asked_for_by_name: "the setting does not apply to a read that names the category or one product, and the receipt says so"
+      receipt: "{category} left out at your instruction, {date}"
 
 
 # =============================================================================

@@ -46,8 +46,9 @@ FOUR RULES, AND EACH ONE IS THE ANSWER TO A WAY MEMORY GOES WRONG.
 
   3. A STANCE IS ONE OF THE WORDS IN THE DEFINITIONS. metrics.yaml
      `judgment.stances`, and the same ones the prompt teaches — five readings
-     of data and `means`. One invented at the keyboard would be a category of
-     business situation nobody defined.
+     of data and two a person told him, `means` and `leave_out` (which binds
+     a declared setting the reads apply, P2S.11). One invented at the keyboard
+     would be a category of business situation nobody defined.
 
   4. CHANGING A VIEW KEEPS THE OLD ONE AND SAYS WHY. A belief that supersedes
      another must name it and give a reason. A view that can be silently
@@ -78,9 +79,28 @@ MAX_WHY = 240
 MAX_BELIEFS_PER_TURN = 6
 
 
-def taught_stance(defs: Mapping[str, Any]) -> str:
-    """The one stance that rests on a person rather than on a read."""
-    return str(defs["judgment"]["taught"]["stance"])
+def taught_stances(defs: Mapping[str, Any]) -> tuple[str, ...]:
+    """
+    The stances that rest on a person rather than on a read.
+
+    One until 2026-09-18 (`means`); `leave_out` joined it for P2S.11, because
+    "leave per gram out" is something a person SAID, exactly as "we means the
+    shops" is, and no read can settle either.
+    """
+    return tuple(str(s) for s in defs["judgment"]["taught"]["stances"])
+
+
+def setting_bound_by(defs: Mapping[str, Any], stance: str) -> Optional[tuple[str, Mapping[str, Any]]]:
+    """
+    The declared setting a told stance binds, as (name, declaration), or None.
+
+    Read from metrics.yaml settings.declared.<name>.bound_by, so the one place
+    that says which stance binds which setting is the declaration itself.
+    """
+    for name, decl in ((defs.get("settings") or {}).get("declared") or {}).items():
+        if (decl.get("bound_by") or {}).get("stance") == stance:
+            return name, decl
+    return None
 
 
 def max_told_words(defs: Mapping[str, Any]) -> int:
@@ -112,6 +132,7 @@ def validate(
     defs: Mapping[str, Any],
     *,
     is_executed: Callable[[Mapping[str, Any]], bool],
+    resolve_category: Optional[Callable[[str], tuple[Optional[str], str]]] = None,
 ) -> tuple[list[dict], list[dict]]:
     """
     Split proposed beliefs into those George may hold and those he may not.
@@ -123,12 +144,19 @@ def validate(
     function also keeps agent/write_tools.py and this file from importing each
     other.
 
+    `resolve_category` answers, for a view that BINDS a setting, whether its
+    subject is a category the catalogue carries: (the catalogue's spelling,
+    "") or (None, why not). Supplied by the writer, which can read; without it
+    a binding view is refused, because a setting bound to a name that matches
+    nothing would put "left out at your instruction" on reads that left out
+    nothing (metrics.yaml settings.declared.<name>.bounds.values).
+
     Returns (accepted, rejected). A rejected belief is NOT stored and the answer
     must not describe it as though it were.
     """
     stances = stances_for(defs)
     kinds = subject_kinds_for(defs)
-    taught = taught_stance(defs)
+    taught = taught_stances(defs)
     max_told = max_told_words(defs)
 
     accepted: list[dict] = []
@@ -208,17 +236,17 @@ def validate(
         # sentence borrow a read's authority, and a view offering neither is
         # the invention rule 1 exists to refuse.
         told = item.get("told")
-        if stance == taught:
+        if stance in taught:
             evidence, why_bad = [], None
             if item.get("evidence"):
                 why_bad = (
-                    f"a {taught!r} view rests on what the person SAID, not on a read. "
+                    f"a {stance!r} view rests on what the person SAID, not on a read. "
                     f"Put their words in `told` and leave `evidence` out; if this is "
                     f"a reading of data, it needs one of the other stances"
                 )
             elif not isinstance(told, str) or not told.strip():
                 why_bad = (
-                    f"a {taught!r} view needs `told`: what the person actually said, "
+                    f"a {stance!r} view needs `told`: what the person actually said, "
                     f"in their words. Without it there is nothing behind it"
                 )
             else:
@@ -232,8 +260,9 @@ def validate(
             told = None
             if item.get("told"):
                 why_bad = (
-                    f"only a {taught!r} view rests on what a person said. A reading "
-                    f"of data rests on the reads behind it — name them in `evidence`"
+                    f"only a {' or '.join(repr(t) for t in taught)} view rests on what "
+                    f"a person said. A reading of data rests on the reads behind it "
+                    f"— name them in `evidence`"
                 )
                 evidence = []
             else:
@@ -241,6 +270,34 @@ def validate(
         if why_bad:
             rejected.append(_reject(item, why_bad))
             continue
+
+        # A VIEW THAT BINDS A SETTING is held to the setting's declaration: the
+        # kind of thing it is about, and a value inside its bounds. "Leave out
+        # Rockwell" is not a category, and "leave out gummies" names nothing
+        # the catalogue calls a category — either would be a receipt saying
+        # something was left out when nothing was (P2S.11).
+        subject = subject.strip()
+        binds = setting_bound_by(defs, stance)
+        if binds is not None:
+            name, decl = binds
+            want_kind = decl["bound_by"]["subject_kind"]
+            if kind != want_kind:
+                rejected.append(_reject(item, (
+                    f"a {stance!r} view is about a {want_kind}, not a {kind} "
+                    f"(metrics.yaml settings.declared.{name}.bound_by)"
+                )))
+                continue
+            if resolve_category is None:
+                rejected.append(_reject(item, (
+                    f"a {stance!r} view needs the catalogue to check its {want_kind} "
+                    f"against, and this session cannot read it"
+                )))
+                continue
+            spelled, why_not = resolve_category(subject)
+            if spelled is None:
+                rejected.append(_reject(item, why_not))
+                continue
+            subject = spelled
 
         supersedes = item.get("supersedes")
         why = item.get("why")
@@ -261,7 +318,7 @@ def validate(
         accepted.append({
             "stance": stance,
             "subject_kind": kind,
-            "subject": subject.strip(),
+            "subject": subject,
             "claim": claim,
             "evidence": evidence,
             "told": told,

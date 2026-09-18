@@ -590,8 +590,9 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                     # — which is why `evidence` left `required` rather than
                     # `told` joining it.
                     "told": {"type": "string",
-                             "description": ("only for a `" + _beliefs.taught_stance(_defs)
-                                             + "` view: what the person said, in their "
+                             "description": ("only for a "
+                                             + " or ".join(f"`{t}`" for t in _beliefs.taught_stances(_defs))
+                                             + " view: what the person said, in their "
                                              "words. Such a view names no evidence")},
                     "supersedes": {"type": "string"},
                     "why": {"type": "string"},
@@ -1608,7 +1609,31 @@ INJECTED_READS: dict[str, tuple[str, str]] = {
 }
 
 
+def _bound_settings_for(name: str, ctx: Optional[WriteContext]) -> dict:
+    """
+    What a person has bound that this read takes, as {argument: value}.
+
+    From metrics.yaml settings.declared.<setting>: `participates_in` names the
+    reads, `argument` the keyword-only parameter each takes it as. Nothing is
+    passed when nothing is bound, so a read with no setting runs exactly as it
+    always did and its receipt says nothing about one (P2S.11).
+    """
+    bound = (ctx.settings if ctx is not None else None) or {}
+    out: dict = {}
+    for setting, decl in (req(_load_defs(), "settings.declared") or {}).items():
+        value = bound.get(setting)
+        if value and name in (decl.get("participates_in") or {}):
+            out[decl["argument"]] = value
+    return out
+
+
 async def _injected_args(name: str, args: dict, ctx: Optional[WriteContext]) -> dict:
+    # A setting's argument the MODEL sent is dropped, whatever is bound: he
+    # may record what he was told, never bind a value himself
+    # (settings.model_may_not.change_a_setting_silently).
+    own = {d["argument"] for d in (req(_load_defs(), "settings.declared") or {}).values()}
+    args = {**{k: v for k, v in args.items() if k not in own},
+            **_bound_settings_for(name, ctx)}
     spec = INJECTED_READS.get(name)
     if spec is None or ctx is None:
         return args
@@ -2740,6 +2765,7 @@ async def run(
     belief_store: Optional[write_tools.BeliefStore] = None,
     page_references: Optional[list[dict]] = None,
     desk: Optional[dict] = None,
+    bound_settings: Optional[dict] = None,
 ) -> AsyncIterator[str]:
     """
     Answer one question, streaming SSE frames.
@@ -2778,6 +2804,12 @@ async def run(
             the caller (backend/app/services/belief_store.as_block). Views,
             not figures: they shape the turn, so they arrive with the
             question rather than being fetched during it.
+        bound_settings: what a person has BOUND (metrics.yaml settings.declared), as
+            {setting: value}, built by the caller from the told views that
+            stand (belief_store.bound_settings). Handed to the reads each
+            declaration names as a keyword-only argument; the model sees
+            neither the value nor the parameter, and every read that applies
+            it says so in its receipt (P2S.11).
         standing: for a question asked on a schedule, how its owner has said
             he wants it answered. Text he wrote, never a definition — it
             steers emphasis and cannot introduce a figure, because every
@@ -2862,6 +2894,7 @@ async def run(
         decisions_reader=decisions_reader,
         standing_writer=standing_writer,
         watch_writer=watch_writer,
+        settings=bound_settings,
     )
     # Per capability, not per session: a caller with a pin writer and no
     # workflow writer gets pin_answer and not save_workflow.

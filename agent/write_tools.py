@@ -82,6 +82,7 @@ analysis leaves no page behind, and the tool returns only after the commit.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -402,6 +403,12 @@ class WriteContext:
     # hands it to get_attention as a keyword-only argument, so the ranking
     # can learn from recorded gestures and the model cannot supply any.
     decisions_reader: Optional[DecisionsReader] = None
+    # What a person has BOUND — metrics.yaml settings.declared — as
+    # {setting name: value}, built by the web process from the told views
+    # that stand (belief_store.bound_settings). Not a tool and not a reader:
+    # the loop hands each value to the reads its declaration names, as a
+    # keyword-only argument the model neither sees nor sends (P2S.11).
+    settings: Optional[dict] = None
     # The questions the caller has asked George to keep asking. A write, bound
     # to the owner here like every other one. Deliberately NOT injected into a
     # scheduled ask (app/services/standing_runner.py): a question that can
@@ -1066,6 +1073,14 @@ async def record_belief(beliefs: list[dict], *, ctx: WriteContext) -> dict:
     here, and nothing you read can. Keep it as a `means` view with their words
     in `told`, and the next answer is scoped their way rather than yours.
 
+    AND WHEN THEY SAY WHAT TO IGNORE, RECORD IT THE SAME TURN. "Don't focus
+    on per gram, it doesn't matter" is a `leave_out` view about that category,
+    their words in `told`: from then on every read that ranks or lists
+    products or categories leaves it out and its receipt says so — you do not
+    filter anything yourself, and a total stays whole. "Include per gram
+    again" supersedes that view with a `means` view in their words, which
+    lifts it. Only a category can be left out.
+
     Args:
         beliefs: The views to keep, as a list of objects:
             subject_kind — one of store, warehouse, supplier, product, category,
@@ -1073,7 +1088,8 @@ async def record_belief(beliefs: list[dict], *, ctx: WriteContext) -> dict:
             subject — the thing itself, by the name a person uses: "Rockwell",
                 "AJI BARN", "Seikyo SEK001".
             stance — needs_attention, unremarkable, unexplained, not_visible or
-                waiting.
+                waiting for a reading; means or leave_out for what they told
+                you.
             claim — what you think, in ONE sentence and with NO FIGURE in it. A
                 stored number is wrong a week later and tells nobody; say what
                 the figures MEAN. "Rockwell is losing customers rather than
@@ -1083,7 +1099,7 @@ async def record_belief(beliefs: list[dict], *, ctx: WriteContext) -> dict:
                 run in this conversation; a view has to rest on something that
                 actually happened. A read that found nothing counts.
             told — the other thing a view may rest on, and only for a `means`
-                view: what the person SAID, in their words. "We means the
+                or `leave_out` view: what the person SAID, in their words. "We means the
                 shops, not the warehouse" is not a reading of data and no read
                 can settle it, so it names `told` and no evidence — and from
                 then on it is how you scope and word the answer. A view names
@@ -1110,13 +1126,49 @@ async def record_belief(beliefs: list[dict], *, ctx: WriteContext) -> dict:
         return call_key(call["tool"], call["arguments"]) in ctx.executed
 
     return await _record_beliefs(beliefs, defs=defs, is_executed=is_executed,
-                                 store=ctx.belief_store)
+                                 store=ctx.belief_store,
+                                 resolve_category=await _category_resolver(beliefs, defs))
 
 
-async def _record_beliefs(beliefs, *, defs, is_executed, store) -> dict:
+async def _category_resolver(beliefs: Any, defs: dict):
+    """
+    The catalogue's categories, as the check a `leave_out` view is held to.
+
+    Read only when a submitted view binds a setting — every other belief is
+    recorded without touching the database, as before. A catalogue that cannot
+    be read returns None, and the validator refuses the binding view rather
+    than keeping a name nobody checked (agent/beliefs.validate).
+    """
+    from agent import beliefs as belief_rules
+    items = beliefs if isinstance(beliefs, list) else [beliefs]
+    if not any(isinstance(b, dict) and belief_rules.setting_bound_by(defs, b.get("stance"))
+               for b in items):
+        return None
+    try:
+        from tools.products import get_product_categories
+        known = [str(r["category"]) for r in
+                 (await asyncio.to_thread(get_product_categories))["rows"]]
+    except Exception:  # noqa: BLE001 - an unreadable catalogue refuses the view, never the turn
+        return None
+
+    def resolve(name: str) -> tuple[Optional[str], str]:
+        if name in known:
+            return name, ""
+        folded = [k for k in known if k.lower() == str(name).strip().lower()]
+        if folded:
+            return folded[0], ""
+        return None, (f"No category is called {name!r}, so nothing could be left "
+                      f"out. The categories are: {', '.join(sorted(known))} "
+                      f"(metrics.yaml: products.category_normalization).")
+    return resolve
+
+
+async def _record_beliefs(beliefs, *, defs, is_executed, store,
+                          resolve_category=None) -> dict:
     """The async half of agent/beliefs.record — validation is pure, storing is not."""
     from agent import beliefs as belief_rules
-    accepted, rejected = belief_rules.validate(beliefs, defs, is_executed=is_executed)
+    accepted, rejected = belief_rules.validate(beliefs, defs, is_executed=is_executed,
+                                               resolve_category=resolve_category)
     stored = await store.record(accepted) if accepted else []
     return {
         "rows": stored,

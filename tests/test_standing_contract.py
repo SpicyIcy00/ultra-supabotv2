@@ -66,7 +66,7 @@ def _capture_run(monkeypatch) -> dict:
     monkeypatch.setattr(standing_runner.george_loop, "run", fake_run)
 
     async def no_beliefs():
-        return None
+        return None, {}
 
     monkeypatch.setattr(standing_runner, "_beliefs_block", no_beliefs)
     return seen
