@@ -75,6 +75,11 @@ export function FiguresArea({ children, areaRef }: {
   );
 }
 
+/** A column with more below moves most of a screen, as the figures' arrow does. */
+export function scrollWords(el: HTMLElement | null): void {
+  el?.scrollBy({ top: arrowStep(el.clientHeight), behavior: reducedMotion() ? 'auto' : 'smooth' });
+}
+
 /**
  * WHETHER AN ELEMENT HAS MORE BELOW WHAT IT SHOWS — for a column that scrolls
  * with no bar, so its foot can fade rather than cut (the words, 2026-09-17).

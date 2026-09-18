@@ -150,6 +150,15 @@ describe('"if its stating whats already stated or shown in the page … dont mak
   });
 });
 
+describe('"add a indicatior … to let people know they can scroll down on it"', () => {
+  it('draws the figures\' own arrow at the foot of his words, only while there is more', () => {
+    expect(ROOM).toMatch(/className="r-arr r-arr--words"[\s\S]{0,200}hidden=\{!wordsMore\}/);
+    expect(ROOM).toMatch(/onClick=\{\(\) => scrollWords\(wordsRef\.current\)\}/);
+    expect(declaration('.r-arr--words', 'grid-area')).toBe('words');
+    expect(declaration('.r-arr--words', 'bottom')).toBe('0');
+  });
+});
+
 describe('"i should see what i ask too"', () => {
   it('pairs each answer with the question before it, in the person\'s words', () => {
     const turns = [

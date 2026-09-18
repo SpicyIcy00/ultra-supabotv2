@@ -23,7 +23,7 @@ import { boardContext, buildBoard, folded, shapedByReplay,
 import { keepLocal, restoreLocal } from './arrangement';
 import { callOf, rowsOf, subjectOf, type AnswerTurn, type Block } from './data';
 import { Board, turnNotices } from './render';
-import { FiguresArea, Wires, scrollToFigure, useMoreBelow } from './FiguresArea';
+import { FiguresArea, Wires, scrollToFigure, scrollWords, useMoreBelow } from './FiguresArea';
 import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
 import { caveatUnshown, claimAndStanding, thoughtsOf, unmark } from './beside';
@@ -831,6 +831,14 @@ export default function Room() {
             )}
             {latest?.error && <p className="r-note r-failed">{latest.error}</p>}
           </div>
+          {/* THERE IS MORE OF HIS WORDS BELOW (the owner, 2026-09-18: "add a
+              indicatior that matches the theme to the text under blob to let
+              people know they can scroll down on it"). The figures' own arrow,
+              at the foot of his column, only while there is more; a tap moves
+              it most of a screen, as the figures' does. */}
+          <button type="button" className="r-arr r-arr--words" title="more of what he said"
+                  aria-label="More of what he said" hidden={!wordsMore}
+                  onClick={() => scrollWords(wordsRef.current)}>↓</button>
 
           <div className="r-right">
             {/* NO HEADER OVER THE FIGURES (the log, 2026-09-17: "we also dont

@@ -670,6 +670,12 @@
 .r-arr--up { top: 0; }
 .r-arr--dn { bottom: 0; }
 .r-arr[hidden] { display: none; }
+/* THE SAME ARROW AT THE FOOT OF HIS WORDS (the owner, 2026-09-18: "add a
+   indicatior that matches the theme to the text under blob to let people know
+   they can scroll down on it"). A child of the grid placed in the words' own
+   area, so it stays put while the words scroll under it, centred in the column
+   as the figures' is in theirs. */
+.r-arr--words { grid-area: words; top: auto; bottom: 0; }
 
 /* THE FLOW (row 6, 7). One grid; each figure told its column and spanning its
    own height in 1px rows, so a figure changing column never remounts. */
