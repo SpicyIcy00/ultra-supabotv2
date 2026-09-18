@@ -162,6 +162,20 @@ def test_the_replay_block_is_served_whole_so_no_client_keeps_a_copy():
     assert served.fragments["correction"] == FRAGMENTS["correction"]
 
 
+def test_read_it_to_me_is_served_and_means_nothing_else():
+    """P2S.5(c): the words that ask for the claim aloud are the definitions',
+    served whole, and none of them is also a steer or the correction — a
+    phrase that could mean two things would be resolved by whichever the
+    room happened to check first."""
+    served = _served()
+    spellings = served.fragments["read_aloud"]["spellings"]
+    assert spellings and spellings == FRAGMENTS["read_aloud"]["spellings"]
+    taken = {s.strip().lower() for t in served.tokens
+             for a in t.alternatives for s in a.spellings}
+    taken.add(FRAGMENTS["correction"]["token"].strip().lower())
+    assert not {s.strip().lower() for s in spellings} & taken
+
+
 # ------------------------------------------------------------ 3. spellings --
 
 def test_every_spelling_resolves_to_exactly_one_alternative():

@@ -202,6 +202,11 @@
   max-width: 30ch; text-wrap: balance;
 }
 .r-say--claim em, .r-say--claim .r-claim { font-style: italic; }
+/* WHILE HE READS IT ALOUD (P2S.5(c)) the claim is ringed — emphasis ADDS and
+   never dims, and a ring moves nothing around it (the owner, 2026-09-18). */
+.r-say--claim[data-speaking='yes'] {
+  outline: 1px solid var(--ink-3); outline-offset: 8px; border-radius: 4px;
+}
 /* HIS WORDS ARE NEVER GREY (the owner, 2026-09-18: "i dont like how alot of text
    is grey if it says something in a chart it should already be white just use
    other methods to emphasize things … just dont desaturate or lower other things
@@ -898,6 +903,38 @@
 }
 .r-send:hover { background: var(--raise); color: var(--ink); }
 .r-send:disabled { color: var(--ink-4); cursor: default; background: var(--sunk); }
+
+/* THE MIC (P2S.5) — the design's `.mic`, the same quiet circle as ↑. While it
+   listens it is RINGED in the ink, never lit in the accent: listening is not a
+   thing that needs you (UI rule 5). Held on a phone, it must not select text
+   or open the long-press menu. */
+.r-mic, .r-hands {
+  width: 36px; height: 36px; border-radius: 50%; border: 0; flex-shrink: 0;
+  background: var(--sunk); color: var(--ink-2);
+  display: grid; place-items: center; cursor: pointer; font-size: 15px;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.r-mic:hover, .r-hands:hover { background: var(--raise); color: var(--ink); }
+.r-mic[data-state='listening'] {
+  background: var(--raise); color: var(--ink);
+  box-shadow: 0 0 0 2px var(--ink);
+  animation: r-listening 1.4s var(--ease) infinite;
+}
+@keyframes r-listening {
+  0%, 100% { box-shadow: 0 0 0 2px var(--ink); }
+  50% { box-shadow: 0 0 0 5px var(--edge-strong), 0 0 0 2px var(--ink); }
+}
+@media (prefers-reduced-motion: reduce) { .r-mic[data-state='listening'] { animation: none; } }
+/* Hands-free is a switch: on, it is ringed as the mic is, so the state reads
+   by shape and not by colour. */
+.r-hands { width: 32px; height: 32px; background: transparent; color: var(--ink-3); }
+.r-hands[aria-pressed='true'] { background: var(--raise); color: var(--ink); box-shadow: 0 0 0 1px var(--ink-3); }
+/* THE ONE LINE VOICE SAYS ABOUT ITSELF — a label, the frame's voice. */
+.r-voice-note {
+  margin: 0 0 8px 16px;
+  font: 400 11.5px/1.6 var(--mono); color: var(--ink-3);
+  pointer-events: auto;
+}
 
 .r-chip {
   border: 1px solid var(--edge); background: var(--card);

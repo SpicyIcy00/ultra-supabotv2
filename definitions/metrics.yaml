@@ -7775,6 +7775,18 @@ surface:
           record what I actually meant as a belief against it, and answer
           that instead.
 
+      # "READ IT TO ME" (P2S.5(c)). Said or typed whole, the room reads the
+      # claim on screen aloud — the headline sentence, never the figures or
+      # the receipts — and asks George nothing. Matched whole like every
+      # fragment; anything else is a question. The words are here, beside the
+      # correction token, so what the room answers to is a definition.
+      read_aloud:
+        spellings:
+          - read it to me
+          - read it out
+          - read that to me
+          - read it
+
     # THE WORK, VISIBLE, FOR FREE (P1.k, 2026-09-14).
     #
     # The owner's feature 13 asks to FEEL him working — checking data, bringing

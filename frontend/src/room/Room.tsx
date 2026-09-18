@@ -61,6 +61,8 @@ import { forgetBelief } from '../services/beliefsApi';
 import { arrivedSince, firstUnseen, forgetLast, lastSeen, lastThread, questionsOf,
          remember } from './history';
 import type { TileActions } from './tiles';
+import { useReader } from './Mic';
+import { asksToHear, spokenClaim } from './voice';
 import './room.css';
 
 export default function Room() {
@@ -118,6 +120,16 @@ export default function Room() {
   // NEXT question and not a view over what is drawn, which is why moving it
   // redraws nothing and costs no turn.
   const [estate, setEstate] = useState<string | null>(null);
+  // HANDS-FREE (P2S.5(c)): each answer that lands is read aloud, the claim
+  // and nothing else. Kept per browser — a switch you turned on stays on — and
+  // off wherever storage is not there to say otherwise.
+  const [handsFree, setHandsFree] = useState<boolean>(() => {
+    try { return localStorage.getItem('george.handsFree') === 'on'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('george.handsFree', handsFree ? 'on' : 'off'); } catch { /* kept for this visit only */ }
+  }, [handsFree]);
+  const reader = useReader();
 
   // THE DEFINITIONS THE TOKENS ARE DRAWN FROM — metrics.yaml, served. Which
   // arguments are movable, what each may be moved to, the words each answers
@@ -317,6 +329,17 @@ export default function Room() {
     return null;
   }, [latest, busy, answers.length, drawn]);
 
+
+  // HE READS THE CLAIM ALOUD AS AN ANSWER LANDS, with hands-free on (P2S.5(c)):
+  // on the moment he stops working, never on opening a thread, so an answer
+  // somebody already read is not read at them again.
+  const wasBusy = useRef(busy);
+  useEffect(() => {
+    const landed = wasBusy.current && !busy;
+    wasBusy.current = busy;
+    if (!landed || !handsFree || !latest) return;
+    reader.speak(spokenClaim(latest.text, latest.reading?.claim));
+  }, [busy, handsFree, latest, reader]);
 
   // WHAT HE IS DOING, off the stream and nothing else (P2S.2(d)). `need` only
   // from a LOADED approvals count (UI rule 8); a failed turn breaks the
@@ -617,6 +640,13 @@ export default function Room() {
   const ask = useCallback((text: string, subjects = selection) => {
     const q = text.trim();
     if (!q) return;
+    // "READ IT TO ME" (P2S.5(c)): the claim on screen, aloud, on demand — the
+    // definitions' words, no model turn, typed or spoken alike.
+    if (asksToHear(q, desk.data)) {
+      setDraft('');
+      reader.speak(spokenClaim(latest?.text, latest?.reading?.claim));
+      return;
+    }
     // "COMPARE THESE" IS A QUESTION, AND THERE IS NO CODE FOR IT (2026-09-15).
     //
     // It used to be a replay: two shops picked scoped the read on screen to
@@ -640,7 +670,7 @@ export default function Room() {
     // room holds no writer and may not (architecture rule 4).
     if (fragment.kind === 'correction') { askGeorge(fragment.asks, subjects); return; }
     void move(fragment.token, fragment.alternative, q);
-  }, [askGeorge, move, tokens, desk.data, selection, runReplay, targetsFor]);
+  }, [askGeorge, move, tokens, desk.data, selection, runReplay, targetsFor, reader, latest]);
 
   /**
    * WHAT AN `@` PICKED, PUT WHERE IT BELONGS (P2.c).
@@ -816,7 +846,8 @@ export default function Room() {
                     drawn at all. A notice that says the data may be wrong stays
                     above the headline (UI rule 4). */}
                 <Reading part="claim" text={latest?.text} notices={drawnOnly(notices, explainsOnly)}
-                         reading={latest?.reading} calls={latest?.toolCalls} onFigure={showFigure} />
+                         reading={latest?.reading} calls={latest?.toolCalls} onFigure={showFigure}
+                         speaking={reader.speaking} />
                 {!busy && (
                   <Reading part="rest" text={latest?.text} reading={latest?.reading}
                            calls={latest?.toolCalls} onFigure={showFigure}
@@ -907,6 +938,11 @@ export default function Room() {
         onUnname={(r) => setNamed((held) => held.filter((x) => x.id !== r.id))}
         onBind={bound}
         onSend={() => ask(draft)}
+        // SPOKEN, THE SAME DOOR (P2S.5(a)): what was heard goes where Enter
+        // sends, so the selection travels with it and a steer replays.
+        onSay={(said) => ask(said)}
+        handsFree={handsFree}
+        onHandsFree={reader.can ? setHandsFree : undefined}
         onStop={() => george.cancel()}
         onClear={() => { setDraft(''); setSelection([]); setScope(null); setNamed([]); }}
         steer={(

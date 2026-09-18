@@ -4679,3 +4679,11 @@ The owner's own 30 days (78 turns that read, 351 calls) asked the same reads pie
 **`same_period_last_year` uses the same calendar dates a year back, not 52 weeks**, because the question is seasonal and Christmas is dated. A moving holiday (Chinese New Year) is the stated cost. It covers closed windows only; the year-to-date version is recorded as not built.
 **A record check was added beyond the card, because the data needed it.** The sales history holds six days between 2024-09-01 and 2024-12-31. Without the check, the tool blamed the shops for December 2024 and read a 5-day September as +567%. A window where no shop sold on any day is refused; one with some silent days gets `sales_record_silent_days`, drawn above the figure. It is not a threshold: one silent day is reported.
 **The card's done-when is not met on its own question.** December 2025 against December 2024 refuses, because that December is not in the record. The comparable set by name was proven on August, and the mid-window exclusion on September.
+
+## 2026-09-18 · P2S.5: voice is the line's own send, not a second path
+
+**What is heard goes into the line and is sent by the same `ask` Enter reaches.** So the selection, estate and board travel with it, and a steer resolves through `resolveFragment`. There is no voice branch for George to see: a spoken question reaches him exactly as a typed one does, and nothing but its text is kept.
+**Hold and release sends; a tap listens until the next tap and leaves the words to correct.** This settles the card's two clauses, "send on release" and "corrected before sending". With hands-free on, a tap sends once the recogniser settles the phrase.
+**Hands-free reads the headline sentence, cut the same way `Reading` cuts it,** and only on a busy→idle edge, so an opened thread is never read aloud at you. The claim is ringed while he speaks (emphasis adds, never the accent), and any pointerdown or keydown cancels him.
+**"Read it to me" is a definition (`surface.desk.fragments.read_aloud`)**, like the correction token, and a contract test keeps it from colliding with any steer's spelling.
+**Not built: listening while he speaks.** An open mic would hear his own voice, so interrupting him means pressing the mic. **"Last 90 days" is not a defined window**, so, spoken or typed, it goes to George as a question.

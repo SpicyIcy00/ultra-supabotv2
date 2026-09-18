@@ -178,7 +178,7 @@ export function unsaid(caveat: string | null | undefined, said: string): string 
     .join(' ');
 }
 
-export function Reading({ text, notices, reading, calls, onFigure, part = 'all', standing, caveat: shownCaveat }: {
+export function Reading({ text, notices, reading, calls, onFigure, part = 'all', standing, caveat: shownCaveat, speaking }: {
   /** The turn's own words. Streaming, so it fills as he speaks. */
   text: string | null | undefined;
   /** The turn's caveats, already filtered to the ones no object carries. */
@@ -202,6 +202,8 @@ export function Reading({ text, notices, reading, calls, onFigure, part = 'all',
    * (`beside.caveatUnshown`). Absent, the caveat less the answer's own repeats.
    */
   caveat?: string;
+  /** He is reading the claim aloud (P2S.5(c)): it is lit while he does. */
+  speaking?: boolean;
 }) {
   // HIS EMPHASIS IS DRAWN, NOT PRINTED. He writes `**the point**`; the frame
   // check (ops/frames.py, P2S.1) showed the asterisks in the claim. The markers
@@ -241,7 +243,8 @@ export function Reading({ text, notices, reading, calls, onFigure, part = 'all',
         <div className="r-reading-caveats"><Caveats notices={notices} /></div>
       )}
       {parts.claimRaw && (
-        <h2 className="r-say r-say--claim" data-part="claim">
+        <h2 className="r-say r-say--claim" data-part="claim"
+            data-speaking={speaking ? 'yes' : undefined}>
           {lit ? (
             <>
               <Figures text={lit.before} {...pieces} />

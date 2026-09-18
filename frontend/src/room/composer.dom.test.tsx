@@ -283,7 +283,9 @@ describe('what is held above the line', () => {
     expect(line.querySelector('input')!.compareDocumentPosition(chip!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('draws no mic — P2S.5 builds voice, and a dead button teaches nothing works', () => {
+  it('draws no mic where nothing receives what is said — a dead button teaches nothing works', () => {
+    // The room passes `onSay` (P2S.5, voice.dom.test.tsx); without it there is
+    // nowhere for spoken words to go, so there is no mic.
     mount({ subjects: [] });
     expect(document.querySelector('.r-mic, [aria-label*="Speak" i], [title*="Speak" i]')).toBeNull();
   });

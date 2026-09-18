@@ -4,6 +4,7 @@ Frames: the room and the design, rendered side by side in a real browser.
     .venv\Scripts\python.exe ops/frames.py                      # situation, doing, nothing
     .venv\Scripts\python.exe ops/frames.py --scenes draw memory # a later card's scenes
     .venv\Scripts\python.exe ops/frames.py --out verification/frames/p2s1
+    .venv\Scripts\python.exe ops/frames.py --scenes doing --voice --out verification/frames/p2s5
 
 WHY THIS EXISTS. Nine cards in a row closed with "nobody has seen it in a
 browser", and every layout test in the suite runs in jsdom, which does no
@@ -391,7 +392,7 @@ MEASURE = r"""
 
 
 async def run(scenes: list[str], out: Path, sizes: dict[int, int], cdp_port: int, base: str,
-              lit: str | None = None, layout: str | None = None) -> dict:
+              lit: str | None = None, layout: str | None = None, voice: bool = False) -> dict:
     import websockets
 
     def new_tab() -> str:
@@ -430,6 +431,30 @@ async def run(scenes: list[str], out: Path, sizes: dict[int, int], cdp_port: int
                             " return !!m; })()"):
                         await asyncio.sleep(0.6)
                         await page.shot(out / f"{stem}-touch.png")
+                    # VOICE (P2S.5): two shops tapped, the mic held, a phrase
+                    # half heard — the composer listening, beside the design's mic.
+                    if voice and rail == "open":
+                        await page.goto(f"{base}/frames.html?scene={scene}&rail={rail}&voice=listening",
+                                        width, height, 0.5)
+                        for _ in range(120):
+                            if await page.eval("!!document.querySelector('.r-mic')"):
+                                break
+                            await asyncio.sleep(0.5)
+                        await asyncio.sleep(3.5)
+                        await page.eval(
+                            "(() => { const names = [...document.querySelectorAll('button.r-mk-name--tap')];"
+                            " const seen = new Set(); for (const b of names) {"
+                            "   if (seen.size >= 2 || seen.has(b.textContent)) continue;"
+                            "   seen.add(b.textContent); b.click(); }"
+                            " const m = document.querySelector('.r-mic');"
+                            " m.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true, pointerId: 1}));"
+                            " return true; })()")
+                        await asyncio.sleep(1.0)
+                        await page.shot(out / f"{stem}-voice.png")
+                        measured[f"{stem}-voice"] = await page.eval(
+                            "(() => ({ mic: document.querySelector('.r-mic')?.getAttribute('data-state'),"
+                            " line: document.querySelector('.r-line input')?.value,"
+                            " chips: [...document.querySelectorAll('.r-chip--subject')].map(c => c.textContent) }))()")
                     # THE DESIGN, the same scene, the sidebar set the same way
                     await page.goto(design, width, height, 2.5)
                     await page.eval(
@@ -484,6 +509,8 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--widths", nargs="+", type=int, default=[1440, 1920])
     ap.add_argument("--lit", default=None, help="a name to emphasise on every block (draws ringed swatches)")
     ap.add_argument("--layout", default=None, choices=["beside", "speak"], help="which composition to render")
+    ap.add_argument("--voice", action="store_true",
+                    help="also shoot the composer listening: two shops tapped, the mic held (P2S.5)")
     args = ap.parse_args(argv)
 
     out = ROOT / args.out
@@ -504,7 +531,7 @@ def main(argv: list[str]) -> int:
         chrome = start_chrome(cdp_port, profile)
         wait_http(f"http://127.0.0.1:{cdp_port}/json/version", 30)
         sizes = {w: SIZES.get(w, 1080) for w in args.widths}
-        measured = asyncio.run(run(scenes, out, sizes, cdp_port, base, args.lit, args.layout))
+        measured = asyncio.run(run(scenes, out, sizes, cdp_port, base, args.lit, args.layout, args.voice))
     finally:
         if chrome:
             chrome.terminate()
@@ -521,6 +548,9 @@ def main(argv: list[str]) -> int:
     for stem, m in measured.items():
         if not m:
             print(f"{stem:<24} (nothing measured)")
+            continue
+        if stem.endswith("-voice"):
+            print(f"{stem:<24} mic {m.get('mic')} · line {m.get('line')!r} · chips {m.get('chips')}")
             continue
         cols = "/".join(str(round(c)) for c in m.get("columns_px") or [])
         off = m.get("centre_offset_px")

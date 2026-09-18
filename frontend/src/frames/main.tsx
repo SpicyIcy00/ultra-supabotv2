@@ -92,6 +92,27 @@ const george = {
   presence: 'idle', live: null, composer: null,
 } as unknown as GeorgeContext;
 
+// ?voice=listening (P2S.5): a recogniser that hears "compare these two" and
+// keeps listening, so `ops/frames.py --voice` can hold the mic and shoot the
+// composer mid-phrase. Headless Chrome has no microphone to give a real one.
+if (params.get('voice') === 'listening') {
+  class Heard {
+    continuous = false; interimResults = false; lang = '';
+    onresult: ((e: unknown) => void) | null = null;
+    onerror: ((e: unknown) => void) | null = null;
+    onend: (() => void) | null = null;
+    start() {
+      setTimeout(() => this.onresult?.({
+        results: [Object.assign([{ transcript: 'compare these two' }], { isFinal: false })],
+      }), 250);
+    }
+    stop() { /* the frame is taken while it is still held */ }
+    abort() { /* nothing to let go of */ }
+  }
+  // Both names: Chrome now ships the standard one too, and the room takes it first.
+  Object.assign(window, { SpeechRecognition: Heard, webkitSpeechRecognition: Heard });
+}
+
 const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

@@ -23,6 +23,8 @@ import { accept, bind, offered, openMention, worthReading, type Bound } from './
 import { accepted, ghostFor, type Ghost } from './ghosts';
 import type { DrawnToken } from './tokenShape';
 import type { Subject } from './subjects';
+import { HandsFree, MicButton, VoiceNote, useVoice } from './Mic';
+import type { RecognitionCtor } from './voice';
 
 export interface NamedReference {
   kind: string;
@@ -87,6 +89,19 @@ export interface ComposerProps {
    * is the Room's.
    */
   steer?: ReactNode;
+  /**
+   * SPEAKING (P2S.5). What was heard, sent as though it had been typed — the
+   * room points this at the same `ask` Enter reaches, so what is picked
+   * travels with it and a spoken steer replays like a typed one. Absent, no
+   * mic is drawn.
+   */
+  onSay?(text: string): void;
+  /** Injected in tests; left out, the browser's own recogniser (or none). */
+  recognition?: RecognitionCtor | null;
+  /** Hands-free: each answer that lands is read aloud, the claim only. */
+  handsFree?: boolean;
+  /** Absent where this browser cannot read aloud, and then no switch is drawn. */
+  onHandsFree?(on: boolean): void;
 }
 
 export function Composer(p: ComposerProps) {
@@ -96,6 +111,14 @@ export function Composer(p: ComposerProps) {
   // Dismissed with Escape, and re-opened by typing. Without this the menu
   // cannot be got rid of while a mention is still under the caret.
   const [shut, setShut] = useState(false);
+  const voice = useVoice({
+    recognition: p.recognition,
+    draft: p.draft,
+    onDraft: p.onDraft,
+    onSay: (text) => p.onSay?.(text),
+    handsFree: Boolean(p.handsFree),
+    input,
+  });
 
   const open = useMemo(
     () => (shut ? null : openMention(p.draft, caret, p.defs)),
@@ -292,7 +315,11 @@ export function Composer(p: ComposerProps) {
           </div>
         )}
 
-        <div className="r-line">
+        {/* WHAT VOICE HAS TO SAY ABOUT ITSELF, in one line: a failure, or that
+            this browser has none (P2S.5(d), (e)). */}
+        <VoiceNote voice={voice} offered={Boolean(p.onSay)} />
+
+        <div className="r-line" data-voice={voice.listening ? 'listening' : undefined}>
           {/* THE GHOST SITS UNDER THE INPUT, in the same box with the same
               type, so the grey continues the line rather than sitting beside
               it. What has been typed is drawn transparent here — it is the
@@ -312,12 +339,14 @@ export function Composer(p: ComposerProps) {
               ref={input}
               value={p.draft}
               placeholder={
-                p.subjects.length ? 'say what to do with these'
+                voice.listening ? 'listening…'
+                  : p.subjects.length ? 'say what to do with these'
                   : p.busy ? 'you can redirect while he reads'
                   : 'say what you mean · “why?” · “these two” · “last 90 days”'
               }
               onChange={(e) => {
                 setShut(false);
+                voice.clear();
                 p.onDraft(e.target.value);
                 setCaret(e.target.selectionStart ?? e.target.value.length);
               }}
@@ -329,8 +358,10 @@ export function Composer(p: ComposerProps) {
             />
           </span>
           {p.steer && <div className="r-steer">{p.steer}</div>}
-          {/* NO MIC YET. The design draws one here; P2S.5 builds voice, and a
-              button that does nothing teaches that buttons do nothing. */}
+          {/* THE MIC, WHERE THE DESIGN DRAWS IT: between the chips and ↑
+              (P2S.5). Not drawn where the browser cannot hear. */}
+          {p.onHandsFree && <HandsFree on={Boolean(p.handsFree)} onChange={p.onHandsFree} />}
+          {p.onSay && <MicButton voice={voice} />}
           {p.busy ? (
             <button type="button" className="r-send" onClick={p.onStop}
                     title="Stop" aria-label="Stop">■</button>
