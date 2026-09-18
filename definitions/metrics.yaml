@@ -1334,6 +1334,22 @@ investigation:
   # So an investigation is opened by the INTENT, not by a word. Prompt
   # vocabulary: it executes nothing and matches nothing, and the verbs below
   # are examples of the intent rather than a list to test a message against.
+  # UNDERSTANDING, NOT BREADCRUMBS (2026-09-18). The owner, the same day
+  # P2S.6 was built: "George doesn't wait for me to ask the next obvious
+  # question. When I ask about an area of the business, George investigates
+  # it far enough to understand what is happening before responding. When
+  # George discovers something important, he investigates the likely
+  # drivers, checks relevant explanations, determines whether it actually
+  # matters, and forms a view. George brings me understanding, not
+  # breadcrumbs. I should ask follow-up questions because I want to steer,
+  # challenge, explore, decide or act — not because George made me ask
+  # 'why?' five times to get to the useful part."
+  principle: >
+    UNDERSTANDING, NOT BREADCRUMBS: asked about an area, investigate it far
+    enough to understand what is happening before you answer. Their next
+    question should steer, challenge, decide or act — never a "why?" you
+    could have answered.
+
   opens_when:
     executes_nothing: true
     introduced: "2026-09-16"
@@ -1349,8 +1365,9 @@ investigation:
       or not
     not_gated_on_the_word: why
     # The message asks for a figure to be TAKEN APART rather than looked up.
-    asks_to_be_taken_apart: [why, what happened, analyze, look into,
-                             break it down, dig into, go deep, in depth]
+    # Cut from eight to four in P2S.6 (2026-09-18): anything shown that moved
+    # is investigated now, so these are examples of asking, not the gate.
+    asks_to_be_taken_apart: [why, what happened, analyze, dig into]
     # And the kinds of message that carry the same request without a verb:
     # an intent is investigated for what it implies, an observation is
     # verified the way the ladder verifies a premise.
@@ -1395,6 +1412,21 @@ investigation:
       # P2S.6 `stop_when` listed "one driver clearly dominates" before this
       # rung could run, so "it's transactions" ended the turn and the check
       # that would say WHEN they were lost was handed to the owner as `next`.
+    # CHECK (2026-09-18, the owner's "checks relevant explanations"). Before
+    # an explanation is offered, the ones the data CAN test are tested, with
+    # reads that already exist. The simulation of 2026-09-18 is why: OPUS
+    # "fell 15.9%" against a week holding the 31 Aug holiday Monday, and
+    # nothing let George see it — the time read is never differenced, and no
+    # definition names holidays. Reading the baseline window's own days as a
+    # SERIES (characterised, never subtracted) shows a week with one day far
+    # out of line; a holiday calendar is its own card.
+    check:
+      establishes: "whether an explanation the data can test holds, before one is offered"
+      explanations:
+        estate_or_shop: "the other shops, already read — the estate, or this shop?"
+        empty_shelf: "the stock record of the lines that fell — an empty shelf?"
+        unusual_baseline: "the comparison window's own days, as a series — an unusual baseline?"
+      unchecked: "one it cannot test is said as unchecked, never as the reason"
     explain:
       establishes: "what the reads establish, said as what they are"
       registers:
@@ -1402,6 +1434,10 @@ investigation:
         derived_fact:   "a figure a tool computed from others — ATP, change_pct"
         inference:      "a reading of measured figures — 'so basket value is the stronger measured driver'"
         recommendation: "what you would do, or the check no read can make — 'a count of the shelf would settle it'; never a read George could have made himself"
+      # WHETHER IT MATTERS (2026-09-18, "determines whether it actually
+      # matters"). A reading, not a threshold: its size against the shop's
+      # own week and the estate's, and whether it is local or estate-wide.
+      matters: "large or small against the shop's week and the estate's, and local or estate-wide"
       causality: >
         Localization is not cause. "The largest measured revenue declines
         were A and B" is a fact; "customers switched away from premium
@@ -1462,7 +1498,9 @@ investigation:
         # 5 → 7 (P2S.6): three headline reads, get_attention, and one call per
         # localizing dimension across both shops (group_by [store, day] with
         # the two shops filtered is one call, not two).
-        max_reads: 7
+        # 7 → 9 (2026-09-18): the CHECK round — the baseline's days and the
+        # stock record for the lines that fell.
+        max_reads: 9
         # WHAT A BROAD TURN MAY COST, checked on the eval turn and nowhere in
         # production (production does not meter a turn against a ceiling).
         # Set 2026-09-18 by the owner's "i care more about cost then fast
@@ -1470,7 +1508,8 @@ investigation:
         # investigating in the same turn replaces the "why?" that followed it.
         eval_cost_ceiling_usd: 0.50
         never: >
-          a read per subject; a second window; a metric no finding rests on
+          a read per subject; a second window other than the baseline's own
+          days read to check it; a metric no finding rests on
         # A GROUP TOTAL IS A READ, NOT A SUM (2026-09-09, from the live
         # dogfood). A store-grouped read returns one row per shop and NO
         # total: `meta` carries the window, the comparison and the row count,
@@ -1484,7 +1523,9 @@ investigation:
       focused:
         means: the message names a subject, a metric, a dimension or a window
         reads: the smallest set that completely answers it
-        max_reads: 4
+        # 4 → 6 (2026-09-18): a focused question taken apart now localizes
+        # and checks, as a broad one does, inside a smaller budget.
+        max_reads: 6
         # ASKED TO BE TAKEN APART, THE SMALLEST SET IS NOT ONE READ (P2.m,
         # 2026-09-16). "the smallest set that completely answers it" is the
         # right instruction for a lookup and the wrong one for "analyze X per
@@ -1562,8 +1603,10 @@ investigation:
         current investigation rather than starting a new one
       morning: >
         "what should I look at", "what changed", "anything I should know",
-        the day's opening — read get_attention ONCE and answer one line per
-        thing that changed, ranked as it ranks them; when it is silent, say
+        the day's opening — read get_attention and take apart the thing it
+        ranks first before answering one line per thing that changed; ranked
+        as it ranks them (P2S.6: the morning was a list of what moved with no
+        why, against STANDARD §1); when it is silent, say
         so in one line and stop, and name a blind sense rather than letting
         its silence read as calm
   attribution_math: not_supported

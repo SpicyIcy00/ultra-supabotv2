@@ -65,8 +65,11 @@ def test_an_investigation_is_opened_by_an_intent_and_not_by_a_word():
     # The word it used to be gated on is one example among several, not the
     # gate: if it is the only one, nothing has changed.
     assert "why" in verbs and len(verbs) > 1
-    for v in ("analyze", "look into", "break it down", "in depth"):
+    # Four since P2S.6 (2026-09-18): anything shown that moved is investigated
+    # whether or not a verb asked, so these are examples, not the gate.
+    for v in ("analyze", "dig into"):
         assert v in verbs, v
+    assert "asked or not" in req(OPENS, "what_is_shown_that_moved")
 
 
 def test_the_kinds_that_open_one_are_kinds_a_message_can_be():
@@ -114,7 +117,8 @@ def test_a_focused_message_asked_to_be_taken_apart_gets_a_second_read():
 
 
 def test_the_ladder_is_the_five_rungs_in_order():
-    assert list(req(INV, "ladder")) == ["verify", "decompose", "localize", "explain", "next"]
+    # CHECK joined 2026-09-18 — the owner's "checks relevant explanations".
+    assert list(req(INV, "ladder")) == ["verify", "decompose", "localize", "check", "explain", "next"]
     for rung in INV["ladder"].values():
         assert rung["establishes"], rung
 
@@ -402,7 +406,47 @@ def test_the_persona_no_longer_waits():
     assert "and wait" not in prompt
     assert "you do the looking yourself" in prompt
     assert "You read without asking and act on nothing alone" in prompt
-    assert "make the obvious next read yourself instead of offering it" in prompt
+    assert "UNDERSTANDING, NOT BREADCRUMBS" in prompt
+
+
+def test_understanding_not_breadcrumbs_is_the_owners_principle_rendered():
+    """
+    The owner, 2026-09-18: "George brings me understanding, not breadcrumbs.
+    I should ask follow-up questions because I want to steer, challenge,
+    explore, decide or act". The prompt renders the yaml's sentence whole.
+    """
+    principle = " ".join(req(INV, "principle").split())
+    assert principle in _prompt()
+    assert "steer, challenge, decide or act" in principle
+
+
+def test_explanations_the_data_can_test_are_tested_before_one_is_offered():
+    """
+    CHECK, 2026-09-18. The simulation that day: OPUS "fell 15.9%" against a
+    week holding the 31 Aug holiday Monday, and nothing let George see it.
+    Each explanation names a read that already exists, and the prompt says
+    all of them, plus what to do with one it cannot test.
+    """
+    chk = req(INV, "ladder.check")
+    assert set(req(chk, "explanations")) == {"estate_or_shop", "empty_shelf", "unusual_baseline"}
+    prompt = _prompt()
+    for text in req(chk, "explanations").values():
+        assert text in prompt, text
+    assert req(chk, "unchecked") in prompt
+    assert req(INV, "ladder.explain.matters") in prompt
+    # The baseline's own days are the ONE second window a broad read may make.
+    assert "baseline's own" in req(INV, "scope.kinds.broad.never")
+
+
+def test_the_morning_takes_apart_what_it_ranks_first():
+    """
+    The morning was "read get_attention ONCE and answer one line per thing",
+    so it listed what moved with no why — STANDARD §1, unmet. The line the
+    model reads is cut at the first comma, so the dig must be before it.
+    """
+    line = [l for l in _prompt().splitlines() if l.strip().startswith("MORNING")][0]
+    assert "take apart the thing it ranks first" in line
+    assert "ONCE" not in line
 
 
 def test_next_is_never_a_read_he_could_have_made():

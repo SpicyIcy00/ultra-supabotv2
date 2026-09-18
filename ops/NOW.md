@@ -2949,6 +2949,30 @@ cleanup; he decides.
       whether a new shape is drawn; the two P2.m questions are unasked; no
       eval checks that `next` names no read (the owner tests that himself,
       2026-09-18); the cost ceiling is checked on eval turns only.
+      **EXTENDED THE SAME DAY — "understanding, not breadcrumbs".** Shown a
+      simulation of eight questions run on real reads, the owner: *"George
+      doesn't wait for me to ask the next obvious question … investigates the
+      likely drivers, checks relevant explanations, determines whether it
+      actually matters, and forms a view … not because George made me ask
+      'why?' five times"*. Built: `investigation.principle` rendered at the
+      head of INVESTIGATING; a **CHECK** rung (the other shops — estate or
+      this shop; the stock record of the lines that fell — an empty shelf;
+      the baseline's own days as a series — an unusual baseline; an untested
+      explanation said as unchecked); **MATTERS** under EXPLAIN; the morning
+      takes apart what `get_attention` ranks first (it read ONCE and listed);
+      `asks` steer, challenge, decide or act. Budgets `broad.max_reads` 7 → 9,
+      `focused.max_reads` 4 → 6. Prompt **1,797 words**, prohibitions 14;
+      paid for by cutting the P2.m verb list to four examples, two lines the
+      `compose` and `record_belief` schemas already carry, and repeats.
+      **Pure 1,875 → 1,878.** **The re-simulation changed three of five
+      answers:** North Edsa's −46% morning flag is a flattered comparison
+      (last Thursday did 84 transactions against its usual 40s — yesterday's
+      45 is normal); OPUS's −15.9% compares against a week whose Monday, 31
+      Aug, was far above every other weekday; and the Kiamoy Strips/White
+      falls at OPUS and Greenhills line up with stock-outs, the barn out of
+      Kiamoy White seven days running. **Not run live; a broad turn now
+      likely reads 9 times over ~5 model rounds, so the $0.50 ceiling is at
+      risk and is held, not raised.**
 - [ ] **P2S.4 same-store year-over-year** — **was P2.i, kept by the merge
       2026-09-17 because it changes what George can SAY, not how it looks,
       and so is untouched by the redraw.** It may be taken ahead of any P2S
