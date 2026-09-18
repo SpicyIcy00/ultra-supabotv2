@@ -1422,15 +1422,11 @@
   box-shadow: 0 0 0 2px var(--ground), 0 0 0 3px var(--ring);
 }
 /* THE ROW HE POINTED AT GAINS; NOTHING ELSE LOSES (the owner, 2026-09-18: "use
-   other methods to emphasize … maybe color to highlight it just dont desaturate
-   or lower other things"). A band of his own colour behind it — `--george`, the
-   colour already meaning "the one he pointed at" — with its name in weight. */
-.r-mk[data-emphasis="yes"] [data-lit="yes"]:is(.r-mk-row, .r-mk-col, .r-mk-multiple),
-.r-spec-bar[data-lit="yes"], tr[data-lit="yes"] {
-  background: rgba(var(--george), 0.07);
-  box-shadow: 0 0 0 4px rgba(var(--george), 0.07);
-  border-radius: 4px;
-}
+   other methods to emphasize … just dont desaturate or lower other things").
+   Its name in weight and its swatch ringed — and NO BAND behind it: a band of
+   `--george` was tried the same day and the owner's screenshots came back with
+   "wtf happend here dont do that" — on the dark ground it read as grey boxes,
+   and neighbouring lit rows stacked into a slab. */
 tr[data-lit="yes"] td { font-weight: 600; }
 .r-mk-series { display: inline-flex; align-items: center; color: var(--ink-2); }
 

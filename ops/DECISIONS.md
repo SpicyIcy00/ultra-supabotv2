@@ -4632,3 +4632,4 @@ Reverses 2026-09-17's "a sentence about a chart with its own thought stays with 
 At the owner's word (`f7335f1`): *"dont desaturate or lower other things to emphsize something else"*. This finishes 2026-09-15's "all stores still matter" (dimming 0.5 → 0.75) by ending dimming: `COOL` is 1, and the grammar's `litness` is a hit test, never an opacity.
 **What stands out gains**: weight, a ringed swatch, and a band of `--george`, the colour already meaning "the one he pointed at". Not the accent, which stays "needs you" (UI rule 5).
 **All of his prose is `--ink`.** Grey is the frame's (labels, ticks, read-times), and `ink.test.ts` holds the list of his classes.
+**Amended the same day: no band.** The `--george` band behind a lit row was refused on sight (*"wtf happend here dont do that"*); it read as grey slabs on the dark ground. Emphasis is weight and a ringed swatch only, and `ink.test.ts` forbids a background or shadow on a lit row.

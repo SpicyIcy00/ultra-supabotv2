@@ -132,7 +132,7 @@ function paint(node: SpecNode, row: Record<string, unknown>): string {
 /**
  * WHETHER THIS IS THE ROW HE POINTED AT — true for every row when he pointed at
  * none. Never an opacity: nothing is dimmed to light something else (the owner,
- * 2026-09-18); the row gains a band (`data-lit`) and the others keep theirs.
+ * 2026-09-18); the row is marked (`data-lit`) and the others keep theirs.
  */
 function hit(node: SpecNode, row: Record<string, unknown>): boolean {
   if (!node.emphasise) return true;

@@ -43,8 +43,8 @@ export function wash(c: DataColour, strength: number): string {
  * 1 SINCE 2026-09-18 — nothing is lowered to light something else (the owner:
  * *"just use other methods to emphasize things … just dont desaturate or lower
  * other things to emphsize something else"*). The row he points at is lit by
- * what it GAINS — bold, its swatch ringed, a band of his own colour behind it
- * (`[data-lit="yes"]` in room.css) — and every other row stays as it is.
+ * what it GAINS — bold, its swatch ringed — and every other row stays as it is.
+ * No band behind it: tried the same day, and refused (`ink.test.ts`).
  */
 export const COOL = 1;
 

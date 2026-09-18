@@ -401,6 +401,14 @@ swatch ringed; list items and paragraphs under him stay lines. Grey is left to
 labels, axis ticks and read-times — the frame, not his words. Held by
 `ink.test.ts`; frame-checked at 1440.
 
+**And the band was refused the same day.** Three screenshots of the live
+`f7335f1` build — the lit rows of a bar chart, a dumbbell and a stock table —
+and *"wtf happend here dont do that"*. On the dark ground the `--george` band
+read as grey slabs, and neighbouring lit rows stacked into one. **Removed**:
+the row he points at keeps its weight and ringed swatch, nothing behind it, and
+nothing else dimmed; `ink.test.ts` now fails on any background or shadow on a
+lit row.
+
 ### 2026-09-18 — "if its stating whats already stated or shown in the page … then dont make it say that"
 
 > *"ok what is more from george text tho we just fixed? if its stating whats already stated or shown in the page (meaning charts section) then dont make it say that"*

@@ -9,7 +9,8 @@
  *
  * Held here: every class George's prose is drawn in uses the full ink; no row,
  * figure or tile is drawn at reduced opacity for being the one he did not point
- * at; and the one he did point at gains a band of his colour.
+ * at; and the one he did point at gains weight and a ringed swatch, never a
+ * band behind it (tried and refused the same day).
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -68,13 +69,17 @@ describe('nothing is lowered to light something else', () => {
     expect(top('.r-tile--quiet', 'opacity')).toBe('1');
   });
 
-  it('the row he pointed at gains a band of his colour', () => {
-    let band: string | undefined;
+  it('the row he pointed at gains weight and a ring, and no band behind it', () => {
+    // A band was tried and refused the same day: "wtf happend here dont do that".
+    const banded: string[] = [];
     CSS.walkRules((rule) => {
-      if (rule.selector.includes('tr[data-lit="yes"]') && rule.selector.includes('.r-spec-bar[data-lit="yes"]')) {
-        rule.walkDecls('background', (d) => { band = d.value; });
-      }
+      if (!rule.selector.includes('[data-lit="yes"]')) return;
+      rule.walkDecls(/^(background|box-shadow)$/, (d) => {
+        if (!rule.selector.includes('.r-sw')) banded.push(`${rule.selector} { ${d.prop}: ${d.value} }`);
+      });
     });
-    expect(band).toMatch(/rgba\(var\(--george\)/);
+    expect(banded).toEqual([]);
+    expect(top('.r-mk-row[data-lit="yes"] .r-mk-name', 'font-weight')).toBe('600');
+    expect(top('tr[data-lit="yes"] td', 'font-weight')).toBe('600');
   });
 });
