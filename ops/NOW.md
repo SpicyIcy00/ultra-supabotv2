@@ -267,7 +267,7 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2S.4`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Four live runs across 14 open cards, $4.30** (P2S.6 and P2S.7 subsets and the two full closes; P2S.3's subset was spent 2026-09-17, $0.72 against $0.64) — P2.m closed 2026-09-16 and **its own run has not been made**, so the paragraph below it is the record of what that costs — the two
+its own numbers. **Seven live runs across 17 open cards, $6.22** (P2S.6, P2S.7, P2S.8, P2S.9 and P2S.10 subsets and the two full closes; P2S.3's subset was spent 2026-09-17, $0.72 against $0.64) — P2.m closed 2026-09-16 and **its own run has not been made**, so the paragraph below it is the record of what that costs — the two
 phase closes still to come, at $1.51 each on v2, the measured price.
 Every remaining gate was dropped or absorbed, so two FULL runs is the whole
 of it.
@@ -3110,6 +3110,71 @@ cleanup; he decides.
       products, 74k characters to the model (≈$0.13 a turn a 50-row default
       would save — measured, not cut, at the owner's word). Pure 1,883 →
       1,927 here, vitest 924 → 927. Prompt 1,793 → 1,798 words.
+- [ ] **P2S.8 the answer is a page under the mark** — written 2026-09-18 at the
+      owner's word: *"it still builds widgets in mind when i think it should
+      build more page like more loose … text and blob on top and build below
+      it"*, after *"its does feel slow and really rough, it didn't feel like it
+      was investigating"* (dogfood log, 2026-09-18). The render he approved:
+      https://claude.ai/artifact/MmucV72EaL4yDHYagFXchS — his real 18 Sep
+      morning answer, redrawn. **(a)** the mark and the headline on top; the
+      headline settles last, and until then a line says what he is doing.
+      **(b)** each block is a SECTION in the order it arrived: his claim as the
+      heading, his thought as the paragraph, the chart under it sized to what it
+      needs, never a boxed tile or a column grid; a block changed later changes
+      where it stands. **(c)** reads that landed and are not written up yet are a
+      small line under the page, and become a section when he writes one.
+      **(d)** caveat, next and asks at the foot; a notice that may make a figure
+      wrong stays above its chart (UI rule 4). **(e)** then the one change to
+      what he writes: the separate summary paragraph goes, each finding is
+      written once, in its section. Replaces the beside room's layout — the
+      owner's decision, recorded in DECISIONS.md; the 2026-09-17 `?layout=speak`
+      he turned down was text under the mark, not this.
+      **Done when:** frames of the recorded morning, broad and lookup answers at
+      1440 and phone width beside the render; nothing drawn earlier moves as a
+      turn builds (a dom test on a replayed frame sequence); tsc and vitest
+      green; on the live gate the trust rows hold and output tokens per turn are
+      reported against `p2s7-gate-2.json`. **eval: subset** — for (e) only.
+- [ ] **P2S.9 fewer rounds for the same work** — the owner, 2026-09-18: *"is
+      our tool use really optimized?"* Measured on `verification/p2s7-gate-2.json`
+      (7 questions, 422 s, $1.91): 65 rounds for 81 reads across both runs,
+      ~14 s a round; spend 47% cache writes, 31% output, 22% cache reads; the
+      reads themselves cost nothing. Three fixes that change no function:
+      **(a) no empty last round** — when a round's only calls are compose and
+      the answer is written, the turn ends there instead of sending the compose
+      back for a closing line (42 s of 422 s); **(b) the three drivers in one
+      read** — net sales, transactions and basket compared, one call, the rows
+      carrying all three (`metric_sets.sales_headline` already names them as one
+      set; asked as three reads in 4 of 7 answers); **(c) shorter receipts for
+      the model** — 59% of what he reads is `meta`, most of it explanatory
+      notes repeated on every read; the model's copy keeps source, filters,
+      window, read time and every notice, the long notes once per turn, and the
+      person's receipts are untouched. **Done when:** on the live gate every
+      trust row holds, and time and cost per turn are reported against
+      `p2s7-gate-2.json` beside the estimate (about 10% faster, 10–15%
+      cheaper), the shortfall named. **eval: subset**.
+- [ ] **P2S.10 three tools where he now makes many reads** — the owner,
+      2026-09-18: *"build more case specific tools … based of the things were
+      testing and the logs cause they might help other questions too"*. Across
+      177 recorded test turns the same reads recur piece by piece: one shop's
+      three drivers compared (37–62 turns), every shop compared (25), a shop's
+      products that moved (25), a shop by day (16), a shop's stock and
+      replenishment (17–21). **First, the real log** — the same count over the
+      owner's own questions in `george.conversations` for 30 days, read-only, so
+      the tools fit what he asks, not what the tests ask. **Then, at most three
+      tools, each replacing calls rather than adding a choice:** (1) *how did
+      this change, and where* — for a shop or the estate: the drivers, the days,
+      the products that moved most, and whether those were on the shelf, in one
+      read; (2) *every shop at a glance* — the three drivers for all shops,
+      compared, one read; (3) *a shop's stock health* — running low, the
+      replenishment list and the broken (negative) counts together. Each built
+      from the existing vetted reads (as `get_object` is), definitions in the
+      yaml, `{rows, meta}` with receipts on every figure — no new SQL path, no
+      model-written query (the owner, 2026-09-18: *"No we wont do that"*).
+      **Done when:** the log count is in the card's close; on the live gate
+      "how are we doing", the morning and "analyze" take fewer rounds, every
+      trust row holds, and time and cost are reported against
+      `p2s7-gate-2.json` beside the estimate (about 30 s faster and 15–25%
+      cheaper on those three). **eval: subset**.
 - [ ] **P2S.4 same-store year-over-year** — **was P2.i, kept by the merge
       2026-09-17 because it changes what George can SAY, not how it looks,
       and so is untouched by the redraw.** It may be taken ahead of any P2S
