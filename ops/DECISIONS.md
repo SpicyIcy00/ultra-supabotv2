@@ -4638,3 +4638,9 @@ At the owner's word (`f7335f1`): *"dont desaturate or lower other things to emph
 
 At the owner's word (*"that should only be the headline and suggestions what to do next … that should be with those charts"*): the left column is the question, the headline, `next`, the asks and the offers. His analysis sentences and caveat go on the chart the headline rests on (`wordsOnCharts`). They are under him only when the turn drew no chart. This supersedes the morning's "draw the rest under him" (`5b40454`); the chart-repeat filter (`f13df40`) still applies.
 **Amended within the hour** (*"no not on top and before of the charts with the charts thats it related to. and if its not related then it can go under the blob"*): `wordsOnCharts` is deleted. A sentence about a chart goes under that chart, and a sentence about no chart goes under him. "About" is still the figures a sentence cites, so a chart sentence with no numeral stays under him. Only George writing into each chart's thought fixes that.
+
+## 2026-09-18 · No card runs its own test; the phase close is the test
+
+The owner: *"revise the plan no more tests ill do it at the end of the phase"*. P2S.9, P2S.10 and P2S.11 lose their subset runs, and the P2S.✓ full run checks everything the phase changed. It names which card any failure came from. Eval spend left: $6.22 → $3.02, the two phase closes.
+**P2S.6 and P2S.7 are closed as built.** Both are live, and their only open condition was their own trust run, which is now the close's. The known failure to beat there is the morning's "₱25–45k".
+**The trade, said plainly:** a regression surfaces at the close with up to six cards behind it, where a per-card run would have caught it at its own card. The owner chose that knowingly.
