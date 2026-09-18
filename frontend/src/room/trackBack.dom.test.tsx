@@ -17,7 +17,7 @@ import { join } from 'node:path';
 import postcss from 'postcss';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/react';
-import { thoughtsOf } from './beside';
+import { caveatUnshown, thoughtsOf } from './beside';
 import { Reading } from './Reading';
 import { questionsOf } from './history';
 
@@ -71,6 +71,53 @@ describe('"whats more from george? why is it hiding?"', () => {
   it('keeps a stray marker he did not close, as he wrote it', () => {
     const got = thoughtsOf('It fell. A lone ** here.', 'It fell.', []);
     expect(got.unbound).toBe('A lone ** here.');
+  });
+});
+
+describe('"if its stating whats already stated or shown in the page … dont make it say that"', () => {
+  const META = { source_table: 'new_transactions', snapshot_timestamp: '2026-09-18T06:00:00Z', filters_applied: [] };
+  const CALLS = [
+    { seq: 0, tool: 'get_sales', arguments: {}, result: { rows: [{ store: 'OPUS', value: 467102, change_pct: -15.9 }], meta: META } },
+    { seq: 1, tool: 'get_sales', arguments: {}, result: { rows: [{ store: 'North Edsa', value: 16230, hours: 11 }], meta: META } },
+  ] as never;
+  const CLAIM = 'the dip is one outsized Monday at OPUS';
+
+  it('draws nothing a chart already says, and keeps what no chart shows', () => {
+    const text = 'Yes — the dip is one outsized Monday at OPUS. '
+      + 'OPUS fell to ₱467,102, down 15.9%. So it is one shop. '          // chart 0, and what carries on from it
+      + 'North Edsa took ₱16,230 yesterday. '                             // read 1, not drawn
+      + 'I cannot establish the cause from here.';
+    const got = thoughtsOf(text, CLAIM, CALLS, new Set([0]), { drawn: new Set([0]), said: [] });
+    expect(got.unbound).toBe('North Edsa took ₱16,230 yesterday. I cannot establish the cause from here.');
+    expect(got.bySeq.size).toBe(0);
+  });
+
+  it('draws nothing his next step, his questions or a chart title already say', () => {
+    const next = 'Ask the North Edsa team what changed on the 14th, and have the barn recount F9.';
+    const text = `Yes — the dip is one outsized Monday at OPUS. Nothing else moved. ${next.replace('Ask', 'I would ask')}`;
+    const got = thoughtsOf(text, CLAIM, CALLS, new Set(), { drawn: new Set(), said: [next] });
+    expect(got.unbound).toBe('Nothing else moved.');
+  });
+
+  it('takes a heading with the lines it heads, and draws no list marker', () => {
+    const text = 'Yes — the dip is one outsized Monday at OPUS.\n\nWhere it sits:\n\n'
+      + '- **It is one shop.**\n- OPUS fell to ₱467,102.\n\n- **The cause is open.**\n- Nothing in the reads says why.';
+    const got = thoughtsOf(text, CLAIM, CALLS, new Set([0]), { drawn: new Set([0]), said: [] });
+    expect(got.unbound).toBe('**The cause is open.** Nothing in the reads says why.');
+  });
+
+  it('draws no caveat sentence the answer already said in other sentences', () => {
+    const answer = 'Three product codes are each shared by two products. They are nuts01, nuts02 and gz31. '
+      + 'Those codes do not identify a single item.';
+    const caveat = 'Three product codes — nuts01, nuts02 and gz31 — are each shared by two products, so those codes do not identify one item. '
+      + 'Purchase orders are a frozen import.';
+    expect(caveatUnshown(caveat, [], answer)).toBe('Purchase orders are a frozen import.');
+  });
+
+  it('is fed what the room draws: the reads on screen and his words beside them', () => {
+    expect(ROOM).toMatch(/thoughtsOf\(latest\.text, latest\.reading\?\.claim, latest\.toolCalls, thoughtful,\s*\{ drawn: shown, said \}\)/);
+    expect(ROOM).toMatch(/latest\.reading\?\.next, \.\.\.\(latest\.reading\?\.asks \?\? \[\]\)/);
+    expect(ROOM).toMatch(/caveat=\{thoughts\?\.caveat\}/);
   });
 });
 

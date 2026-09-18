@@ -36,13 +36,13 @@ const CALLS = [
 
 describe('his thoughts, on the chart they cite', () => {
   const TEXT = 'OPUS alone gave up the estate. OPUS fell to ₱467,102 while Rockwell held at ₱206,800. '
-    + 'The basket at Rockwell rose to ₱576.04. That is the whole of it.';
+    + 'The basket at Rockwell rose to ₱576.04. Nothing else moved enough to matter.';
 
   it('puts a sentence on the read its figures came from, and keeps the rest', () => {
     const got = thoughtsOf(TEXT, 'OPUS alone gave up the estate', CALLS as never);
     expect(got.bySeq.get(0)).toEqual(['OPUS fell to ₱467,102 while Rockwell held at ₱206,800.']);
     expect(got.bySeq.get(1)).toEqual(['The basket at Rockwell rose to ₱576.04.']);
-    expect(got.unbound).toBe('That is the whole of it.');
+    expect(got.unbound).toBe('Nothing else moved enough to matter.');
   });
 
   it('never moves the headline, and changes no character', () => {

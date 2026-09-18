@@ -71,7 +71,10 @@ describe('"its failing here" — what reached the screen', () => {
     expect(thoughtsOf(text, claim, calls).bySeq.get(0)).toHaveLength(1);
     const held = thoughtsOf(text, claim, calls, new Set([0]));
     expect(held.bySeq.get(0)).toBeUndefined();
-    expect(held.unbound).toContain('GZ aji mix leads');
+    // AND NOT UNDER HIM EITHER (the owner, 2026-09-18: "if its stating whats
+    // already stated or shown in the page … dont make it say that"): the chart
+    // already says it, in his thought.
+    expect(held.unbound).not.toContain('GZ aji mix leads');
   });
 });
 

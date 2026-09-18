@@ -34,50 +34,151 @@ import { placeFigures as figuresPlaced } from './figures';
  *
  * A sentence that cites figures from a read belongs beside that read's chart —
  * the read most of its figures came from, by the same matcher the superscripts
- * use. A sentence citing none stays with the rest of his words. The claim's own
- * sentence is not moved: it is the headline. Not a character is rewritten; the
- * sentences are the answer's own slices, in order.
+ * use. The claim's own sentence is not moved: it is the headline. Not a
+ * character is rewritten; the sentences are the answer's own slices, in order.
  *
- * SPLIT ON WHAT IS DRAWN, NOT ON WHAT WAS SENT (the log, 2026-09-18: the rest
- * of his words printed `**Three.`). He writes `**Three. Four.**`; split raw,
- * the first sentence kept an opening marker whose partner went to the second,
- * and an unpaired marker is printed as he typed it. So the sentences are cut
- * from the text with his markers out — the same text the headline is cut from
- * — and each one gets back exactly the part of his emphasis that falls inside
- * it, closed at its own edges. Draw one with `unmark` and nothing is printed.
+ * AND WHAT IS LEFT UNDER HIM IS ONLY WHAT THE SCREEN DOES NOT ALREADY SAY (the
+ * owner, 2026-09-18: *"if its stating whats already stated or shown in the page
+ * (meaning charts section) then dont make it say that"*). Read against every
+ * recorded answer, the rest was the whole body of the answer: every chart he
+ * draws carries its own thought, so no sentence was placed and all of them fell
+ * through to the words under the headline, restating the charts, and closing on
+ * his `next` word for word. So a sentence is not drawn under him when
+ *
+ *   - it cites a read that is drawn as a figure — on a chart with no thought it
+ *     is that chart's thought; on one with its own, the chart already says it;
+ *   - it restates something already on screen (`restated`): the headline, what
+ *     he'd do next, a question he suggests, a chart's title or thought;
+ *   - it carries on from a sentence that went ("So…", "That…", "And it…"), or it
+ *     introduces one ("…:", a short bullet heading) — alone it is an orphan.
+ *
+ * A sentence citing a read that is NOT drawn stays under him: nothing else on
+ * screen says it. `shown` absent is the old reading — every read drawn.
  */
+export interface Shown {
+  /** The reads this turn draws as figures, by seq. Absent: every read is. */
+  drawn?: ReadonlySet<number>;
+  /** His other words already on screen: the headline, next, asks, each chart's title and thought. */
+  said?: readonly (string | null | undefined)[];
+}
+
+type Verdict = { went: 'kept' } | { went: 'shown' } | { went: 'placed'; seq: number };
+
 export function thoughtsOf(text: string | null | undefined, claimSpan: string | null | undefined,
                            calls: ToolCall[],
-                           /**
-                            * THE READS WHOSE CHART ALREADY CARRIES HIS THOUGHT. A
-                            * sentence citing one of them is NOT placed on it too —
-                            * the owner's screenshot, 2026-09-17: one point said by
-                            * a placed sentence, the title and the thought, three
-                            * times on one chart. It stays with the rest of his words.
-                            */
-                           thoughtful: ReadonlySet<number> = new Set()):
+                           /** THE READS WHOSE CHART ALREADY CARRIES HIS THOUGHT. */
+                           thoughtful: ReadonlySet<number> = new Set(),
+                           shown: Shown = {}):
   { bySeq: Map<number, string[]>; unbound: string } {
   const { plain, bold } = unmark((text ?? '').trim());
   const parts = claimAndStanding(plain, claimSpan);
-  const bySeq = new Map<number, string[]>();
-  const unbound: string[] = [];
+  const screen = [parts.claimRaw, ...(shown.said ?? [])]
+    .map((x) => (x ?? '').trim()).filter(Boolean);
   const afterAt = parts.before.length + parts.claimRaw.length;
-  for (const [slice, from] of [[parts.before, 0], [parts.after, afterAt]] as const) {
-    for (const { at, said } of sentencesOf(slice, from)) {
-      const count = new Map<number, number>();
-      for (const piece of figuresPlaced(said, calls)) {
-        if (piece.seq !== undefined) count.set(piece.seq, (count.get(piece.seq) ?? 0) + 1);
-      }
-      const sentence = remark(said, at, bold);
-      const best = [...count.entries()].sort((a, b) => b[1] - a[1])[0];
-      if (best && !thoughtful.has(best[0])) bySeq.set(best[0], [...(bySeq.get(best[0]) ?? []), sentence]);
-      else unbound.push(sentence);
+  const sentences = ([[parts.before, 0], [parts.after, afterAt]] as const)
+    .flatMap(([slice, from]) => sentencesOf(slice, from));
+
+  const verdicts: Verdict[] = [];
+  sentences.forEach(({ said }, i) => {
+    const count = new Map<number, number>();
+    for (const piece of figuresPlaced(said, calls)) {
+      if (piece.seq !== undefined) count.set(piece.seq, (count.get(piece.seq) ?? 0) + 1);
+    }
+    const best = [...count.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    const previous = verdicts[i - 1];
+    if (best !== undefined && (!shown.drawn || shown.drawn.has(best))) {
+      verdicts.push(thoughtful.has(best) ? { went: 'shown' } : { went: 'placed', seq: best });
+    } else if (restated(said, screen)) {
+      verdicts.push({ went: 'shown' });
+    } else if (previous && previous.went !== 'kept' && CARRIES_ON.test(bare(said))) {
+      verdicts.push(previous);
+    } else {
+      verdicts.push({ went: 'kept' });
+    }
+  });
+  // A LEAD-IN GOES WITH WHAT IT LEADS INTO, read from the end so a run of them
+  // follows the sentence at its foot.
+  for (let i = sentences.length - 2; i >= 0; i -= 1) {
+    if (verdicts[i].went === 'kept' && leadsIn(sentences[i].said) && verdicts[i + 1].went !== 'kept') {
+      verdicts[i] = { went: 'shown' };
     }
   }
+
+  const bySeq = new Map<number, string[]>();
+  const unbound: string[] = [];
+  sentences.forEach(({ at, said }, i) => {
+    const v = verdicts[i];
+    const sentence = remark(said, at, bold);
+    if (v.went === 'placed') bySeq.set(v.seq, [...(bySeq.get(v.seq) ?? []), sentence]);
+    else if (v.went === 'kept') unbound.push(sentence.replace(BULLET, ''));
+  });
   return { bySeq, unbound: unbound.join(' ') };
 }
 
-/** A slice's sentences, trimmed, each with where it starts in the whole text. */
+/** A sentence that only makes sense after the one before it. */
+const CARRIES_ON = /^(so|that|that's|this|these|those|it|it's|they|their|and|but|which|all|each|both|neither|none|nobody|underneath)\b/i;
+/** A list marker he typed, which is drawn as nothing, like his `**`. */
+const BULLET = /^[-*•]\s+/;
+const bare = (said: string) => said.replace(BULLET, '').replace(/^\*\*/, '').replace(/^["'“‘(]+/, '');
+/** "Here is how it broke down:", or a bullet's own short heading. */
+function leadsIn(said: string): boolean {
+  if (/:\s*$/.test(said)) return true;
+  return BULLET.test(said) && said.split(/\s+/).length <= 9;
+}
+
+/**
+ * WHETHER A SENTENCE SAYS AGAIN WHAT ANOTHER ALREADY SAYS: most of its words —
+ * three or more letters, the glue words out, numbers kept — are in one of them.
+ * Measured on the recorded answers (`verification/p2s7-gate*.json`): a repeat of
+ * `next` or of a chart's thought scores 0.6 to 1.0, a sentence carrying
+ * something new 0.5 or under.
+ */
+export function restated(sentence: string, others: readonly string[]): boolean {
+  const mine = wordsOf(sentence);
+  if (!mine.size) return false;
+  return others.some((other) => {
+    const theirs = wordsOf(other);
+    let shared = 0;
+    for (const w of mine) if (theirs.has(w)) shared += 1;
+    return shared / mine.size >= RESTATED_AT;
+  });
+}
+const RESTATED_AT = 0.6;
+const GLUE = new Set(('the and for that this with was were are but not its his her our you your from '
+  + 'than then they them into have has had just only also what which when where who how why all any '
+  + 'one two out off per same about over more less most very there here been being will would could '
+  + 'should can may might shall').split(' '));
+function wordsOf(text: string): Set<string> {
+  return new Set((text.toLowerCase().match(/[\p{L}\p{N}₱%.,'-]+/gu) ?? [])
+    .map((w) => w.replace(/^[.,'-]+|[.,'-]+$/g, ''))
+    .filter((w) => w.length >= 3 && !GLUE.has(w)));
+}
+
+/**
+ * HIS CAVEAT, LESS WHAT IS ALREADY SAID — by the answer (`unsaid` catches the
+ * exact repeats; this, the same point in other words) or by anything else on
+ * screen. The caveat's own words, in order; only a repeat is not drawn twice.
+ * Against the answer it reads runs of up to three sentences, because he often
+ * says in three what the caveat says in one.
+ */
+export function caveatUnshown(caveat: string | null | undefined, said: readonly (string | null | undefined)[],
+                              answer = ''): string {
+  const lines = answer.trim() ? sentencesOf(answer.trim(), 0).map((x) => x.said) : [];
+  const runs = lines.flatMap((_, i) => [1, 2, 3].map((n) => lines.slice(i, i + n).join(' ')));
+  const others = [...said, ...runs].map((x) => (x ?? '').trim()).filter(Boolean);
+  const whole = (caveat ?? '').trim();
+  if (!whole) return '';
+  return whole.split(/(?<=[.!?])\s+/)
+    .filter((x) => x.trim() && !restated(x, others))
+    .map((x) => x.trim())
+    .join(' ');
+}
+
+/**
+ * A slice's sentences, trimmed, each with where it starts in the whole text. A
+ * line break ends one too: a list item or a heading line ("Where it sits:") is
+ * its own piece, never glued to the line under it.
+ */
 function sentencesOf(slice: string, from: number): { at: number; said: string }[] {
   const out: { at: number; said: string }[] = [];
   const push = (start: number, end: number) => {
@@ -85,7 +186,7 @@ function sentencesOf(slice: string, from: number): { at: number; said: string }[
     const said = raw.trim();
     if (said) out.push({ at: from + start + (raw.length - raw.trimStart().length), said });
   };
-  const re = /(?<=[.!?])\s+/g;
+  const re = /(?<=[.!?])\s+|\s*\n\s*/g;
   let start = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(slice))) { push(start, m.index); start = m.index + m[0].length; }

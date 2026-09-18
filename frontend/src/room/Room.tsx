@@ -26,13 +26,13 @@ import { Board, turnNotices } from './render';
 import { FiguresArea, Wires, scrollToFigure, useMoreBelow } from './FiguresArea';
 import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
-import { claimAndStanding, thoughtsOf, unmark } from './beside';
+import { caveatUnshown, claimAndStanding, thoughtsOf, unmark } from './beside';
 import { placeFigures as figuresInText } from './figures';
 import { identitiesFrom } from './identity';
 import { readStoreAppearance } from '../services/storesApi';
 import { IdentityContext } from './swatch';
 import { ExplainsOnlyContext, drawnOnly, explainsOnlyFrom } from './noticeDrawing';
-import { Narration, Reading, ReadingAsks, ReadingNext } from './Reading';
+import { Narration, Reading, ReadingAsks, ReadingNext, unsaid } from './Reading';
 import { FootOffers } from './FootOffers';
 import { offersOf, placement } from './actions';
 import { usePagesForGhosts } from './ghosts';
@@ -275,7 +275,23 @@ export default function Room() {
     const thoughtful = new Set(drawn.flatMap((o) => (
       o.turn === newest && o.thought?.trim() ? [o.seq ?? o.seqs?.[0]] : []
     )).filter((s): s is number => typeof s === 'number'));
-    return thoughtsOf(latest.text, latest.reading?.claim, latest.toolCalls, thoughtful);
+    // WHAT THE SCREEN ALREADY SAYS (the owner, 2026-09-18: "if its stating
+    // whats already stated or shown in the page … then dont make it say that").
+    // The reads this turn draws, and his words already drawn beside them.
+    const mine = drawn.filter((o) => o.turn === newest);
+    const shown = new Set(mine.flatMap((o) => [o.seq, ...(o.seqs ?? [])])
+      .filter((s): s is number => typeof s === 'number'));
+    const said = [
+      latest.reading?.claim, latest.reading?.next, ...(latest.reading?.asks ?? []),
+      ...mine.flatMap((o) => [o.claim, o.thought]),
+    ].map((x) => (typeof x === 'string' ? x : ''));
+    const got = thoughtsOf(latest.text, latest.reading?.claim, latest.toolCalls, thoughtful,
+                           { drawn: shown, said });
+    // His caveat, less the answer's exact repeats and anything said again in
+    // other words — by the answer or by what is drawn.
+    const plain = unmark((latest.text ?? '').trim()).plain;
+    const caveat = caveatUnshown(unsaid(latest.reading?.caveat, plain), said, plain);
+    return { ...got, caveat };
   }, [latest, busy, drawn, answers.length]);
   // A NEW ANSWER IS READ FROM ITS TOP (the log, 2026-09-17: the headline shown
   // from its middle). While he works, the lines above the answer come and go
@@ -803,7 +819,7 @@ export default function Room() {
                 {!busy && (
                   <Reading part="rest" text={latest?.text} reading={latest?.reading}
                            calls={latest?.toolCalls} onFigure={showFigure}
-                           standing={thoughts?.unbound} />
+                           standing={thoughts?.unbound} caveat={thoughts?.caveat} />
                 )}
                 <ReadingAsks reading={latest?.reading} busy={busy} onAsk={(q) => ask(q)} />
                 <ReadingNext reading={latest?.reading} />
