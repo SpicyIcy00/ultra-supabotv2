@@ -183,6 +183,13 @@ function drawnSeqs(blocks: readonly Block[]): Set<number> {
  * one; what he does name is the READ, which is the identity the board already
  * uses (readIdentity). A default over a read he did NOT mention stays, quiet,
  * exactly as any object he does not mention stays.
+ *
+ * AND SINCE P2S.7 HIS COMPOSITION IS THE WHOLE BOARD OF THE TURN. The loop
+ * folds every compose into one list (agent/compose.fold) — his blocks where
+ * he put them, the machine's defaults flagged in place — so a default the
+ * list still carries under its own key is not drawn a second time from the
+ * seeded frame. A turn stored before that carries his blocks alone and is
+ * drawn exactly as it always was.
  */
 function editsFor(turn: AnswerTurn, i: number): Block[] {
   // THE READING IS NOT AN OBJECT (P1.c, 2026-09-14). It is drawn above the
@@ -195,9 +202,10 @@ function editsFor(turn: AnswerTurn, i: number): Block[] {
   const seeded = kept(turn.defaultComposition?.blocks ?? []);
   if (composed?.length) {
     const his = drawnSeqs(composed);
+    const named = new Set(composed.map((b) => b.key));
     return [
       ...seeded
-        .filter((b) => !(typeof b.seq === 'number' && his.has(b.seq)))
+        .filter((b) => !(typeof b.seq === 'number' && his.has(b.seq)) && !named.has(b.key))
         // A DEFAULT NEVER OUTRANKS HIM. What survives is a read he did not
         // mention, and weight is judgement made visible — so once he has
         // composed, the machine's guess at what leads is quiet whatever it
@@ -444,6 +452,13 @@ export function buildBoard(answers: AnswerTurn[], kept: ReadonlySet<string> = ne
   const aliases = new Map<string, string>();
   answers.forEach((turn, i) => {
     const edits = editsFor(turn, i);
+    // WHERE THIS TURN'S NEW OBJECTS GO (P2S.7): above every earlier turn's,
+    // as they always were — and in HIS order among themselves. They were
+    // `unshift`ed one by one, which reversed a turn's own order, so a block
+    // added in a later round landed ABOVE the ones already drawn and moved
+    // every one of them down. A board that builds as he goes must add at the
+    // end of what this turn has drawn, and move nothing.
+    let inserted = 0;
 
     // THE BOARD TRANSFORMS; IT NEVER ACCUMULATES (P1.d, 2026-09-14). A
     // question that shares nothing with what is on the board clears it, and
@@ -452,7 +467,8 @@ export function buildBoard(answers: AnswerTurn[], kept: ReadonlySet<string> = ne
     // with the objects they pointed at: a name for something that is no
     // longer there would land his next edit on nothing.
     if (travel(answers, board, i, edits,
-               new Set((turn.composition?.blocks ?? []).map((b) => b.key))) === 'clears') {
+               new Set((turn.composition?.blocks ?? []).filter((b) => !b.default)
+                 .map((b) => b.key))) === 'clears') {
       board = board.filter((o) => kept.has(o.key));
       const left = new Set(board.map((o) => o.key));
       for (const [from, to] of [...aliases]) if (!left.has(to)) aliases.delete(from);
@@ -513,7 +529,10 @@ export function buildBoard(answers: AnswerTurn[], kept: ReadonlySet<string> = ne
         touched: i,
       } as BoardObject;
       if (at >= 0) board[at] = object;
-      else board.unshift(object);
+      else {
+        board.splice(inserted, 0, object);
+        inserted += 1;
+      }
     }
     board = oneLead(board);
     board = expired(board, i, kept);

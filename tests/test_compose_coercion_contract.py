@@ -360,3 +360,47 @@ def test_the_allowed_fields_are_still_the_closed_set(defs):
         calls=CALLS, defs=defs)
     drawn = set(out["rows"][0]) - {"op", "tool"}
     assert drawn <= allowed
+
+
+# ---------------------------------------------------------------------------
+# THE SHAPE THE TOOLS ACTUALLY RETURN (P2S.7, 2026-09-18)
+# ---------------------------------------------------------------------------
+#
+# Every case above passes `filters` as a mapping, and no tool returns one:
+# `meta.filters_applied` is a LIST of statements. So in production a read
+# filtered to North Edsa was refused "read 0 has no row for 'North Edsa'"
+# (verification/p2s6-gate-2.json, twice) while every test here passed.
+
+STATED = [
+    "t.is_cancelled = false   # metrics.yaml: filters.cancelled",
+    "t.store_id IN (1: North Edsa)   # metrics.yaml: stores.active_retail",
+]
+
+
+def _stated_read(store="North Edsa"):
+    return {0: {"tool": "get_sales", "error": None, "is_read": True, "rows": TOTAL,
+                "arguments": {"group_by": [], "filters": {"store": store}},
+                "filters": STATED}}
+
+
+def test_a_subject_the_tools_statement_names_back_is_the_reads_scope(defs):
+    accepted, rejected, _ = run(
+        [{"kind": "figure", "key": "ne-week", "seq": 0, "subject": "North Edsa"}],
+        defs, calls=_stated_read())
+    assert rejected == []
+    assert accepted[0]["subject"] == "North Edsa"
+
+
+def test_an_argument_the_tool_did_not_state_back_is_not_scope(defs):
+    """The argument proposes and the receipt confirms: a store the statement
+    does not name is not what the read was about."""
+    accepted, rejected, _ = run(
+        [{"kind": "figure", "key": "x", "seq": 0, "subject": "Rockwell"}],
+        defs, calls=_stated_read(store="Rockwell"))
+    assert accepted == [] and "no row for 'Rockwell'" in rejected[0]["reason"]
+
+
+def test_a_one_row_read_takes_its_caption_from_the_confirmed_argument(defs):
+    accepted, rejected, coerced = run(
+        [{"kind": "figure", "key": "ne", "seq": 0}], defs, calls=_stated_read())
+    assert rejected == [] and accepted[0]["subject"] == "North Edsa"

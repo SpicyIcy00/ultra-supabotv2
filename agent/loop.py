@@ -1109,7 +1109,9 @@ def _depth_sentence(defs: dict) -> str:
         f"itself: by store, {' '.join(str(loc['store']).split())}; by product or "
         f"category, {' '.join(str(loc['product']).split())}; over time, "
         f"{' '.join(str(loc['time']).split())}.{together} Never rank two lists "
-        f"yourself."
+        f"yourself, and never put one row's change as PART of another's — "
+        f"\"₱10,701 of the ₱11,843 gap\", \"half the drop\" is a share no read "
+        f"computed: say what each moved, side by side."
     )
 
 
@@ -1133,9 +1135,9 @@ INVESTIGATING
 
 {_opening_sentence(defs)}
 
-VERIFY the primary fact first, compared over a closed window; if the premise does not hold, say so and stop. DECOMPOSE — {_drivers_sentence(defs)} Read change_pct off each driver's row: the stronger moved more, close means both moved, and a share of the change is nobody's. LOCALIZE the driver that moved — dominating is where to look, not a reason to stop — by time and by what sold, both in ONE round. CHECK what the data can test before offering an explanation: {checks}; {req(chk, 'unchecked')}. EXPLAIN, keeping the kinds apart: "down 12%" is measured, "basket value is the stronger driver" is your reading, and localization is not cause — and say whether it MATTERS: {matters}. STOP when the premise is false, the movement is localized and checked, no tool goes further, the evidence is mixed or the reads are spent.
+VERIFY the primary fact first, compared over a closed window; if the premise does not hold, say so and stop. DECOMPOSE — {_drivers_sentence(defs)} Read change_pct off each driver's row: the stronger moved more, close means both moved, and a share of the change — "most of the gap" — is nobody's. LOCALIZE the driver that moved — dominating is where to look, not a reason to stop — by time and by what sold, both in ONE round. CHECK what the data can test before offering an explanation: {checks}; {req(chk, 'unchecked')}. EXPLAIN, keeping the kinds apart: "down 12%" is measured, "basket value is the stronger driver" is your reading, and localization is not cause — and say whether it MATTERS: {matters}. STOP when the premise is false, the movement is localized and checked, no tool goes further, the evidence is mixed or the reads are spent.
 
-Every read keeps the primary fact's window — the baseline's own days aside — store scope and filters. compose once, the reading on the same call.
+Every read keeps the primary fact's window — the baseline's own days aside — store scope and filters. COMPOSE AS YOU GO: each round's findings go on the board in the same call as the next reads; the claim settles last.
 """
 
 INVESTIGATING_SECTION = _investigating_section(_load_defs())
@@ -1336,11 +1338,9 @@ WHO YOU ARE
 
 You are responsible for understanding this business, and you run it with the owner. You do the looking yourself: you understand before you speak, keep that understanding as the data moves, follow what one area says into another, and bring the owner what is worth knowing, deciding, challenging or doing. An operator, not a reporter. First person, always.
 
-Warm, precise, occasionally dry — never sycophantic, corporate, breathless or apologetic. No manners for an opening: "Great question" and its kind say nothing.
+Warm, precise, occasionally dry — never sycophantic, corporate, breathless or apologetic. No manners: "Great question" says nothing.
 
 You lead with your view: what is happening, why as far as the data shows, whether it matters, what you ruled out, what is still unknown, and what you would do. "I checked; nothing here concerns me" is a conclusion — say it and stop. The same voice for good news and bad. WIT NEVER SOFTENS A CAVEAT: a caveat is a clause in the same breath, in the plainest words.
-
-You hold views as views, with what would change your mind, and say so when a read contradicts one.
 
 You read without asking and act on nothing alone: you draft, you propose, you ask "shall I?"
 
@@ -1348,7 +1348,7 @@ You read without asking and act on nothing alone: you draft, you propose, you as
 
 VOICE — THE SHAPE OF AN ANSWER
 
-As much as the situation needs and no more: a quiet week is a line; a situation you investigated is the few findings that make it understood. The screen holds THREE SLOTS you name on `compose`: the CLAIM, your view, with the few words that ARE the point repeated in `claim`; the CAVEAT, what qualifies the figures, drawn above them; the NEXT, drawn last: what you would do, never a read you could have made. The slots are places, not a length.
+As much as the situation needs and no more: a quiet week is a line; a situation you investigated is the few findings that make it understood. The screen holds THREE SLOTS you name on `compose`: the CLAIM, your view, with the few words that ARE the point repeated in `claim`; the CAVEAT, what qualifies the figures — data quality included, never in the body — drawn above them; the NEXT, drawn last: what you would do, never a read you could have made. The slots are places, not a length.
 
 GIVE EACH FINDING THE FIGURE IT RESTS ON, with its date or window from the result. The board drawing it is no reason to leave it out; reciting the rows it draws is. No preamble, no restating the question, no summary.
 
@@ -1409,7 +1409,9 @@ def _truncate(result: dict) -> dict:
     meta["rows_omitted"] = omitted
     meta["truncation_note"] = (
         f"{MAX_ROWS_TO_MODEL} of {len(rows)} rows shown. Every figure in meta is "
-        f"computed over ALL {len(rows)} rows — do not total the visible rows."
+        f"computed over ALL {len(rows)} rows — do not total the visible rows, "
+        f"and a row you cannot see is not known to be absent: check that one "
+        f"by its own key before saying anything about it."
     )
     return {"rows": rows[:MAX_ROWS_TO_MODEL], "meta": meta}
 
@@ -1636,6 +1638,16 @@ def _drawn_on_the_board(blocks: list[dict], charted: list[dict]) -> set[str]:
             if isinstance(item, dict) and item.get("kind"):
                 kinds.add(str(item["kind"]))
     return kinds
+
+
+def _his(blocks: list[dict]) -> list[dict]:
+    """
+    The blocks GEORGE composed, without the loop's defaults (P2S.7). Since the
+    turn's board became one list, the defaults ride in it flagged — and the
+    notice gate must never be fed one (P1.b): a caveat is discharged by a
+    person deciding to draw the read that raised it, not by the machine.
+    """
+    return [b for b in blocks if not b.get("default")]
 
 
 def _unsurfaced(pending: list[dict], answer: str, defs: dict,
@@ -1893,10 +1905,19 @@ def _drop_safely(answer: str, drop, still_surfaces) -> tuple[str, list[str]]:
     may never take away a caveat: a sentence that both recites a figure and
     surfaces a notice STAYS, because notices surfaced is a floor and a
     stylistic gate does not get to lower it.
+
+    AND A THIRD (P2S.7, 2026-09-18): it may never strand a sentence. "That's
+    a bookkeeping problem, not a shelf problem" was left pointing at nothing
+    in verification/p2s6-gate-2.json, and "Two things temper the size of the
+    drop" announced two things that had both been deleted — 3 of 14 turns. A
+    sentence another one leans on stays (agent/prose.strands): a figure said
+    twice is a style miss, and a sentence about nothing is a broken answer.
     """
     out = answer
     dropped: list[str] = []
     for s in drop:
+        if _prose.strands(out, s):
+            continue
         candidate = _without_sentences(out, [s])
         if not candidate.strip():
             continue
@@ -2752,6 +2773,16 @@ async def run(
     answer = ""
     status = "ok"
     notice_forced = False
+    # PROSE WRITTEN BESIDE A COMPOSE IS THE ANSWER, AND IT OUTLIVES ITS ROUND
+    # (P2S.7, 2026-09-18). A round that only composes, labels or writes is not
+    # narration — the reset below fires only before a READ — so its words stay
+    # on screen. But `answer` was the LAST round's text alone: George, told to
+    # compose as he goes, wrote his answer beside his final compose and a
+    # closing line in the next round, and the gates, the notice check and the
+    # stored post saw only the closing line (verification/p2s7-gate.json,
+    # "overnight.My read:" — the seam, also P2S.6's "numbers.I'd"). What the
+    # reader is shown is what the loop now judges and keeps.
+    kept_prose = ""
 
     # meta of the last tool result that actually produced one — the receipts
     # shown under the answer. See the `receipts` frame emitted before `done`.
@@ -2789,9 +2820,19 @@ async def run(
     # not two.
     reading_recorded: dict[str, str] = {}
 
-    # The blocks that stood, for the ANSWER POST and the UI. A later compose
-    # call REPLACES this, for the same reason.
+    # The blocks that stood, for the ANSWER POST and the UI. SINCE P2S.7 A
+    # LATER COMPOSE ADDS TO THIS rather than replacing it (compose.fold): each
+    # round's findings are drawn as they are found, and nothing drawn earlier
+    # moves. It holds the WHOLE board of the turn once he has composed —
+    # defaults flagged `default` — so a reload draws what the person saw.
     composition_recorded: list[dict] = []
+    # The board of this turn as it stands, in the order it arrived: the loop's
+    # defaults first, then his edits folded over them (compose.fold).
+    turn_board: list[dict] = []
+    his_composed = False
+    # Every read this turn has drawn at any point, so a read he DROPPED is
+    # not drawn again by the default rule on the next batch.
+    ever_drawn: set[int] = set()
 
     # What he offered to DO about a row (P2.d), for the answer post and the UI.
     # Replaced by a later compose that names any, exactly as the reading is.
@@ -2809,17 +2850,11 @@ async def run(
     # nobody having decided anything, so the notice gate is fed his blocks
     # alone and this list never reaches it.
     default_composition_recorded: list[dict] = []
-    # DRAWN AT MOST ONCE A TURN: a second default after more reads landed would
-    # move objects under a person mid-read for no decision anybody made.
-    #
-    # It latches on having DRAWN something, not on having tried. A first batch
-    # that is a write, or a read like get_object that returns sections rather
-    # than a figure, composes nothing — and a turn that spent its one chance on
-    # a batch with nothing in it would leave the board empty for every read
-    # that followed. Nothing was put on screen, so nothing moves when the next
-    # batch gets its turn. Measured on the twelve, 2026-09-13: `shop` and
-    # `product` both open on get_object.
-    default_composed = False
+    # NO LONGER DRAWN ONCE A TURN (P2S.7). It was latched because a second
+    # default would move objects under a person mid-read. A default that only
+    # ADDS — the reads that landed since, quiet, at the end of the board —
+    # moves nothing, so every batch now draws what it brought
+    # (default_composition.compose_added), and the reason for the latch stands.
 
     # What George read of the page, for the ANSWER POST and the UI: compact
     # evidence — which page, when, which pins with what status — never the
@@ -2951,6 +2986,9 @@ async def run(
                             if event.type == "content_block_delta":
                                 d = event.delta
                                 if d.type == "text_delta":
+                                    if (kept_prose and not text_parts
+                                            and not kept_prose[-1:].isspace()):
+                                        yield _sse("text", {"delta": "\n\n"})
                                     text_parts.append(d.text)
                                     streamed = True
                                     yield _sse("text", {"delta": d.text})
@@ -3030,10 +3068,15 @@ async def run(
                           and b.name not in write_tools.WRITE_TOOL_FUNCTIONS]
             if reads_next and "".join(text_parts).strip():
                 yield _reset_answer("interim_prose")
+                kept_prose = ""
+            elif tool_uses and "".join(text_parts).strip():
+                kept_prose = "\n\n".join(
+                    x for x in (kept_prose.strip(), "".join(text_parts).strip()) if x)
 
             # ---- no more tools: candidate answer -------------------------
             if not tool_uses:
-                answer = "".join(text_parts).strip()
+                answer = "\n\n".join(
+                    x for x in (kept_prose.strip(), "".join(text_parts).strip()) if x)
                 answer, echoed = _strip_history_marker(answer)
                 if echoed:
                     log.gap("history_marker_echoed", answer[:2000])
@@ -3052,6 +3095,7 @@ async def run(
                     log.gap(f"pin_{claim}_not_made", answer[:2000])
                     yield _sse("warning", {"reason": f"pin_{claim}_not_made"})
                     yield _reset_answer(f"pin_{claim}_not_made")
+                    kept_prose = ""
                     answer = ""
                     messages.append({
                         "role": "user",
@@ -3089,6 +3133,7 @@ async def run(
                     log.gap(f"save_{save}_not_made", answer[:2000])
                     yield _sse("warning", {"reason": f"save_{save}_not_made"})
                     yield _reset_answer(f"save_{save}_not_made")
+                    kept_prose = ""
                     answer = ""
                     messages.append({
                         "role": "user",
@@ -3127,6 +3172,7 @@ async def run(
                     log.gap(f"page_{page_claim}_not_made", answer[:2000])
                     yield _sse("warning", {"reason": f"page_{page_claim}_not_made"})
                     yield _reset_answer(f"page_{page_claim}_not_made")
+                    kept_prose = ""
                     answer = ""
                     messages.append({
                         "role": "user",
@@ -3182,7 +3228,7 @@ async def run(
                 # row moves. Making that one deterministic would move it by
                 # construction, every time it fires. The Done-when wins over
                 # the method; the owner decides whether to take the trade.
-                on_screen_now = _drawn_on_the_board(composition_recorded, charted)
+                on_screen_now = _drawn_on_the_board(_his(composition_recorded), charted)
                 unsurfaced_now = len(_unsurfaced(
                     pending, reading.said_this_turn(answer, reading_recorded),
                     defs, on_screen=on_screen_now))
@@ -3225,6 +3271,7 @@ async def run(
                         answer = edited
                         deterministic_edits += 1
                         yield _reset_answer("volunteering_over_cap")
+                        kept_prose = ""
                         yield _sse("text", {"delta": answer})
                     else:
                         # NOTHING COULD GO, SO THE MODEL IS ASKED AFTER ALL.
@@ -3236,6 +3283,7 @@ async def run(
                         # the only honest version of "deterministic".
                         volunteer_corrections += 1
                         yield _reset_answer("volunteering_over_cap")
+                        kept_prose = ""
                         answer = ""
                         messages.append({
                             "role": "user",
@@ -3329,6 +3377,7 @@ async def run(
                         answer = edited
                         deterministic_edits += 1
                         yield _reset_answer(reason)
+                        kept_prose = ""
                         yield _sse("text", {"delta": answer})
                     else:
                         # NOTHING COULD GO. A remainder or a misstated figure
@@ -3340,6 +3389,7 @@ async def run(
                         # is unchanged where the edit cannot reach.
                         restate_corrections += 1
                         yield _reset_answer(reason)
+                        kept_prose = ""
                         answer = ""
                         parts: list[str] = []
                         if remainders:
@@ -3406,7 +3456,7 @@ async def run(
                 # it missing and force a duplicate underneath it.
                 missing = _unsurfaced(
                     pending, reading.said_this_turn(answer, reading_recorded), defs,
-                    on_screen=_drawn_on_the_board(composition_recorded, charted),
+                    on_screen=_drawn_on_the_board(_his(composition_recorded), charted),
                 )
 
                 if missing and corrective_turns < max_corrective:
@@ -3425,6 +3475,7 @@ async def run(
                     })
                     yield _sse("warning", {"reason": "unsurfaced_notice", "kinds": names})
                     yield _reset_answer("unsurfaced_notice")
+                    kept_prose = ""
                     answer = ""
                     continue
 
@@ -3494,6 +3545,7 @@ async def run(
                 # Whatever prose preceded the cap was a draft written mid-search;
                 # the answer that replaces it is the one to keep.
                 yield _reset_answer("convergence_cap")
+                kept_prose = ""
                 answer = ""
 
                 # Every tool_use in the assistant turn just appended MUST be
@@ -3531,19 +3583,24 @@ async def run(
                     "role": "user",
                     "content": refused + [{
                         "type": "text",
+                        # WRITTEN FOR THE PERSON WHO READS THE ANSWER (P2S.7).
+                        # It asked for "the single grouped or ranked call —
+                        # naming the tool and arguments", and George obeyed:
+                        # verification/p2s6-gate-2.json's `analyze` printed
+                        # `get_sales(metric='product_revenue', …)` to the owner
+                        # under a numbered account of his own search — rule 9
+                        # broken on the loop's instruction. The loop's facts
+                        # (the count, the calls) stay here, for him; what he
+                        # is asked to SAY is an answer.
                         "text": (
                             f"STOP CALLING TOOLS. You have made {executed} reads on this "
                             f"question ({attempted}) without reaching an answer, "
                             f"which is past the limit of {MAX_TOOL_CALLS}.\n\n"
-                            "Do not call another tool. Answer now with three things:\n"
-                            "1. what you were attempting and why it needed so many "
-                            "calls;\n"
-                            "2. whatever partial finding the results you already have "
-                            "will actually support, clearly labelled as partial;\n"
-                            "3. the single grouped or ranked call — naming the tool "
-                            "and arguments — that would answer this properly, or a "
-                            "plain statement that no available tool expresses the "
-                            "question."
+                            "Do not call another tool. Answer the question now, from "
+                            "the results you already have: what they support, said as "
+                            "partial where it is, and what would settle the rest. "
+                            "Write it for the owner, in the business's words — no "
+                            "tool, argument or call, and no account of your search."
                         ),
                     }],
                 })
@@ -3749,7 +3806,12 @@ async def run(
                         (b.input or {}).get("reading"),
                         (b.input or {}).get("actions"),
                         calls=calls_by_seq, defs=defs,
-                        board=(desk or {}).get("board"),
+                        # THE BOARD AS IT STANDS, this turn's objects included
+                        # (P2S.7): a second compose changes the first one's
+                        # blocks by key, and "this is that" finds a read this
+                        # turn already drew.
+                        board=[*((desk or {}).get("board") or []),
+                               *compose.as_board_objects(turn_board, calls_by_seq)],
                         question=question,
                     )
                     err = None
@@ -3765,11 +3827,21 @@ async def run(
                     # Without this, a roles-only call would overwrite the
                     # composition with an empty list and clear the screen.
                     if (b.input or {}).get("blocks") is not None:
-                        composition_recorded = list(result["rows"])
+                        # FOLDED, NOT REPLACED (P2S.7): the frame carries the
+                        # whole board of the turn so far, his edits applied
+                        # where they land and nothing already drawn moved.
+                        turn_board = compose.fold(turn_board, result["rows"],
+                                                  first=not his_composed)
+                        ever_drawn |= compose.drawn_seqs(turn_board)
+                        his_composed = True
+                        composition_recorded = list(turn_board)
                         yield _sse("compose", {
                             "seq": gseq,
                             "blocks": composition_recorded,
                             "rejected": result["meta"].get("rejected") or [],
+                            # What was ADJUSTED rather than refused (P2S.7),
+                            # so a run can count the rounds coercion saved.
+                            "coerced": result["meta"].get("coerced") or [],
                         })
                     if result["meta"].get("rejected"):
                         yield _sse("warning", {
@@ -4020,17 +4092,29 @@ async def run(
             # same validator, in the same vocabulary — and George's own
             # composition supersedes it when it arrives.
             #
-            # Once a turn, and never after he has composed: a default that kept
-            # arriving would rearrange the board under a person while they read
-            # it. The model is not told this happened, which is why it moves no
-            # iteration and no token.
-            if not default_composed and not composition_recorded:
-                default_composition_recorded = default_composition.compose_default(
-                    calls_by_seq, defs=defs, board=(desk or {}).get("board"),
-                    max_rows=MAX_ROWS_TO_CLIENT,
-                )
-                if default_composition_recorded:
-                    default_composed = True
+            # AND IT KEEPS FILLING (P2S.7). Every batch's new reads are drawn,
+            # quiet, at the END of the board — never a rearrangement, which is
+            # what the once-a-turn latch existed to prevent. The model is not
+            # told this happened, which is why it moves no iteration and no
+            # token.
+            added = default_composition.compose_added(
+                calls_by_seq, drawn=ever_drawn | compose.drawn_seqs(turn_board), defs=defs,
+                board=(desk or {}).get("board"), max_rows=MAX_ROWS_TO_CLIENT,
+                room=int(req(defs, "composition.max_blocks")) - len(turn_board),
+                lead=not turn_board,
+            )
+            if added:
+                turn_board = [*turn_board, *added]
+                ever_drawn |= compose.drawn_seqs(added)
+                if his_composed:
+                    # His frame, with the machine's additions flagged on each
+                    # block: the board of the turn is ONE list once he has
+                    # composed, so what a reload draws is what was seen.
+                    composition_recorded = list(turn_board)
+                    yield _sse("compose", {"seq": -1, "blocks": composition_recorded,
+                                           "rejected": []})
+                else:
+                    default_composition_recorded = list(turn_board)
                     yield _sse("compose", {
                         "seq": -1,
                         "blocks": default_composition_recorded,

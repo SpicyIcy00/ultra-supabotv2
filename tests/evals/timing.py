@@ -154,3 +154,82 @@ def analytical_figure_ms(replays: Sequence[float]) -> Optional[float]:
     report that quoted the turn here would be reporting the wrong thing.
     """
     return fragment_change_ms(replays)
+
+
+# ---------------------------------------------------------------------------
+# The board building while he works (P2S.7, 2026-09-18)
+# ---------------------------------------------------------------------------
+#
+# The owner: "it should still display like the normal data first and then it
+# goes deeper so theres something to see already and the more pop up so you
+# can really see it building". Measured before this card on
+# verification/p2s6-gate-2.json: the shops at 10.4 s, George's board at
+# 59.6 s, the end at 105.7 s, and nothing new in between.
+
+def _drawn_order(blocks: Sequence[dict]) -> list[str]:
+    """The keys as the room draws them: the lead first, then in order."""
+    puts = [b for b in blocks if (b.get("op") or "put") == "put" and b.get("key")]
+    lead = [b["key"] for b in puts if b.get("weight") == "lead"][:1]
+    return lead + [b["key"] for b in puts if b["key"] not in lead]
+
+
+def board_growth(frames: Sequence[Frame], done: Optional[dict]) -> dict:
+    """
+    When the board gained blocks, whether one landed BEFORE the final round
+    began, and whether anything already drawn MOVED.
+
+      first_ms      the first compose frame that drew anything
+      gains         (ms, how many new keys) for every later frame that added one
+      final_round   when the last model round began: the turn's duration less
+                    that round's own time, off the done frame's clock
+      deeper_before_final   a gain after the first, before the final round
+      moved         consecutive boards where a key both held changed its place
+                    among them, or the board lost a place — his drop, or a
+                    rearrangement; a default replaced WHERE IT STOOD is neither
+    """
+    his: Optional[list] = None
+    default: Optional[list] = None
+    seen: set[str] = set()
+    prev: Optional[list[str]] = None
+    first: Optional[float] = None
+    gains: list[tuple[int, int]] = []
+    moved: list[str] = []
+    for event, data, at in frames:
+        if event != "compose":
+            continue
+        blocks = list(data.get("blocks") or [])
+        if data.get("default"):
+            if his is not None:
+                continue
+            default = blocks
+        else:
+            his = blocks
+        order = _drawn_order(his if his is not None else (default or []))
+        if not order:
+            continue
+        new = [k for k in order if k not in seen]
+        if first is None:
+            first = at
+        elif new:
+            gains.append((int(round(at)), len(new)))
+        if prev is not None:
+            kept_before = [k for k in prev if k in order]
+            kept_now = [k for k in order if k in prev]
+            if kept_before != kept_now or len(order) < len(prev):
+                moved.append(f"{int(round(at))} ms: {prev} -> {order}")
+        seen |= set(order)
+        prev = order
+    final_round: Optional[float] = None
+    duration = (done or {}).get("duration_ms")
+    rounds = (done or {}).get("iteration_ms")
+    if (isinstance(duration, (int, float)) and isinstance(rounds, list) and rounds
+            and isinstance(rounds[-1], (int, float))):
+        final_round = float(duration) - float(rounds[-1])
+    return {
+        "first_ms": None if first is None else int(round(first)),
+        "gains": gains,
+        "final_round_ms": None if final_round is None else int(round(final_round)),
+        "deeper_before_final": bool(first is not None and final_round is not None
+                                    and any(ms < final_round for ms, _n in gains)),
+        "moved": moved,
+    }

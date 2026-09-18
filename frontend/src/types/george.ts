@@ -388,6 +388,14 @@ export interface CompositionBlock {
     | 'chart' | 'distribution' | 'timeline' | 'recommendation';
   /** George's key for the object. The same key in a later turn is the same object, changed. */
   key: string;
+  /**
+   * THE LOOP DREW THIS, NOT GEORGE (P2S.7). Since a turn's board is one list
+   * built as he goes, the reads that landed after he composed ride in his
+   * composition as quiet blocks the machine shaped — and a key he never chose
+   * must never count as him naming an object (`travel`), exactly as a
+   * `default: true` frame's keys never did.
+   */
+  default?: boolean;
   /** Absent on a `change` that only re-points the object at another read. */
   weight?: 'lead' | 'supporting' | 'quiet';
   /** The read it draws from. Absent for text and a state with no read. */

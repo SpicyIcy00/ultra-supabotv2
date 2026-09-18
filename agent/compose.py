@@ -58,11 +58,17 @@ and refused where it can.
             a subject the read is FILTERED to   accepted: the read is about it
             no subject on a one-row read        filled from that read's scope
             a node named `type`/`kind`/`node`   renamed (agent/grammar.py)
+            a claim or thought past its length  cut at a word or a sentence
+            a caveat or next past its length    kept whole: it carries notices
+            `emphasise` past its cap            the first ones he named stand
+            a rounded figure in a slot          said exactly, when ONE read
+                                                figure is what it rounds
 
   REFUSED   a seq that never ran or failed      there is nothing to draw
             a subject no row and no filter has  a label nobody read
             a subject on a MANY-row read        choosing a row is a judgement
             a note carrying a digit             that is a figure in prose
+            a figure in a slot no read returned that one is about truth
             a figure, colour, size or title     the attempt this file exists
                                                 to stop, and the one coercion
                                                 that came back off the list
@@ -97,6 +103,7 @@ import re
 from typing import Any, Iterable, Mapping, Optional
 
 from agent import grammar
+from agent import reading as _reading
 
 
 class Rejected(ValueError):
@@ -167,14 +174,35 @@ def _scope_values(call: Mapping[str, Any]) -> set[str]:
     This is not the model introducing a subject. `filters_applied` is the
     tool's own statement of scope, in `meta`, beside the snapshot timestamp —
     the same place the receipts come from.
+
+    AND THE TOOLS STATE IT AS SENTENCES (P2S.7, 2026-09-18). Every read tool
+    writes `filters_applied` as a LIST of statements — "t.store_id IN (1:
+    North Edsa)   # metrics.yaml: stores.active_retail" — and this read only
+    a mapping, so in production the scope was never seen at all: "read 0 has
+    no row for 'North Edsa'" on a read filtered to North Edsa, twice in
+    verification/p2s6-gate-2.json, and the same for an action on Rockwell.
+    The tests passed a mapping and so never met the shape the tools return.
+    A value the call was ASKED to filter by now counts when the tool's own
+    statement names it back: the argument proposes, the receipt confirms, and
+    a store the tool resolved to something else is not confirmed.
     """
     found: set[str] = set()
     filters = call.get("filters")
-    if not isinstance(filters, Mapping):
+    if isinstance(filters, Mapping):
+        for value in filters.values():
+            for one in (value if isinstance(value, (list, tuple)) else [value]):
+                if isinstance(one, str) and one.strip():
+                    found.add(one.strip().lower())
         return found
-    for value in filters.values():
+    if not isinstance(filters, (list, tuple)):
+        return found
+    stated = " ".join(str(s) for s in filters if isinstance(s, str)).lower()
+    asked = (call.get("arguments") or {}).get("filters")
+    if not stated or not isinstance(asked, Mapping):
+        return found
+    for value in asked.values():
         for one in (value if isinstance(value, (list, tuple)) else [value]):
-            if isinstance(one, str) and one.strip():
+            if isinstance(one, str) and one.strip() and one.strip().lower() in stated:
                 found.add(one.strip().lower())
     return found
 
@@ -187,6 +215,8 @@ def _backs(call: Mapping[str, Any], subject: str) -> bool:
 def _implied_subject(call: Mapping[str, Any]) -> Optional[str]:
     """
     The subject a ONE-ROW read is already about, when the block named none.
+    (Its spelling comes from the argument the tool confirmed — see
+    `_scope_values` — or from a mapping of filters where one is given.)
 
     Only from what the read declares, and only when there is no choice to
     make. One row means the client draws that row whatever the subject says
@@ -206,7 +236,9 @@ def _implied_subject(call: Mapping[str, Any]) -> Optional[str]:
         return None
     # The filter's own spelling, not the lowercased one it was matched on.
     filters = call.get("filters")
-    for value in (filters or {}).values():
+    if not isinstance(filters, Mapping):
+        filters = (call.get("arguments") or {}).get("filters") or {}
+    for value in filters.values():
         for one in (value if isinstance(value, (list, tuple)) else [value]):
             if isinstance(one, str) and one.strip().lower() == values[0]:
                 return one.strip()
@@ -257,7 +289,8 @@ def _demote(key: str, lead_key: str, weights: list, coerced: list[str]) -> str:
     return below
 
 
-def _claim(text: Any, voc: Mapping[str, Any]) -> str:
+def _claim(text: Any, voc: Mapping[str, Any], coerced: Optional[list[str]] = None,
+           key: Optional[str] = None) -> str:
     """
     THE FEW WORDS OVER A BLOCK, and the one thing on it George writes.
 
@@ -266,23 +299,24 @@ def _claim(text: Any, voc: Mapping[str, Any]) -> str:
     name a number (CLAUDE.md). The figure is already under the title, with the
     read that returned it and the time it was read — a digit up here would be
     a figure with no receipt of its own, stated above one that has.
+
+    The digit rule is TRUTH and stays a refusal. The length is not: past it,
+    the title is cut at a word (composition.claim.over_length).
     """
     spec = voc.get("claim") or {}
     if not isinstance(text, str) or not text.strip():
         raise Rejected("a claim is a few words saying what this block says")
     said = " ".join(text.split())
-    longest = int(spec.get("max_length") or 80)
     if spec.get("no_digits", True) and any(ch.isdigit() for ch in said):
         raise Rejected(
             "a claim carries no digits — the figure is drawn under it, with "
             "its own receipts (metrics.yaml composition.claim)"
         )
-    if len(said) > longest:
-        raise Rejected(
-            f"a claim is at most {longest} characters — it is a title on a "
-            f"block, not the reading"
-        )
-    return said
+    try:
+        return _reading.over_length(f"{key!r} claim" if key else "claim", said, spec, 80,
+                                    coerced, "metrics.yaml composition.claim")
+    except _reading.Rejected as why:
+        raise Rejected(str(why)) from None
 
 
 def _mark_kinds(voc: Mapping[str, Any]) -> set[str]:
@@ -353,10 +387,10 @@ def validate(
     def thought_of(text: Any) -> str:
         try:
             return _reading_rules.check_sentence(
-                "thought", text, voc.get("thought") or {}, returned, defs)
+                "thought", text, voc.get("thought") or {}, returned, defs,
+                coerced, "composition.thought")
         except _reading_rules.Rejected as why:
-            raise Rejected(str(why).replace("voice.reading.slots.thought",
-                                            "composition.thought")) from None
+            raise Rejected(str(why)) from None
 
     def ruled_out_of(flag: Any) -> bool:
         # A FLAG, NEVER A SENTENCE (composition.ruled_out): why a read was
@@ -491,7 +525,7 @@ def validate(
                 # says what the block SAYS; it names no row and carries no
                 # figure, so it changes on its own exactly as a weight does.
                 if "claim" in item:
-                    edit["claim"] = _claim(item["claim"], voc)
+                    edit["claim"] = _claim(item["claim"], voc, coerced, key)
                 if "thought" in item:
                     edit["thought"] = thought_of(item["thought"])
                 if "ruled_out" in item:
@@ -567,7 +601,7 @@ def validate(
                     if isinstance(item.get(field), str):
                         edit[field] = item[field]
                 if "claim" in item:
-                    edit["claim"] = _claim(item["claim"], voc)
+                    edit["claim"] = _claim(item["claim"], voc, coerced, key)
                 if "thought" in item:
                     edit["thought"] = thought_of(item["thought"])
                 if "ruled_out" in item:
@@ -657,7 +691,7 @@ def validate(
             # a composed one — held to the same "no digits" rule, which is the
             # whole of what makes a few words over a figure safe.
             if "claim" in item:
-                block["claim"] = _claim(item["claim"], voc)
+                block["claim"] = _claim(item["claim"], voc, coerced, key)
             if "thought" in item:
                 block["thought"] = thought_of(item["thought"])
             if "emphasise" in item:
@@ -673,10 +707,16 @@ def validate(
                 cap = int((voc.get("grammar", {}).get("channels", {})
                            .get("emphasise", {}) or {}).get("max_emphasised") or 3)
                 if len(many) > cap:
-                    raise Rejected(
-                        f"emphasise names at most {cap} rows; lighting more than "
-                        f"that emphasises nothing. Draw the read you mean instead."
+                    # PAST THE CAP, THE FIRST ONES ARE KEPT (P2S.7). Lighting
+                    # a fourth row changes no value — it is emphasis, not a
+                    # figure — and refusing it threw away the whole block: the
+                    # `caveats` turn of both P2S.6 runs lost its board to it.
+                    # His order is his ranking, so the first `cap` stand.
+                    coerced.append(
+                        f"{key!r}: emphasise names at most {cap} rows, so only "
+                        f"{', '.join(repr(str(x)) for x in many[:cap])} are lit"
                     )
+                    many = list(many)[:cap]
                 try:
                     lit = [grammar.annotation("emphasise", one, defs) for one in many]
                 except grammar.Rejected as why:
@@ -788,7 +828,7 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, *,
             defs: Mapping[str, Any], board: Any = None,
             question: Optional[str] = None) -> dict:
     """
-    Compose the workspace: say which of the results you read the person sees, as which kind of object, at what weight — say the reading in its three slots, and offer what to do about a row. Call it once, after your reads return and before you answer. Nothing here is a figure: every number is drawn from the read a block names.
+    Compose the workspace: say which of the results you read the person sees, as which kind of object, at what weight — say the reading in its three slots, and offer what to do about a row. Call it AS YOU GO, in the same batch as your next reads, drawing what the reads so far found: a later call adds new keys and changes known ones where they stand, and nothing you do not name moves. The reading settles in your last call. Nothing here is a figure: every number is drawn from the read a block names.
 
     Args:
         blocks: the blocks on screen, in order. Each names a kind, a short key, a weight, the read (seq) it draws, a claim — the few words saying what it says — and a thought: one or two sentences of what you think it shows, drawn beside it as you go through it together.
@@ -826,7 +866,7 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, *,
         # Taken from the calls this composition is already validated against —
         # the same rows, the same meta, no second source of truth.
         said, said_rejected = _reading.validate(
-            reading, defs, _reading.returned_numbers(calls.values()))
+            reading, defs, _reading.returned_numbers(calls.values()), coerced)
     return {
         "rows": accepted,
         "meta": {
@@ -854,10 +894,141 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, *,
                 "was read, and nothing you did not name has moved. A refused "
                 "edit did not happen and the answer must not describe the "
                 "board as though it did. A COERCED edit did happen, in the "
-                "form named beside it — describe that one. A claim you gave "
+                "form named beside it: that is for you, never for the reader "
+                "— say what the figures show, not how they were drawn. A "
+                "claim you gave "
                 "here is lit where you say it in your answer, so say it there. "
                 "An action you offered is drawn on its own row, with what it "
                 "costs derived — do not say either in your answer."
             ),
         },
     }
+
+
+# ---------------------------------------------------------------------------
+# THE TURN'S BOARD, BUILT AS HE GOES (P2S.7, 2026-09-18)
+# ---------------------------------------------------------------------------
+
+def drawn_seqs(blocks: Iterable[Mapping[str, Any]]) -> set[int]:
+    """Every read a list of blocks draws — `seq` on a mark, `seqs` on a shape."""
+    out: set[int] = set()
+    for b in blocks:
+        if isinstance(b.get("seq"), int) and not isinstance(b.get("seq"), bool):
+            out.add(b["seq"])
+        for s in b.get("seqs") or []:
+            if isinstance(s, int) and not isinstance(s, bool):
+                out.add(s)
+    return out
+
+
+def fold(board: list[dict], edits: Iterable[Mapping[str, Any]], *,
+         first: bool = False) -> list[dict]:
+    """
+    The turn's board after one more compose: `board` is what this turn has
+    drawn so far, in the order it arrived; `edits` are a compose's accepted
+    edits. Returns a new list; nothing already on it MOVES.
+
+    WHY. Until today each compose frame REPLACED the turn's composition — here
+    and in the client — so George's second compose had to restate the whole
+    board, and one that did not erased it: `why` in verification/p2s6-gate-2
+    .json composed three blocks, then `{"key": "stores-week", "op": "change",
+    "weight": "lead"}`, and the frame that carried only that change left a
+    change aimed at a key no longer on screen. The owner asked for the
+    opposite: *"the more pop up so you can really see it building"*.
+
+    So a compose is folded the way the board already folds turns
+    (frontend/src/room/board.ts):
+
+      put     under a key already here   replaced where it stands
+              over a read a DEFAULT drew replaces that default where it stands
+                                         — he has now said what the read is
+              otherwise                  added at the end
+      change  of a key already here      merged into it, where it stands
+      quiet   of a key already here      made quiet, where it stands
+      drop    of a key already here      removed — his decision, said
+      any edit to a key NOT here         kept as the edit, for the board of an
+                                         earlier turn (the client applies it)
+
+    `first` is his first compose of the turn: the moment a default stops
+    outranking anything, exactly as editsFor demotes one on the client.
+    """
+    out = [dict(b) for b in board]
+    if first:
+        for b in out:
+            if b.get("default") and b.get("weight") == "lead":
+                b["weight"] = "quiet"
+    # THE LEAD HIS FIRST COMPOSE SETTLED, if this is a later one.
+    settled = None if first else next(
+        (b.get("key") for b in out if b.get("weight") == "lead" and not b.get("default")),
+        None)
+    for edit in edits:
+        e = {k: v for k, v in edit.items()}
+        key = e.get("key")
+        op = e.get("op", "put")
+        at = next((i for i, b in enumerate(out) if b.get("key") == key), None)
+        if op == "put":
+            if at is None:
+                mine = drawn_seqs([e])
+                at = next((i for i, b in enumerate(out)
+                           if b.get("default") and drawn_seqs([b]) & mine), None)
+            if at is None:
+                out.append(e)
+            else:
+                out[at] = e
+            continue
+        if at is None:
+            out.append(e)
+            continue
+        if op == "drop":
+            del out[at]
+        elif op == "quiet":
+            out[at] = {**out[at], "weight": "quiet"}
+            out[at].pop("default", None)
+        else:
+            merged = {**out[at], **{k: v for k, v in e.items() if k != "op"}}
+            merged.pop("default", None)
+            out[at] = merged
+        # ONE LEAD, THE LATEST, within his first compose.
+        now = next((b for b in out if b.get("key") == key), None)
+        if now is not None and now.get("weight") == "lead":
+            for b in out:
+                if b is not now and b.get("weight") == "lead":
+                    b["weight"] = "supporting"
+    # AND AFTER IT, THE LEAD IS SETTLED. The lead is drawn first, so a lead
+    # that changed hands later MOVED the board under the reader — both runs of
+    # verification/p2s7-gate*.json did it in `morning`: a new block asked to
+    # lead, and the settled one was restated as supporting. So the block his
+    # first compose made lead keeps it, whatever a later edit says of its
+    # weight, and a later ask to lead is drawn supporting where it landed. A
+    # lead he DROPPED is gone, and the latest ask stands. The CLAIM is what
+    # settles last, not the board.
+    if settled is not None and any(b.get("key") == settled for b in out):
+        for b in out:
+            if b.get("key") == settled:
+                b["weight"] = "lead"
+            elif b.get("weight") == "lead":
+                b["weight"] = "supporting"
+    return out
+
+
+def as_board_objects(board: Iterable[Mapping[str, Any]],
+                     calls: Mapping[int, Mapping[str, Any]]) -> list[dict]:
+    """
+    This turn's blocks in the shape the question's `[On the board` carries —
+    key, kind, the read behind it, what it is about — so a later compose in
+    the SAME turn can change them by key and "this is that" finds a read the
+    turn already drew. A default is left out: he never saw its key, and a put
+    over its read is handled by `fold`, which replaces it where it stands.
+    """
+    out: list[dict] = []
+    for b in board:
+        if b.get("default") or b.get("op", "put") != "put":
+            continue
+        obj: dict[str, Any] = {"key": b.get("key"), "kind": b.get("kind") or "spec"}
+        call = calls.get(b.get("seq")) if isinstance(b.get("seq"), int) else None
+        if call is not None:
+            obj["read"] = {"tool": call.get("tool"), "arguments": call.get("arguments")}
+        if isinstance(b.get("subject"), str):
+            obj["about"] = b["subject"]
+        out.append(obj)
+    return out

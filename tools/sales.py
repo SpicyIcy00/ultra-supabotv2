@@ -797,6 +797,9 @@ def get_sales(
     if "category" in filters:
         predicates.append(f"{_req(defs, 'products.category_normalization.sql')} = %(category)s")
         params["category"] = filters["category"]
+        # Resolved to the catalogue's spelling once the connection is open
+        # (tools/products.resolve_category, P2S.7).
+        category_statement = len(filters_applied)
         filters_applied.append(
             f"{_req(defs, 'products.category_normalization.sql')} = {filters['category']!r}"
             f"   # metrics.yaml: products.category_normalization"
@@ -821,6 +824,19 @@ def get_sales(
             )
             head = cur.fetchone()
             snapshot_timestamp = head["read_at"]
+
+            # THE CATEGORY AS THE CATALOGUE SPELLS IT (P2S.7): "TRADSNAX" is
+            # tradsnax, and a category that does not exist is refused with
+            # every one named, rather than read as a week of no sales.
+            if "category" in filters:
+                from .products import resolve_category
+                spelled_as, spelled = resolve_category(cur, defs, filters["category"])
+                if spelled_as != params["category"]:
+                    params["category"] = spelled_as
+                    filters_applied[category_statement] = (
+                        f"{_req(defs, 'products.category_normalization.sql')} = {spelled_as!r}"
+                        f"   # metrics.yaml: products.category_normalization ({spelled})"
+                    )
 
             # A preset resolves to Manila calendar dates HERE, with the same SQL
             # the query binds, and they go on the receipt. Without this the

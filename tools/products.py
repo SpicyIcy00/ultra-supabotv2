@@ -59,6 +59,39 @@ def _split_barcodes(raw: Optional[str]) -> list[str]:
     return [b for b in (x.strip() for x in raw.replace(" ", "").split(",")) if b]
 
 
+def resolve_category(cur: Any, defs: dict, category: str) -> tuple[str, Optional[str]]:
+    """
+    The catalogue's own spelling of a category the caller named, and a note
+    when it differed — or a refusal that NAMES EVERY CATEGORY (P2S.7).
+
+    WHY. "analyze tradsnax per store" cost four reads of spelling in both
+    P2S.6 runs: `category='TRADSNAX'` matched nothing (the catalogue says
+    `tradsnax`), a name search for it matched nothing, and so did `snax`,
+    before `trad` turned up a product that happened to carry the category.
+    An exact match that returns nothing for a real category is an answer that
+    looks like "no products", which is the thing a refusal exists to prevent.
+
+    So one grouped statement over the catalogue, the same one the categories
+    read uses: an exact match stands; a match ignoring case and surrounding
+    space is the category; anything else is refused with the list, so the
+    next read is the right one.
+    """
+    cat_sql = _req(defs, "products.category_normalization.sql")
+    cur.execute(f"SELECT DISTINCT {cat_sql} AS category FROM products p")
+    known = sorted(str(r["category"]) for r in cur.fetchall())
+    if category in known:
+        return category, None
+    want = str(category).strip().lower()
+    folded = [k for k in known if k.strip().lower() == want]
+    if len(folded) == 1:
+        return folded[0], (f"category {category!r} is spelled {folded[0]!r} in the "
+                           f"catalogue, and that is what was read")
+    raise ValueError(
+        f"No category is called {category!r}. The categories are: "
+        f"{', '.join(known)} (metrics.yaml: products.category_normalization)."
+    )
+
+
 def get_product(
     sku: Optional[str] = None,
     name: Optional[str] = None,
@@ -74,8 +107,9 @@ def get_product(
                   meta. Nothing is merged.
         name:     case-insensitive substring, searched across name and nickname.
                   Substring only, never fuzzy.
-        category: exact normalized category. 'Uncategorized' selects products
-                  with a NULL or blank category.
+        category: a normalized category, matched ignoring case. 'Uncategorized'
+                  selects products with a NULL or blank category. One that
+                  does not exist is refused with every category named.
         barcode:  exact barcode. Matches an element of the comma-separated
                   products.barcode list, or a row in product_barcodes.
 
@@ -166,6 +200,11 @@ def get_product(
         with conn.cursor(row_factory=DICT_ROW) as cur:
             cur.execute("SELECT now() AS read_at")
             snapshot_timestamp = cur.fetchone()["read_at"]
+
+            if category is not None:
+                params["category"], spelled = resolve_category(cur, defs, category)
+                if spelled:
+                    filters_applied.append(spelled)
 
             cur.execute(sql, params)
             rows = [dict(r) for r in cur.fetchall()]

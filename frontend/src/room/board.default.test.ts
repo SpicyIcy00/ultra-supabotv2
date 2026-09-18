@@ -49,9 +49,12 @@ describe('the board before George has spoken', () => {
       toolCalls: [call(0), call(1, 'get_stock')],
       defaultComposition: frame(seeded, true),
     })]);
+    // IN THE ORDER IT WAS COMPOSED (P2S.7). This read [read-1, read-0] until
+    // the board stopped reversing a turn's own order: a block added in a later
+    // round landed above the ones already drawn and moved all of them down.
     expect(board.map((o) => [o.key, o.kind, o.weight])).toEqual([
-      ['read-1', 'table', 'quiet'],
       ['read-0', 'figure', 'lead'],
+      ['read-1', 'table', 'quiet'],
     ]);
   });
 
@@ -112,5 +115,68 @@ describe('when George composes', () => {
       ]),
     })]);
     expect(board.filter((o) => o.weight === 'lead').map((o) => o.key)).toEqual(['stock']);
+  });
+});
+
+
+describe('the board builds as he goes (P2S.7)', () => {
+  const calls = [call(0), call(1, 'get_stock'), call(2, 'get_sales', { group_by: 'hour' })];
+
+  it('a later round adds at the end, and nothing already drawn moves', () => {
+    const first = buildBoard([turn({
+      toolCalls: calls,
+      defaultComposition: frame(seeded, true),
+      composition: frame([
+        { op: 'put', kind: 'dumbbell', key: 'shops', weight: 'lead', seq: 0 },
+        { ...seeded[1], default: true },
+      ]),
+    })]).map((o) => o.key);
+    const later = buildBoard([turn({
+      toolCalls: calls,
+      defaultComposition: frame(seeded, true),
+      composition: frame([
+        { op: 'put', kind: 'dumbbell', key: 'shops', weight: 'lead', seq: 0 },
+        { ...seeded[1], default: true },
+        { op: 'put', kind: 'heatmap', key: 'hours', weight: 'supporting', seq: 2 },
+      ]),
+    })]).map((o) => o.key);
+    expect(first).toEqual(['shops', 'read-1']);
+    expect(later).toEqual(['shops', 'read-1', 'hours']);
+  });
+
+  it('a default riding in his composition is not drawn twice from the seeded frame', () => {
+    const board = buildBoard([turn({
+      toolCalls: calls,
+      defaultComposition: frame(seeded, true),
+      composition: frame([
+        { op: 'put', kind: 'dumbbell', key: 'shops', weight: 'lead', seq: 0 },
+        { ...seeded[1], default: true },
+      ]),
+    })]);
+    expect(board.filter((o) => o.key === 'read-1')).toHaveLength(1);
+  });
+
+  it("the machine's keys are never him naming an object: an unrelated turn still clears", () => {
+    const yesterday = turn({
+      toolCalls: [call(0, 'get_vending', { store: 'AJI CMG' }),
+                  call(1, 'get_vending', { store: 'AJI CMG', state: 'empty' })],
+      composition: frame([
+        { op: 'put', kind: 'table', key: 'read-1', weight: 'lead', seq: 0 },
+        { op: 'put', kind: 'table', key: 'cmg-empty', weight: 'supporting', seq: 1 },
+      ]),
+    });
+    const today = turn({
+      toolCalls: [call(0, 'get_stock', { store: 'Greenhills' }),
+                  call(1, 'get_stock', { store: 'Greenhills', state: 'low_stock' })],
+      composition: frame([
+        { op: 'put', kind: 'table', key: 'low', weight: 'lead', seq: 0, subject: 'Greenhills' },
+        { op: 'put', kind: 'table', key: 'read-1', weight: 'quiet', seq: 1, default: true },
+      ]),
+    });
+    const board = buildBoard([yesterday, today]);
+    // Had 'read-1' counted as his, the turn would have TRANSFORMED yesterday's
+    // board and 'cmg-empty' — nothing to do with Greenhills — would still be on it.
+    expect(board.map((o) => o.key)).toEqual(['low', 'read-1']);
+    expect(board.every((o) => o.turn === 1)).toBe(true);
   });
 });

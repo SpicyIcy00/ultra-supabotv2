@@ -150,10 +150,14 @@ def test_an_offer_with_no_reason_is_refused(defs):
     assert "WHY" in said
 
 
-def test_a_reason_longer_than_the_definitions_allow_is_refused(defs):
+def test_a_reason_longer_than_the_definitions_allow_is_cut_at_a_word(defs):
+    """P2S.7: a length is not about truth, so the offer stands with its first
+    words rather than being refused and taking the button with it."""
     longest = int(req(defs, "composition.actions.reason.max_length"))
-    said = one({"act": "why", "seq": 1, "target": "OPUS", "reason": "a" * (longest + 1)}, defs)
-    assert str(longest) in said
+    long = "it moved further than any other shop this week and nobody has looked yet at why"
+    assert len(long) > longest
+    stood = one({"act": "why", "seq": 1, "target": "OPUS", "reason": long}, defs)
+    assert len(stood["reason"]) <= longest and long.startswith(stood["reason"])
 
 
 def test_an_act_the_surface_cannot_perform_is_refused(defs):

@@ -313,3 +313,35 @@ def test_every_tool_george_can_call_has_words_on_the_room_surface():
     assert retired <= named, (
         f"a retired tool still has stored turns to narrate: {sorted(retired - named)}"
     )
+
+
+# ---------------------------------------------------------------------------
+# P2S.7 (2026-09-18): explaining the difference is not confusing the two
+# ---------------------------------------------------------------------------
+
+def test_the_foot_traffic_refusal_raises_no_wording_warning():
+    """Both P2S.6 runs warned on the answer the trust rules most want."""
+    from agent import surface as _surface
+    from tools._common import load_defs as _load
+    d = _load()
+    run1 = ("No door counter exists anywhere in the estate, so I can't tell you how "
+            "many people walked in — the closest thing we have is transactions rung up. "
+            "If footfall itself is the question — conversion, people who came in and "
+            "bought nothing — that needs a counter at the door, and we don't have one.")
+    run2 = ("A transaction is a completed sale, not a person through the door. Anyone "
+            "who walked in and bought nothing never appears, so this is a floor under "
+            "traffic, not a measure of it. If footfall is genuinely what you want to "
+            "manage, that needs a door counter.")
+    assert _surface.transaction_synonyms(run1, d) == []
+    assert _surface.transaction_synonyms(run2, d) == []
+
+
+def test_calling_transactions_by_a_persons_name_is_still_reported():
+    from agent import surface as _surface
+    from tools._common import load_defs as _load
+    d = _load()
+    assert _surface.transaction_synonyms(
+        "Transactions fell 5% and footfall was down.", d) == ["footfall"]
+    assert _surface.transaction_synonyms(
+        "This was footfall through the till, not bigger purchases; transactions rose.",
+        d) == ["footfall"]

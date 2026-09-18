@@ -436,6 +436,20 @@ def get_stock(
         "top_n": top_n,
         "truncated": truncated,
         "row_limit": top_n or _MAX_ROWS,
+        # THE WHOLE OF A GROUPED COUNT, AS A READ (P2S.7). Grouped by state,
+        # the rows are 3,005 out and 536 in stock, and "3,005 of Greenhills'
+        # 3,541" is the sentence a person says — so George added them up
+        # himself (verification/p2s7-gate.json, a figure no tool returned). A
+        # group total is a read, never a sum of rows on screen: the tool
+        # states it, over the complete set only.
+        **({"product_count_all_groups": sum(int(r.get("product_count") or 0) for r in rows)}
+           if group_by and not truncated and full_row_count == len(rows)
+           and all("product_count" in r for r in rows) else {}),
+        # SAID, NOT LEFT TO `truncated` (P2S.7): absence from a cut list is
+        # not a fact about the product (metrics.yaml ranking.absent_from_a_cut_list).
+        **({"absent_is_not_known": " ".join(_req(defs, "ranking.absent_from_a_cut_list").split())
+            .format(shown=len(rows), full=full_row_count)}
+           if full_row_count > len(rows) else {}),
         # The net_sales / product_revenue discount tie governs money measures
         # only. get_stock returns no money column, so asserting it here would be
         # theatre. Recorded explicitly so a reader can see it was considered

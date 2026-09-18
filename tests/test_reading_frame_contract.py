@@ -146,11 +146,57 @@ def test_a_claim_may_carry_its_figure_because_it_is_the_answer_s_own_words():
     assert rejected == [] and "130,016" in accepted["claim"]
 
 
-def test_a_slot_past_its_bound_is_refused_and_the_others_stand():
-    long = "word " * 200
-    accepted, rejected = _validate({"claim": CLAIM, "caveat": long})
-    assert accepted == {"claim": CLAIM}
-    assert "at most" in rejected[0]["reason"]
+def test_a_caveat_past_its_bound_is_kept_whole_and_said_so():
+    """A caveat carries notices, so past its length it is KEPT (P2S.7) —
+    cutting one could drop the warning it exists for — and the crossing is
+    recorded on meta.coerced rather than costing the slot."""
+    long = ("word " * 200).strip()
+    coerced: list[str] = []
+    accepted, rejected = reading.validate({"claim": CLAIM, "caveat": long}, _DEFS,
+                                          RETURNED, coerced)
+    assert rejected == []
+    assert accepted == {"claim": CLAIM, "caveat": long}
+    assert any("kept whole" in c for c in coerced)
+
+
+def test_a_claim_past_its_bound_is_cut_at_a_word():
+    """The claim is a span of the answer, so its first words still light it."""
+    longest = _DEFS["voice"]["reading"]["slots"]["claim"]["max_length"]
+    long = CLAIM + " and that is the whole of the reason the week went the way it did, all of it"
+    assert len(long) > longest
+    coerced: list[str] = []
+    accepted, rejected = reading.validate({"claim": long}, _DEFS, RETURNED, coerced)
+    assert rejected == []
+    assert len(accepted["claim"]) <= longest and long.startswith(accepted["claim"])
+    assert not accepted["claim"].endswith(" ")
+    assert coerced and "cut to" in coerced[0]
+
+
+def test_a_rounded_figure_is_said_exactly_when_one_read_returned_it():
+    """"about 13,100" over a row of 13,134 is that row said loosely: the caveat
+    stands with the exact figure, so the notices it carries are not lost
+    (verification/p2s6-gate-2.json forced a notice in over this)."""
+    coerced: list[str] = []
+    accepted, rejected = reading.validate(
+        {"caveat": "the largest was honey bayberry at about 13,100 pesos"},
+        _DEFS, {13134.0, 7.0}, coerced)
+    assert rejected == []
+    assert "13,134" in accepted["caveat"] and "13,100" not in accepted["caveat"]
+    assert coerced
+
+
+def test_a_rounding_of_two_figures_is_refused_with_both_named():
+    accepted, rejected = reading.validate(
+        {"caveat": "the largest was about 13,100 pesos"}, _DEFS, {13134.0, 13080.0})
+    assert "caveat" not in accepted
+    assert "13,134" in rejected[0]["reason"] and "13,080" in rejected[0]["reason"]
+
+
+def test_a_figure_no_read_returned_is_still_refused():
+    """The one that is about truth stays a refusal."""
+    accepted, rejected = reading.validate(
+        {"caveat": "the gap was 17,000 pesos"}, _DEFS, {13134.0})
+    assert "caveat" not in accepted and "no read returned" in rejected[0]["reason"]
 
 
 def test_a_slot_nobody_declared_is_refused_by_name():

@@ -88,30 +88,151 @@ def returned_numbers(results: Iterable[Mapping[str, Any]]) -> set[float]:
     return _prose.allowed_numbers([dict(r) for r in results])
 
 
+def cut_to(text: str, longest: int, how: str) -> str:
+    """
+    `text` shortened to at most `longest` characters by REMOVING its end — at
+    the last sentence that fits (`cut_at_sentence`, else a word) or at the
+    last word that fits (`cut_at_word_boundary`). Nothing is added or
+    reworded, so a cut cannot put a figure on screen the words did not
+    already carry; it can only leave one out.
+    """
+    if len(text) <= longest:
+        return text
+    head = text[:longest + 1]
+    if how == "cut_at_sentence":
+        ends = [m.end() for m in re.finditer(r"[.!?](?=\s)", head) if m.end() <= longest]
+        if ends:
+            return head[:ends[-1]].strip()
+    space = head.rfind(" ")
+    cut = head[:space] if space > 0 else text[:longest]
+    return cut.rstrip(" ,;:—–-")
+
+
+def over_length(name: str, text: str, spec: Mapping[str, Any], default_longest: int,
+                coerced: Optional[list[str]], where: str) -> str:
+    """
+    WHAT A LENGTH BOUND DOES WHEN IT IS CROSSED (P2S.7, 2026-09-18), read from
+    the definition's own `over_length` and never decided here.
+
+    A length is not about truth, so by P1.a's line it is coerced, not refused:
+    about a tenth of verification/p2s6-gate*.json's $3.88 was George redoing a
+    compose refused for a title ten characters long, or losing a caveat to
+    its length. `kept_whole` is for the slots that carry notices — cutting a
+    caveat could drop the very warning it exists for. `refuse` (the default,
+    for anything that declares nothing) is the old behaviour.
+    """
+    longest = int(spec.get("max_length") or default_longest)
+    if len(text) <= longest:
+        return text
+    how = str(spec.get("over_length") or "refuse")
+    if how == "kept_whole":
+        if coerced is not None:
+            coerced.append(f"{name}: longer than {longest} characters and kept "
+                           f"whole ({where})")
+        return text
+    if how in ("cut_at_word_boundary", "cut_at_sentence"):
+        cut = cut_to(text, longest, how)
+        if cut:
+            if coerced is not None:
+                coerced.append(f"{name}: longer than {longest} characters, so it "
+                               f"was cut to {cut!r} ({where})")
+            return cut
+    raise Rejected(
+        f"{name} is at most {longest} characters — it is one thing said once ({where})"
+    )
+
+
+#: A written figure that is a returned one ROUNDED — "about 13,100" over a row
+#: of 13,134 — is the returned one, said loosely. `_rounded_from` finds it.
+def _rounded_from(n: float, decimals: int, returned: set[float]) -> list[float]:
+    """
+    The returned figures `n` is a rounding of, at the precision it was written
+    to: 13,100 keeps its hundreds, so any returned value within fifty of it.
+    Only a written figure that ENDS IN ZEROS can be a rounding — 13,134 said as
+    13,134 either matched or is a different number.
+    """
+    if decimals > 0 or n < 10 or n != int(n):
+        return []
+    zeros = len(str(int(n))) - len(str(int(n)).rstrip("0"))
+    if zeros == 0:
+        return []
+    half = 0.5 * 10 ** zeros
+    return sorted({abs(v) for v in returned if abs(abs(v) - n) < half and abs(v) != n})
+
+
+def _say(value: float, like: str) -> str:
+    """A returned figure written the way the one it replaces was: commas kept."""
+    text = f"{value:,.2f}".rstrip("0").rstrip(".") if value != int(value) else f"{int(value):,}"
+    return text if "," in like else text.replace(",", "")
+
+
+def _correct_rounding(name: str, text: str, returned: set[float], presentation: int,
+                      coerced: Optional[list[str]], where: str) -> str:
+    """
+    A ROUNDED FIGURE IS SAID EXACTLY, OR REFUSED WITH THE ROW'S OWN VALUE
+    NAMED (P2S.7, 2026-09-18).
+
+    verification/p2s6-gate-2.json refused George's caveat for "about 13,100
+    pesos" over a row of 13,134 — true, and rounded — and with the caveat gone
+    the notices it carried were unsurfaced, the answer was re-asked, and a
+    block of them was forced in anyway. The failure was not the rounding; it
+    was losing the caveat to it.
+
+    So where exactly ONE returned figure rounds to what was written, the
+    numeral is replaced by that figure, and said. Nothing is invented: the
+    value that goes on screen is one a read returned, in the place George put
+    its rounding. Where two could be meant, nothing here chooses — the slot is
+    refused and the refusal names them, so the next compose can say which.
+    """
+    out = text
+    for m in reversed(list(_prose._NUMERAL.finditer(text))):
+        raw = m.group("num")
+        if m.group("suffix"):
+            continue
+        n = float(raw.replace(",", ""))
+        decimals = len(raw.split(".")[1]) if "." in raw else 0
+        if not _prose._is_business_figure(n, decimals, False, presentation):
+            continue
+        if _prose._matches(n, decimals, returned):
+            continue
+        meant = _rounded_from(n, decimals, returned)
+        if len(meant) == 1:
+            exact = _say(meant[0], raw)
+            start, end = m.span("num")
+            out = out[:start] + exact + out[end:]
+            if coerced is not None:
+                coerced.append(f"{name}: {raw} is {exact} rounded, so it says "
+                               f"{exact} — the figure the read returned ({where})")
+        elif len(meant) > 1:
+            named = ", ".join(_say(v, raw) for v in meant[:4])
+            raise Rejected(
+                f"{name} says {raw}, which rounds more than one figure this turn "
+                f"read ({named}) — say the one you mean exactly ({where})"
+            )
+    return out
+
+
 def _check(name: str, value: Any, spec: Mapping[str, Any],
-           returned: set[float], presentation: int) -> str:
+           returned: set[float], presentation: int,
+           coerced: Optional[list[str]] = None, where: Optional[str] = None) -> str:
     if not isinstance(value, str) or not value.strip():
         raise Rejected(f"{name} is a few words, or it is left out")
-    text = " ".join(value.split())
-    longest = int(spec.get("max_length") or 160)
-    if len(text) > longest:
-        raise Rejected(
-            f"{name} is at most {longest} characters — it is one thing said "
-            f"once (voice.reading.slots.{name})"
-        )
+    where = where or f"voice.reading.slots.{name}"
+    text = over_length(name, " ".join(value.split()), spec, 160, coerced, where)
     rule = spec.get("figures")
     if rule == FIGURES_RETURNED:
         # A FIGURE, NOT A DIGIT. The matcher is the one the answer's own gates
         # use (agent/prose), so a caveat and a sentence excuse the same dates,
         # day numbers and small counts — two rules that disagreed about what a
         # figure is would be the measure and the gate drifting apart again.
+        text = _correct_rounding(name, text, returned, presentation, coerced, where)
         unbacked = _prose.unreturned_figures(text, returned, presentation)
         if unbacked:
             wrote = ", ".join(f"{n:g}" for n in unbacked[:3])
             raise Rejected(
                 f"{name} carries a figure no read returned ({wrote}) — it may "
                 f"say a number this turn read, never one worked out from them "
-                f"(voice.reading.slots.{name})"
+                f"({where})"
             )
     elif rule is not None:
         raise ValueError(
@@ -121,7 +242,8 @@ def _check(name: str, value: Any, spec: Mapping[str, Any],
 
 
 def validate(submitted: Any, defs: Mapping[str, Any],
-             returned: Optional[set[float]] = None) -> tuple[dict, list[dict]]:
+             returned: Optional[set[float]] = None,
+             coerced: Optional[list[str]] = None) -> tuple[dict, list[dict]]:
     """
     Which slots stand, and why the others do not.
 
@@ -134,6 +256,10 @@ def validate(submitted: Any, defs: Mapping[str, Any],
     nothing passes nothing, and then a slot under `figures: returned` may carry
     no figure at all — which is the same rule, not a stricter one: with no read
     behind it, every figure is one George made up.
+
+    `coerced` collects what was ADJUSTED rather than refused — a claim cut at
+    a word, a caveat kept whole past its length, a rounded figure said
+    exactly — for the caller to hand back on `meta.coerced` (P2S.7).
     """
     spec = slots(defs)
     if not spec:
@@ -161,7 +287,7 @@ def validate(submitted: Any, defs: Mapping[str, Any],
             continue
         try:
             accepted[name] = _check(name, submitted[name], spec[name],
-                                    returned, presentation)
+                                    returned, presentation, coerced)
         except Rejected as why:
             # WHAT WAS REFUSED, NOT ONLY WHY. P1.f's run refused five slots
             # across eleven turns, every one of them for a digit or a length,
@@ -175,7 +301,7 @@ def validate(submitted: Any, defs: Mapping[str, Any],
                              "said": _shorten(submitted[name])})
     if ASKS in submitted:
         asks, refused = _asks(submitted[ASKS], _reading(defs).get(ASKS) or {},
-                              returned, presentation)
+                              returned, presentation, coerced)
         if asks:
             accepted[ASKS] = asks
         rejected.extend(refused)
@@ -183,7 +309,8 @@ def validate(submitted: Any, defs: Mapping[str, Any],
 
 
 def _asks(value: Any, spec: Mapping[str, Any], returned: set[float],
-          presentation: int) -> tuple[list[str], list[dict]]:
+          presentation: int, coerced: Optional[list[str]] = None,
+          ) -> tuple[list[str], list[dict]]:
     """
     THE QUESTIONS HE SUGGESTS (2026-09-17): up to `max_items`, each held to the
     slot rule — bounded, and no figure a read did not return. One that fails is
@@ -199,7 +326,8 @@ def _asks(value: Any, spec: Mapping[str, Any], returned: set[float],
     most = int(spec.get("max_items") or 3)
     for item in value:
         try:
-            text = _check(ASKS, item, spec, returned, presentation)
+            text = _check(ASKS, item, spec, returned, presentation, coerced,
+                          "voice.reading.asks")
         except Rejected as why:
             rejected.append({"slot": ASKS, "reason": str(why), "said": _shorten(item)})
             continue
@@ -212,9 +340,11 @@ def _asks(value: Any, spec: Mapping[str, Any], returned: set[float],
 
 
 def check_sentence(name: str, value: Any, spec: Mapping[str, Any],
-                   returned: set[float], defs: Mapping[str, Any]) -> str:
+                   returned: set[float], defs: Mapping[str, Any],
+                   coerced: Optional[list[str]] = None,
+                   where: Optional[str] = None) -> str:
     """A sentence held to a slot's rule, for a field outside the reading (a block's thought)."""
-    return _check(name, value, spec, returned, presentation_max(defs))
+    return _check(name, value, spec, returned, presentation_max(defs), coerced, where)
 
 
 def _shorten(value: Any) -> str:

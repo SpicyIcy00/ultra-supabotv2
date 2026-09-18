@@ -832,14 +832,19 @@ def test_one_name_is_still_a_string_so_every_stored_board_draws_as_it_did(defs):
     assert accepted[0]["emphasise"] == "Magnolia"
 
 
-def test_emphasising_more_than_the_definitions_allow_is_refused(defs):
-    """Lighting most of a chart emphasises nothing; the cap is what keeps it
-    an emphasis rather than a second way to draw every row bright."""
+def test_emphasising_more_than_the_definitions_allow_keeps_the_first_ones(defs):
+    """Lighting most of a chart emphasises nothing, so the cap still holds —
+    but past it the first rows he named stand and the block is drawn (P2S.7).
+    A refusal here took the whole block off the board over an emphasis, which
+    changes no value; both P2S.6 runs lost the `caveats` board to it."""
     cap = int(req(defs, "composition.grammar.channels.emphasise.max_emphasised"))
+    coerced: list[str] = []
+    named = [f"row {n}" for n in range(cap + 1)]
     accepted, warnings = compose.validate(
-        [_block([f"row {n}" for n in range(cap + 1)])], _shops_read(), defs)
-    assert accepted == []
-    assert str(cap) in warnings[0]["reason"]
+        [_block(named)], _shops_read(), defs, coerced=coerced)
+    assert warnings == []
+    assert accepted[0]["emphasise"] == named[:cap]
+    assert any(str(cap) in c for c in coerced)
 
 
 def test_every_emphasised_name_is_held_to_the_rule_one_name_was_held_to(defs):

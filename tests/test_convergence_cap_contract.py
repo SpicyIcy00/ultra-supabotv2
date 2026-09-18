@@ -210,3 +210,14 @@ def test_a_write_does_not_spend_the_read_budget(monkeypatch):
     assert "convergence_cap" not in [w["reason"] for w in frames_of(frames, "warning")]
     assert not [r for r in frames_of(frames, "tool_result") if r["error"]]
     _assert_every_tool_use_is_answered(requests[-1]["messages"])
+
+
+def test_the_forced_answer_is_never_asked_to_name_a_tool():
+    """P2S.7: the cap's instruction asked for "the single grouped or ranked
+    call — naming the tool and arguments", and the owner was shown
+    `get_sales(metric='product_revenue', …)` (verification/p2s6-gate-2.json).
+    Rule 9 holds on the loop's own instructions too."""
+    source = open("agent/loop.py", encoding="utf-8").read()
+    body = source.split('f"STOP CALLING TOOLS.')[1].split("}]")[0]
+    assert "naming the tool" not in body
+    assert "no\n" in body or "no tool" in body.replace('"\n', "").replace('                            "', "")

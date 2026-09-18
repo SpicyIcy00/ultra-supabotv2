@@ -54,6 +54,8 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Optional
 
+from agent import reading as _reading
+
 
 class Rejected(ValueError):
     """One action refused, with a reason a person could act on."""
@@ -92,12 +94,14 @@ def _reason(text: Any, defs: Mapping[str, Any]) -> str:
             "a reason carries no digits — it sits over rows that draw their "
             "own figures (metrics.yaml composition.actions.reason)"
         )
-    if len(said) > longest:
+    try:
+        return _reading.over_length("reason", said, {**bound, "max_length": longest},
+                                    70, None, "metrics.yaml composition.actions.reason")
+    except _reading.Rejected:
         raise Rejected(
             f"a reason is at most {longest} characters — it is the few words "
             f"beside a button, not the reading"
-        )
-    return said
+        ) from None
 
 
 def _shorten(value: Any) -> str:

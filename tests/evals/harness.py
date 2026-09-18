@@ -31,6 +31,18 @@ from tests.test_loop_correction_contract import StubLog
 Inject = Callable[[str, dict, dict], dict]
 
 
+def say(text: str = "") -> None:
+    """
+    A report line, printed so ANY console can take it (P2S.7, 2026-09-18).
+
+    The v2 summary prints "target ≤ 1", and a Windows console on cp1252 has no
+    "≤": the print raised at the end of a paid run and its summary was lost.
+    A character the console cannot show becomes "?"; the line is never lost.
+    """
+    enc = getattr(sys.stdout, "encoding", None) or "utf-8"
+    print(str(text).encode(enc, "replace").decode(enc, "replace"))
+
+
 def required():
     """Skip unless the eval is opted in and both live dependencies are present."""
     if os.environ.get("GEORGE_EVALS") != "1":
@@ -187,6 +199,8 @@ def turn_usd(turn) -> float:
     functionality, i just want to optimize cost".
     """
     usage = (turn.done or {}).get("usage") or {}
+    if not isinstance(usage, dict):
+        return 0.0
     return sum(int(usage.get(k) or 0) / 1e6 * RATES[k] for k in RATES)
 
 
@@ -255,10 +269,10 @@ class Meter:
             row["report"] = os.environ.get("GEORGE_EVAL_REPORT") or None
             with path.open("a", encoding="utf-8") as fh:
                 fh.write(json.dumps(row) + "\n")
-            print(f"\n[spend] this process: {row['turns']} live turns, "
+            say(f"\n[spend] this process: {row['turns']} live turns, "
                   f"${row['usd']:.2f} — appended to {path.name}")
         except Exception as exc:            # never fail a run over bookkeeping
-            print(f"\n[spend] LEDGER WRITE FAILED: {exc!r}")
+            say(f"\n[spend] LEDGER WRITE FAILED: {exc!r}")
 
 
 METER = Meter()
@@ -483,6 +497,29 @@ class Report:
                 "shaped_before": timing.first_composed_object_ms(turn.frames, with_default=False),
                 "shaped_after": timing.first_composed_object_ms(turn.frames, with_default=True),
             },
+            # THE BOARD BUILDING AS HE WORKS (P2S.7): when it gained blocks,
+            # whether one landed before the final round, and whether anything
+            # drawn earlier moved (tests/evals/timing.board_growth).
+            "board_growth": timing.board_growth(turn.frames, turn.done),
+            # WHAT WAS COERCED rather than refused, per compose (P2S.7): each
+            # entry is a length, an emphasis count or a rounding that used to
+            # cost a refused compose and, usually, another round.
+            "coerced": [c for event, data, _at in turn.frames if event == "compose"
+                        for c in (data.get("coerced") or [])],
+            # WHAT THE TURN COST, recorded and never asserted (the owner,
+            # 2026-09-18: "cost should not hold us back in functionality").
+            "turn_usd": round(turn_usd(turn), 4),
+            # HOW BIG EACH READ WAS WHEN HANDED TO THE MODEL (P2S.7(f)) — the
+            # characters the loop sends, after its own row cap. Measured, not
+            # cut: in P2S.6's Greenhills turn $0.20 of $0.34 was caching
+            # large stock and replenishment results, and the owner's rule is
+            # that cost never makes George read less.
+            "result_sizes": [
+                {"tool": r["tool"], "rows": len((r["result"] or {}).get("rows") or []),
+                 "chars_to_model": len(json.dumps(george_loop._json_safe(
+                     george_loop._truncate(r["result"] or {}))))}
+                for r in turn.results if not r["error"] and r["result"]
+            ],
             # THE EVIDENCE, BOUNDED — added 2026-09-13 so a recorded run can be
             # REPLAYED through changed checks for free. Every trust check is a
             # function of (answer, results): `ungrounded_numerals`,
@@ -548,12 +585,12 @@ class Report:
                       fh, indent=2, default=str)
         # On stdout as well as in the file: a run that cost real money should
         # say so where the person who started it is looking.
-        print(f"\n[eval] {spend['turns']} live turns cost ${spend['usd']:.2f} "
+        say(f"\n[eval] {spend['turns']} live turns cost ${spend['usd']:.2f} "
               f"— {spend['scored_only']['turns']} scored (${spend['scored_only']['usd']:.2f}) "
               f"+ {spend['unscored_turns']} setup (${spend['unscored_usd']:.2f})")
         # AND WHETHER IT PASSED, which until 2026-09-15 existed only in a
         # pytest line nothing kept.
-        print(f"[eval] {outcome['passed']}/{outcome['scenarios']} scenarios passed"
+        say(f"[eval] {outcome['passed']}/{outcome['scenarios']} scenarios passed"
               + (f" — failed: {', '.join(outcome['failed'])}" if outcome["failed"] else "")
               + (f" — unscored: {', '.join(outcome['unscored'])}" if outcome["unscored"] else ""))
         return path

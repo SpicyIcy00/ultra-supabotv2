@@ -30,7 +30,7 @@ import json
 import pytest
 
 from tests.evals import checks
-from tests.evals.harness import Report, evidence_summary, required, run_turn
+from tests.evals.harness import Report, evidence_summary, required, run_turn, say
 from tests.evals.judge import judge
 
 MAX_ITERATIONS = 6
@@ -48,14 +48,14 @@ def _live():
 def _write_report():
     yield
     path = report.write()
-    print("\n\n== investigation evals ==")
+    say("\n\n== investigation evals ==")
     for r in report.records:
         d = r["done"]
-        print(f"  {_outcome(r):<4} {r['scenario']:<30} calls={d.get('tool_calls')} exec={d.get('executed_calls')} "
+        say(f"  {_outcome(r):<4} {r['scenario']:<30} calls={d.get('tool_calls')} exec={d.get('executed_calls')} "
               f"dup={d.get('duplicate_reads')} iters={d.get('iterations')} "
               f"notices={','.join(r['notices']) or '-'} judge={_judge_line(r['judge'])}")
     if path:
-        print(f"  report: {path}")
+        say(f"  report: {path}")
 
 
 def _outcome(record) -> str:

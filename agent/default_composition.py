@@ -250,6 +250,41 @@ def compose_default(calls: Mapping[int, Mapping[str, Any]], *,
     return list(result.get("rows") or [])
 
 
+def compose_added(calls: Mapping[int, Mapping[str, Any]], *, drawn: set[int],
+                  defs: Mapping[str, Any], board: Any = None, max_rows: int,
+                  room: int, lead: bool) -> list[dict]:
+    """
+    THE READS THAT LANDED SINCE THE BOARD WAS LAST DRAWN, as blocks to ADD to
+    it (P2S.7, 2026-09-18) — flagged `default`, and quiet unless the board is
+    still empty.
+
+    WHY. The default used to be drawn once a turn and never again, so between
+    the first figures and the end of a broad answer nothing new appeared: "how
+    are we doing?" drew the shops at 10.4 s and nothing else until 59.6 s
+    (verification/p2s6-gate-2.json). The owner: *"the more pop up so you can
+    really see it building"*. A default that REARRANGED the board would move
+    objects under a person mid-read, which is why it was latched (P1.b); one
+    that only ADDS, quiet, at the end, moves nothing — so the latch goes and
+    that reason stays.
+
+    Same rule as `blocks` and the same gate as `compose_default`; `drawn` is
+    every seq the turn's board already draws, George's and the defaults'.
+    """
+    if room <= 0:
+        return []
+    fresh = {s: c for s, c in calls.items() if s not in drawn}
+    proposed = [b for b in blocks(fresh, max_rows=max_rows)][:room]
+    if not proposed:
+        return []
+    for i, b in enumerate(proposed):
+        b["weight"] = "lead" if (lead and i == 0) else "quiet"
+    try:
+        result = compose.compose(proposed, None, calls=calls, defs=defs, board=board)
+    except (ValueError, KeyError, TypeError):
+        return []
+    return [{**b, "default": True} for b in (result.get("rows") or [])]
+
+
 def pin_blocks(tool_calls: Sequence[Mapping[str, Any]], results: Sequence[Mapping[str, Any]],
                *, defs: Mapping[str, Any]) -> list[dict]:
     """

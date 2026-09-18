@@ -4220,9 +4220,13 @@ notices:
     must_convey:
       - [different products, three products, more than one product, several products, multiple products]
   duplicate_skus_in_result:
+    # "product code" and "shared by" added P2S.7 (2026-09-18): "three product
+    # codes in it are each shared by two different products — those codes do
+    # not identify a single item" said it plainly, missed the word "sku", and
+    # the notice was forced in underneath it (verification/p2s7-gate.json).
     must_convey:
-      - [sku]
-      - [duplicate, more than one, not unique, not a key]
+      - [sku, product code, item code]
+      - [duplicate, more than one, not unique, not a key, shared by, identify a single]
   metric_redefined:
     must_convey:
       - [contain, containing, different question, not transactions of]
@@ -4893,6 +4897,14 @@ ranking:
     Size of the complete result set before top_n or the row cap. When it exceeds
     row_count, the rows shown are the top slice by the ordering in
     meta.ordering — never a sample, and never something to total.
+  # WHAT A CUT LIST CANNOT SAY (P2S.7, 2026-09-18). The store-wide stock-out
+  # list returned 1,000 of more rows with only `truncated` to show it, and in
+  # the 2026-09-18 simulation a product absent from it was read as "not out".
+  # Absence from the top slice is not a fact about the product.
+  absent_from_a_cut_list: >
+    This list is cut: {shown} of {full} rows, the top slice by meta.ordering. A
+    product that is not in it is NOT known to be in any state — check that one
+    line by its sku before saying anything about it.
 
   sales:
     # "Top N" means the N largest by the metric. When top_n is set this
@@ -5084,6 +5096,12 @@ voice:
           your answer, word for word, where they belong; the surface lights
           them there. Not a summary of the answer and not a second copy of it.
         max_length: 120
+        # PAST IT, CUT AT A WORD — not refused (P2S.7, 2026-09-18). A length
+        # is not about truth: verification/p2s6-gate-2.json lost the whole
+        # reading's claim on the foot-traffic turn for being 123 characters,
+        # and the claim is a span of the answer, so its first words still
+        # light the answer where he said them. agent/reading.over_length.
+        over_length: cut_at_word_boundary
       caveat:
         about: >
           the one thing that qualifies these figures, in plain words, whole —
@@ -5104,6 +5122,10 @@ voice:
         # comparison AND frozen purchase orders is two honest things, and the
         # refusal lost the slot. A caveat is still one thing said whole.
         max_length: 640
+        # PAST IT, KEPT WHOLE (P2S.7): a caveat is where the notices go, and
+        # cutting one could drop the very warning it exists for. The bound is
+        # the prompt's guide to length, recorded on meta.coerced when crossed.
+        over_length: kept_whole
       next:
         # Rewritten 2026-09-18. It said "the one thing you would do or check
         # next … where an investigation stopped, this is where it says what to
@@ -5120,6 +5142,9 @@ voice:
         # bayberry facings on the floor — the counts say three packs for …"
         # was refused at 160; what to do and why is one sentence, not a tag.
         max_length: 320
+        # Kept whole past it, like the caveat (P2S.7): a next may name what a
+        # notice says no read can settle, and a cut would drop that.
+        over_length: kept_whole
     # WHAT IS NOT A FIGURE, wherever `figures: returned` is declared. A whole
     # number to here, with no decimals and no per-cent sign, is a day number or
     # a small count — "3 of 7 shops", "the 12th", "8 weeks from delivery" — and
@@ -5141,6 +5166,8 @@ voice:
         only when a read returned it.
       max_items: 3
       max_length: 90
+      # Kept whole past it (P2S.7): a question cut at a word is not a question.
+      over_length: kept_whole
       figures: returned
     # A claim nobody said is not drawn, and the loop records that it was not:
     # the gap log's own word for it, so the rate is measurable rather than
@@ -6069,6 +6096,10 @@ composition:
       block titles itself from the read.
     no_digits: true
     max_length: 80
+    # A title past its length is cut at a word, never refused (P2S.7): the
+    # `analyze` turn of verification/p2s6-gate.json lost its lead block to a
+    # claim over 80 characters. The digit rule above is truth and stays.
+    over_length: cut_at_word_boundary
 
   # WHAT HE THINKS THIS BLOCK SHOWS (the owner, 2026-09-17: "add more ai
   # thoughts to the charts cause if the ai thoughts are with the charts it
@@ -6087,6 +6118,9 @@ composition:
       A figure belongs here only when a read this turn returned it.
     figures: returned
     max_length: 260
+    # Past it, the sentences that fit stand and the rest go (P2S.7) — a
+    # thought refused took its whole block off the board with it.
+    over_length: cut_at_sentence
 
 
   # ===========================================================================
@@ -6503,6 +6537,9 @@ composition:
       about: "why this one — in your own few words, the way you would say it out loud"
       no_digits: true
       max_length: 70
+      # Cut at a word past it, like a block's claim (P2S.7): a length is not
+      # about truth, and a refused reason took the whole offer with it.
+      over_length: cut_at_word_boundary
     warning_reason: actions_rejected
 
 surface:
@@ -6620,6 +6657,7 @@ surface:
       - not
       - "no"
       - nobody
+      - nothing
       - none
       - never
       - cannot
@@ -6640,6 +6678,18 @@ surface:
     # above does the separating. This only stops a very long clause from being
     # cleared by a negator at the far end of it.
     negation_window_words: 6
+    # EXPLAINING THE DIFFERENCE IS NOT CONFUSING THE TWO (P2S.7, 2026-09-18).
+    # Both P2S.6 runs raised a wording warning on the foot-traffic refusal —
+    # "If footfall itself is the question … that needs a counter at the
+    # door", "this is a floor under traffic, not a measure of it" — which is
+    # George saying a transaction is NOT a person, the thing the scan exists
+    # to protect. A sentence that is hypothetical, names the instrument that
+    # would measure the thing, or says the figure is not a measure of it, is
+    # an explanation; a sentence that USES the word for the transactions
+    # ("footfall was down 5%", "customers were up") is still reported.
+    explaining_the_difference:
+      opens_with: ["if", "whether", "unless"]
+      says: ["counter", "not a measure of", "floor under", "would need", "needs a door"]
     causal_words_to_avoid:
       - caused
       - because of

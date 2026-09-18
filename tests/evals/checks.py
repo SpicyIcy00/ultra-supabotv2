@@ -160,6 +160,61 @@ _ATTRIBUTION = [
 ]
 
 
+#: Words that name a CHANGE, for the share-shaped constructions below.
+_CHANGE_NOUN = (r"(?:decline|drop|fall|change|decrease|shortfall|gap|loss|increase|"
+                r"rise|growth|swing|movement|difference|dip|slide)")
+#: "roughly half the gap", "the bulk of the decline", "most of that drop" —
+#: a share of a change said in words instead of digits (P2S.7).
+_SHARE_IN_WORDS = re.compile(
+    r"\b(?:(?:roughly|about|nearly|almost|around|just over|just under|over|under)\s+)?"
+    r"(?:half|a third|a quarter|two[- ]thirds|three[- ]quarters|most|the bulk|"
+    r"nearly all|almost all)\s+(?:of\s+)?(?:the|that|this|its|their)\s+"
+    r"(?:[\w'’]+\s+){0,2}" + _CHANGE_NOUN + r"\b", re.I)
+#: "₱10,701 of the ₱11,843 gap" — one figure put as a PART of another.
+_PART_OF = re.compile(
+    r"(?P<part>[₱$]?\s?\d[\d,]*(?:\.\d+)?)\s+of\s+(?:the|that|this|its|their)\s+"
+    r"(?:[\w'’]+\s+)?(?P<whole>[₱$]?\s?\d[\d,]*(?:\.\d+)?)(?P<noun>\s+(?:[\w'’]+\s+)?"
+    + _CHANGE_NOUN + r"\b)?", re.I)
+
+
+def _changes(results: Iterable[dict]) -> set[float]:
+    """Every CHANGE a read returned — the `change` on a compared row."""
+    out: set[float] = set()
+    for r in results:
+        for row in (r.get("rows") or []):
+            v = row.get("change") if isinstance(row, dict) else None
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                out.add(abs(float(v)))
+    return out
+
+
+def share_of_a_change(answer: str, results: Iterable[dict] = ()) -> list[str]:
+    """
+    A SHARE OF A CHANGE WITHOUT A PER-CENT SIGN (P2S.7, 2026-09-18).
+
+    `attribution_claims` caught "82% of the decline" and nothing shaped like
+    it, and both P2S.6 runs said it another way: "Aji Mix alone ... ₱10,701 of
+    the ₱11,843 gap", "the ten biggest droppers come to roughly half the gap".
+    The same arithmetic no tool performs (CLAUDE.md 10), in words and in
+    pesos.
+
+    A figure OF another is a share only when the whole is a CHANGE — a
+    `change` a read returned, or followed by a word naming one. "4,764 of the
+    6,344 units requested" is the replenishment notice's own count of a set
+    and is not one; "155 of the 407 products" is a count, not a share.
+    """
+    results = list(results)
+    changes = _changes(results)
+    out: list[str] = []
+    for m in _SHARE_IN_WORDS.finditer(answer):
+        out.append(m.group(0))
+    for m in _PART_OF.finditer(answer):
+        whole = float(re.sub(r"[^\d.]", "", m.group("whole")) or 0)
+        if m.group("noun") or any(abs(whole - c) <= 0.5 for c in changes):
+            out.append(m.group(0).strip())
+    return out
+
+
 def attribution_claims(answer: str, results: Iterable[dict] = ()) -> list[str]:
     """
     Sentences that put a share of the change on a driver — arithmetic no tool
@@ -183,6 +238,7 @@ def attribution_claims(answer: str, results: Iterable[dict] = ()) -> list[str]:
     a receipt: "82% of the decline came from ATP" fails whatever the rows say.
     The two are told apart by which pattern fired, not by reading the figure.
     """
+    results = list(results)
     allowed = allowed_numbers(results)
     kept: list[str] = []
     for rx, receiptable in _ATTRIBUTION:
@@ -190,6 +246,9 @@ def attribution_claims(answer: str, results: Iterable[dict] = ()) -> list[str]:
             claim = m.group(0)
             if receiptable and allowed and _quoted_share(claim, allowed):
                 continue
+            kept.append(claim)
+    for claim in share_of_a_change(answer, results):
+        if not any(claim in k or k in claim for k in kept):
             kept.append(claim)
     return kept
 
@@ -488,3 +547,38 @@ class Turn:
             {"role": "user", "text": self.question},
             {"role": "george", "text": self.answer, "tool_calls": calls},
         ]
+
+
+# ---------------------------------------------------------------------------
+# A refusal that is not about truth (P2S.7, 2026-09-18)
+# ---------------------------------------------------------------------------
+
+_NO_ROW_FOR = re.compile(r"read (?P<seq>\d+) has no row for '(?P<subject>[^']+)'")
+_REFUSALS = ("composition_rejected", "reading_rejected", "actions_rejected")
+
+
+def refused_for_what_is_not_truth(warnings: Iterable[dict], calls: Iterable[dict]) -> list[str]:
+    """
+    Every compose, reading or action refused for a LENGTH, an EMPHASIS COUNT,
+    or a SUBJECT THE READ WAS FILTERED TO — the three P2S.7 turned into
+    coercions, because none of them can change what a figure says. A refusal
+    for a figure no read returned is truth and is not listed.
+    """
+    by_seq = {int(c["seq"]): c for c in calls if c.get("seq") is not None}
+    out: list[str] = []
+    for w in warnings:
+        if w.get("reason") not in _REFUSALS:
+            continue
+        for part in str(w.get("detail") or "").split("; "):
+            if "at most" in part and "no read returned" not in part:
+                out.append(part)
+                continue
+            m = _NO_ROW_FOR.search(part)
+            if not m:
+                continue
+            asked = ((by_seq.get(int(m.group("seq"))) or {}).get("arguments") or {}).get("filters") or {}
+            values = [v for x in asked.values() for v in (x if isinstance(x, list) else [x])]
+            if any(isinstance(v, str) and v.strip().lower() == m.group("subject").strip().lower()
+                   for v in values):
+                out.append(part)
+    return out

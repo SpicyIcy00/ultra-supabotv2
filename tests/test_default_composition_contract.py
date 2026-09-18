@@ -218,13 +218,15 @@ def test_a_default_never_discharges_a_caveat():
     charted = [{"seq": 0, "tool": "get_sales", "meta": {"notice": {"kind": "partial_window"}}}]
     seeded = [{"op": "put", "kind": "figure", "key": "read-0", "seq": 0, "weight": "lead"}]
     assert loop._drawn_on_the_board([], charted) == set()
-    # And it is his blocks, not the default's, that the loop passes in: the
-    # source says `_drawn_on_the_board(composition_recorded, charted)` and
-    # `default_composition_recorded` is a separate name that reaches the frame
-    # and the post and nothing else.
+    # And it is his blocks, not the default's, that the loop passes in. Since
+    # P2S.7 the turn's board is one list with the defaults flagged in it, so
+    # the gate is fed `_his(...)`, which is that list without them.
     source = open("agent/loop.py", encoding="utf-8").read()
-    assert "_drawn_on_the_board(composition_recorded, charted)" in source
+    assert "_drawn_on_the_board(_his(composition_recorded), charted)" in source
+    assert "_drawn_on_the_board(composition_recorded" not in source
     assert "_drawn_on_the_board(default_composition_recorded" not in source
+    flagged = [{**seeded[0], "default": True}]
+    assert loop._drawn_on_the_board(loop._his(flagged), charted) == set()
     # The default would have discharged it, which is why it is kept out.
     assert loop._drawn_on_the_board(seeded, charted) != set()
 
@@ -234,20 +236,39 @@ def test_the_frame_says_it_is_a_default():
     assert '"default": True,' in source
 
 
-def test_the_one_chance_is_spent_on_drawing_and_not_on_trying():
+def test_a_batch_that_draws_nothing_spends_nothing(defs):
     """
     A turn whose first batch is a write, or a read like get_object that returns
-    sections rather than a figure, composes nothing. If that spent the turn's
-    one default, the board would stay empty for every read that followed — and
-    nothing was put on screen, so nothing moves when the next batch gets its
-    turn. Measured on the twelve, 2026-09-13: `shop` and `product` both open on
-    get_object.
+    sections rather than a figure, composes nothing — and the reads after it
+    are still drawn. Measured on the twelve, 2026-09-13: `shop` and `product`
+    both open on get_object. Since P2S.7 there is no one chance to spend: every
+    batch draws what it brought.
     """
-    source = open("agent/loop.py", encoding="utf-8").read()
-    body = source.split("if not default_composed and not composition_recorded:")[1][:900]
-    latch = body.index("default_composed = True")
-    emitted = body.index("if default_composition_recorded:")
-    assert emitted < latch, "the latch must sit inside the branch that drew something"
+    empty = default_composition.compose_added(
+        {0: read(rows=[])}, drawn=set(), defs=defs, max_rows=120, room=8, lead=True)
+    assert empty == []
+    later = default_composition.compose_added(
+        {0: read(rows=[]), 1: read(rows=TOTAL)}, drawn=set(), defs=defs,
+        max_rows=120, room=8, lead=True)
+    assert [b["seq"] for b in later] == [1] and later[0]["weight"] == "lead"
+
+
+def test_reads_that_land_later_are_added_quiet_and_flagged(defs):
+    """
+    P2S.7: "how are we doing?" drew the shops at 10.4 s and nothing new until
+    59.6 s. Reads that land after the first are ADDED, quiet, and say they are
+    the machine's — never leading, never redrawing what is already there.
+    """
+    calls = {0: read(rows=TOTAL), 1: read(rows=TOTAL, arguments={"metric": "atv"})}
+    added = default_composition.compose_added(
+        calls, drawn={0}, defs=defs, max_rows=120, room=8, lead=False)
+    assert [(b["seq"], b["weight"], b["default"]) for b in added] == [(1, "quiet", True)]
+
+
+def test_the_board_has_room_or_nothing_is_added(defs):
+    calls = {0: read(rows=TOTAL)}
+    assert default_composition.compose_added(
+        calls, drawn=set(), defs=defs, max_rows=120, room=0, lead=True) == []
 
 
 def test_the_model_is_never_told_a_default_was_composed():

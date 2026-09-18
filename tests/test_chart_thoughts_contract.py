@@ -54,10 +54,17 @@ def test_a_thought_may_not_carry_a_figure_no_read_returned():
     assert "composition.thought" in rejected[0]["reason"]
 
 
-def test_a_thought_is_bounded():
+def test_a_thought_is_bounded_by_cutting_not_by_losing_the_block():
+    """Past its length a thought keeps the sentences that fit (P2S.7); a
+    refused thought used to take its whole block off the board."""
     longest = DEFS["composition"]["thought"]["max_length"]
-    _, rejected = compose.validate(_block(thought="word " * longest), CALLS, DEFS)
-    assert rejected and "at most" in rejected[0]["reason"]
+    first = "OPUS gave up more than any shop this week."
+    coerced: list[str] = []
+    accepted, rejected = compose.validate(
+        _block(thought=first + " " + "word " * longest), CALLS, DEFS, coerced=coerced)
+    assert rejected == []
+    assert accepted[0]["thought"] == first
+    assert coerced
 
 
 def test_the_asks_are_kept_bounded_and_held_to_the_figure_rule():

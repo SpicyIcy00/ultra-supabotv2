@@ -44,9 +44,9 @@ import os
 
 import pytest
 
-from tests.evals import checks
+from tests.evals import checks, timing
 from tests.evals import voice_checks as voice
-from tests.evals.harness import Report, required, run_turn, turn_usd
+from tests.evals.harness import Report, required, run_turn, say, turn_usd
 from tests.evals.test_page_workshop_evals import FakeWriter
 from tools._common import load_defs, req
 
@@ -70,7 +70,7 @@ def _live():
 def _write_report():
     yield
     path = report.write()
-    print("\n\n== voice evals v2 ==")
+    say("\n\n== voice evals v2 ==")
     n = max(len(report.records), 1)
     lead = sum(int(r["findings"]["leads_with_reading"]) for r in report.records)
     cited = sum(int(bool(r["findings"].get("grounded_numerals"))) for r in report.records)
@@ -79,27 +79,27 @@ def _write_report():
     labels = sum(int(r["findings"].get("label_calls") or 0) for r in report.records)
     refused = sum(int(bool(r["findings"].get("compose_rejected"))) for r in report.records)
     out = report.outcome()
-    print(f"  scenarios {n} · live turns {LIVE_TURNS['n']}")
+    say(f"  scenarios {n} · live turns {LIVE_TURNS['n']}")
     # WHETHER IT PASSED, first, because it is the question (P2.0). Every
     # number below is a rate that means nothing if a scenario blew up.
-    print(f"  OUTCOME  {out['passed']}/{out['scenarios']} scenarios passed"
+    say(f"  OUTCOME  {out['passed']}/{out['scenarios']} scenarios passed"
           + (f" · failed {', '.join(out['failed'])}" if out["failed"] else "")
           + (f" · unscored {', '.join(out['unscored'])}" if out["unscored"] else ""))
-    print(f"  TRUST (pass/fail, meaningful from one run):")
-    print(f"    every scenario that asked for a figure cited one: see failures above")
-    print(f"  THE BOARD (P1.f's own numbers):")
-    print(f"    questions where compose was refused  {refused}/{n}   target ≤ 1")
-    print(f"    label calls as a share of all calls  {labels}/{calls} "
+    say(f"  TRUST (pass/fail, meaningful from one run):")
+    say(f"    every scenario that asked for a figure cited one: see failures above")
+    say(f"  THE BOARD (P1.f's own numbers):")
+    say(f"    questions where compose was refused  {refused}/{n}   target ≤ 1")
+    say(f"    label calls as a share of all calls  {labels}/{calls} "
           f"({100 * labels / max(calls, 1):.0f}%)   target not worse than 33%")
-    print(f"  THE READING (a rate, not a gate):")
-    print(f"    said a claim          {rate('has_claim')}/{n}")
-    print(f"    the claim was lit     {rate('claim_lit')}/{n}")
-    print(f"    said what is next     {rate('has_next')}/{n}")
-    print(f"  STYLE (a rate, not a gate — compare with the last run):")
-    print(f"    leads with a reading  {lead}/{n} ({100 * lead / n:.0f}%)")
-    print(f"    cited a real figure   {cited}/{n} ({100 * cited / n:.0f}%)")
+    say(f"  THE READING (a rate, not a gate):")
+    say(f"    said a claim          {rate('has_claim')}/{n}")
+    say(f"    the claim was lit     {rate('claim_lit')}/{n}")
+    say(f"    said what is next     {rate('has_next')}/{n}")
+    say(f"  STYLE (a rate, not a gate — compare with the last run):")
+    say(f"    leads with a reading  {lead}/{n} ({100 * lead / n:.0f}%)")
+    say(f"    cited a real figure   {cited}/{n} ({100 * cited / n:.0f}%)")
     if path:
-        print(f"  report: {path}")
+        say(f"  report: {path}")
 
 
 @pytest.fixture(scope="module")
@@ -162,6 +162,11 @@ def _voice(name: str, turn: checks.Turn, *, extra_results: list | None = None,
     f["limitation"] = checks.limitation_statement(turn.answer)
     f["attribution"] = checks.attribution_claims(turn.answer, results)
     f["refused_calls"] = [c.get("tool") for c in turn.calls if c.get("error")]
+    # P2S.7's rows, read off the turn at no cost: a refusal that was not about
+    # truth, the board building, what the turn cost.
+    f["refused_for_ceremony"] = checks.refused_for_what_is_not_truth(turn.warnings, turn.calls)
+    f["board_growth"] = timing.board_growth(turn.frames, turn.done)
+    f["turn_usd"] = round(turn_usd(turn), 4)
     # The carried rows go ON THE RECORD, not just into the checks: a thread's
     # later turn cites figures its earlier turns read, and a report without
     # them makes `corpus.py` report ungrounded numerals the run did not.
@@ -182,6 +187,10 @@ def _voice(name: str, turn: checks.Turn, *, extra_results: list | None = None,
     assert not f["ungrounded_numerals"], f"figures no tool returned: {f['ungrounded_numerals']}"
     assert not f["internal_vocabulary"], f"internal vocabulary: {f['internal_vocabulary']}"
     assert not f["attribution"], f"a share of the change, which no tool computed: {f['attribution']}"
+    # P2S.7: nothing refused for a length, an emphasis count or a subject the
+    # read is filtered to — each is coerced now — and nothing drawn moves.
+    assert not f["refused_for_ceremony"], f"refused for what is not truth: {f['refused_for_ceremony']}"
+    assert not f["board_growth"]["moved"], f"something drawn earlier moved: {f['board_growth']['moved']}"
 
     # THE ASSERTION THE FIRST TWELVE DID NOT HAVE. A question that asks for a
     # figure is not answered by prose about what cannot be established.
@@ -234,6 +243,8 @@ def test_gate_3_cannot(monkeypatch):
     """A refusal that stopped refusing. Expects NO figure, by design."""
     turn = _turn(monkeypatch, "What was the foot traffic at Rockwell last week?")
     _voice("cannot", turn, expect_refusal=True, expects_figure=False)
+    # P2S.7: saying a transaction is NOT a person is the refusal working.
+    assert "transaction_wording" not in [w.get("reason") for w in turn.warnings], turn.answer
 
 
 @pytest.mark.gate
@@ -258,6 +269,15 @@ def _broad(turn: checks.Turn, f: dict) -> None:
     f["turn_usd"] = round(turn_usd(turn), 4)
     assert loc, ("a broad answer read by store and nothing under it — "
                  f"{[c.get('arguments') for c in turn.read_calls]}")
+    # P2S.7: THE FIGURES FIRST, AND THEN IT BUILDS. The first thing drawn is
+    # the shops, and at least one deeper block lands before the final round.
+    growth = f["board_growth"]
+    first = next((data for event, data, _at in turn.frames
+                  if event == "compose" and data.get("blocks")), {})
+    by_seq = {c.get("seq"): c for c in turn.calls}
+    f["first_drawn"] = [(by_seq.get(b.get("seq")) or {}).get("arguments") for b in first.get("blocks") or []]
+    assert any("store" in str((a or {}).get("group_by")) for a in f["first_drawn"]), f["first_drawn"]
+    assert growth["deeper_before_final"], f"nothing new was drawn before the final round: {growth}"
 
 
 @pytest.mark.gate

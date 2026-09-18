@@ -661,6 +661,7 @@ def transaction_synonyms(answer: str, defs: Mapping[str, Any]) -> list[str]:
     window = int(req(defs, "surface.prose.negation_window_words"))
     low = answer.lower()
 
+    explaining = req(defs, "surface.prose.explaining_the_difference")
     found: list[str] = []
     for term in req(defs, "surface.prose.transaction_synonyms_not_established"):
         if not isinstance(term, str) or not term:
@@ -668,7 +669,27 @@ def transaction_synonyms(answer: str, defs: Mapping[str, Any]) -> list[str]:
         pattern = r"(?<![\w.])" + re.escape(term.lower()) + r"(?![\w])"
         uses = list(re.finditer(pattern, low))
         if uses and not all(
-            _disclaimed(answer[:use.start()], markers, window) for use in uses
+            _disclaimed(answer[:use.start()], markers, window)
+            or _explains(answer, use.start(), explaining)
+            for use in uses
         ):
             found.append(term)
     return found
+
+
+def _explains(answer: str, at: int, spec: Mapping[str, Any]) -> bool:
+    """
+    Whether the SENTENCE a use sits in is explaining the difference between
+    a transaction and a person rather than calling one the other (P2S.7):
+    hypothetical ("If footfall is the question"), naming the instrument that
+    would count it ("a counter at the door"), or saying the figure is not a
+    measure of it ("a floor under traffic, not a measure of it").
+    surface.prose.explaining_the_difference.
+    """
+    start = max(answer.rfind(ch, 0, at) for ch in ".!?\n") + 1
+    ends = [i for i in (answer.find(ch, at) for ch in ".!?\n") if i != -1]
+    sentence = answer[start:min(ends) if ends else len(answer)].strip(" *_-—–").lower()
+    if any(re.match(rf"{re.escape(str(w).lower())}\b", sentence)
+           for w in spec.get("opens_with") or []):
+        return True
+    return any(str(w).lower() in sentence for w in spec.get("says") or [])

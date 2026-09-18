@@ -417,6 +417,48 @@ def test_the_edit_never_empties_the_answer() -> None:
         "Only this.", [])
 
 
+def test_the_edit_never_strands_a_sentence_that_points_back() -> None:
+    """P2S.7: verification/p2s6-gate-2.json `caveats` — the sentence under
+    "That's a bookkeeping problem" was deleted and left it about nothing."""
+    from agent import loop as _loop
+    text = ("The rest of what that plan asks for I wouldn't trust. 99 of 456 "
+            "lines have negative stock. That's a bookkeeping problem, not a "
+            "shelf problem.")
+    out, dropped = _loop._drop_safely(text, ["99 of 456 lines have negative stock."],
+                                      lambda _t: True)
+    assert dropped == [] and out == text
+
+
+def test_the_edit_never_breaks_a_count_it_was_announced_with() -> None:
+    """P2S.7: verification/p2s6-gate.json `analyze` — "Two things temper the
+    size of the drop." with both things deleted under it."""
+    from agent import loop as _loop
+    text = ("Two things temper the size of the drop. OPUS fell 44,114. Magnolia "
+            "fell 11,785. Magnolia and North Edsa I'd leave alone.")
+    out, dropped = _loop._drop_safely(text, ["OPUS fell 44,114.", "Magnolia fell 11,785."],
+                                      lambda _t: True)
+    assert dropped == [] and out == text
+
+
+def test_a_sentence_nothing_leans_on_still_goes() -> None:
+    from agent import loop as _loop
+    text = "OPUS is the shop that moved. It fell 15.9% to 467,102. Greenhills held."
+    out, dropped = _loop._drop_safely(text, ["It fell 15.9% to 467,102."], lambda _t: True)
+    assert dropped == ["It fell 15.9% to 467,102."]
+    assert out == "OPUS is the shop that moved. Greenhills held."
+
+
+def test_the_edit_never_removes_what_a_paragraph_opens_with() -> None:
+    """P2S.7, verification/p2s7-gate-2.json `morning`: the barn's negative
+    count went, and the paragraph's explanation of it stayed, about nothing."""
+    from agent import loop as _loop
+    text = ("North Edsa is the thing today.\n\nF9 at the barn went from 4,703 to "
+            "-297. A negative count is a receiving or counting error, not an empty shelf.")
+    out, dropped = _loop._drop_safely(text, ["F9 at the barn went from 4,703 to -297."],
+                                      lambda _t: True)
+    assert dropped == [] and out == text
+
+
 def test_a_deleted_sentence_leaves_the_rest_byte_for_byte() -> None:
     from agent import loop as _loop
     text = "First one. Second one. Third one."

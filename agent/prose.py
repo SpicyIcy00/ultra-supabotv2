@@ -299,3 +299,84 @@ def enumerated_remainders(answer: str, results: Iterable[dict],
                 continue                          # the board holds it: not his
             out.append((s, n, m.group(0).strip()))
     return out
+
+
+# ---------------------------------------------------------------------------
+# WHAT A DELETION MUST NOT STRAND (P2S.7, 2026-09-18)
+# ---------------------------------------------------------------------------
+
+#: A sentence that opens by pointing back at the one before it. Deleting the
+#: one before leaves it pointing at nothing: "That's a bookkeeping problem"
+#: with its subject gone, 3 of 14 turns in verification/p2s6-gate*.json.
+_POINTS_BACK = re.compile(
+    r"^(?:that|this|these|those|it|its|it's|they|their|them|such|both|which|"
+    r"same|so|the (?:rest|others?|same|remainder)|neither|either|"
+    r"(?:and|but|yet) (?:that|this|it|they|those|these)|"
+    r"\w+ (?:more|others?|of (?:them|those|these)))\b",
+    re.I,
+)
+#: A sentence that ANNOUNCES what follows it — "Two things I'd act on:",
+#: "Two things temper the size of the drop." — and how many it announces.
+_COUNT_WORDS = {"two": 2, "three": 3, "four": 4, "five": 5, "a couple of": 2,
+                "a few": 2, "several": 2, "both": 2}
+_ANNOUNCES = re.compile(
+    r"^(?:the\s+)?(?P<count>two|three|four|five|a couple of|a few|several|both)\b"
+    r"(?:\s+\w+){0,3}?\s+(?:things?|points?|lines?|shops?|stores?|products?|reasons?|"
+    r"caveats?|changes?|moves?|signals?|findings?|items?|matters?|others?)\b",
+    re.I,
+)
+
+
+def _blocks(answer: str) -> list[list[str]]:
+    """The answer's sentences, as paragraphs of sentences, in order."""
+    return [_sentences(p) for p in re.split(r"\n\s*\n", answer) if p.strip()]
+
+
+def strands(answer: str, sentence: str) -> bool:
+    """
+    Whether removing `sentence` from `answer` would leave another sentence
+    orphaned — and so whether a deletion gate must leave it standing.
+
+    TWO SHAPES, both measured on the P2S.6 runs:
+
+      pointing back   the sentence after it opens with "That's", "This",
+                      "Same product", "Six more" — it is about the one being
+                      removed, and would be about nothing.
+      announced       a sentence before it announces a number of things to
+                      follow ("Two things I'd act on:", a line ending in a
+                      colon) and this is one of them: removing it breaks the
+                      count the reader was just given.
+      opening         it opens a paragraph that goes on: the sentences after
+                      it are about what it said.
+
+    A heuristic by construction, and it errs toward KEEPING: a restated figure
+    left in is a style miss, a sentence pointing at nothing is a broken answer.
+    """
+    paras = _blocks(answer)
+    target = sentence.strip()
+    # A PARAGRAPH'S OPENING SENTENCE CARRIES THE REST OF IT (verification/
+    # p2s7-gate-2.json `morning`): the barn's negative F9 count was deleted and
+    # "A negative count is a receiving or counting error" was left explaining
+    # nothing, and "recount F9" asked for a count nobody had been told of.
+    for para in paras:
+        if len(para) > 1 and para[0] == target:
+            return True
+    flat = [s for para in paras for s in para]
+    if target not in flat:
+        return False
+    i = flat.index(target)
+    if i + 1 < len(flat) and _POINTS_BACK.match(flat[i + 1].lstrip("*_ -•")):
+        return True
+    for back in range(1, 6):
+        j = i - back
+        if j < 0:
+            break
+        lead = flat[j].lstrip("*_ -•")
+        m = _ANNOUNCES.match(lead)
+        announced = (_COUNT_WORDS.get(m.group("count").lower(), 1) if m
+                     else 1 if lead.rstrip("*_ ").endswith(":") else 0)
+        if announced and back <= announced:
+            return True
+        if announced:
+            break
+    return False

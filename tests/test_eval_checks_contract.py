@@ -330,3 +330,53 @@ def test_a_turn_is_costed_at_the_meters_rates():
     t = Turn(question="q", answer="a", done={"usage": {"cache_read": 1_000_000, "output": 0}})
     assert turn_usd(t) == RATES["cache_read"]
     assert turn_usd(Turn(question="q", answer="a")) == 0
+
+
+# ---------------------------------------------------------------------------
+# A SHARE OF A CHANGE WITHOUT A PER-CENT SIGN (P2S.7, 2026-09-18)
+# ---------------------------------------------------------------------------
+
+def test_a_figure_put_as_part_of_a_returned_change_is_a_share():
+    """verification/p2s6-gate*.json `morning`, both runs."""
+    from tests.evals import checks as _c
+    rows = [{"rows": [{"store": "North Edsa", "value": 16230, "baseline": 28073, "change": -11843}]}]
+    assert _c.attribution_claims("Aji Mix is ₱10,701 of the ₱11,843 — from ₱14,607 to ₱3,906.", rows)
+    assert _c.attribution_claims("₱10,701 of the ₱11,843 gap.", [])
+
+
+def test_a_share_said_in_words_is_a_share():
+    """verification/p2s6-gate-2.json `broad`."""
+    from tests.evals import checks as _c
+    assert _c.attribution_claims("the ten biggest droppers come to roughly half the gap", [])
+    assert _c.attribution_claims("the bulk of the decline sits at OPUS", [])
+
+
+def test_a_count_of_a_set_is_not_a_share():
+    from tests.evals import checks as _c
+    assert _c.attribution_claims("155 of the 407 products could not be compared", []) == []
+    assert _c.attribution_claims("half the shops were up", []) == []
+
+
+def test_a_refusal_for_a_length_or_a_filtered_subject_is_found():
+    """The two P2S.6 runs, as their warnings recorded them."""
+    from tests.evals import checks as _c
+    calls = [{"seq": 0, "tool": "get_sales",
+              "arguments": {"group_by": [], "filters": {"store": "North Edsa"}}}]
+    warnings = [
+        {"reason": "composition_rejected", "detail": "ne-week: read 0 has no row for 'North Edsa'"},
+        {"reason": "reading_rejected", "detail": "claim: claim is at most 120 characters — x"},
+        {"reason": "composition_rejected",
+         "detail": "gh: emphasise names at most 3 rows; lighting more than that emphasises nothing."},
+    ]
+    assert len(_c.refused_for_what_is_not_truth(warnings, calls)) == 3
+
+
+def test_a_refusal_about_truth_is_not_listed():
+    from tests.evals import checks as _c
+    calls = [{"seq": 0, "tool": "get_sales", "arguments": {"group_by": "store"}}]
+    warnings = [
+        {"reason": "reading_rejected",
+         "detail": "caveat: caveat carries a figure no read returned (17000) — it may say at most"},
+        {"reason": "composition_rejected", "detail": "x: read 0 has no row for 'Magnolia'"},
+    ]
+    assert _c.refused_for_what_is_not_truth(warnings, calls) == []
