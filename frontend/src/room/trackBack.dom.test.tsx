@@ -17,7 +17,7 @@ import { join } from 'node:path';
 import postcss from 'postcss';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/react';
-import { caveatUnshown, thoughtsOf, wordsOnCharts } from './beside';
+import { caveatUnshown, thoughtsOf, unmark } from './beside';
 import { Reading } from './Reading';
 import { questionsOf } from './history';
 
@@ -25,6 +25,7 @@ vi.mock('./ObjectPanel', () => ({ ObjectPanel: () => null, kindOf: () => null })
 afterEach(cleanup);
 
 const ROOM = readFileSync(join(__dirname, 'Room.tsx'), 'utf8');
+const RENDER = readFileSync(join(__dirname, 'render.tsx'), 'utf8');
 const CSS = postcss.parse(readFileSync(join(__dirname, 'room.css'), 'utf8'));
 
 function declaration(selector: string, prop: string): string | undefined {
@@ -47,35 +48,37 @@ describe('"it stops too early"', () => {
 });
 
 describe('"whats more from george? why is it hiding?"', () => {
-  it('hides nothing behind a tap — and puts his reading of the data on the charts', () => {
+  it('hides nothing behind a tap: what no chart took is under him', () => {
     expect(ROOM).not.toMatch(/more from George'/);
     expect(ROOM).not.toMatch(/moreOpen/);
-    // Under him only when the turn drew no chart (the owner, later the same day:
-    // "that should only be the headline and suggestions what to do next").
-    expect(ROOM).toMatch(/\{!busy && words\.under && \(\s*<Reading part="rest"/);
-    expect(ROOM).toMatch(/thoughts=\{words\.onCharts\}/);
+    // The owner, later the same day: "with the charts thats it related to. and
+    // if its not related then it can go under the blob".
+    expect(ROOM).toMatch(/\{!busy && \(\s*<Reading part="rest"/);
+    expect(ROOM).toMatch(/thoughts=\{thoughts\?\.bySeq\}/);
+    expect(ROOM).not.toMatch(/wordsOnCharts/);
   });
 
-  it('gives what no chart took to the chart the headline rests on', () => {
-    const t = { bySeq: new Map([[2, ['On read two.']]]), unbound: 'Nothing else moved.', caveat: 'Stock counts are stale.' };
-    const objects = [
-      { key: 'a', turn: 1, weight: 'supporting', seq: 2 },
-      { key: 'b', turn: 1, weight: 'lead', seq: 4 },
-      { key: 'old', turn: 0, weight: 'lead', seq: 9 },
-    ];
-    // The one his claim cites wins; else the one he weighted lead; else the first.
-    expect(wordsOnCharts(t, objects, 1, 'a').onCharts.get(2)).toEqual(['On read two.', 'Nothing else moved.', 'Stock counts are stale.']);
-    const byWeight = wordsOnCharts(t, objects, 1, null);
-    expect(byWeight.onCharts.get(4)).toEqual(['Nothing else moved.', 'Stock counts are stale.']);
-    expect(byWeight.onCharts.get(2)).toEqual(['On read two.']);
-    expect(byWeight.under).toBe(false);
-    // An earlier turn's chart never takes this turn's words.
-    expect(wordsOnCharts(t, [objects[2]], 1, null)).toEqual({ onCharts: t.bySeq, under: true });
+  it('draws his words about a chart UNDER that chart, not above it', () => {
+    // "no not on top and before of the charts"
+    const at = (needle: string) => RENDER.indexOf(needle);
+    expect(at('<Piece')).toBeGreaterThan(0);
+    expect(at('className="r-fig-thought"')).toBeGreaterThan(at('<Piece'));
   });
 
-  it('keeps them under him when the turn drew no chart', () => {
-    const t = { bySeq: new Map<number, string[]>(), unbound: 'There is no door counter.', caveat: '' };
-    expect(wordsOnCharts(t, [], 0, null).under).toBe(true);
+  it('takes a heading to wherever the line it heads goes', () => {
+    const META = { source_table: 'new_transactions', snapshot_timestamp: '2026-09-18T06:00:00Z', filters_applied: [] };
+    const calls = [{ seq: 0, tool: 'get_sales', arguments: {}, result: { rows: [{ store: 'OPUS', value: 467102 }], meta: META } }] as never;
+    const text = 'Yes — OPUS is the story.\n\n**Three.**\nOPUS fell to ₱467,102.\n\nI would leave it alone.';
+    const got = thoughtsOf(text, 'Yes — OPUS is the story.', calls, new Set(), { drawn: new Set([0]), said: [] });
+    // "Three." goes onto OPUS's chart with the line it heads; it is not left alone under him.
+    expect(got.bySeq.get(0)).toEqual(['**Three.**', 'OPUS fell to ₱467,102.']);
+    expect(got.unbound).toBe('I would leave it alone.');
+  });
+
+  it('draws *x* as his emphasis, never its asterisks', () => {
+    const { plain, bold } = unmark("it's the estate's biggest *number*, and 3 * 4 stays");
+    expect(plain).toBe("it's the estate's biggest number, and 3 * 4 stays");
+    expect(bold.map(([a, b]) => plain.slice(a, b))).toEqual(['number']);
   });
 
   it('never prints a marker when his emphasis runs across a sentence', () => {

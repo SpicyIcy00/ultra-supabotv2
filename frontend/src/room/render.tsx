@@ -271,20 +271,6 @@ export function Board(p: BoardProps) {
                 read{index !== null ? ` ${index}` : ''}
                 {out && <> · <s>ruled out</s></>}
               </p>
-              {(() => {
-                const seq = o.seq ?? o.seqs?.[0];
-                const said = o.turn === newest && seq !== undefined ? p.thoughts?.get(seq) : undefined;
-                const first = objects.findIndex((x) => x.turn === newest && (x.seq ?? x.seqs?.[0]) === seq) === n;
-                if (!said?.length || !first) return null;
-                // HIS THOUGHT ON THE CHART IT IS ABOUT, in his own voice.
-                return (
-                  <div className="r-fig-thought" data-thought-for={seq}>
-                    {said.map((s, i) => (
-                      <p key={i} className="r-say"><Marked text={s} calls={turn?.toolCalls ?? []} /></p>
-                    ))}
-                  </div>
-                );
-              })()}
               <Piece
                 order={order}
                 o={o}
@@ -301,6 +287,22 @@ export function Board(p: BoardProps) {
                 on={p.on}
                 offers={p.offers?.get(o.key)}
               />
+              {(() => {
+                const seq = o.seq ?? o.seqs?.[0];
+                const said = o.turn === newest && seq !== undefined ? p.thoughts?.get(seq) : undefined;
+                const first = objects.findIndex((x) => x.turn === newest && (x.seq ?? x.seqs?.[0]) === seq) === n;
+                if (!said?.length || !first) return null;
+                // HIS WORDS ABOUT THIS CHART, UNDER IT (the owner, 2026-09-18: "not
+                // on top and before of the charts with the charts thats it related
+                // to"). The chart first, then what he says about it.
+                return (
+                  <div className="r-fig-thought" data-thought-for={seq}>
+                    {said.map((s, i) => (
+                      <p key={i} className="r-say"><Marked text={s} calls={turn?.toolCalls ?? []} /></p>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         );

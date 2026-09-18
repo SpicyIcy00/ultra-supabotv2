@@ -381,6 +381,24 @@ once changes the next answer. That is the card's own done-when.
 
 ## Fixed
 
+### 2026-09-18 — "no not on top and before of the charts with the charts thats it related to … i dont want it to get to crowded"
+
+> *"no not on top and before of the charts with the charts thats it related to. and if its not related then it can go under the blob. read the text its showing could they be with the charts instead? or whats another way i dont want it to get to crowded"*
+
+Said of `589af9f` with five screenshots: whole answers stacked above one chart,
+"Three." alone, bold headings cut from their lines, `*number*` printed.
+**Found:** `589af9f` gave everything no chart took to the lead chart, ABOVE it.
+
+**Fixed in the commit after `cf11d26`, not verified by him.** A sentence about a
+chart is drawn UNDER that chart; one about no chart is under him; a repeat of
+what is on screen is not drawn. A heading or lead-in goes wherever the line it
+heads goes, and `*x*` is emphasis, never asterisks. `wordsOnCharts` is deleted.
+**Not solved, and said:** most of his sentences about a chart carry no numeral
+("Second week running that its tills stay busy"), and "about this chart" is
+matched by the figures a sentence cites — so those stay under him. The fix
+that removes the crowding is upstream: George writes his words about a chart
+into that chart's thought and keeps the answer to what no chart shows.
+
 ### 2026-09-18 — "theres still alot of text on the left … that should only be the headline and suggestions what to do next"
 
 > *"also theres still alot of text on the left remeber that should only be the headline and suggestions what to do next and stuff like thaat like i dont want it tell me what i tihnks about data with charts cause that should be with those charts simple logic you know"*

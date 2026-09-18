@@ -96,12 +96,16 @@ export function thoughtsOf(text: string | null | undefined, claimSpan: string | 
       verdicts.push({ went: 'kept' });
     }
   });
-  // A LEAD-IN GOES WITH WHAT IT LEADS INTO, read from the end so a run of them
-  // follows the sentence at its foot.
+  // A LEAD-IN OR A HEADING GOES WHERE WHAT IT LEADS INTO GOES — onto its chart,
+  // under him, or nowhere — read from the end so a run of them follows the
+  // sentence at its foot. Alone it is an orphan ("Three.", the log 2026-09-18).
   for (let i = sentences.length - 2; i >= 0; i -= 1) {
-    if (verdicts[i].went === 'kept' && leadsIn(sentences[i].said) && verdicts[i + 1].went !== 'kept') {
-      verdicts[i] = { went: 'shown' };
-    }
+    const { at, said } = sentences[i];
+    const next = sentences[i + 1];
+    const ownLine = plain.slice(at + said.length, next.at).includes('\n');
+    const allBold = bold.some(([a, b]) => a <= at && at + said.length <= b);
+    const heading = ownLine && (said.split(/\s+/).length <= 3 || (allBold && said.split(/\s+/).length <= 8));
+    if (verdicts[i].went === 'kept' && (leadsIn(said) || heading)) verdicts[i] = verdicts[i + 1];
   }
 
   const bySeq = new Map<number, string[]>();
@@ -221,7 +225,11 @@ function remark(said: string, at: number, bold: readonly [number, number][]): st
  * partner is left in place: it is not emphasis, and removing it would be
  * changing what he wrote.
  */
-export function unmark(text: string): { plain: string; bold: [number, number][] } {
+export function unmark(raw: string): { plain: string; bold: [number, number][] } {
+  // `*x*` is his emphasis too (the log, 2026-09-18: "biggest *number*"): drawn
+  // in weight like `**x**`, never printed. Only a pair hugging a word counts, so
+  // "3 * 4" and a lone "*" stay as he wrote them.
+  const text = raw.replace(/(?<![*\w])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?![*\w])/g, '**$1**');
   const bold: [number, number][] = [];
   let plain = '';
   let open = -1;
@@ -555,33 +563,4 @@ export function claimAndStanding(text: string | null | undefined, span?: string 
   const after = said.slice(end);
   const standing = [before.trim(), after.trim()].filter(Boolean).join(' ');
   return { claim: claimRaw.trim(), standing, before, claimRaw, after };
-}
-
-/**
- * WHERE HIS WORDS GO: THE CHARTS, NOT UNDER HIM (the owner, 2026-09-18: "that
- * should only be the headline and suggestions what to do next … i dont want it
- * tell me what i tihnks about data with charts cause that should be with those
- * charts").
- *
- * Every sentence a chart took stays on it (`thoughtsOf`). What no chart took —
- * the sentences placed on none, and his caveat — goes on the chart the headline
- * rests on: the one his claim cites (`lead`), else the one he weighted `lead`,
- * else the first he drew this turn. `under` is true only when this turn drew no
- * chart at all, and then the words stay under him: there is nowhere else.
- */
-export function wordsOnCharts(
-  thoughts: { bySeq: Map<number, string[]>; unbound: string; caveat?: string },
-  objects: readonly { key: string; turn: number; weight?: string; seq?: number; seqs?: readonly number[] }[],
-  newest: number,
-  lead: string | null,
-): { onCharts: Map<number, string[]>; under: boolean } {
-  const mine = objects.filter((o) => o.turn === newest && (o.seq ?? o.seqs?.[0]) !== undefined);
-  const host = mine.find((o) => o.key === lead) ?? mine.find((o) => o.weight === 'lead') ?? mine[0];
-  const seq = host ? (host.seq ?? host.seqs?.[0]) : undefined;
-  if (seq === undefined) return { onCharts: thoughts.bySeq, under: true };
-  const rest = [thoughts.unbound, thoughts.caveat ?? ''].map((x) => x.trim()).filter(Boolean);
-  if (!rest.length) return { onCharts: thoughts.bySeq, under: false };
-  const onCharts = new Map(thoughts.bySeq);
-  onCharts.set(seq, [...(onCharts.get(seq) ?? []), ...rest]);
-  return { onCharts, under: false };
 }
