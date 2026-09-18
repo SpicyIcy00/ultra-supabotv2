@@ -129,13 +129,20 @@ function paint(node: SpecNode, row: Record<string, unknown>): string {
  * With nothing emphasised, every row is lit: a chart with no point to make
  * should not look like one where everything failed to matter.
  */
-function litness(node: SpecNode, row: Record<string, unknown>): number {
-  if (!node.emphasise) return 1;
+/**
+ * WHETHER THIS IS THE ROW HE POINTED AT — true for every row when he pointed at
+ * none. Never an opacity: nothing is dimmed to light something else (the owner,
+ * 2026-09-18); the row gains a band (`data-lit`) and the others keep theirs.
+ */
+function hit(node: SpecNode, row: Record<string, unknown>): boolean {
+  if (!node.emphasise) return true;
   const want = node.emphasise.trim().toLowerCase();
-  const hit = Object.values(row).some(
+  const found = Object.values(row).some(
     (v) => typeof v === 'string' && v.trim().toLowerCase() === want);
-  return hit ? 1 : 0.28;
+  return found;
 }
+const litAttr = (node: SpecNode, row: Record<string, unknown>) =>
+  (node.emphasise && hit(node, row) ? 'yes' : undefined);
 
 /** An ISO date as a person says it; anything else unchanged. */
 function niceDate(text: string): string {
@@ -203,16 +210,15 @@ function Mark(p: SpecProps) {
       return (
         <div className="r-spec-bars">
           {rows.map((row, n) => (
-            <div key={n} className="r-spec-bar">
+            <div key={n} className="r-spec-bar" data-lit={litAttr(node, row)}>
               <span className="r-spec-bar-name">{nameOf(node, row)}</span>
               <span className="r-spec-bar-track">
                 <i style={{ width: `${(values[n] / most) * 100}%`,
-                            background: `rgb(${paint(node, row)})`,
-                            opacity: litness(node, row) }} />
+                            background: `rgb(${paint(node, row)})` }} />
               </span>
               <span className="r-spec-bar-figure">{fmt(node.field!, row[node.field!], u(row))}</span>
               {/* The note sits on the row it is about, not under the chart. */}
-              {node.note && litness(node, row) === 1 && node.emphasise && (
+              {node.note && hit(node, row) && node.emphasise && (
                 <span className="r-spec-note">{node.note}</span>
               )}
             </div>
@@ -247,8 +253,7 @@ function Mark(p: SpecProps) {
             {rows.map((row, n) => (
               <span key={n} className="r-spec-point" title={nameOf(node, row)}>
                 <i style={{ background: `rgb(${paint(node, row)})`,
-                            bottom: `${at(values[n])}%`,
-                            opacity: litness(node, row) }} />
+                            bottom: `${at(values[n])}%` }} />
                 {/* A LINE NAMES ITS HIGH AND ITS LOW. Both are rows the read
                     returned, so both may be written; and a series whose
                     extremes are named is one you can read without a table. */}
@@ -274,7 +279,7 @@ function Mark(p: SpecProps) {
         <div className="r-spec-cells">
           {rows.map((row, n) => (
             <span key={n} className="r-spec-cell"
-                  style={{ background: `rgba(${paint(node, row)}, ${(0.12 + (Math.abs(values[n]) / high) * 0.7) * litness(node, row)})` }}>
+                  style={{ background: `rgba(${paint(node, row)}, ${(0.12 + (Math.abs(values[n]) / high) * 0.7)})` }}>
               <em>{nameOf(node, row)}</em>
               <b>{fmt(node.field!, row[node.field!], u(row))}</b>
             </span>
@@ -324,7 +329,7 @@ function Mark(p: SpecProps) {
       const span = hi - lo || 1;
       const x = (v: number) => 3 + ((v - lo) / span) * 94;
       const iMark = node.emphasise
-        ? rows.findIndex((r) => litness(node, r) === 1)
+        ? rows.findIndex((r) => hit(node, r))
         : rows.length - 1;
       const mark = rows[iMark];
       return (
@@ -369,13 +374,12 @@ function Mark(p: SpecProps) {
       return (
         <div className="r-spec-bars">
           {rows.map((row, n) => (
-            <div key={n} className="r-spec-bar r-spec-bullet">
+            <div key={n} className="r-spec-bar r-spec-bullet" data-lit={litAttr(node, row)}>
               <span className="r-spec-bar-name">{nameOf(node, row)}</span>
               <span className="r-spec-bullet-area">
                 <span className="r-spec-bullet-whole" style={{ width: `${(wholes[n] / most) * 100}%` }}>
                   <i style={{ width: `${Math.min(fills[n] / (wholes[n] || 1), 1) * 100}%`,
-                              background: `rgb(${paint(node, row)})`,
-                              opacity: litness(node, row) }} />
+                              background: `rgb(${paint(node, row)})` }} />
                 </span>
               </span>
               <span className="r-spec-bar-figure">
@@ -410,7 +414,7 @@ function Mark(p: SpecProps) {
             return (
               <line key={i} x1={x1.toFixed(1)} y1={y1.toFixed(1)} x2={x2.toFixed(1)} y2={y2.toFixed(1)}
                     stroke={`rgb(${paint(node, row)})`} strokeWidth={n > 60 ? 2 : 3} strokeLinecap="round"
-                    opacity={(values[i] === 0 ? 0.35 : 0.95) * litness(node, row)}>
+                    opacity={(values[i] === 0 ? 0.35 : 0.95)}>
                 <title>{nameOf(node, row)} · {fmt(node.field!, row[node.field!], u(row))}</title>
               </line>
             );
@@ -437,7 +441,7 @@ function Mark(p: SpecProps) {
               <span key={i} className="r-spec-dot"
                     title={`${nameOf(node, row)} · ${fmt(node.field!, row[node.field!], u(row))}`}>
                 <i style={{ width: d, height: d, background: `rgb(${paint(node, row)})`,
-                            opacity: (0.35 + 0.65 * (values[i] / most)) * litness(node, row) }} />
+                            opacity: (0.35 + 0.65 * (values[i] / most)) }} />
                 <em>{nameOf(node, row)}</em>
               </span>
             );
@@ -471,7 +475,7 @@ function Mark(p: SpecProps) {
           {dated.map((d, i) => (
             <span key={i} className="r-spec-cal-day"
                   title={`${fmt(node.by!, d.row[node.by!])} · ${fmt(node.field!, d.row[node.field!], u(d.row))}`}
-                  style={{ background: `rgba(${paint(node, d.row)}, ${((0.08 + (d.v / most) * 0.85) * litness(node, d.row)).toFixed(3)})` }}>
+                  style={{ background: `rgba(${paint(node, d.row)}, ${((0.08 + (d.v / most) * 0.85)).toFixed(3)})` }}>
               {d.at.getDate()}
             </span>
           ))}

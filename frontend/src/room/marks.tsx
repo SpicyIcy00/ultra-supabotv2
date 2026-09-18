@@ -413,7 +413,7 @@ function Rows({ rows: all, meta, o, p }: { rows: Row[]; meta: Meta; o: TileProps
             </thead>
             <tbody>
               {rows.map((row, n) => (
-                <tr key={n} style={{ opacity: isLit(o, row) ? 1 : COOL, ...beat(n) }}>
+                <tr key={n} data-lit={emphasised(o) && isLit(o, row) ? 'yes' : undefined} style={{ ...beat(n) }}>
                   {shown.map((c) => {
                     // THE CELL THAT HOLDS THE ROW'S SUBJECT IS TAPPABLE, and
                     // only that one: a table of a shop's products has one

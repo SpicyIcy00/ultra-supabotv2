@@ -103,7 +103,8 @@ describe('"if its stating whats already stated or shown in the page … dont mak
     const text = 'Yes — the dip is one outsized Monday at OPUS.\n\nWhere it sits:\n\n'
       + '- **It is one shop.**\n- OPUS fell to ₱467,102.\n\n- **The cause is open.**\n- Nothing in the reads says why.';
     const got = thoughtsOf(text, CLAIM, CALLS, new Set([0]), { drawn: new Set([0]), said: [] });
-    expect(got.unbound).toBe('**The cause is open.** Nothing in the reads says why.');
+    // His lines stay lines: two list items are two lines, with no marker.
+    expect(got.unbound).toBe('**The cause is open.**\nNothing in the reads says why.');
   });
 
   it('draws no caveat sentence the answer already said in other sentences', () => {

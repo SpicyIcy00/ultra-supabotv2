@@ -202,14 +202,21 @@
   max-width: 30ch; text-wrap: balance;
 }
 .r-say--claim em, .r-say--claim .r-claim { font-style: italic; }
+/* HIS WORDS ARE NEVER GREY (the owner, 2026-09-18: "i dont like how alot of text
+   is grey if it says something in a chart it should already be white just use
+   other methods to emphasize things … just dont desaturate or lower other things
+   to emphsize something else"). Everything George SAYS, on a chart or under
+   him, is drawn in --ink; what stands out does so by size, weight and italic,
+   never by greying what is around it. Grey is left to the frame: labels, axis
+   ticks, the read-time receipts. Held by `ink.test.ts`. */
 .r-say--standing {
   margin: 0;
   font: 400 15.5px/1.55 var(--serif);
-  color: var(--ink-2); max-width: 56ch;
+  color: var(--ink); max-width: 56ch;
   /* Newlines he wrote are kept; a space at the start of a line is not. */
   white-space: pre-line;
 }
-.r-say--standing b { color: var(--ink); font-weight: 500; }
+.r-say--standing b { color: var(--ink); font-weight: 600; }
 /* The turn's caveat: one line, directly above the claim (UI rule 4). */
 .r-turn-caveat { max-width: 56ch; }
 .r-reading-caveats { margin: 0; }
@@ -220,7 +227,7 @@
    never the accent: prominence from position, not hue (UI rules 4 and 5). */
 .r-caveat {
   font: 400 13.5px/1.5 var(--sans);
-  color: var(--ink-2);
+  color: var(--ink);
   max-width: 56ch;
   margin: 0;
 }
@@ -360,7 +367,7 @@
 
 /* COOLED — no longer the point. Said by the ink stepping back, not by a hue
    and not by a box. */
-.r-tile--quiet { opacity: 0.86; }
+.r-tile--quiet { opacity: 1; }
 
 .r-tile[data-open] { cursor: pointer; }
 .r-tile:focus-visible { outline: 2px solid var(--ink-3); outline-offset: 6px; border-radius: 6px; }
@@ -589,7 +596,7 @@
 .r-asked { display: flex; align-items: baseline; justify-content: flex-end; gap: 6px; max-width: 100%; }
 .r-asked-q {
   margin: 0; min-width: 0; max-width: 46ch;
-  font: 400 12.5px/1.5 var(--sans); color: var(--ink-3); overflow-wrap: anywhere;
+  font: 400 12.5px/1.5 var(--sans); color: var(--ink); overflow-wrap: anywhere;
 }
 .r-asked-label {
   font: 400 10.5px/1.5 var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
@@ -622,11 +629,11 @@
   .r-doing .r-work { justify-content: flex-start; }
 }
 .r-doing-line .r-work-clock { margin-left: 10px; color: var(--ink-3); }
-.r-doing-said { color: var(--ink-3); max-width: 46ch; }
+.r-doing-said { color: var(--ink); max-width: 46ch; }
 .r-words .r-reading { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; margin: 0; max-width: none; }
 .r-words .r-caveats { border-left: 0; border-right: 2px solid var(--edge-strong); padding: 0 12px 0 0; }
 .r-words .r-foot-offers { justify-content: flex-end; }
-.r-failed { color: var(--ink-2); }
+.r-failed { color: var(--ink); }
 
 /* THE FIGURES — the right column, the whole height. */
 .r-right {
@@ -679,7 +686,8 @@
 /* ARRIVING: invisible until its moment, then drawn in (row 13). */
 .r-fig[data-arrived="no"] { opacity: 0; transform: translateY(6px); }
 .r-fig[data-arrived="yes"] { opacity: 1; transform: none; transition: opacity 420ms var(--ease), transform 420ms var(--ease); }
-.r-fig--out { opacity: 0.55; }
+/* Ruled out is SAID by its label ("READ n · ruled out"), never by dimming it. */
+.r-fig--out { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   .r-fig[data-arrived] { transition: none; transform: none; }
 }
@@ -967,7 +975,7 @@
 /* A caveat. Above the work, never behind a hint-less disclosure, and never in
    a direction colour — it qualifies a figure, it is not one. */
 .r-caveats { display: grid; gap: 9px; border-left: 2px solid var(--edge-strong); padding-left: 14px; }
-.r-caveats .r-caveat { font: 400 12.5px/1.55 var(--sans); color: var(--ink-2); max-width: 60ch; margin: 0; }
+.r-caveats .r-caveat { font: 400 12.5px/1.55 var(--sans); color: var(--ink); max-width: 60ch; margin: 0; }
 .r-caveat-detail { display: block; margin-top: 6px; color: var(--ink-3); font-size: 11.5px; }
 .r-more {
   border: 0; background: none; padding: 0; cursor: pointer; font: inherit;
@@ -1114,7 +1122,7 @@
    it is the only thing the surface knows — this one you cannot open. It is NOT
    a verdict on his arithmetic: a difference he worked out is a real number,
    and CLAUDE.md rule 9 leaves checking prose numerals to the evals. */
-.r-figure-bare { color: var(--ink-2); }
+.r-figure-bare { color: inherit; }
 
 /* --------------------------------------------------------- composed shapes
    The marks of the grammar (Spec.tsx). Every colour here is a DIRECTION a row
@@ -1413,6 +1421,17 @@
 .r-mk[data-emphasis="yes"] .r-mk-row[data-lit="yes"] .r-sw {
   box-shadow: 0 0 0 2px var(--ground), 0 0 0 3px var(--ring);
 }
+/* THE ROW HE POINTED AT GAINS; NOTHING ELSE LOSES (the owner, 2026-09-18: "use
+   other methods to emphasize … maybe color to highlight it just dont desaturate
+   or lower other things"). A band of his own colour behind it — `--george`, the
+   colour already meaning "the one he pointed at" — with its name in weight. */
+.r-mk[data-emphasis="yes"] [data-lit="yes"]:is(.r-mk-row, .r-mk-col, .r-mk-multiple),
+.r-spec-bar[data-lit="yes"], tr[data-lit="yes"] {
+  background: rgba(var(--george), 0.07);
+  box-shadow: 0 0 0 4px rgba(var(--george), 0.07);
+  border-radius: 4px;
+}
+tr[data-lit="yes"] td { font-weight: 600; }
 .r-mk-series { display: inline-flex; align-items: center; color: var(--ink-2); }
 
 /* ---------------------------------------------------------------- the six
@@ -1431,12 +1450,12 @@
  */
 .r-mk-title {
   font: 400 14px/1.45 var(--serif);
-  color: var(--ink-2);
+  color: var(--ink);
   margin: 0 0 12px;
   max-width: 60ch;
 }
 .r-mk-thought {
-  font: 400 15px/1.5 var(--serif); color: var(--ink-2);
+  font: 400 15px/1.5 var(--serif); color: var(--ink);
   margin: -4px 0 14px; max-width: 62ch;
 }
 .r-mk-sub {

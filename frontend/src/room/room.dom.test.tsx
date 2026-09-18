@@ -318,15 +318,15 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
 });
 
 describe('the picture points, so the sentence does not have to', () => {
-  it('lights the row George named and cools the rest', () => {
+  it('lights the row George named and lowers none of the rest', () => {
     const { container } = draw([object('table', { emphasise: 'OPUS' })]);
     const rows = [...container.querySelectorAll('tbody tr')] as HTMLElement[];
-    const lit = rows.filter((r) => r.style.opacity === '1');
-    // 0.5 until 2026-09-15 — "all stores still matter not full focus on one".
-    const cooled = rows.filter((r) => r.style.opacity === '0.75');
+    const lit = rows.filter((r) => r.getAttribute('data-lit') === 'yes');
+    // 0.5 until 2026-09-15 ("all stores still matter not full focus on one"),
+    // 0.75 until 2026-09-18 ("dont desaturate or lower other things").
     expect(lit).toHaveLength(1);
-    expect(cooled).toHaveLength(1);
     expect(lit[0].textContent).toMatch(/OPUS/);
+    for (const r of rows) expect(r.style.opacity).toBe('');
   });
 
   it('leaves every row lit when he pointed at nothing', () => {
@@ -334,7 +334,7 @@ describe('the picture points, so the sentence does not have to', () => {
     // failed to matter.
     const { container } = draw([object('table', {})]);
     const rows = [...container.querySelectorAll('tbody tr')] as HTMLElement[];
-    expect(rows.every((r) => r.style.opacity === '1')).toBe(true);
+    expect(rows.every((r) => r.style.opacity === '' && !r.hasAttribute('data-lit'))).toBe(true);
   });
 
   it('draws his few words about what is shown', () => {
@@ -377,11 +377,11 @@ describe('a bar chart names its bars', () => {
     expect(fills[1]).toBe('rgb(var(--up))');
   });
 
-  it('cools the rows George did not point at', () => {
+  it('marks the row George pointed at and lowers none of the others', () => {
     const { container } = draw([object('chart', { form: 'bar', emphasise: 'OPUS' })]);
     const rows = [...container.querySelectorAll('.r-mk-ranked .r-mk-row')] as HTMLElement[];
     expect(rows.map((r) => r.getAttribute('data-lit'))).toEqual(['no', 'yes']);
-    expect(rows[0].style.opacity).toBe('0.75');
+    expect(rows[0].style.opacity).toBe('1');
     expect(rows[1].style.opacity).toBe('1');
   });
 

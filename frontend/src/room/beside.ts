@@ -105,14 +105,21 @@ export function thoughtsOf(text: string | null | undefined, claimSpan: string | 
   }
 
   const bySeq = new Map<number, string[]>();
-  const unbound: string[] = [];
+  let unbound = '';
+  let keptTo = -1;
   sentences.forEach(({ at, said }, i) => {
     const v = verdicts[i];
     const sentence = remark(said, at, bold);
     if (v.went === 'placed') bySeq.set(v.seq, [...(bySeq.get(v.seq) ?? []), sentence]);
-    else if (v.went === 'kept') unbound.push(sentence.replace(BULLET, ''));
+    else if (v.went === 'kept') {
+      // HIS LINES STAY LINES: a kept sentence that began a new line in what he
+      // wrote (a list item, a paragraph) starts one here, drawn by `pre-line`.
+      const joint = keptTo < 0 ? '' : (plain.slice(keptTo, at).includes('\n') ? '\n' : ' ');
+      unbound += joint + sentence.replace(BULLET, '');
+      keptTo = at + said.length;
+    }
   });
-  return { bySeq, unbound: unbound.join(' ') };
+  return { bySeq, unbound };
 }
 
 /** A sentence that only makes sense after the one before it. */

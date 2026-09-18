@@ -39,8 +39,14 @@ export function wash(c: DataColour, strength: number): string {
  * moved read as six shops that did not. The row he named is still the loudest
  * thing in the mark — it is fully lit, bold, and in the primary ink — but the
  * others are now quieter rather than faint, and they keep their own colour.
+ *
+ * 1 SINCE 2026-09-18 — nothing is lowered to light something else (the owner:
+ * *"just use other methods to emphasize things … just dont desaturate or lower
+ * other things to emphsize something else"*). The row he points at is lit by
+ * what it GAINS — bold, its swatch ringed, a band of his own colour behind it
+ * (`[data-lit="yes"]` in room.css) — and every other row stays as it is.
  */
-export const COOL = 0.75;
+export const COOL = 1;
 
 /**
  * WHAT A TOUCH SAYS (P2S.2(f)) — the exact figure, in the tool's own values,

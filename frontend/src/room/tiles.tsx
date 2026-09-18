@@ -398,7 +398,7 @@ export function DraftTile(p: TileProps) {
           </thead>
           <tbody>
             {rows.slice(0, 30).map((row, n) => (
-              <tr key={n} style={{ opacity: isLit(p.o, row) ? 1 : 0.4 }}>
+              <tr key={n} data-lit={p.o.emphasise && isLit(p.o, row) ? 'yes' : undefined}>
                 <td>
                   <div style={{ color: 'var(--ink)' }}>{String(row.product ?? row.sku ?? '')}</div>
                   <div className="r-src" style={{ marginTop: 3 }}>
