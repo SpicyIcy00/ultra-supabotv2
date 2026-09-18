@@ -4687,3 +4687,12 @@ The owner's own 30 days (78 turns that read, 351 calls) asked the same reads pie
 **Hands-free reads the headline sentence, cut the same way `Reading` cuts it,** and only on a busy→idle edge, so an opened thread is never read aloud at you. The claim is ringed while he speaks (emphasis adds, never the accent), and any pointerdown or keydown cancels him.
 **"Read it to me" is a definition (`surface.desk.fragments.read_aloud`)**, like the correction token, and a contract test keeps it from colliding with any steer's spelling.
 **Not built: listening while he speaks.** An open mic would hear his own voice, so interrupting him means pressing the mic. **"Last 90 days" is not a defined window**, so, spoken or typed, it goes to George as a question.
+
+## 2026-09-18 · P2S.✓: the close ran, and the run is bigger than its price
+
+**The full run is fourteen questions and $4.79, measured** (`verification/p2sclose-v2.json`); the plan carried eleven and $1.51 from P1.e. The suite grew at P2S.6, P2S.7 and P2S.10 and nobody re-priced it. `FULL_USD` in the alignment contract now says 4.79 and both plan copies quote it. A suite that grows is re-priced the day it grows, not at the next close.
+**Three trust rows failed the same way:** a rounded range over day rows written in prose (*"₱28,000–36,700"*) that no tool returned. Logged, not fixed, not bisected; P2S.6's initiative over the rows is the likely source.
+**The claim under the mark, not inside its lower edge, is the owner's fix of 2026-09-17** (`6975200`); the frame measure's `claim_starts_inside_mark_lower_edge` is false by decision and is not a defect.
+**A ticked close card still names every scene it owns:** the contract reads `[x]` as well as `[ ]`.
+**Voice on the live build was not tried** — a headless session has no microphone. It waits on the owner, with "feels right".
+**The gate to Phase 3 is not met and the close says so:** 13 Open, median 76.6 s a turn against under 10. Whether Phase 3 starts anyway is the owner's call.

@@ -57,6 +57,27 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-18 — found by the session: rounded ranges in his prose that no tool returned
+
+In the P2S.✓ full run (`verification/p2sclose-v2.json`) three answers carried
+figures no read returned: *"₱28,000–36,700"* and *"₱13,500–21,000"* as the run
+of days, and *"₱6,569 down to ₱398"* for a product — each a rounding or a
+pairing George did in prose over day rows (rule 9: a figure in prose has no
+receipt). The board's figures were fine; the sentence was not. Likely P2S.6's
+reading policy (initiative over the rows), not bisected. In the same run
+`analyze tradsnax per store` had a notice forced into the answer and `run it
+every monday at 6` died on an `anthropic.APIError` after four rounds, detail
+lost because the harness stubs the gaps log; and the `cannot` check's regex
+does not recognise *"I don't have footfall"* as saying what he cannot tell —
+the check is stale, not the answer. Not fixed: the close.
+
+### 2026-09-18 — found by the session: the memory figure prints a stance as its raw name
+
+`what do you remember?` draws each belief's stance as the enum, uppercased by
+CSS: `NEEDS_ATTENTION`, `MEANS` (`frontend/src/room/tiles.tsx`,
+`r-belief-stance`). The design says *Noticed*, *Checked*, *Still open*. Seen on
+the P2S.✓ frame `memory-1920-open-room.png`. Not fixed: the close.
+
 ### 2026-09-18 — found by the session: the sales record has no autumn 2024
 
 Found building P2S.4 (year over year). `new_transactions` has every shop on

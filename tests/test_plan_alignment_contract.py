@@ -36,8 +36,9 @@ NOW = ROOT / "ops" / "NOW.md"
 PLAN = ROOT / "ops" / "plan" / "plan.html"
 
 GATE_USD = 0.64      # measured at P1.g, 2026-09-13
-FULL_USD = 1.51      # MEASURED at P1.e, 2026-09-14 — verification/p1e-v2.json,
-                     # 11 turns, nothing unscored. Was 1.84, an estimate.
+FULL_USD = 4.79      # MEASURED at P2S.✓, 2026-09-18 — verification/p2sclose-v2.json,
+                     # 14 turns, nothing unscored. Was 1.51 on 11 turns (P1.e);
+                     # the suite grew at P2S.6/P2S.7/P2S.10 and was not re-priced.
 
 WORDS = {0: "No",        # a phase with nothing left open, first needed at P1.✓
          1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six", 7: "Seven",
@@ -221,9 +222,10 @@ def test_every_scene_of_the_ideal_has_exactly_one_close():
 @pytest.mark.parametrize("close", ["P2S.✓", "P3.✓"])
 def test_each_close_card_names_every_scene_it_owns(close):
     owned = sorted(s for s, c in ledger().items() if c == close)
-    card = re.search(r"\n- \[ \] \*\*" + re.escape(close) + r" (.*?)(?=\n- \[|\n\*\*[A-Z])",
+    # A close that has run is `[x]` and still has to name what it walked.
+    card = re.search(r"\n- \[[ x]\] \*\*" + re.escape(close) + r" (.*?)(?=\n- \[|\n\*\*[A-Z])",
                      _now(), re.S)
-    assert card, f"no open {close} card"
+    assert card, f"no {close} card"
     unnamed = [s for s in owned if f"`{s}`" not in card.group(1)]
     assert not unnamed, f"{close} owns {unnamed} in the ledger and its card does not walk them"
 
