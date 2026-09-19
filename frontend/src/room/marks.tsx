@@ -563,7 +563,7 @@ export function MarkBlock(p: TileProps) {
           <span className="r-mk-title">
             {titleFor(p.o, meta)}{p.earlier ? ' · from earlier' : ''}
           </span>
-          {p.o.thought?.trim() && (
+          {!p.told && p.o.thought?.trim() && (
             <>
               {/[.!?:…]["'”’)\]]?$/.test(`${titleFor(p.o, meta)}`.trim()) ? ' ' : '. '}
               <span className="r-mk-thought">

@@ -19,6 +19,7 @@ import { inOrder } from './board';
 import { retunedKey } from './tokenShape';
 import { FIGURE_GAP, columnsFor, needsWidth, placeFigures, revealAt } from './beside';
 import { CHILD_GAP, gather, type Relation } from './gather';
+import { sectionFor, type Section } from './page';
 import { readIndexes } from './work';
 import { PROCESS, callOf, rowsOf, tableShape, type AnswerTurn, type Dimension } from './data';
 import { markFor } from './catalogue';
@@ -82,6 +83,13 @@ export interface BoardProps {
   lead?: string | null;
   /** His sentences by the read they cite, for the newest turn (`beside.thoughtsOf`). */
   thoughts?: Map<number, string[]>;
+  /**
+   * HIS ANSWER AS THE PAGE (P3.n, `page.ts`): his paragraphs in his order, each
+   * followed by the figures it cites. Present once the turn has settled and he
+   * said more than a headline; absent, the board draws figure by figure as it
+   * always did — while he is still reading, on a kept page, in an old thread.
+   */
+  page?: Section[];
   /** List stores in one order across the answer's comparisons. */
   sameOrder?: boolean;
   /** Which figure the pointer is over, so the room can draw only its line. */
@@ -112,6 +120,13 @@ export interface BoardProps {
  * composition an argument rather than a pile, so it is said — and said in the
  * label line that already carries `ruled out`, not in chrome of its own.
  */
+/**
+ * The space under one of his paragraphs, in px. Less than the gap between
+ * figures (`FIGURE_GAP`), because that gap says two things are separate and a
+ * paragraph and the figures it cites are one thing.
+ */
+const PARA_GAP = 18;
+
 const RELATION_SAID: Record<Relation, string> = {
   evidence: 'why',
   counter: 'against that',
@@ -218,15 +233,71 @@ export function Board(p: BoardProps) {
   // onto nothing — so a default carrying his sentence is a point he made after
   // all. (Shipped without this for an hour on 2026-09-19; caught reading the
   // code, not by a test, so there is a test now.)
+  const page = p.page ?? [];
+  const seqOf = (o: BoardObject) => o.seq ?? o.seqs?.[0];
+  const sectionOfObject = (o: BoardObject) => (o.turn === newest && page.length
+    ? sectionFor(page, callOf(p.answers[o.turn], seqOf(o))) : -1);
+  const his = (o: BoardObject) => !o.default || Boolean(o.claim || o.thought);
   const spoken = (o: BoardObject) => {
-    const seq = o.seq ?? o.seqs?.[0];
-    return o.turn === newest && seq !== undefined && Boolean(p.thoughts?.get(seq)?.length);
+    const seq = seqOf(o);
+    if (o.turn !== newest || seq === undefined) return false;
+    if (!page.length) return Boolean(p.thoughts?.get(seq)?.length);
+    // ON THE PAGE, a machine-drawn read earns a place when a paragraph of his
+    // CITES it and he did not draw that same read himself. He wrote about
+    // transactions and drew no chart of them: the loop's chart is the evidence
+    // for that sentence, and the superscript on it needs somewhere to land. He
+    // wrote about Fairview's day and drew it as a figure: the loop's seventeen-
+    // row table of the same read is the same numbers, worse.
+    return sectionOfObject(o) >= 0
+      && !led.some((x) => x !== o && his(x) && x.turn === newest && seqOf(x) === seq);
   };
   const unsaid = led.filter((o) => o.default && !o.claim && !o.thought && !spoken(o));
   const said = led.filter((o) => !unsaid.includes(o));
   const shown = !said.length ? led : (unfolded ? [...said, ...unsaid] : said);
   const plan = gather(shown);
-  const objects = plan.order;
+  // THE FLOW'S ITEMS: his paragraphs and the figures, in ONE list, because both
+  // are measured and placed by the same packer. With no page this is exactly
+  // `plan.order` and every point spans, as before.
+  type Item = { kind: 'para'; key: string; text: string }
+    | { kind: 'fig'; o: BoardObject; point: boolean; told: boolean };
+  const items: Item[] = [];
+  if (page.length) {
+    const inFlow = new Map(shown.map((o) => [o.key, o] as const));
+    const kin = new Map(plan.families.map((f) => [f.stem, f.under] as const));
+    const family = (stem: BoardObject) => [stem, ...(kin.get(stem.key) ?? [])
+      .map((k) => inFlow.get(k)).filter((x): x is BoardObject => Boolean(x))];
+    const stems = plan.order.filter((o) => !plan.parentOf[o.key]);
+    const where = new Map(stems.map((o) => [o.key, sectionOfObject(o)] as const));
+    page.forEach((section, i) => {
+      items.push({ kind: 'para', key: `para-${newest}-${i}`, text: section.para });
+      const at = (o: BoardObject) => {
+        const n = section.seqs.indexOf(seqOf(o) as number);
+        return n < 0 ? section.seqs.length : n;
+      };
+      const cited = stems.filter((o) => where.get(o.key) === i)
+        .sort((a, b) => Number(b.key === leadKey) - Number(a.key === leadKey) || at(a) - at(b));
+      // ONE ACROSS THE TOP WHEN THERE IS ONE TO PUT THERE: the figure the answer
+      // rests on, or the odd one out of an odd number. An even pair with no lead
+      // sits side by side, because neither is the other's heading.
+      const head = cited.length % 2 === 1 || cited.some((o) => o.key === leadKey);
+      cited.forEach((stem, k) => {
+        for (const o of family(stem)) {
+          items.push({ kind: 'fig', o, told: true,
+                       point: o === stem && ((k === 0 && head) || kin.has(stem.key)) });
+        }
+      });
+    });
+    // WHAT NO PARAGRAPH CITES comes after the prose: evidence he gathered and
+    // did not talk about, and everything from earlier turns.
+    for (const stem of stems.filter((o) => (where.get(o.key) ?? -1) < 0)) {
+      for (const o of family(stem)) items.push({ kind: 'fig', o, told: false, point: o === stem });
+    }
+  } else {
+    for (const o of plan.order) {
+      items.push({ kind: 'fig', o, told: false, point: !plan.parentOf[o.key] });
+    }
+  }
+  const objects = items.flatMap((it) => (it.kind === 'fig' ? [it.o] : []));
   const width = useViewport();
   // WHAT EACH FIGURE NEEDS, from what it draws (beside.needsWidth).
   const wide = objects.map((o) => {
@@ -260,9 +331,10 @@ export function Board(p: BoardProps) {
   // belongs to a point shares the width with its siblings, which is how the
   // design draws it — the finding across the top, its because and its against
   // side by side beneath.
-  const spans = objects.map((o, i) => !plan.parentOf[o.key] || wide[i]);
-  const leads = objects.map((o) => o.key === leadKey);
-  const keys = objects.map((o) => o.key).join('|');
+  const wideOf = new Map(objects.map((o, i) => [o.key, wide[i]] as const));
+  const itemKey = (it: Item) => (it.kind === 'para' ? it.key : it.o.key);
+  const spans = items.map((it) => it.kind === 'para' || it.point || Boolean(wideOf.get(it.o.key)));
+  const keys = items.map(itemKey).join('|');
 
   // HOW TALL EACH FIGURE IS, measured — the one input the placement needs.
   // Unmeasured is 0, which still places in order (ties go to fewest figures).
@@ -275,7 +347,7 @@ export function Board(p: BoardProps) {
         let next = was;
         for (const e of entries) {
           const el = e.target as HTMLElement;
-          const key = el.dataset.figure ?? '';
+          const key = el.dataset.figure ?? el.dataset.para ?? '';
           const body = el.firstElementChild as HTMLElement | null;
           const h = Math.round(body ? body.getBoundingClientRect().height : e.contentRect.height);
           if (key && was[key] !== h) {
@@ -297,7 +369,7 @@ export function Board(p: BoardProps) {
   // it belongs to. With no families this is `placeFigures`, called as before.
   // The stem spans, which resets both columns to its foot, so its children
   // land side by side under it without anything having to group them.
-  const placed = placeFigures(objects.map((o) => heights[o.key] ?? 0), columns, spans);
+  const placed = placeFigures(items.map((it) => heights[itemKey(it)] ?? 0), columns, spans);
 
   // WHICH FIGURES HAVE ARRIVED. Keyed, so an answer that transforms a figure
   // in place does not make it arrive again.
@@ -324,7 +396,23 @@ export function Board(p: BoardProps) {
          onMouseLeave={() => { touch.leave(); p.onHover?.(null); }}
          onClickCapture={touch.tap}>
       {touch.tip}
-      {objects.map((o, n) => {
+      {items.map((it, at) => {
+        if (it.kind === 'para') {
+          // HIS PARAGRAPH, whole and in his order — the spine of the page. Not a
+          // figure: no wire runs to it and nothing counts it as one.
+          return (
+            <div key={it.key} className="r-para" data-para={it.key}
+                 ref={(el) => { if (el) nodes.current.set(it.key, el); else nodes.current.delete(it.key); }}
+                 style={{ gridColumn: '1 / -1',
+                          gridRowEnd: `span ${Math.max(1, (heights[it.key] ?? 0) + PARA_GAP)}` }}>
+              <p className="r-say r-page-say">
+                <Marked text={it.text} calls={p.answers[newest]?.toolCalls ?? []} />
+              </p>
+            </div>
+          );
+        }
+        const { o } = it;
+        const n = objects.indexOf(o);
         const turn = p.answers[o.turn];
         const index = readNumber(turn, o);
         const out = (o as BoardObject & { ruled_out?: boolean }).ruled_out === true;
@@ -336,23 +424,24 @@ export function Board(p: BoardProps) {
             data-figure={o.key}
             data-turn={o.turn}
             data-seq={o.seq ?? o.seqs?.[0]}
-            data-col={placed[n]}
+            data-col={placed[at]}
             data-arrived={arrived.has(o.key) ? 'yes' : 'no'}
-            data-lead={leads[n] ? 'yes' : undefined}
+            data-lead={o.key === leadKey ? 'yes' : undefined}
             // WHETHER IT NEEDS THE WIDTH, not whether it has it. Every point
             // spans now, so `spans` would say yes to all of them and switch off
             // the cap that stops a small figure spending 940px on one number.
-            data-span={wide[n] ? 'yes' : undefined}
+            data-span={wideOf.get(o.key) ? 'yes' : undefined}
+            data-told={it.told ? 'yes' : undefined}
             data-under={plan.parentOf[o.key]}
             data-relation={plan.relationOf[o.key]}
             data-weight={o.weight}
             className={['r-fig', out ? 'r-fig--out' : '', p.focused === o.key ? 'r-fig--open' : '',
-                        leads[n] ? 'r-fig--lead' : '']
+                        o.key === leadKey ? 'r-fig--lead' : '']
               .filter(Boolean).join(' ')}
             // A gathered point sits tight under the one it belongs to, so it
             // closes the flow's gap. The same constant the family's height was
             // summed with, or the columns drift and it jumps on the next pass.
-            style={{ gridColumn: spans[n] && columns > 1 ? '1 / -1' : placed[n] + 1,
+            style={{ gridColumn: spans[at] && columns > 1 ? '1 / -1' : placed[at] + 1,
                      gridRowEnd: `span ${Math.max(1, h + (plan.parentOf[o.key] ? CHILD_GAP : FIGURE_GAP))}` }}
           >
             <div className="r-fig-body">
@@ -360,6 +449,7 @@ export function Board(p: BoardProps) {
                 <p className="r-fig-rel">{RELATION_SAID[plan.relationOf[o.key] ?? 'evidence']}</p>
               )}
               <Piece
+                told={it.told}
                 chrome={chromeFor(index, out)}
                 order={order}
                 o={o}
@@ -380,7 +470,9 @@ export function Board(p: BoardProps) {
                 const seq = o.seq ?? o.seqs?.[0];
                 const said = o.turn === newest && seq !== undefined ? p.thoughts?.get(seq) : undefined;
                 const first = objects.findIndex((x) => x.turn === newest && (x.seq ?? x.seqs?.[0]) === seq) === n;
-                if (!said?.length || !first) return null;
+                // ON THE PAGE his words are the paragraph above, whole; drawing
+                // the cited sentence again under the chart would say it twice.
+                if (!said?.length || !first || page.length) return null;
                 // HIS WORDS ABOUT THIS CHART, UNDER IT (the owner, 2026-09-18: "not
                 // on top and before of the charts with the charts thats it related
                 // to"). The chart first, then what he says about it.

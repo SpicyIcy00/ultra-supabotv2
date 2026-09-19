@@ -27,6 +27,7 @@ import { FiguresArea, Wires, scrollToFigure, scrollWords, useMoreBelow } from '.
 import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
 import { caveatUnshown, claimAndStanding, thoughtsOf, unmark } from './beside';
+import { pageOf } from './page';
 import { placeFigures as figuresInText } from './figures';
 import { identitiesFrom } from './identity';
 import { readStoreAppearance } from '../services/storesApi';
@@ -303,7 +304,12 @@ export default function Room() {
     // other words — by the answer or by what is drawn.
     const plain = unmark((latest.text ?? '').trim()).plain;
     const caveat = caveatUnshown(unsaid(latest.reading?.caveat, plain), said, plain);
-    return { ...got, caveat };
+    // HIS ANSWER AS THE PAGE (P3.n). Only where there are figures to put it
+    // among: with nothing drawn there is no page to carry his words, and they
+    // stay under him where they have always been.
+    const page = mine.length
+      ? pageOf(latest.text, latest.reading?.claim, latest.reading?.next, latest.toolCalls) : [];
+    return { ...got, caveat, page };
   }, [latest, busy, drawn, answers.length]);
   // A NEW ANSWER IS READ FROM ITS TOP (the log, 2026-09-17: the headline shown
   // from its middle). While he works, the lines above the answer come and go
@@ -851,7 +857,8 @@ export default function Room() {
                 {!busy && (
                   <Reading part="rest" text={latest?.text} reading={latest?.reading}
                            calls={latest?.toolCalls} onFigure={showFigure}
-                           standing={thoughts?.unbound} caveat={thoughts?.caveat} />
+                           standing={thoughts?.page?.length ? '' : thoughts?.unbound}
+                           caveat={thoughts?.caveat} />
                 )}
                 <ReadingAsks reading={latest?.reading} busy={busy} onAsk={(q) => ask(q)} />
                 <ReadingNext reading={latest?.reading} />
@@ -906,6 +913,7 @@ export default function Room() {
                     onLanding={onLanding}
                     lead={lead}
                     thoughts={thoughts?.bySeq}
+                    page={thoughts?.page}
                     sameOrder
                   />
                 </>

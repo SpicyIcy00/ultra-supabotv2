@@ -206,7 +206,7 @@ function sentencesOf(slice: string, from: number): { at: number; said: string }[
 }
 
 /** His emphasis back on one sentence: every bold range, cut to its edges. */
-function remark(said: string, at: number, bold: readonly [number, number][]): string {
+export function remark(said: string, at: number, bold: readonly [number, number][]): string {
   const cuts: [number, number][] = [];
   for (const [a, b] of bold) {
     const s = Math.max(a, at) - at;

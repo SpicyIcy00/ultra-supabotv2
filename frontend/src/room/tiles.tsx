@@ -98,6 +98,15 @@ export interface TileProps {
    */
   chrome?: string;
   /**
+   * HIS PARAGRAPH ABOVE THIS FIGURE ALREADY SAYS IT (P3.n). On the page a
+   * figure stands under the paragraph that cites it, so drawing the block's
+   * own `thought` as well would say the same thing twice, one line apart —
+   * the log, 2026-09-17: *"one point said three times"*. The claim stays: it is
+   * the few words that say WHICH figure this is, and a paragraph that cites
+   * three of them needs that.
+   */
+  told?: boolean;
+  /**
    * THE ORDER STORES ARE LISTED IN ACROSS AN ANSWER (the `speak` layout,
    * 2026-09-17): a comparison lists its stores in this order, so the eye finds
    * OPUS in the same place on every chart. Absent keeps the tool's own order.

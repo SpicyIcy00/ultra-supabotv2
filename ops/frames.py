@@ -116,7 +116,13 @@ FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
               # with the two new fields set to what a composer will say once the
               # grammar is live: read 1 is why, read 2 cuts the other way.
               # Committed, because a frame check nobody else can run is not one.
-              "gathered": ROOT / "ops" / "frames_fixtures" / "gathered.json"}
+              "gathered": ROOT / "ops" / "frames_fixtures" / "gathered.json",
+              # THE TURN THAT MADE THE CASE FOR THE PAGE (P3.n): the owner's own
+              # "whats been down?" of 2026-09-19 18:36 — his words and his
+              # composition off the stored post, its five reads run again through
+              # the read-only role, because a post keeps arguments and not rows.
+              # Real business rows, so it lives in verification/ like the others.
+              "whatsdown": ROOT / "verification" / "frames_fixtures" / "whatsdown.json"}
 SIZES = {1440: 900, 1920: 1080, 1857: 963}
 VOCAB_READS = ROOT / "frontend" / "src" / "room" / "__fixtures__" / "vocab-reads.json"
 MAX_ROWS = 200

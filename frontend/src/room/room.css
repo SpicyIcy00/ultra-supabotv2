@@ -739,6 +739,31 @@
 .r-fig--lead .r-mk-say { font-size: 21px; line-height: 1.36; letter-spacing: -0.01em; max-width: 44ch; margin-bottom: 20px; }
 .r-fig--lead .r-fig-body { padding-bottom: 42px; }
 
+/* HIS PARAGRAPH — THE SPINE OF THE PAGE (P3.n, page.ts).
+   The owner, of the design against the live room: "you had it done well in the
+   artifact but this doesn't feel like a page with a well thought out path". The
+   path was in what he WROTE, and the room was taking it apart — moving a
+   sentence under the chart it cited, dropping another because "the chart
+   already says it", and leaving the rest on the left as orphans ("The other
+   four were up." — the other four what?). Now his paragraphs run down the page
+   whole and in his order, and each is followed by the figures it cites.
+   A reading size, not a display size: these are paragraphs, and the headline
+   beside them is already the large thing. His words, so the full ink. */
+.r-para { min-width: 0; }
+.r-page-say {
+  font: 400 17.5px/1.58 var(--serif);
+  color: var(--ink);
+  margin: 0; max-width: 68ch;
+  white-space: pre-line; text-wrap: pretty;
+}
+/* UNDER A PARAGRAPH, A BLOCK'S OWN WORDS ARE A CAPTION. The paragraph has said
+   what this shows; the claim stays, smaller, because a paragraph that cites
+   three figures needs each one to say which it is. */
+.r-fig[data-told="yes"] .r-mk-say {
+  font-size: 15px; line-height: 1.45; letter-spacing: 0;
+  max-width: 60ch; margin-bottom: 10px;
+}
+
 /* WHAT IS GATHERED UNDER A POINT (P2S.8). It sits in from the point it belongs
    to, under one hairline — ONE EDGE, NOT A BOX. A border on four sides says
    "an object someone placed here", which is the thing the owner had removed
@@ -807,6 +832,10 @@
      indent is the only thing saying what belongs to what — but a 20px inset of
      a 5vw page is a lot of the width, so it is narrower here. */
   .r-fig[data-under] { padding-left: 12px; }
+  /* His paragraphs are blocks in a block flow here, so the space the grid's
+     row span gave them on a desk has to be said again as a margin. */
+  .r-para { grid-column: auto !important; grid-row: auto !important; margin: 0 0 16px; }
+  .r-page-say { font-size: 16.5px; max-width: none; }
   .r-figs[data-more-up], .r-figs[data-more-down] { -webkit-mask-image: none; mask-image: none; }
 }
 
