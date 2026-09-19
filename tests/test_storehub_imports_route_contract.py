@@ -101,9 +101,18 @@ def test_the_page_exists_everywhere_a_page_has_to():
     # Its OWN key: being allowed to talk to Bob does not grant writing orders.
     assert route.group(1) == "storehub_imports"
 
-    nav = (REPO / "frontend/src/components/Layout.tsx").read_text(encoding="utf-8")
-    assert re.search(r"to:\s*'/storehub-imports',\s*page:\s*'storehub_imports'", nav), \
+    # IT IS ONE OF BOB'S SCREENS, so it is reached from BOB'S rail — the owner,
+    # 2026-09-19: "it should be a page in bob not supabot". It spent one session
+    # in the Supabot sidebar; two doors to one room is how a surface stops being
+    # anybody's, so the absence is held here rather than remembered.
+    rail = (REPO / "frontend/src/room/Rail.tsx").read_text(encoding="utf-8")
+    assert 'to="/storehub-imports"' in rail, \
         "the page is routed and reachable from nowhere a person stands"
+    assert "storehub_imports" in rail, "the rail draws the link to a role that cannot open it"
+
+    nav = (REPO / "frontend/src/components/Layout.tsx").read_text(encoding="utf-8")
+    assert "/storehub-imports" not in nav, \
+        "the upload page is back in the Supabot sidebar; it belongs in Bob's rail"
 
 
 def test_every_frontend_page_key_is_a_backend_page_key():

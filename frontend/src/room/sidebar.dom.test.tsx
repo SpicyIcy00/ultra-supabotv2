@@ -18,9 +18,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const pages = vi.fn();
 const workflows = vi.fn();
 const standing = vi.fn();
+const imports = vi.fn();
 vi.mock('../services/pagesApi', () => ({ listPages: () => pages() }));
 vi.mock('../services/workflowsApi', () => ({ listWorkflows: () => workflows() }));
 vi.mock('../services/standingApi', () => ({ listStanding: () => standing() }));
+vi.mock('../services/storehubImportsApi', () => ({ listImports: () => imports() }));
 
 import { Rail, restoreSide } from './Rail';
 import { useAuthStore } from '../stores/authStore';
@@ -44,6 +46,11 @@ beforeEach(() => {
                                  current_version: { version: 2 } }]);
   standing.mockResolvedValue([{ id: 's1', question: 'Morning question', instructions: [], when: 'every day at 06:00',
                                 state: 'switched off', last_asked: null, last_status: null }]);
+  imports.mockReset();
+  imports.mockResolvedValue([
+    { id: 14, kind: 'purchase_orders', uploaded_at: '2026-09-03T14:57:42+00:00' },
+    { id: 12, kind: 'stock_transfers', uploaded_at: '2026-09-02T09:50:27+00:00' },
+  ]);
   useAuthStore.setState({ user: { id: 'u', username: 'owner', display_name: 'You', role: 'owner', allowed_pages: [] } });
 });
 afterEach(cleanup);
@@ -136,5 +143,75 @@ describe('collapsible, from the left edge (row 3)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open the sidebar' }));
     await waitFor(() => expect(document.documentElement.getAttribute('data-side')).toBe('open'));
     expect(localStorage.getItem('bob.side')).toBe('open');
+  });
+});
+
+/**
+ * SOURCES — the upload page is one of BOB'S screens (P3.h, the owner
+ * 2026-09-19: *"it should be a page in bob not supabot"*). It sat in the
+ * Supabot sidebar for one session; the rail is where it belongs, and the
+ * rail's own shape is a thing you own with the state it is in.
+ */
+describe('sources — what arrives as a file, and when it last did', () => {
+  const granted = () => useAuthStore.setState({
+    user: { id: 'u', username: 'owner', display_name: 'You', role: 'owner',
+            allowed_pages: ['bob', 'storehub_imports'] },
+  });
+
+  it('lists both records, each opening the upload page, dated by its newest import', async () => {
+    granted();
+    mount();
+    const orders = await screen.findByRole('link', { name: /Purchase orders/ });
+    expect(orders.getAttribute('href')).toBe('/storehub-imports');
+    await waitFor(() => expect(orders.textContent).toContain('3 Sep'));
+    const transfers = screen.getByRole('link', { name: /Stock transfers/ });
+    expect(transfers.getAttribute('href')).toBe('/storehub-imports');
+    expect(transfers.textContent).toContain('2 Sep');
+    // The heading says what the date is the date OF, so the date itself can be short.
+    expect(screen.getByText('Sources · last import')).toBeTruthy();
+  });
+
+  it('is absent, and is not even read, for a role without the page', async () => {
+    useAuthStore.setState({
+      user: { id: 'u', username: 'staff', display_name: 'Staff', role: 'warehouse_staff',
+              allowed_pages: ['bob'] },
+    });
+    mount();
+    await screen.findByText('Seikyo Purchasing');
+    expect(screen.queryByText('Sources · last import')).toBeNull();
+    expect(screen.queryByRole('link', { name: /Purchase orders/ })).toBeNull();
+    // A role that cannot open the ledger does not collect a 403 for opening the room.
+    expect(imports).not.toHaveBeenCalled();
+  });
+
+  it('keeps the way in when nothing has been imported, and says never', async () => {
+    granted();
+    imports.mockResolvedValue([]);
+    mount();
+    const orders = await screen.findByRole('link', { name: /Purchase orders/ });
+    // The day nothing is imported is the day the upload page is most needed.
+    expect(orders.getAttribute('href')).toBe('/storehub-imports');
+    await waitFor(() => expect(orders.textContent).toContain('never'));
+  });
+
+  it('draws loading, could not be read, and a date as three different things', async () => {
+    granted();
+    let settle!: (rows: unknown[]) => void;
+    imports.mockReturnValue(new Promise((r) => { settle = r as (rows: unknown[]) => void; }));
+    mount();
+    const orders = await screen.findByRole('link', { name: /Purchase orders/ });
+    expect(orders.textContent).toContain('loading');
+    expect(orders.textContent).not.toContain('never');
+    settle([{ id: 1, kind: 'purchase_orders', uploaded_at: '2026-09-03T14:57:42+00:00' }]);
+    await waitFor(() => expect(orders.textContent).toContain('3 Sep'));
+    cleanup();
+
+    imports.mockRejectedValue(new Error('down'));
+    granted();
+    mount();
+    const again = await screen.findByRole('link', { name: /Purchase orders/ });
+    await waitFor(() => expect(again.textContent).toContain('not read'));
+    expect(again.textContent).not.toContain('never');
+    expect(again.getAttribute('href')).toBe('/storehub-imports');
   });
 });

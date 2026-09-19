@@ -28,6 +28,7 @@ import { useQuery } from '@tanstack/react-query';
 import { listPages } from '../services/pagesApi';
 import { listWorkflows } from '../services/workflowsApi';
 import { listStanding } from '../services/standingApi';
+import { listImports } from '../services/storehubImportsApi';
 import { useAuthStore } from '../stores/authStore';
 import { useRoomTheme } from './theme';
 
@@ -107,6 +108,27 @@ function useNow(): Date {
   return now;
 }
 
+/**
+ * WHAT BOB READS THAT ONLY A FILE CAN FILL (P3.h).
+ *
+ * These are not screens on a menu — they are the two records Bob's purchasing
+ * and movement answers stand on, and each is as old as the last file somebody
+ * uploaded. The morning of 2026-09-19 said orders were 16 days old and
+ * transfers 80; the rail is where that is visible without asking.
+ */
+const SOURCES: { kind: string; label: string }[] = [
+  { kind: 'purchase_orders', label: 'Purchase orders' },
+  { kind: 'stock_transfers', label: 'Stock transfers' },
+];
+
+/** "3 Sep", in Manila. The heading says what the date is the date OF. */
+function imported(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Asia/Manila' });
+}
+
 /** One group: a heading, and its three renderings. */
 function Group<T>({ title, query, empty, children }: {
   title: string;
@@ -135,6 +157,18 @@ export function Rail({ busy, needsYou, onNew, estate }: RailProps) {
   const pages = useQuery({ queryKey: ['pages'], queryFn: listPages, staleTime: 30_000, retry: false });
   const systems = useQuery({ queryKey: ['workflows'], queryFn: listWorkflows, staleTime: 30_000, retry: false });
   const standing = useQuery({ queryKey: ['standing'], queryFn: listStanding, staleTime: 60_000, retry: false });
+
+  // The import ledger is behind its own page key. A role without it is not
+  // shown the group at all — a link that bounces is worse than no link — and
+  // the read is not attempted, so nobody collects a 403 for opening the room.
+  const mayImport = user?.allowed_pages.includes('storehub_imports') ?? false;
+  const imports = useQuery({
+    queryKey: ['storehub-imports'],
+    queryFn: listImports,
+    staleTime: 60_000,
+    retry: false,
+    enabled: mayImport,
+  });
 
   return (
     <>
@@ -195,6 +229,34 @@ export function Rail({ busy, needsYou, onNew, estate }: RailProps) {
             </NavLink>
           ))}
         </Group>
+
+        {/* SOURCES — the two records that arrive as files, and when each last
+            did. NOT the `Group` above: that swaps its rows for a line when
+            there is nothing, and the way IN to the upload page would vanish
+            on the one day it is most needed — the day nothing has been
+            imported. So the links are always drawn and only the DATE is a
+            loaded thing: loading, not read, a date, or never (UI rule 8). */}
+        {mayImport && (
+          <div className="r-side-grp">
+            <h2 className="r-side-h">Sources · last import</h2>
+            {SOURCES.map(({ kind, label }) => {
+              const newest = imported(
+                (imports.data ?? []).find((row) => row.kind === kind)?.uploaded_at ?? null,
+              );
+              const said = imports.isPending ? 'loading'
+                : imports.isError ? 'not read'
+                  : newest ?? 'never';
+              return (
+                <NavLink key={kind} to="/storehub-imports" className="r-side-it"
+                         title={newest ? `${label}: last imported ${newest}` : `${label}: import an export`}>
+                  <i className="r-pip" />
+                  <span>{label}</span>
+                  <small>{said}</small>
+                </NavLink>
+              );
+            })}
+          </div>
+        )}
 
         {/* PEOPLE — whoever the system already knows, which today is the person
             signed in. Nobody else is invented to fill the list (S.6). */}
