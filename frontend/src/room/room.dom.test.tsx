@@ -672,3 +672,45 @@ describe('a lead that needs no width does not span (frames, 2026-09-17)', () => 
     expect(first.style.gridColumn).toBe('1 / -1');
   });
 });
+
+/**
+ * A READ HE NEVER WROTE UP IS NOT A SECTION (P3.l).
+ *
+ * The owner, of a board that had eleven blocks and four unclaimed machine
+ * defaults between his points: *"it still just feels like here's this and
+ * here's this"*. The loop draws every read as it lands so the board fills
+ * while he thinks; one he never mentions is a read that happened, not a point
+ * he made, and it belongs at the foot rather than in the middle of an argument.
+ */
+describe('only what he wrote up is a section', () => {
+  const his = (key: string) => object('ranked', { key, claim: `${key} is the thing` });
+  const machine = (key: string) => object('table', { key, weight: 'quiet', default: true });
+
+  it('draws his points and folds the rest to a line', () => {
+    const { container } = draw([his('a'), machine('m1'), machine('m2')]);
+    expect(Array.from(container.querySelectorAll('[data-figure]'))
+      .map((el) => el.getAttribute('data-figure'))).toEqual(['a']);
+    expect(container.querySelector('.r-earlier-line')?.textContent)
+      .toMatch(/2 more reads he did not write up · show/);
+  });
+
+  it('opens them, and they are drawn after his points', () => {
+    const { container } = draw([his('a'), machine('m1')]);
+    fireEvent.click(container.querySelector('.r-earlier-line') as HTMLElement);
+    expect(Array.from(container.querySelectorAll('[data-figure]'))
+      .map((el) => el.getAttribute('data-figure'))).toEqual(['a', 'm1']);
+  });
+
+  it('keeps every read when he wrote nothing up — then they ARE the answer', () => {
+    const { container } = draw([machine('m1'), machine('m2')]);
+    expect(container.querySelectorAll('[data-figure]')).toHaveLength(2);
+    expect(container.querySelector('.r-earlier-line')).toBeNull();
+  });
+
+  it('a default he gave a claim to is his, and stays a section', () => {
+    const { container } = draw([his('a'),
+      object('table', { key: 'm1', weight: 'quiet', default: true, claim: 'he named it' })]);
+    expect(container.querySelectorAll('[data-figure]')).toHaveLength(2);
+    expect(container.querySelector('.r-earlier-line')).toBeNull();
+  });
+});

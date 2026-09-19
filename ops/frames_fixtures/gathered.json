@@ -8,7 +8,8 @@
    "key": "read-0",
    "seq": 0,
    "weight": "lead",
-   "kind": "figure"
+   "kind": "figure",
+   "claim": "Transactions held while the money did not"
   },
   {
    "op": "put",
@@ -17,16 +18,8 @@
    "weight": "supporting",
    "kind": "figure",
    "under": "read-0",
-   "relation": "evidence"
-  },
-  {
-   "op": "put",
-   "key": "read-2",
-   "seq": 2,
-   "weight": "supporting",
-   "kind": "figure",
-   "under": "read-0",
-   "relation": "counter"
+   "relation": "counter",
+   "claim": "Net sales are up on the week, against that"
   }
  ],
  "default_blocks": [

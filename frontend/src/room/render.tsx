@@ -206,7 +206,25 @@ export function Board(p: BoardProps) {
   // puts each stem immediately before what it gathered, so a family is
   // consecutive and can be placed as one item. A board that names nothing
   // yields no families and every line below runs exactly as it did.
-  const plan = gather(led);
+  // A READ HE NEVER WROTE UP IS NOT A SECTION (P3.l).
+  //
+  // The loop draws a shape for every read the moment it lands, so the board
+  // fills while he thinks. One he then writes up is a point he made; one he
+  // never mentions is a read that happened — no claim, no thought, no place in
+  // the argument — and drawing it as a full section between two of his points
+  // is most of what the owner kept calling *"here's this and here's this"*.
+  // His last board: eleven blocks, four of them unclaimed machine defaults,
+  // one of which was the `attention` read with RANK and SIZE meaning pesos on
+  // two rows and a count on six.
+  //
+  // They are not thrown away — they are a line at the foot, and it opens.
+  // A turn where he wrote nothing up keeps them all, because then they are
+  // the whole answer and not the noise around it.
+  const [unfolded, setUnfolded] = useState(false);
+  const unsaid = led.filter((o) => o.default && !o.claim && !o.thought);
+  const said = led.filter((o) => !unsaid.includes(o));
+  const shown = !said.length ? led : (unfolded ? [...said, ...unsaid] : said);
+  const plan = gather(shown);
   const objects = plan.order;
   const width = useViewport();
   // WHAT EACH FIGURE NEEDS, from what it draws (beside.needsWidth).
@@ -372,6 +390,19 @@ export function Board(p: BoardProps) {
           </div>
         );
       })}
+      {/* AT THE FOOT, and it opens. Not gone: the board still holds them,
+          they still travel with the next question, and the count is the
+          length of a list this already has rather than a number anybody
+          wrote down (UI rule 8). No accent — this is navigation. */}
+      {Boolean(said.length && unsaid.length) && (
+        <p className="r-label r-earlier" style={{ gridColumn: '1 / -1' }}>
+          <button type="button" className="r-earlier-line" aria-expanded={unfolded}
+                  onClick={() => setUnfolded((o) => !o)}>
+            {unsaid.length} more {unsaid.length === 1 ? 'read' : 'reads'} he did not
+            {' '}write up · {unfolded ? 'fold' : 'show'}
+          </button>
+        </p>
+      )}
     </div>
   );
 }

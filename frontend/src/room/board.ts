@@ -71,6 +71,13 @@ export interface BoardObject {
   against?: string;
   /** The ladder checked this read and it did not explain the thing (P2S.3). */
   ruled_out?: boolean;
+  /**
+   * THE MACHINE DREW THIS, NOT BOB (P3.l). The loop composes a shape for every
+   * read as it lands so the board fills while he thinks. One he then writes up
+   * is his; one he never mentions stays, and is a read that happened rather
+   * than a point he made — which is why it is not drawn as a section.
+   */
+  default?: Block['default'];
   /** The key this point belongs to; the room gathers it there (P2S.8). */
   under?: Block['under'];
   /** How it sits under that one: evidence, counter, or the scale it sits inside. */
@@ -107,7 +114,7 @@ export interface Local {
 const FIELDS = ['kind', 'weight', 'seq', 'tool', 'subject', 'subjects', 'form',
                 'label', 'action', 'argument', 'spec', 'seqs', 'claim',
                 'emphasise', 'note', 'thought', 'field', 'against', 'ruled_out',
-                'under', 'relation'] as const;
+                'under', 'relation', 'default'] as const;
 
 function carried(edit: Block): Partial<BoardObject> {
   const out: Record<string, unknown> = {};
@@ -217,7 +224,12 @@ function editsFor(turn: AnswerTurn, i: number): Block[] {
         // said. `oneLead` cannot settle this: both edits land in the same
         // turn, so `touched` is equal and which one wins comes down to the
         // order objects happen to sit in the array.
-        .map((b) => (b.weight === 'lead' ? { ...b, weight: 'quiet' as const } : b)),
+        // AND FLAGGED AS THE MACHINE'S (P3.l). Which list a block arrived in is
+        // the only thing that knows this — the frame says `default`, not the
+        // blocks — and the room needs it to tell a point Bob made from a read
+        // that merely happened.
+        .map((b) => ({ ...b, default: true,
+                       weight: b.weight === 'lead' ? ('quiet' as const) : b.weight })),
       ...composed,
     ];
   }
