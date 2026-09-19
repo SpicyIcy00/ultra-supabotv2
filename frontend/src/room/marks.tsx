@@ -381,7 +381,13 @@ function Rows({ rows: all, meta, o, p }: { rows: Row[]; meta: Meta; o: TileProps
   // ONE DEFINITION OF WHICH COLUMNS A READ DRAWS (P2.e), so the table on the
   // board and the same read at its rung in the walk agree about what is a
   // column and what is a caption.
-  const { constant, columns: shown } = tableShape(rows, meta);
+  //
+  // OVER EVERY ROW, NOT THE VISIBLE ONES (P3.k). This was handed `rows` — the
+  // 8 or 40 on screen — so a column constant across the first eight was
+  // captioned as constant for the whole table. Tolerable while the answer was
+  // a caption; not tolerable now the same pass REMOVES a column that mirrors
+  // another, which on eight rows of forty would be a deletion on a guess.
+  const { constant, columns: shown } = tableShape(all, meta);
   // PER COLUMN, not per row: a read's unit says what its VALUE is measured in,
   // and applying it to every numeric cell drew the attention table's rank as
   // `₱1`. `unitFor` returns none for a column that is a position or a count.
@@ -391,7 +397,15 @@ function Rows({ rows: all, meta, o, p }: { rows: Row[]; meta: Meta; o: TileProps
     <div className="r-mk r-mk-table">
       {(constant.length > 0 || all.length > 8) && (
         <div className="r-mk-tablehead">
-          <span>{constant.join(' · ')}</span>
+          {/* THREE FACTS, NOT SIX (P3.k). The owner's stockout read captioned
+              `sku ... product ... days negative 0 ... last observed ...
+              observed days ... first observed ...` — a field dump over a
+              chart, and a good part of why a block read as a card. The rest
+              stay on the element, so nothing is lost, only quiet. */}
+          <span title={constant.join(' · ')}>
+            {constant.slice(0, 3).join(' · ')}
+            {constant.length > 3 && ` · +${constant.length - 3} more`}
+          </span>
           {all.length > 8 && (
             <button type="button" className="r-act" onClick={() => p.on.patch(o.key, { open: !open })}>
               {open ? 'less' : `all ${all.length}`}
@@ -552,7 +566,7 @@ export function MarkBlock(p: TileProps) {
           {/* THE ELEVEN P2S.3 ADDED (shapes.tsx), framed exactly as the six. */}
           <Shape mark={mark} rows={rows} meta={meta} o={p.o} subject={seriesOf} {...offering} />
         </div>
-        <Receipts meta={meta} tool={p.o.tool} />
+        <Receipts meta={meta} tool={p.o.tool} chrome={p.chrome} />
       </Shell>
       {/* OPENED — below the tile, never inside it, because a tile clips its
           content and a panel is the one place a hue still says something: ONE

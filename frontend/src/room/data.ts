@@ -358,10 +358,41 @@ export function tableShape(
   const wholes = drawable.filter(whole);
   if (wholes.length >= 2 && wholes.length < drawable.length) drawable = wholes;
 
-  const columns = drawable
+  const ranked = drawable
     .sort((a, b) => Number(whole(b)) - Number(whole(a))
       || (COLUMN_RANK[a] ?? 4) - (COLUMN_RANK[b] ?? 4)
-      || cols.indexOf(a) - cols.indexOf(b))
+      || cols.indexOf(a) - cols.indexOf(b));
+
+  // COLUMNS THAT SAY THE SAME THING AS EACH OTHER (P3.k).
+  //
+  // The fold above catches a column that says ONE thing all the way down. It
+  // does not catch two columns that say the same thing as each other on every
+  // row, and the owner's stockout read was exactly that: `days out of stock`,
+  // `current stockout run` and `longest stockout run`, printing 21 · 21 · 21,
+  // 20 · 20 · 20, 19 · 19 · 19 — the same number three times for every shop,
+  // and the reason that table also claimed it needed the whole width.
+  //
+  // Three genuinely different measures that HAPPEN to coincide on this data,
+  // so this is a drawing decision and not the tool's: suppressing a column in
+  // SQL would change what Bob sees and make a tool's contract depend on its
+  // rows. Here the first one drawn keeps its place and the rest are NAMED in
+  // the caption, because a reader is entitled to know the column was there.
+  const mirrors = new Map<string, string>();
+  for (let i = 0; i < ranked.length; i += 1) {
+    const a = ranked[i];
+    if (mirrors.has(a) || /sales|revenue|value|total|cost|price/i.test(a)) continue;
+    for (let j = i + 1; j < ranked.length; j += 1) {
+      const b = ranked[j];
+      if (mirrors.has(b) || /sales|revenue|value|total|cost|price/i.test(b)) continue;
+      if (rows.every((r) => String(r[a] ?? '') === String(r[b] ?? ''))) mirrors.set(b, a);
+    }
+  }
+  if (rows.length >= 3 && mirrors.size) {
+    for (const [b, a] of mirrors) {
+      constant.push(`${b.replace(/_/g, ' ')} is the same as ${a.replace(/_/g, ' ')}`);
+    }
+  }
+  const columns = (rows.length >= 3 ? ranked.filter((k) => !mirrors.has(k)) : ranked)
     .slice(0, COLUMNS_MAX);
   return { constant, columns };
 }

@@ -329,12 +329,17 @@ export function composition(viewport: number, sideOpen: boolean): Composition {
  */
 export function columnsFor(count: number, viewport: number, onlyOneNeedsWidth = false): 1 | 2 {
   if (viewport <= PHONE) return 1;
-  // A CHART TAKES THE SIZE IT NEEDS (the owner, 2026-09-17: "some charts are
-  // too big that dont need to be it should know like how much size it needs
-  // not waste it"). One ranked list of eight categories across 940px is bars
-  // twice as long as they need to be; it sits in a column like any other.
-  if (count <= 1) return onlyOneNeedsWidth ? 1 : 2;
-  return 2;
+  // ONE COLUMN SINCE 2026-09-19 (P3.k). Two columns is a dashboard: the eye
+  // reads across, the order you see is the packer's, and each item has to
+  // carry its own label to say what it is — which is the whole of what the
+  // owner kept calling widgets. *"the right should feel like a page of that
+  // answer with text"*, and a page has one column. His order is then the
+  // page's order, and a figure that needs the width simply has it.
+  //
+  // `onlyOneNeedsWidth` and the `spans` it feeds are kept and now do nothing
+  // here, because they are what would come back if a second column ever did.
+  if (count <= 1) return onlyOneNeedsWidth ? 1 : 1;
+  return 1;
 }
 
 /**

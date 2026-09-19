@@ -250,14 +250,17 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
     .map((el) => Number(el.getAttribute('data-col')));
 
   it.each([
-    // One figure that does not need the width sits in a column (2026-09-17).
-    [1, 2, [0]],
-    [2, 2, [0, 1]],
-    [3, 2, [0, 1, 0]],
-    [4, 2, [0, 1, 0, 1]],
-    // Never three since 2026-09-17: three columns cut what a row names.
-    [5, 2, [0, 1, 0, 1, 0]],
-  ])('puts %i figures in %i columns, in that order', (n, cols, want) => {
+    // ONE COLUMN SINCE 2026-09-19 (P3.k). This asserted two until the owner
+    // said of the live board: "it still feels like the widgets, it's not the
+    // page style". Two columns is a dashboard — the eye reads across and the
+    // order you see is the packer's, not his. One column makes his order the
+    // page's order, which is what a page is.
+    [1, 1, [0]],
+    [2, 1, [0, 0]],
+    [3, 1, [0, 0, 0]],
+    [4, 1, [0, 0, 0, 0]],
+    [5, 1, [0, 0, 0, 0, 0]],
+  ])('puts %i figures in %i column, in his order', (n, cols, want) => {
     const { container } = draw(many(n as number));
     expect(container.querySelector('.r-flow')?.getAttribute('data-columns')).toBe(String(cols));
     expect(columnsOf()).toEqual(want);
@@ -278,17 +281,23 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
     expect(container.querySelectorAll('[data-lead="yes"]')).toHaveLength(1);
   });
 
-  it('lets a figure that needs the width span it, lead or not', () => {
-    // A table of nine columns cuts them in half a width.
+  it('still knows which figure needs the width, though one column gives it anyway', () => {
+    // `data-span` is what a second column would read. It is kept and asserted
+    // so that bringing one back is a decision, not a rebuild (P3.k).
     const { container } = draw([object('ranked', { key: 'a' }), object('table', { key: 'wide' })]);
     const wide = container.querySelector('[data-figure="wide"]') as HTMLElement;
     expect(wide.getAttribute('data-span')).toBe('yes');
-    expect(wide.style.gridColumn).toBe('1 / -1');
+    expect(wide.style.gridColumn).toBe('1');
   });
 
-  it('labels every figure with the read it came from, as the superscripts do', () => {
+  it('says which read every figure came from, as the superscripts do', () => {
+    // IT MOVED, IT DID NOT GO (P3.k). This was an uppercase banner of its own
+    // above every title, and a label over every item is most of what made the
+    // board read as a dashboard. The same words now ride the source line at
+    // the foot, which was already drawn — one line of chrome instead of two.
     const { container } = draw([object('table', { key: 'a' })]);
-    expect(container.querySelector('.r-fig-lbl')?.textContent).toBe('read 1');
+    expect(container.querySelector('.r-fig-lbl')).toBeNull();
+    expect(container.querySelector('.r-src')?.textContent).toMatch(/^read 1 · /);
   });
 
   it('arrives in order — the first at 200ms, the next 260ms after', async () => {

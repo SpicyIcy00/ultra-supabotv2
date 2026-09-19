@@ -118,6 +118,34 @@ const RELATION_SAID: Record<Relation, string> = {
   scale: 'the scale of',
 };
 
+/**
+ * THE WHOLE OF A FIGURE'S OWN CHROME, in one string: `read 4`, or
+ * `read 4 · why read 2`, or `read 3 · ruled out`.
+ *
+ * It used to be an uppercase banner over every block. The words are the same;
+ * where they sit is the change (P3.k) — they ride the source line at the foot,
+ * which was already drawn, so a block costs one line of chrome and not two.
+ * The number stays because his prose's superscripts point at it.
+ */
+function chromeFor(
+  o: BoardObject,
+  index: number | null,
+  out: boolean,
+  plan: { parentOf: Record<string, string>; relationOf: Record<string, Relation> },
+  byKey: Map<string, BoardObject>,
+  answers: AnswerTurn[],
+): string {
+  const parts = [`read${index !== null ? ` ${index}` : ''}`];
+  const up = plan.parentOf[o.key];
+  const parent = up ? byKey.get(up) : undefined;
+  if (parent) {
+    const n = readNumber(answers[parent.turn], parent);
+    parts.push(`${RELATION_SAID[plan.relationOf[o.key] ?? 'evidence']} read ${n ?? '—'}`);
+  }
+  if (out) parts.push('ruled out');
+  return parts.join(' · ');
+}
+
 export function turnNotices(p: {
   answers: AnswerTurn[];
   board: BoardObject[];
@@ -300,25 +328,8 @@ export function Board(p: BoardProps) {
                      gridRowEnd: `span ${Math.max(1, h + (plan.parentOf[o.key] ? CHILD_GAP : FIGURE_GAP))}` }}
           >
             <div className="r-fig-body">
-              {/* WHICH READ THIS IS — the number his words' superscripts point
-                  at, so a figure and the sentence citing it match by eye. Off
-                  the turn's own calls, never a rank. `ruled out` is drawn when
-                  a block says so; nothing sets it until P2S.3. */}
-              {/* WHAT IT IS TO THE POINT ABOVE IT, said in the line that
-                  already carries `ruled out` rather than in new chrome. The
-                  relation is a WORD, never a colour and never a box: a
-                  representation earns its place by communicating, and an
-                  indent alone cannot say whether this agrees or disagrees. */}
-              <p className="r-fig-lbl">
-                read{index !== null ? ` ${index}` : ''}
-                {plan.parentOf[o.key] && (
-                  <> · {RELATION_SAID[plan.relationOf[o.key] ?? 'evidence']} read
-                    {' '}{readNumber(p.answers[byKey.get(plan.parentOf[o.key])?.turn ?? 0],
-                                     byKey.get(plan.parentOf[o.key])!) ?? '—'}</>
-                )}
-                {out && <> · <s>ruled out</s></>}
-              </p>
               <Piece
+                chrome={chromeFor(o, index, out, plan, byKey, p.answers)}
                 order={order}
                 o={o}
                 turn={turn}

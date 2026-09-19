@@ -132,3 +132,60 @@ describe('the unit a cell is drawn in', () => {
     expect(fmt('change_pct', -58.1, 'PHP')).toBe('-58.1%');
   });
 });
+
+/**
+ * COLUMNS THAT SAY THE SAME THING AS EACH OTHER (P3.k).
+ *
+ * The owner's stockout read, 2026-09-19: `days out of stock`, `current
+ * stockout run` and `longest stockout run`, printing 21 · 21 · 21 for AJI
+ * BARN, 20 · 20 · 20 for OPUS, and so on down — the same number three times
+ * for every shop, and the reason that table also claimed the whole width.
+ *
+ * Three genuinely different measures that HAPPEN to coincide here, so this is
+ * a drawing decision, not the tool's: the first keeps its place, the rest are
+ * named in the caption, and a read where they differ is untouched.
+ */
+describe('a column that only repeats another', () => {
+  const stockout = [
+    { store: 'AJI BARN', days_out_of_stock: 21, current_stockout_run: 21, longest_stockout_run: 21 },
+    { store: 'OPUS', days_out_of_stock: 20, current_stockout_run: 20, longest_stockout_run: 20 },
+    { store: 'Shangri-La', days_out_of_stock: 19, current_stockout_run: 19, longest_stockout_run: 19 },
+    { store: 'Greenhills', days_out_of_stock: 14, current_stockout_run: 14, longest_stockout_run: 14 },
+    { store: 'Rockwell', days_out_of_stock: 13, current_stockout_run: 13, longest_stockout_run: 13 },
+  ];
+
+  it('draws one of them, not three', () => {
+    const { columns } = tableShape(stockout, null);
+    expect(columns).toContain('days_out_of_stock');
+    expect(columns).not.toContain('current_stockout_run');
+    expect(columns).not.toContain('longest_stockout_run');
+  });
+
+  it('names the ones it dropped, because the reader is entitled to know', () => {
+    const { constant } = tableShape(stockout, null);
+    expect(constant.join(' · ')).toMatch(/current stockout run is the same as days out of stock/);
+    expect(constant.join(' · ')).toMatch(/longest stockout run is the same as days out of stock/);
+  });
+
+  it('leaves a read whose columns genuinely differ alone', () => {
+    const real = stockout.map((r, i) => ({ ...r, longest_stockout_run: 30 + i }));
+    const { columns } = tableShape(real, null);
+    expect(columns).toContain('days_out_of_stock');
+    expect(columns).toContain('longest_stockout_run');
+  });
+
+  it('never folds one money column into another', () => {
+    const money = [
+      { store: 'A', value: 10, total: 10 }, { store: 'B', value: 20, total: 20 },
+      { store: 'C', value: 30, total: 30 },
+    ];
+    const { columns } = tableShape(money, null);
+    expect(columns).toContain('value');
+    expect(columns).toContain('total');
+  });
+
+  it('will not delete a column on the evidence of two rows', () => {
+    const { columns } = tableShape(stockout.slice(0, 2), null);
+    expect(columns).toContain('current_stockout_run');
+  });
+});

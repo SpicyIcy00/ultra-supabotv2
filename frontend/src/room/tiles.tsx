@@ -83,6 +83,21 @@ export interface TileProps {
    */
   offers?: ActionOffer[];
   /**
+   * WHICH READ THIS IS, AND WHAT IT IS TO THE ONE ABOVE IT — `read 4`, or
+   * `read 4 · why read 2`, or `read 3 · ruled out`.
+   *
+   * IT USED TO BE A BANNER (P3.k). Until 2026-09-19 this was an uppercase line
+   * of its own ABOVE the title, on every block. The owner, of the live board:
+   * *"it still feels like the widgets, it's not the page style"* — and a label
+   * over every item is most of what makes a page look like a dashboard. It is
+   * the same words; it now rides the source line at the foot, which was
+   * already there, so a block costs one line of chrome instead of two.
+   *
+   * It cannot simply go: the number is what his prose's superscripts point at,
+   * and `markers.dom.test.tsx` holds that every figure he cites is findable.
+   */
+  chrome?: string;
+  /**
    * THE ORDER STORES ARE LISTED IN ACROSS AN ANSWER (the `speak` layout,
    * 2026-09-17): a comparison lists its stores in this order, so the eye finds
    * OPUS in the same place on every chart. Absent keeps the tool's own order.
@@ -207,15 +222,17 @@ export function Delta({ change }: { change: Change }) {
  * of — because a figure with no line under it is a figure a reader cannot
  * place, and the last-resort version of that line is still true.
  */
-export function Receipts({ meta, tool }: {
-  meta: Parameters<typeof receiptsLine>[0]; tool?: string | null;
+export function Receipts({ meta, tool, chrome }: {
+  meta: Parameters<typeof receiptsLine>[0]; tool?: string | null; chrome?: string;
 }) {
   // A TAP OPENS THE RECEIPTS IN PLACE (UI rule 3, P2S.2(f)): the source and
   // every filter the read applied, under the line, with no route and no modal.
   const [open, setOpen] = useState(false);
-  const line = receiptsLine(meta)
+  const said = receiptsLine(meta)
     || [tool?.replace(/^get_/, '').replace(/_/g, ' ') ?? null,
         meta?.source_table ?? null].filter(Boolean).join(' · ');
+  // WHICH READ IT IS COMES FIRST, because that is what his prose points at.
+  const line = [chrome, said].filter(Boolean).join(' · ');
   if (!line) return null;
   const detail = receiptsDetail(meta);
   return (

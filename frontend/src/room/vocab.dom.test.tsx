@@ -167,10 +167,15 @@ describe('a read too small, too big or empty for its shape', () => {
 });
 
 describe('ruled out', () => {
-  it('draws a read the ladder ruled out as READ n · RULED OUT, dimmed', () => {
+  it('says a read the ladder ruled out is ruled out, at full strength', () => {
+    // NOT "dimmed" any more, on two counts. Emphasis adds and never takes
+    // away (2026-09-18), so `.r-fig--out` sets opacity 1; and the words moved
+    // off the banner onto the source line with the rest of a figure's chrome
+    // (P3.k), because a label over every block is what made this a dashboard.
     const { container } = draw('ranked', all.ranked, { ruled_out: true });
     const fig = container.querySelector('.r-fig') as HTMLElement;
     expect(fig.className).toContain('r-fig--out');
-    expect(fig.querySelector('.r-fig-lbl')?.textContent).toMatch(/ruled out/);
+    expect(fig.querySelector('.r-fig-lbl')).toBeNull();
+    expect(fig.querySelector('.r-src')?.textContent).toMatch(/ruled out/);
   });
 });

@@ -74,12 +74,20 @@ describe('the composition is the design\'s, and it stays centred', () => {
 });
 
 describe('the figures flow into columns — his rows 6 and 7', () => {
-  it('uses two columns on a desk — never three, and one only for a lone figure that needs the width', () => {
-    // "some charts are still getting cut" (three ~290px columns ellipsed every
-    // product name) and "some charts are too big that dont need to be".
-    expect(columnsFor(1, 1920)).toBe(2);
+  /**
+   * ONE COLUMN, EVERYWHERE, SINCE 2026-09-19.
+   *
+   * This test asserted two until today. The owner, of the live board: *"it
+   * still feels like the widgets, it's not the page style"* — and two columns
+   * is what makes it a dashboard rather than a page. The eye reads across, the
+   * order you see is the packer's rather than his, and every item has to carry
+   * a label to say what it is. Three went in September for cutting names; two
+   * go for the same reason one level up.
+   */
+  it('uses one column, on a desk as on a phone, whatever the count', () => {
+    expect(columnsFor(1, 1920)).toBe(1);
     expect(columnsFor(1, 1920, true)).toBe(1);
-    for (const n of [2, 3, 4, 5, 6, 9]) expect(columnsFor(n, 1920)).toBe(2);
+    for (const n of [2, 3, 4, 5, 6, 9]) expect(columnsFor(n, 1920)).toBe(1);
   });
 
   it('knows which figures need the width, from what they draw', () => {
@@ -115,19 +123,25 @@ describe('the figures flow into columns — his rows 6 and 7', () => {
     expect(placeFigures([400, 100, 200, 100], 2, [false, false, true, false])).toEqual([0, 1, 0, 0]);
   });
 
-  it('takes one column at 900px and under, whatever the count', () => {
+  it('takes one column at 900px and under, and now above it too', () => {
     for (const n of [1, 3, 7]) expect(columnsFor(n, 900)).toBe(1);
-    expect(columnsFor(3, 901)).toBe(2);
+    expect(columnsFor(3, 901)).toBe(1);
   });
 
-  it.each([
-    [2, [0, 1]],
-    [3, [0, 1, 0]],
-    [4, [0, 1, 0, 1]],
-    [5, [0, 1, 0, 1, 0]],
-  ])('places %i equal figures left to right, then down', (n, want) => {
+  it.each([[2], [3], [4], [5]])('places %i figures down one flow, in his order', (n) => {
     const heights = new Array(n as number).fill(200);
+    const want = new Array(n as number).fill(0);
     expect(placeFigures(heights, columnsFor(n as number, 1920))).toEqual(want);
+  });
+
+  /**
+   * THE PACKER STILL PACKS. `columnsFor` stopped asking for two columns; it
+   * did not stop being able to place them, and `placeFamilies` still leans on
+   * exactly this arithmetic. Held so that a second column is a decision to
+   * make again, not a capability to rebuild.
+   */
+  it('still packs two columns when it is asked for two', () => {
+    expect(placeFigures([200, 200, 200], 2)).toEqual([0, 1, 0]);
   });
 
   it('sends each figure to the SHORTEST column, so nothing leaves a hole', () => {

@@ -713,7 +713,14 @@
   align-items: start;
 }
 .r-fig { min-width: 0; position: relative; }
-.r-fig-body { padding-bottom: 34px; }
+/* A FIGURE TAKES THE WIDTH IT NEEDS, NOT THE WIDTH THERE IS (P3.k). One
+   column gave every chart the whole 940px, so a dumbbell put its name at
+   the far left and its number at the far right with a metre of nothing
+   between — the owner, 2026-09-17: "some charts are too big that dont need
+   to be it should know like how much size it needs not waste it". A figure
+   that asked for the width (beside.needsWidth) still gets all of it. */
+.r-fig-body { padding-bottom: 34px; max-width: 760px; }
+.r-fig[data-span="yes"] .r-fig-body { max-width: none; }
 /* HIS WORDS ON A CHART — including, on the chart the headline rests on, what no
    chart took (the owner, 2026-09-18: "that should be with those charts"). His
    line breaks stay line breaks; a gap between his paragraphs. */
