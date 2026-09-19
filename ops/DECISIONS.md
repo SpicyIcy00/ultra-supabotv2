@@ -4849,4 +4849,8 @@ So from the moment that deploy went live, **every post Bob authored was rejected
 
 **A NOTE ON THE PREVIOUS FIX.** The Decimal sanitising and the `posts()` guard from earlier today were a genuine hole and stay. They were not this. Diagnosing from the data showed a question with no answer and correctly identified one way that happens; it took the table's own constraint definitions to find the way it actually did.
 
+**THE MIGRATION FAILED THE FIRST TIME AND TOOK PRODUCTION DOWN FOR FOUR MINUTES.** It updated the rows before replacing the constraints, on the reasoning that a constraint should only be created once every row satisfies it. That is backwards here: the OLD constraints are what the rows are being moved out of. `ck_posts_actor` read `(author='user' AND author_user IS NOT NULL) OR author='george'`, so setting `author='bob'` made both branches false and Postgres refused the UPDATE itself with a CheckViolation naming that constraint. Alembic stopped, the schema check found the database one revision behind the code and refused to serve, and the app came up 503 rather than half-working — which is the schema check doing exactly its job.
+
+**An old rule cannot be satisfied by rows on their way to a new one.** Drop, then update, then create, in both directions. Applied by hand to restore service, then pushed; head `z0a1b2c3d4e5`, the three constraints name bob, 176 answer posts moved across, healthy at 05:01:35 UTC on build `2f57a400`.
+
 **Suites after:** pure 2,098 → 2,106. No frontend change.
