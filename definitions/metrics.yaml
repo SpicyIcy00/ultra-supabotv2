@@ -2474,6 +2474,98 @@ products:
     match: case_insensitive_substring
     fuzzy: false
 
+  # ---------------------------------------------------------------------------
+  # WHO SUPPLIES A PRODUCT, AND WHAT LEVEL SOMEBODY SET FOR IT (2026-09-19).
+  #
+  # Filled by the StoreHub products export (storehub.products) into two tables
+  # that nothing else writes. Added the day the first real export landed:
+  # 2,381 supplier links across 2,247 products, 61 distinct supplier names, and
+  # 40 stock levels at 5 shops.
+  #
+  # THERE ARE TWO ANSWERS TO "WHO SUPPLIES THIS" AND THEY ARE NOT THE SAME
+  # QUESTION. Keep them apart, always, and never blend them into one figure:
+  #
+  #   product_suppliers (here)      WHO STOREHUB RECORDS as supplying it. The
+  #                                 system of record, typed by a person into
+  #                                 StoreHub, covering 2,247 products.
+  #   purchasing.plan.supplier_link WHO WE HAVE BOUGHT IT FROM, inferred from
+  #                                 purchase_order_lines by
+  #                                 ops/propose_supplier_map.py into
+  #                                 definitions/product_suppliers.yaml (650
+  #                                 entries, approved 2026-09-10). A history,
+  #                                 not a declaration.
+  #
+  # The first says who you are meant to buy from. The second says who you did.
+  # They will disagree, and WHICH ONE WINS for a purchasing decision is a
+  # business definition NOBODY HAS MADE YET. Until somebody does, the purchase
+  # plan keeps using the inferred map it was built on and this one is read for
+  # answering "who supplies this", never for choosing whom to order from.
+  #
+  # NOTHING HERE IS SUMMED, RANKED INTO A DECISION, OR TREATED AS A KEY. A
+  # supplier is a NAME as StoreHub exported it: no supplier master exists in
+  # this database, so two spellings of one company are two names and are left
+  # that way rather than guessed together.
+  # ---------------------------------------------------------------------------
+  suppliers:
+    introduced: "2026-09-19"
+    source_table: product_suppliers
+    written_by: "the StoreHub products import (storehub.products)"
+    # The export's own order, kept. The first name is usually the one they
+    # actually buy from, and losing the ordering loses that.
+    order_by: position
+    is_not: >
+      the inferred map at definitions/product_suppliers.yaml, which is derived
+      from purchase history and is what the purchase plan uses. See the block
+      above; the two are never blended.
+    normalised: false
+    normalisation_note: >
+      Names are stored exactly as exported and never trimmed into each other,
+      case-folded or fuzzy-matched. There is no supplier master and no id.
+
+    # ATTACHED TO A RESULT ONLY WHILE THE RESULT IS ABOUT PRODUCTS RATHER THAN
+    # ABOUT THE CATALOGUE. A whole-catalogue listing would drag every one of
+    # the 2,381 links through the answer to pad a list nobody asked suppliers
+    # about. Above the bound the lists are left off and meta says so, which is
+    # a fact about the result rather than a silent omission.
+    attach_when_rows_at_most: 200
+
+    # A product with no row here is a product StoreHub has no supplier for. It
+    # is NOT an error and NOT an empty answer — most of the catalogue has one,
+    # 1,486 of 3,733 do not — so it is reported as coverage rather than raised.
+    missing_is_absent: true
+    coverage_notice_kind: supplier_coverage
+
+  # ---------------------------------------------------------------------------
+  # THE WARNING AND IDEAL LEVELS, PER SHOP.
+  #
+  # A LEVEL IS NOT A QUANTITY AND NEVER STANDS IN FOR ONE. It is what somebody
+  # decided this product's floor and target should be at one store; what is
+  # actually on hand is inventory (get_stock). The products export carries a
+  # quantity column beside each pair and it is deliberately not imported here,
+  # because two sources for on-hand is how a stock figure becomes a question
+  # about which table you read.
+  #
+  # BLANK IS NOT ZERO. Null means nobody ever set a level; 0 means somebody set
+  # it to zero, which is a decision. The columns are nullable so the two stay
+  # different, the same rule as received_quantity.blank_is_zero.
+  # ---------------------------------------------------------------------------
+  stock_levels:
+    introduced: "2026-09-19"
+    source_table: product_stock_levels
+    written_by: "the StoreHub products import (storehub.products)"
+    per: store
+    blank_is_zero: false
+    is_not_on_hand: true
+    on_hand_lives_in: "inventory (get_stock)"
+    attach_when_rows_at_most: 200
+    # 40 levels across 5 shops on the first real export — almost nothing is
+    # set. Said plainly so an empty list is read as "nobody set one", not as a
+    # tool that failed to look.
+    sparse_note: >
+      Very few products have a level at all. On the export of 2026-09-19, 40
+      levels existed across 27 products at 5 stores. An empty list means
+      nobody set one, not that the level could not be read.
+
 
 # =============================================================================
 # STOCK MOVEMENT (AJI BARN <-> stores)

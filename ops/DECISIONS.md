@@ -4773,3 +4773,28 @@ The owner's own 30 days (78 turns that read, 351 calls) asked the same reads pie
 **A THIRD COLOUR FAMILY, BOUNDED LIKE THE OTHER TWO.** Green and red could not come from the accent, which means "needs you" and would stop meaning it, and could not come from `--up` / `--down`, which mean a direction a tool MEASURED — an import landing is not a measurement, and borrowing the rise colour would make "it worked" and "it went up" the same green. `--landed` and `--refused` are their own pair, defined not aliased, and `accentUse.test.ts` now holds them to the two files allowed to name them. The words beside the band say the same thing the colour does, so nothing depends on seeing the hue.
 
 **Suites after:** pure 2,063 → 2,064, vitest 999 → 1,006, `tsc -b --force` clean.
+
+## 2026-09-19 · Bob can read who supplies a product, and there are two answers to that question
+
+**The owner asked whether Bob knew about the two tables the products import had just filled.** He did not, in two separate ways, and both are now closed.
+
+**A GRANT IS NOT PART OF A DEPLOY, and that is a trap worth naming.** `tools/george_ro_role.sql` is run by hand. The migration created `product_suppliers` and `product_stock_levels` and Railway applied it, so the tables existed and held 2,381 links and 40 levels while `george_ro` had no SELECT on either. Any tool that had reached for them would have raised InsufficientPrivilege in production. Granted on the live database 2026-09-19, and the script now says out loud that a new table Bob reads needs a line there AND a hand-run grant.
+
+**A TABLE WITH NO VETTED QUERY IS INVISIBLE TO BOB BY DESIGN.** He writes no SQL, so the grant alone changed nothing. `get_product` now attaches two facts to every row it returns: the supplier names StoreHub records, in the export's own order, and the warning / ideal level per store. Both read through query constants with one bound parameter — the ids of the rows already selected — never a built string.
+
+**ATTACHED TO THE PRODUCT, NOT GIVEN A TOOL OF ITS OWN.** "Who supplies Aji Mix" is a question about a product. A second tool would mean two calls and two results for one answer, and rule 5 keeps depth in the tools rather than in the loop.
+
+**THERE ARE TWO ANSWERS TO "WHO SUPPLIES THIS" AND THEY ANSWER DIFFERENT QUESTIONS.** This is the part that will cause trouble if it is ever forgotten:
+
+- `product_suppliers` — who StoreHub **records** as supplying it. Typed by a person into the system of record, 2,247 products covered.
+- `definitions/product_suppliers.yaml` — who we have **bought** it from, inferred from purchase history by `ops/propose_supplier_map.py`, 650 entries, approved by the owner 2026-09-10, and what the purchase plan uses.
+
+The first says who you are meant to buy from; the second says who you did. **They will disagree, and which one wins for a purchasing decision is a business definition nobody has made.** Until somebody does, the purchase plan keeps the inferred map it was built on, and the imported list answers "who supplies this" and nothing else. Every attached result names which of the two it is, by path, and a coverage notice explicitly warns against falling back to the other one in the same breath.
+
+**A LEVEL IS NOT WHAT IS ON HAND**, and the tool says so to the model in its own schema. The export carries a quantity column beside each pair and it is deliberately not imported: two sources for on-hand is how a stock figure becomes a question about which table you read. Null in a pair means nobody set that half; 0 means somebody set zero.
+
+**A WIDE RESULT SAYS IT DID NOT LOOK.** Over 200 rows the lists are not read and come back null, not empty, because an empty list there would be the tool asserting "this product has no supplier" about a question it never asked.
+
+**Verified against the live data, not a fixture.** Aji Mix reads back with its five suppliers in export order; SH1206 carries 10/20 at SM North Edsa and 10/25 at Magnolia; every result names import 18 and the file it came from.
+
+**Suites after:** pure 2,064 → 2,083, vitest 1,006 unchanged, `tsc -b --force` clean.

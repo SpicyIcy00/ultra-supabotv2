@@ -92,6 +92,162 @@ def resolve_category(cur: Any, defs: dict, category: str) -> tuple[str, Optional
     )
 
 
+# ---------------------------------------------------------------------------
+# WHO SUPPLIES IT, AND WHAT LEVEL SOMEBODY SET (2026-09-19)
+#
+# Two facts the catalogue row does not carry, filled by the StoreHub products
+# export into two tables nothing else writes. Both are attached to the rows
+# this tool already returns rather than given a tool of their own: "who
+# supplies Aji Mix" is a question about a PRODUCT, and a second tool would mean
+# two calls and two results to line up by hand for one answer.
+#
+# VETTED AND PARAMETERISED. Both queries are constants with one bound
+# parameter, the ids of the rows already selected.
+# ---------------------------------------------------------------------------
+
+_SUPPLIERS_SQL = """
+SELECT ps.product_id, ps.supplier_name, ps.position
+  FROM product_suppliers ps
+ WHERE ps.product_id = ANY(%(ids)s)
+ ORDER BY ps.product_id, ps.position
+"""
+
+_LEVELS_SQL = """
+SELECT l.product_id, l.store_id, s.name AS store,
+       l.warning_level, l.ideal_level
+  FROM product_stock_levels l
+  JOIN stores s ON s.id = l.store_id
+ WHERE l.product_id = ANY(%(ids)s)
+ ORDER BY l.product_id, s.name
+"""
+
+# Which import wrote what is there now, so the lists carry a date and a file
+# rather than arriving out of nowhere (UI rule 6: no number without a time).
+_SUPPLIER_SOURCE_SQL = """
+SELECT id, filename, uploaded_at, uploaded_by
+  FROM storehub_imports
+ WHERE kind = 'products'
+ ORDER BY id DESC
+ LIMIT 1
+"""
+
+
+def _attach_supplier_facts(cur, rows: list[dict], defs: dict) -> tuple[dict, list[dict]]:
+    """
+    Hang the supplier list and the per-store levels on each product row.
+
+    Returns (what goes in meta, notices). Rows are changed in place: every row
+    gets `suppliers` and `stock_levels`, both possibly empty, because a key
+    that is sometimes absent is a key a reader forgets to check.
+    """
+    spec = _req(defs, "products.suppliers")
+    level_spec = _req(defs, "products.stock_levels")
+    bound = int(spec["attach_when_rows_at_most"])
+    notices: list[dict] = []
+
+    if not rows:
+        return {}, notices
+
+    if len(rows) > bound:
+        # A fact about the RESULT, not a silent omission. The lists are left
+        # off and the answer says so, so nothing reads an absent list as "this
+        # product has no supplier".
+        for r in rows:
+            r["suppliers"] = None
+            r["stock_levels"] = None
+        return {
+            "supplier_facts": {
+                "attached": False,
+                "reason": (
+                    f"{len(rows)} products in this result, over the "
+                    f"{bound}-row bound for attaching supplier lists. Narrow "
+                    f"the search to see them. `suppliers` and `stock_levels` "
+                    f"are null here, which means NOT READ, not 'none'."
+                ),
+                "source": "definitions/metrics.yaml: products.suppliers.attach_when_rows_at_most",
+            },
+        }, notices
+
+    ids = [r["id"] for r in rows]
+    by_id: dict[str, dict] = {r["id"]: r for r in rows}
+    for r in rows:
+        r["suppliers"] = []
+        r["stock_levels"] = []
+
+    cur.execute(_SUPPLIERS_SQL, {"ids": ids})
+    supplier_rows = cur.fetchall()
+    for s in supplier_rows:
+        by_id[s["product_id"]]["suppliers"].append(s["supplier_name"])
+
+    cur.execute(_LEVELS_SQL, {"ids": ids})
+    for lv in cur.fetchall():
+        by_id[lv["product_id"]]["stock_levels"].append({
+            "store_id": lv["store_id"],
+            "store": lv["store"],
+            # NULL stays NULL: nobody set that half. 0 is a level somebody set.
+            "warning_level": float(lv["warning_level"]) if lv["warning_level"] is not None else None,
+            "ideal_level": float(lv["ideal_level"]) if lv["ideal_level"] is not None else None,
+        })
+
+    cur.execute(_SUPPLIER_SOURCE_SQL)
+    wrote = cur.fetchone()
+
+    with_supplier = sum(1 for r in rows if r["suppliers"])
+    with_level = sum(1 for r in rows if r["stock_levels"])
+
+    facts = {
+        "attached": True,
+        "source_tables": [spec["source_table"], level_spec["source_table"]],
+        "products_with_a_supplier": with_supplier,
+        "products_with_a_stock_level": with_level,
+        "supplier_order": (
+            "the order StoreHub exported them in; the first is usually the one "
+            "actually bought from"
+        ),
+        "names_are_raw": (
+            "exactly as exported, never trimmed together or fuzzy-matched — "
+            "there is no supplier master in this database"
+        ),
+        # THE OTHER ANSWER TO THE SAME QUESTION, named every time so nothing
+        # downstream mistakes one for the other.
+        "not_the_same_as": " ".join(str(spec["is_not"]).split()),
+        "stock_level_is_not_on_hand": (
+            f"a level is what somebody DECIDED the floor and target should be; "
+            f"what is on hand is {level_spec['on_hand_lives_in']}"
+        ),
+        "source": "definitions/metrics.yaml: products.suppliers, products.stock_levels",
+    }
+    if wrote is not None:
+        facts["last_written_by_import"] = {
+            "import_id": wrote["id"],
+            "filename": wrote["filename"],
+            "uploaded_at": wrote["uploaded_at"].isoformat() if wrote["uploaded_at"] else None,
+            "uploaded_by": wrote["uploaded_by"],
+        }
+
+    # Coverage, not an error: most of the catalogue has a supplier and a large
+    # minority does not, so a result full of blanks is a fact worth saying once.
+    without = len(rows) - with_supplier
+    if without:
+        notices.append({
+            "kind": _req(defs, "products.suppliers.coverage_notice_kind"),
+            "message": (
+                f"{without} of {len(rows)} product(s) here have no supplier "
+                f"recorded in StoreHub. That is an absence in the export, not a "
+                f"failed lookup, and it means any answer about who supplies "
+                f"them has nothing behind it."
+            ),
+            "guidance": (
+                "Do not fall back to the inferred map in the same breath: "
+                "definitions/product_suppliers.yaml says who we have BOUGHT "
+                "from, which is a different question."
+            ),
+            "source": "definitions/metrics.yaml: products.suppliers",
+        })
+
+    return {"supplier_facts": facts}, notices
+
+
 def get_product(
     sku: Optional[str] = None,
     name: Optional[str] = None,
@@ -115,6 +271,23 @@ def get_product(
 
     All four omitted returns the whole catalog, capped and reported as
     truncated. Multiple arguments are ANDed.
+
+    Each row also carries WHO SUPPLIES IT and WHAT STOCK LEVEL somebody set
+    for it, from the StoreHub products export:
+
+      suppliers      the supplier names StoreHub records for this product, in
+                     the order it exported them; the first is usually the one
+                     actually bought from. Empty means StoreHub has none. This
+                     is who you are MEANT to buy from, and is a different
+                     question from who you HAVE bought from (the purchase plan's
+                     inferred map) — never blend the two.
+      stock_levels   the warning and ideal level per store, as somebody set
+                     them. A level is NOT what is on hand — that is get_stock.
+                     Null in a pair means nobody set that half; 0 means somebody
+                     set zero. Empty means no level anywhere, which is usual.
+
+    Both are null rather than empty when the result is too wide to attach them
+    to, and meta says so — null means NOT READ, never "none".
 
     Returns:
         {"rows": [...], "meta": {...}}. A non-empty meta["notice"] MUST be
@@ -195,6 +368,8 @@ def get_product(
     )
 
     notices: list[dict] = []
+    supplier_meta: dict = {}
+    supplier_notices: list[dict] = []
 
     with _connect() as conn:
         with conn.cursor(row_factory=DICT_ROW) as cur:
@@ -234,6 +409,9 @@ def get_product(
                     ],
                     "matched_product_barcodes_table": sorted(via_secondary),
                 }
+
+            # Who supplies these, and what levels are set for them.
+            supplier_meta, supplier_notices = _attach_supplier_facts(cur, rows, defs)
 
     # ---- shape rows ------------------------------------------------------
     for r in rows:
@@ -317,6 +495,9 @@ def get_product(
             "source": "definitions/metrics.yaml: products.sku",
         })
 
+    if supplier_meta.get("supplier_facts", {}).get("attached"):
+        source_table = f"{source_table} + product_suppliers + product_stock_levels"
+
     meta: dict[str, Any] = {
         "source_table": source_table,
         "filters_applied": filters_applied,
@@ -338,6 +519,8 @@ def get_product(
             ),
         },
     }
+    meta.update(supplier_meta)
+    notices.extend(supplier_notices)
     if total_matching is not None:
         meta["total_matching"] = total_matching
     if sku_ambiguity is not None:

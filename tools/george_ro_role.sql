@@ -59,6 +59,13 @@ GRANT SELECT ON
     -- Who supplies a product, and the stock level somebody set for it at a
     -- store (migration y9z0a1b2c3d4). The products export fills these; nothing
     -- else in the database holds either fact.
+    --
+    -- GRANTED ON THE LIVE DATABASE 2026-09-19, and it had to be done by hand.
+    -- This file is not run by the deploy: the migration created the tables and
+    -- george_ro could not read them, so `get_product` would have returned an
+    -- InsufficientPrivilege for a week. The owner asked "does bob know about
+    -- those tables now" and the answer was no, for this reason. A new table
+    -- Bob reads needs a line here AND a hand-run grant.
     product_suppliers,
     product_stock_levels,
     -- The replenishment plan (migration a1b2c3d4e5f6). Added 2026-09-09 for
