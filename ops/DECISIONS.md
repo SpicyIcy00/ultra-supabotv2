@@ -4824,3 +4824,29 @@ The first says who you are meant to buy from; the second says who you did. **The
 **Why it started when it did:** the turn before it saved fine at 00:13; this one was the first after the rename and speed-fix deploy went live at 00:54. Which of that deploy's changes put a Decimal into one of those five fields was not chased, because the hole would have opened on any of them eventually and the fix is the same either way.
 
 **Suites after:** pure 2,083 → 2,098. No frontend change.
+
+## 2026-09-19 · The rename changed a value the database validates, and every post Bob wrote was refused
+
+**The owner, after the previous fix shipped: "it still disappeared after hard refresh and cash remove is that normal?"** It was not normal, and the previous fix — real, and worth keeping — was not the cause.
+
+**THE CAUSE.** `044d3e7` ("George is Bob: the name and the code, not the database") changed the author literal in two INSERT statements from `'george'` to `'bob'`, and updated the models to match. The CHECK constraints in the live database still said `'george'`:
+
+```
+ck_posts_author        author = ANY (ARRAY['george', 'user'])
+ck_posts_actor         (author='user' AND author_user IS NOT NULL) OR author='george'
+ck_page_events_actor   actor = ANY (ARRAY['user', 'george'])
+```
+
+So from the moment that deploy went live, **every post Bob authored was rejected by Postgres.** The question post survived, because its author is `'user'`. The answer post did not. That is the entire symptom: a thread with a question, no answer, no `post` frame, no `/w/<thread>` address, and nothing to return to after a refresh.
+
+**IT WAS NOT ONLY THE CHAT.** `river_writer`'s single INSERT carries the brief, watches, approvals, workflow runs and pin confirmations, and spells the author inline. All of them would have failed the same way. `george.page_events` has the identical trap and would have failed the first time Bob created or edited a page, which nobody had tried.
+
+**WHY NOTHING CAUGHT IT.** The suite ran green throughout and would have run green forever. The models agreed with the code, the code agreed with itself, and the only disagreement was with a database no test connects to. A value a CHECK permits is not a column, a type or an index; nothing in this repository compared the literals to the constraints.
+
+**THE FIX MOVES THE VALUE, NOT THE CODE.** The rename's rule is that the database keeps its george NAMES — schema, roles, environment variables, migration ids — and all of that is untouched. `author` is not a name, it is a value the product reads: the frontend's `PostAuthor` has been `'bob' | 'user'` since the rename and `river.py` already defaults a missing author to `'bob'`. Migration `z0a1b2c3d4e5` moves the 175 existing rows to `'bob'` and rewrites the three constraints to permit exactly what the code writes. Nothing is left permitting both spellings: a constraint that accepts either has stopped holding the vocabulary.
+
+**THE GUARD** (`tests/test_post_author_contract.py`) reads the raw SQL literals in both writers, the models' CheckConstraints, and the latest definition of each constraint in the migration scripts, and fails if any of the three disagrees. Upgrade sections only — a downgrade re-creates the rule the migration exists to replace, and scanning whole files reads the old one.
+
+**A NOTE ON THE PREVIOUS FIX.** The Decimal sanitising and the `posts()` guard from earlier today were a genuine hole and stay. They were not this. Diagnosing from the data showed a question with no answer and correctly identified one way that happens; it took the table's own constraint definitions to find the way it actually did.
+
+**Suites after:** pure 2,098 → 2,106. No frontend change.

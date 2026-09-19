@@ -3734,7 +3734,7 @@ prompt, is **Bob, The Build Plan** in §6.
 Run from the repo root. The interpreter is `.venv\Scripts\python.exe`; a system
 `python` cannot import the backend (pinned SQLAlchemy).
 
-    .venv\Scripts\python.exe ops/verify_integration.py pure     # 2,098 here (P3.h + products + the BOM fix + the supplier read + the lost-answer fix, 2026-09-19); CI not re-counted
+    .venv\Scripts\python.exe ops/verify_integration.py pure     # 2,106 here (P3.h + products + the BOM fix + the supplier read + the lost-answer fixes, 2026-09-19); CI not re-counted
 
 **THE PURE COUNT IS FOUR HIGHER HERE THAN IN CI, and that is not a fault.**
 `tests/test_eval_report_contract.py` parametrizes over every
