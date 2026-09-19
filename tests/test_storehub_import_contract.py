@@ -13,6 +13,7 @@ with a reason, on an interpreter that only has 1.4.
 
 from __future__ import annotations
 
+import asyncio
 import pytest
 
 sa = pytest.importorskip("sqlalchemy", reason="SQLAlchemy is required")
@@ -261,3 +262,188 @@ def test_normalise_gives_every_row_the_same_keys():
     assert out[0]["b"] is None and out[2]["a"] is None
     assert out[1]["b"] == 3          # present values survive
     assert _normalise([]) == []
+
+
+# ===========================================================================
+# Products — the import that writes suppliers and stock levels
+#
+# Run against a RECORDING SESSION, not a database. Every statement the importer
+# issues is compiled against the Postgres dialect here, which is the check that
+# matters: a column that does not exist, a conflict target with no unique index
+# behind it, or a Decimal that will not bind all fail at compile time. What is
+# left over — that Postgres accepts the DDL — is the migration's business.
+# ===========================================================================
+
+from types import SimpleNamespace                                  # noqa: E402
+
+from app.models.storehub import ProductStockLevel, ProductSupplier  # noqa: E402
+from app.services import storehub_import                            # noqa: E402
+from tests.test_storehub_products_contract import (                 # noqa: E402
+    AJM1, ITEM1, MAGNOLIA, NORTH_EDSA, ROCKWELL, SH1, SH610, SH1206,
+    ROW_AJM1, ROW_ITEM1, ROW_SH1, ROW_SH610, ROW_SH1206,
+    _file, _row,
+)
+
+
+class _Result:
+    def __init__(self, rows, rowcount=0):
+        self._rows = rows
+        self.rowcount = rowcount
+
+    def all(self):
+        return self._rows
+
+    def __iter__(self):
+        return iter(self._rows)
+
+
+class _RecordingSession:
+    """
+    Stands in for AsyncSession. Compiles everything it is given — so a statement
+    that could not run is a failure here — and answers the SELECT with whichever
+    product ids the test says the catalogue holds.
+    """
+
+    def __init__(self, catalogue, deleted=0):
+        self.catalogue = list(catalogue)
+        self.deleted = deleted
+        self.sql: list[str] = []
+        self.added = None
+
+    def add(self, obj):
+        self.added = obj
+
+    async def flush(self):
+        self.added.id = 77
+
+    async def execute(self, stmt):
+        text = str(stmt.compile(dialect=postgresql.dialect()))
+        self.sql.append(text)
+
+        if isinstance(stmt, sa.Select):
+            return _Result([(pid,) for pid in self.catalogue])
+        if isinstance(stmt, sa.Delete):
+            return _Result([], rowcount=self.deleted)
+
+        # An upsert. One RETURNING row per row of VALUES, all reported as
+        # inserts, which is what an empty table would answer.
+        multi = getattr(stmt, "_multi_values", ())
+        count = len(multi[0]) if multi else 1
+        return _Result([SimpleNamespace(was_inserted=True) for _ in range(count)])
+
+
+def _run(catalogue, rows, deleted=0):
+    db = _RecordingSession(catalogue, deleted=deleted)
+    result = asyncio.run(storehub_import.import_file(
+        db, data=_file(*rows), filename="Products_FROM-ajiichiban.csv",
+        kind="products", uploaded_by="ice",
+    ))
+    return db, result
+
+
+def test_a_products_import_writes_only_suppliers_and_levels():
+    db, result = _run([AJM1, SH1, SH1206, SH610, ITEM1],
+                      [ROW_AJM1, ROW_SH1, ROW_SH1206, ROW_SH610, ROW_ITEM1])
+
+    assert result.kind == "products"
+    assert result.counters["products_seen"] == 5
+    assert result.counters["products_matched"] == 5
+    assert result.counters["unknown_products"] == 0
+
+    # 1 + 5 + 2 + 1 + 0 supplier names across the five rows.
+    assert result.counters["suppliers_inserted"] == 9
+    # SH1206 sets two, SH610 sets two, nothing else sets any.
+    assert result.counters["stock_levels_inserted"] == 4
+
+    written = " ".join(db.sql).lower()
+    assert "insert into product_suppliers" in written
+    assert "insert into product_stock_levels" in written
+    # The catalogue is READ and never written. Its other writer owns it.
+    assert "insert into products" not in written
+    assert "update products" not in written
+    assert "delete from products " not in written
+
+
+def test_the_upserts_land_on_the_unique_key_of_each_table():
+    db, _ = _run([SH1206], [ROW_SH1206])
+    written = " ".join(db.sql).lower()
+    assert "on conflict (product_id, supplier_name) do update" in written
+    assert "on conflict (product_id, store_id) do update" in written
+    # first_seen_import_id is absent from every SET clause: the first import to
+    # see a link keeps its name on it.
+    for clause in written.split("do update set ")[1:]:
+        assert "first_seen_import_id" not in clause.split("returning")[0]
+
+
+def test_a_product_the_catalogue_does_not_have_is_counted_and_said():
+    db, result = _run([SH1206], [ROW_SH1206, ROW_AJM1, ROW_ITEM1])
+
+    assert result.counters["products_seen"] == 3
+    assert result.counters["unknown_products"] == 2
+    said = [n for n in result.notices if n["kind"] == "unknown_products"]
+    assert said and "never creates one" in said[0]["message"]
+
+    # Its suppliers are not written under some invented product row.
+    assert result.counters["suppliers_inserted"] == 2      # SH1206's two only
+
+
+def test_the_converge_delete_is_scoped_to_the_products_in_the_file():
+    db, result = _run([SH1206, SH610], [ROW_SH1206], deleted=3)
+
+    deletes = [s for s in db.sql if s.lower().startswith("delete from product_")]
+    assert len(deletes) == 2, "suppliers and levels each converge"
+    for statement in deletes:
+        assert "product_id IN" in statement
+        assert "import_id !=" in statement
+
+    # rowcount is answered per statement by the stub; both report it.
+    assert result.counters["suppliers_deleted"] == 3
+    assert result.counters["stock_levels_deleted"] == 3
+    removed = [n for n in result.notices if n["kind"] == "links_removed_on_reimport"]
+    assert removed and "converges on the file" in removed[0]["message"]
+
+
+def test_a_level_binds_as_a_number_and_a_blank_one_stays_null():
+    """
+    Magnolia's ideal is 25 and its warning is 10; a product with a warning and
+    no ideal must bind NULL, not 0. Numeric(18,4) takes a Decimal; anything the
+    parser produced that it could not take would fail compiling here.
+    """
+    half = _row("HALF", "Only a warning", "cat", product_id="e" * 24,
+                at={NORTH_EDSA: ("5", "4", "")})
+    db, result = _run(["e" * 24, SH1206], [half, ROW_SH1206])
+    assert result.counters["stock_levels_inserted"] == 3
+
+    levels = [s for s in db.sql if "INSERT INTO product_stock_levels" in s]
+    assert len(levels) == 1
+    assert "warning_level" in levels[0] and "ideal_level" in levels[0]
+
+
+def test_every_key_the_importer_builds_is_a_column_of_its_table():
+    supplier_columns = {c.name for c in ProductSupplier.__table__.columns}
+    level_columns = {c.name for c in ProductStockLevel.__table__.columns}
+    assert {"product_id", "supplier_name", "position", "import_id",
+            "first_seen_import_id"} <= supplier_columns
+    assert {"product_id", "store_id", "warning_level", "ideal_level",
+            "import_id", "first_seen_import_id"} <= level_columns
+    # And the two that make a re-import converge rather than accumulate.
+    for table in (ProductSupplier.__table__, ProductStockLevel.__table__):
+        unique = [c for c in table.constraints
+                  if isinstance(c, sa.UniqueConstraint)]
+        assert unique, f"{table.name} has no unique key for the upsert to hit"
+
+
+def test_a_file_with_no_products_is_recorded_rather_than_refused():
+    db, result = _run([], [], deleted=0)
+    assert result.counters["products_seen"] == 0
+    assert [n["kind"] for n in result.notices] == ["empty_export"]
+    assert not any("INSERT INTO product_suppliers" in s for s in db.sql)
+
+
+def test_the_ledger_row_carries_the_whole_counter_dict():
+    db, result = _run([SH1206], [ROW_SH1206])
+    assert db.added.kind == "products"
+    assert db.added.counters == result.counters
+    # The flat columns were named for documents; this kind fills the ones it
+    # legitimately has and leaves the rest alone.
+    assert db.added.counters["products_seen"] == 1

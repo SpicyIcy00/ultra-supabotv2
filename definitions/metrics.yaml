@@ -3517,6 +3517,139 @@ storehub:
           named StockTransfers_FROM-... - and upload that.
 
   # ---------------------------------------------------------------------------
+  # PRODUCTS — THE CATALOGUE EXPORT, AND THE ONE RULE BETWEEN TWO WRITERS
+  #
+  # `products` ALREADY HAS A WRITER. A job outside this repository fills it
+  # nightly: 321 rows created at 15:00-15:01 UTC over sixty days and 3,699
+  # touched at 15:01 on 2026-09-18, against 3,733 rows in the table and 3,733
+  # products in this export. Name, SKU, category, barcode, cost, price and the
+  # stock-tracking flag are ITS columns.
+  #
+  # So this import does not write them. Two writers on one column is how a
+  # figure starts depending on which ran last, and nothing in a `{rows, meta}`
+  # could tell you which did. THE RULE IS ONE WRITER PER COLUMN, and this
+  # import takes only what the nightly job does not carry at all:
+  #
+  #   SUPPLIER   — free text on the product, several per product, separated by
+  #                ';'. Source S.1, blocked since 2026-09-13 because nothing
+  #                held a product -> supplier link. It is in this file.
+  #   WARNING and IDEAL STOCK LEVEL, per store — source S.10, recorded as
+  #                "never set on any product, so 'getting low' can never be
+  #                flagged, only 'hit zero'". Some are set now (AJI0004 carries
+  #                130/130 at Rockwell; SH1206 carries 10/20 and 10/25), so the
+  #                threshold a person set in StoreHub becomes readable here.
+  #
+  # DELIBERATELY NOT IMPORTED, each for a reason:
+  #   per-store QUANTITY  — `inventory_levels` and `inventory_snapshots` are the
+  #                stock record and are synced separately. A quantity from a
+  #                file somebody exported by hand would be a second, staler
+  #                answer to "how much is there", indistinguishable from the
+  #                first once written.
+  #   Supplier Price, Min/Max Price, Online Price, Tax Name, Kitchen Station,
+  #                Store Credits, Product Description, variants — carried by the
+  #                file, wanted by nothing yet. Adding a column for a figure no
+  #                read asks for is how a schema stops describing the business.
+  #
+  # OBSERVED AND NOT FIXED HERE: `products.price_type` holds a NUMBER in the
+  # live table ("1.3392857142857142" for SH1) where this export's "Price Type"
+  # says Fixed / Variable / Unit, and `products.unit_price` is the price BEFORE
+  # tax while the export's is tax-inclusive. Both are the nightly job's columns;
+  # recorded so the next person does not re-derive it, and so nobody reads
+  # price_type as a type.
+  # ---------------------------------------------------------------------------
+  products:
+    source_table: products
+    writes_tables: [product_suppliers, product_stock_levels]
+    document_key_column: "Product Id"
+    key_is: "the StoreHub ObjectID, equal to products.id"
+
+    # THE SECOND ROW IS NOT A PRODUCT. StoreHub writes a row of instructions
+    # under the header ("#Required(Must be unique)", "Optional; 0 by default
+    # ..."). It is identified by its first cell, never by position, so a file
+    # exported without it still reads.
+    instruction_row:
+      present: true
+      first_cell_startswith: "#Required"
+
+    # THE COLUMN LIST IS NOT FIXED AND CANNOT BE. Between the leading and
+    # trailing blocks StoreHub writes three columns per STORE, named after the
+    # store, so the file grows a column when a store opens. The fixed blocks are
+    # matched exactly — a moved column would import a cost as a price — and the
+    # middle is read structurally.
+    columns:
+      leading:
+        - "SKU"
+        - "Parent Product SKU"
+        - "Product Name"
+        - "Category"
+        - "Price Type"
+        - "Unit"
+        - "Tax-Inclusive Price"
+        - "Min Price"
+        - "Max Price"
+        - "Cost"
+        - "Supplier Price"
+        - "Product Tags"
+        - "Inventory Type"
+        - "Track Stock Levels"
+        - "Barcode"
+        - "SC/PWD Discount"
+        - "Solo Parent Discount"
+        - "Variant Name 1"
+        - "Variant Value 1"
+      trailing:
+        - "Supplier"
+        - "Tax Name"
+        - "Store Credits"
+        - "Kitchen Station"
+        - "Product Id"
+        - "Online Price"
+        - "Online Discounted Price"
+        - "Product Description"
+      # One triple per store, in this order, each prefixed with the store's
+      # name exactly as StoreHub writes it (the same strings the location map
+      # above is keyed by, double spaces and all).
+      per_store_suffixes:
+        quantity: "_Quantity"
+        warning: "_Warning Stock Level"
+        ideal: "_Ideal Stock Level"
+
+    # SUPPLIER IS FREE TEXT, SEVERAL PER PRODUCT, AND NEVER TIDIED. The same
+    # rule purchase_orders.supplier_is_free_text sets, for the same reason:
+    # observed values are a company ("Seikyo SEK001"), a product line ("Dried
+    # Fruits DF001") and a person ("Judy JUD001"), and merging two spellings
+    # would invent a supplier that supplies neither. Order is kept as written.
+    supplier:
+      separator: ";"
+      strip_whitespace_around_separator: true
+      deduplicate: false
+      normalise_case: false
+      fuzzy: false
+      several_per_product: true
+      max_observed: 5
+      max_observed_on: "SH1 Aji Mix — Chris Cheng CHC001; GZ Cri GZ001; Holeywood HLY001; Seikyo SEK001; Yeou Bin YB001"
+
+    # A LEVEL IS A SETTING SOMEBODY TYPED, NOT A MEASUREMENT. Blank means it was
+    # never set for that product at that store, which is a different fact from
+    # zero, so blank imports as NULL and is never defaulted. A level for a store
+    # the location map does not know (the two test stores in this export) is
+    # skipped and counted: there is no store row to hang it on and inventing one
+    # is forbidden (locations.create_store_row: false).
+    stock_levels:
+      blank_is_null: true
+      zero_is_a_real_level: true
+      skip_unresolved_store: true
+      import_quantity: false
+
+    # A product row whose Product Id is not in `products` is NOT created here.
+    # The nightly job is the one creator; this import only adds to rows that
+    # already exist, and names how many it could not place. A product added in
+    # StoreHub today is enriched after that job next runs.
+    unknown_product:
+      create_product_row: false
+      on_unknown: count_and_notice
+
+  # ---------------------------------------------------------------------------
   # IDEMPOTENCY. A RE-IMPORT CONVERGES TO THE FILE; IT DOES NOT ACCUMULATE.
   #
   # Upsert each document on external_id, upsert its lines on (document, line_no),
@@ -7180,6 +7313,13 @@ surface:
         - orphan_line_items
         - mojibake_product_names
         - lines_removed_on_reimport
+        # The products import (2026-09-19). Each says something the file was
+        # meant to carry did NOT land, or no longer does: a supplier list
+        # standing on them is incomplete, which is a figure that may be wrong,
+        # not an explanation of how one was measured.
+        - links_removed_on_reimport
+        - unknown_products
+        - rows_without_product_id
         - duplicate_skus_in_result
         - profit_overstated
         - cost_not_entered

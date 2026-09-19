@@ -189,4 +189,67 @@ describe('the StoreHub exports page', () => {
     fireEvent.click(screen.getAllByRole('button', { name: /Show its notice/ })[0]);
     expect(rows[0].textContent).toContain('matched no product');
   });
+  // --- Products (the owner, 2026-09-19: "we need a new one for products") ---
+
+  const PRODUCTS: ImportResult = {
+    import_id: 21, kind: 'products', filename: 'Products_FROM-ajiichiban_09192026_1109.csv',
+    sha256: 'cd'.repeat(32),
+    counters: {
+      products_seen: 4812, products_matched: 4810, unknown_products: 2,
+      suppliers_seen: 5103, suppliers_inserted: 5103, suppliers_updated: 0,
+      suppliers_deleted: 0, stock_levels_seen: 88, stock_levels_inserted: 88,
+      stock_levels_updated: 0, stock_levels_deleted: 0,
+      unresolved_locations: 1, rows_without_product_id: 0,
+      instruction_rows_skipped: 1,
+    },
+    notices: [{
+      kind: 'unresolved_location',
+      message: 'Test stoee matches no store, so no store row was created.',
+    }],
+  };
+
+  it('counts a products export in products, not in documents it does not have', async () => {
+    listImports.mockResolvedValue([]);
+    uploadExport.mockResolvedValue(PRODUCTS);
+    page();
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Products' }));
+    choose('Products_FROM-ajiichiban_09192026_1109.csv');
+
+    await waitFor(() => expect(uploadExport).toHaveBeenCalled());
+    expect(uploadExport.mock.calls[0][0]).toBe('products');
+
+    const shown = await screen.findByLabelText('This import');
+    expect(shown.textContent).toContain('4,810 matched in the catalogue');
+    expect(shown.textContent).toContain('5,103 added');
+    expect(shown.textContent).toContain('Stock levels: 88 added');
+    expect(shown.textContent).toContain('Products in the file with no catalogue row: 2');
+    // The words for a shape this file does not have are never borrowed.
+    expect(shown.textContent).not.toContain('Documents:');
+    expect(shown.textContent).not.toContain('Lines:');
+    // And the notice is drawn above them (UI rule 4).
+    expect(shown.textContent!.indexOf('no store row was created'))
+      .toBeLessThan(shown.textContent!.indexOf('matched in the catalogue'));
+  });
+
+  it('draws a products row of the ledger from its own counters', async () => {
+    listImports.mockResolvedValue([{
+      id: 21, kind: 'products', filename: PRODUCTS.filename, sha256: PRODUCTS.sha256,
+      uploaded_by: 'ice', uploaded_at: '2026-09-19T11:09:00+08:00',
+      notices: PRODUCTS.notices,
+      // The flat columns say nothing about a products import; `counters` does.
+      documents_seen: 0, lines_seen: 0, documents_inserted: 0, documents_updated: 0,
+      lines_inserted: 0, lines_updated: 0, lines_deleted: 0, unresolved_locations: 1,
+      unmatched_skus: 0, ambiguous_skus: 0, subtotal_mismatches: 0,
+      header_total_mismatches: 0, mojibake_names: 0,
+      counters: PRODUCTS.counters,
+    } as ImportSummary]);
+    page();
+
+    const row = await screen.findByText(PRODUCTS.filename);
+    const item = row.closest('li')!;
+    expect(item.textContent).toContain('Products: 4,810 matched in the catalogue');
+    expect(item.textContent).not.toContain('Documents: 0 inserted');
+  });
+
 });

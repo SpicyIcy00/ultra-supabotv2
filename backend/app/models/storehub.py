@@ -27,6 +27,7 @@ from sqlalchemy import (
     Index,
     Integer,
     Numeric,
+    SmallInteger,
     String,
     Text,
     UniqueConstraint,
@@ -56,7 +57,7 @@ class StorehubImport(Base):
     __tablename__ = "storehub_imports"
     __table_args__ = (
         CheckConstraint(
-            "kind IN ('purchase_orders', 'stock_transfers')",
+            "kind IN ('purchase_orders', 'stock_transfers', 'products')",
             name="ck_storehub_imports_kind",
         ),
         Index("ix_storehub_imports_kind_uploaded_at", "kind", "uploaded_at"),
@@ -90,6 +91,12 @@ class StorehubImport(Base):
     subtotal_mismatches: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     header_total_mismatches: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     mojibake_names: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    # Every counter this import kept, whatever it counts. The flat columns above
+    # are named for documents and lines; products have neither, and reporting a
+    # product count in one called documents_seen would be a lie in a column
+    # name. Written by every kind, so a reader needs one shape.
+    counters: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
 
     notices: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
 
@@ -345,3 +352,93 @@ class StockTransferLine(_LineMixin, Base):
     )
 
     stock_transfer: Mapped["StockTransfer"] = relationship(back_populates="lines")
+
+
+class ProductSupplier(Base):
+    """
+    Who a product comes from, as the StoreHub products export says it.
+
+    ONE ROW PER (PRODUCT, SUPPLIER NAME). A product has several — SH1 "Aji Mix"
+    has five — which is why this is a table and not a column holding
+    "Seikyo SEK001; GZ Cri GZ001" for every reader to split.
+
+    THE NAME IS THE ONLY IDENTITY. There is no supplier master and no id:
+    observed values are a company, a product line and a person, and nothing
+    establishes which spellings are the same buyer. The string is stored as
+    exported and never deduplicated, normalised or fuzzy-matched — the same rule
+    metrics.yaml sets for purchase_orders.supplier_name, for the same reason.
+
+    `position` is the order the export listed them in, kept because the first
+    name is usually the one they actually buy from.
+    """
+
+    __tablename__ = "product_suppliers"
+    __table_args__ = (
+        UniqueConstraint(
+            "product_id", "supplier_name", name="uq_product_suppliers_product_supplier"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+
+    product_id: Mapped[str] = mapped_column(
+        String(24), ForeignKey("products.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    supplier_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    position: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+
+    import_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("storehub_imports.id", ondelete="RESTRICT"), nullable=False
+    )
+    first_seen_import_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("storehub_imports.id", ondelete="RESTRICT"), nullable=False
+    )
+
+
+class ProductStockLevel(Base):
+    """
+    The warning and ideal stock level somebody set for one product at one store.
+
+    A SETTING, NOT A MEASUREMENT. How much is actually there is
+    `inventory_levels`; this is the line under which StoreHub considers the
+    product low. Until this export there was none recorded anywhere, so "getting
+    low" could not be asked and only "hit zero" could.
+
+    NULL IS NOT ZERO. Blank in the export means nobody ever set a level for that
+    product at that store; 0 means somebody set it to zero. Both import as they
+    are and neither is defaulted into the other.
+
+    store_id is NOT NULL: a level belonging to no store is a fact about nothing.
+    A store the location map does not know — the two test stores in the export —
+    is skipped and counted, never invented (metrics.yaml
+    storehub.locations.create_store_row: false).
+    """
+
+    __tablename__ = "product_stock_levels"
+    __table_args__ = (
+        UniqueConstraint(
+            "product_id", "store_id", name="uq_product_stock_levels_product_store"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+
+    product_id: Mapped[str] = mapped_column(
+        String(24), ForeignKey("products.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    store_id: Mapped[str] = mapped_column(
+        String(24), ForeignKey("stores.id", ondelete="RESTRICT"),
+        nullable=False, index=True,
+    )
+
+    warning_level: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 4))
+    ideal_level: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 4))
+
+    import_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("storehub_imports.id", ondelete="RESTRICT"), nullable=False
+    )
+    first_seen_import_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("storehub_imports.id", ondelete="RESTRICT"), nullable=False
+    )

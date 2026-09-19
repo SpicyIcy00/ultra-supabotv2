@@ -4731,3 +4731,29 @@ The owner's own 30 days (78 turns that read, 351 calls) asked the same reads pie
 **The import just made is not drawn again under "Earlier imports"**, and "no file yet" is claimed from the whole loaded ledger, never the filtered one (UI rule 8).
 **`products` gets no upload kind:** a job outside this repo writes it nightly at 15:00 UTC; a second writer on one table needs a rule between them first. Held by a test.
 **Closed as built:** the live done-when needs his push, his export and his upload. Pure 2,031 → 2,039, vitest 986 → 993, tsc clean.
+
+## 2026-09-19 · Products come in too, and the rule between two writers is written down
+
+**Asked for by the owner an hour after P3.h closed declining it**, with the real export attached: *"we need a new one for products it needs to update supabases product page cause we have suppliers"*. The card's reason for declining still stands — a job outside this repository fills `products` nightly — so the kind was built on the only thing that makes two writers safe, which is a rule naming what each owns.
+
+**The rule: one writer per column.** The nightly job owns name, SKU, category, barcode, cost, price, tags and the flags. This import writes **no `products` column at all**. It takes the two facts that job does not carry: who supplies a product, and the warning / ideal stock level somebody set for it at a store. `tests/test_storehub_imports_route_contract.py` holds the absence by reading the importer for any write against that table.
+
+**Two tables, not two columns.** A product has several suppliers (SH1 "Aji Mix" has five) and a level is per shop. Either as a delimited string is how "Seikyo SEK001; GZ Cri GZ001" becomes the name of one supplier. `product_suppliers` keeps the export's order in `position`, because the first name is usually the one they actually buy from. `product_stock_levels` has `store_id` NOT NULL — a level with no shop is not a fact about anything — and both levels nullable, because blank means nobody ever set one and 0 means somebody set zero, the same distinction `received_quantity.blank_is_zero` already owed.
+
+**There is no supplier master, so names are not normalised.** Stored as exported, never trimmed into each other, never fuzzy-matched. Inventing a supplier id here would be inventing the thing the estate does not have.
+
+**The column list cannot be fixed, so the middle of the header is read structurally.** StoreHub writes three columns per STORE, named after the store, between a 19-column leading block and an 8-column trailing one: the real export is 84 wide and gains three when a shop opens. The two fixed blocks are matched exactly — a moved column would import a cost as a price with no error — and the middle must be whole triples that each name one store. A renamed, dropped or reordered column is refused rather than read positionally, because a short row shifts every level after it one shop to the left.
+
+**StoreHub's own instruction row is skipped by its first cell, before the field count.** `#Required(Must be unique)` sits under the header and is not a product. Its width is StoreHub's business; refusing a whole good export over the shape of a row nothing reads would be the wrong trade.
+
+**Nothing is invented for what does not resolve.** A Product Id with no catalogue row is counted and said; a level at "Test stoee" (in the export, in no alias) is counted and dropped. No product row and no store row is ever created by an import.
+
+**A re-import converges, scoped to the products the file mentions.** Within that scope the file is the truth, which is the only way "who supplies this" can ever stop being wrong; outside it nothing is touched, by the same rule that leaves documents outside an export's window alone.
+
+**The ledger gained `counters` (JSONB).** Its flat columns were named for documents and lines. Reporting a product count in `documents_seen` would be a lie in a column name, so every import now records its whole counter dict and the page draws products in products — never "0 documents" about a file that has none.
+
+**Three new notice kinds were decided, not left to default:** `unknown_products`, `rows_without_product_id` and `links_removed_on_reimport` all say something the file was meant to carry did not land, so all three are `data_may_be_wrong` and are drawn. The repository's own guard caught them before the suite went green.
+
+**Not run against a database.** `y9z0a1b2c3d4` is the first new DDL since `x8y9z0a1b2c3` and there is no local Postgres, so it first runs on Railway at deploy. The importer is held instead by a recording session that compiles every statement it issues against the Postgres dialect.
+
+**Suites after:** pure 2,039 → 2,063, vitest 997 → 999, `tsc -b --force` clean. Unpushed.

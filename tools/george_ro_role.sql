@@ -56,6 +56,11 @@ GRANT SELECT ON
     stock_transfers,
     stock_transfer_lines,
     storehub_imports,
+    -- Who supplies a product, and the stock level somebody set for it at a
+    -- store (migration y9z0a1b2c3d4). The products export fills these; nothing
+    -- else in the database holds either fact.
+    product_suppliers,
+    product_stock_levels,
     -- The replenishment plan (migration a1b2c3d4e5f6). Added 2026-09-09 for
     -- get_replenishment. Read-only like everything else here: the plan is
     -- WRITTEN by backend/app/services/replenishment_service.py on the
@@ -147,19 +152,20 @@ CREATE POLICY george_ro_read ON vending_order_lines   FOR SELECT TO george_ro US
 -- products and stores already have "Enable read access for all users"
 -- (PERMISSIVE, roles=public, SELECT, USING true), so they need nothing here.
 --
--- The five StoreHub tables need NO policy: migration h2i3j4k5l6m7 creates them
--- without RLS enabled, so the GRANT above is sufficient on its own. This is
--- deliberate — enabling RLS and forgetting the policy is exactly the failure
--- documented above, where every query succeeds and returns zero rows. If RLS is
--- ever turned on for them (a Supabase dashboard toggle will do it), add five
--- policies here at the same time, or George will silently report that there are
--- no purchase orders.
+-- The seven StoreHub tables need NO policy: migrations h2i3j4k5l6m7 and
+-- y9z0a1b2c3d4 create them without RLS enabled, so the GRANT above is
+-- sufficient on its own. This is deliberate — enabling RLS and forgetting the
+-- policy is exactly the failure documented above, where every query succeeds
+-- and returns zero rows. If RLS is ever turned on for them (a Supabase
+-- dashboard toggle will do it), add seven policies here at the same time, or
+-- George will silently report that there are no purchase orders.
 --
 -- Check before trusting an empty result from them:
 --   SELECT relname, relrowsecurity FROM pg_class
 --    WHERE relname IN ('purchase_orders','purchase_order_lines','stock_transfers',
---                      'stock_transfer_lines','storehub_imports');
---   -- expect relrowsecurity = f on all five
+--                      'stock_transfer_lines','storehub_imports',
+--                      'product_suppliers','product_stock_levels');
+--   -- expect relrowsecurity = f on all seven
 
 -- Verify RLS is no longer filtering George to nothing — expect non-zero counts:
 --   SET ROLE george_ro;

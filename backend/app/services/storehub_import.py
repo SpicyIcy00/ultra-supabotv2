@@ -43,6 +43,8 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.storehub import (
+    ProductStockLevel,
+    ProductSupplier,
     PurchaseOrder,
     PurchaseOrderLine,
     StockTransfer,
@@ -56,6 +58,7 @@ from app.services.storehub_parser import (
     StorehubParseError,
     load_defs,
     parse,
+    parse_products,
     req,
 )
 
@@ -73,6 +76,12 @@ _KINDS: dict[str, dict[str, Any]] = {
         "line_fk": "stock_transfer_id",
     },
 }
+
+
+# The products export is not a document kind: one row is one product, there are
+# no lines, and the import writes only the two facts nothing else in the
+# database holds. It gets its own path below rather than a fourth entry here.
+PRODUCTS_KIND = "products"
 
 
 @dataclass
@@ -233,9 +242,15 @@ async def import_file(
 
     Raises StorehubParseError if the file cannot be trusted; nothing is written.
     """
+    if kind == PRODUCTS_KIND:
+        return await _import_products(
+            db, data=data, filename=filename, uploaded_by=uploaded_by
+        )
+
     if kind not in _KINDS:
         raise StorehubParseError(
-            f"Unknown export kind {kind!r}. Expected one of {sorted(_KINDS)}."
+            f"Unknown export kind {kind!r}. Expected one of "
+            f"{sorted([*_KINDS, PRODUCTS_KIND])}."
         )
 
     defs = load_defs()
@@ -414,4 +429,209 @@ def _finalise(import_row: StorehubImport, counters: dict, notices: list[dict]) -
     ):
         if name in counters:
             setattr(import_row, name, counters[name])
+    # The flat columns were named for documents and lines. Products have
+    # neither, so every import also records its whole counter dict and the
+    # surface renders that when it is there.
+    import_row.counters = counters or None
     import_row.notices = notices or None
+
+
+# ---------------------------------------------------------------------------
+# Products
+#
+# A DIFFERENT SHAPE AND A DIFFERENT JOB. The two document exports carry orders
+# with lines. The products export carries the catalogue, and almost all of it
+# already belongs to the nightly job that fills `products`. This import takes
+# the two things that job does not carry — who supplies a product, and the
+# warning / ideal stock level somebody set for it at a store — and writes
+# NOTHING to `products` itself. One writer per column, which is the rule the
+# whole design rests on (metrics.yaml storehub.products).
+#
+# A PRODUCT IS NEVER CREATED HERE. A Product Id in the export with no row in
+# `products` is counted and said, exactly as an unresolved store is. Creating
+# the row would mean inventing a name, a category and a price from an export
+# whose price columns are already known to be wrong for unit-priced items.
+# ---------------------------------------------------------------------------
+
+
+async def _known_products(db: AsyncSession, product_ids: set[str]) -> set[str]:
+    """Which of the export's Product Ids have a row in `products`."""
+    if not product_ids:
+        return set()
+    known: set[str] = set()
+    ids = sorted(product_ids)
+    # One bind parameter per id, so the IN list is chunked like everything else.
+    step = _MAX_BIND_PARAMS - _BIND_HEADROOM
+    for i in range(0, len(ids), step):
+        rows = await db.execute(
+            select(Product.id).where(Product.id.in_(ids[i:i + step]))
+        )
+        known.update(r[0] for r in rows)
+    return known
+
+
+async def _upsert_and_converge(
+    db: AsyncSession,
+    *,
+    model,
+    rows: list[dict],
+    key: list,
+    scope_ids: list[str],
+    import_id: int,
+    counters: dict,
+    inserted_key: str,
+    updated_key: str,
+    deleted_key: str,
+) -> None:
+    """
+    Upsert `rows` on `key`, then delete the rows of the same products this
+    import did not write.
+
+    The converge scope is the products PRESENT IN THE FILE, never the whole
+    table: a product the export does not mention keeps what it has, by the same
+    rule that leaves documents outside an export's window alone. Within that
+    scope the file is the truth — a supplier removed in StoreHub disappears
+    here, which is the only way "who supplies this" can ever be right.
+    """
+    if rows:
+        rows = _normalise(rows)
+        key_names = {c.name for c in key}
+        mutable = [
+            c for c in rows[0]
+            if c not in key_names and c != "first_seen_import_id"
+        ]
+        for batch in _chunk(rows, len(rows[0])):
+            stmt = pg_insert(model).values(batch)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=key,
+                set_={c: stmt.excluded[c] for c in mutable},
+            ).returning(literal_column("xmax = 0").label("was_inserted"))
+            for row in (await db.execute(stmt)).all():
+                counters[inserted_key if row.was_inserted else updated_key] += 1
+
+    if scope_ids:
+        step = _MAX_BIND_PARAMS - _BIND_HEADROOM
+        for i in range(0, len(scope_ids), step):
+            result = await db.execute(
+                delete(model).where(
+                    model.product_id.in_(scope_ids[i:i + step]),
+                    model.import_id != import_id,
+                )
+            )
+            counters[deleted_key] += result.rowcount or 0
+
+
+async def _import_products(
+    db: AsyncSession,
+    *,
+    data: bytes,
+    filename: str,
+    uploaded_by: str,
+) -> ImportResult:
+    """Import one StoreHub products export. Called by import_file."""
+    defs = load_defs()
+    parsed = parse_products(data, defs)
+
+    ids = {p.product_id for p in parsed.products}
+    known = await _known_products(db, ids)
+
+    import_row = StorehubImport(
+        kind=PRODUCTS_KIND,
+        filename=filename,
+        sha256=hashlib.sha256(data).hexdigest(),
+        byte_size=len(data),
+        uploaded_by=uploaded_by,
+        parser_version=PARSER_VERSION,
+    )
+    db.add(import_row)
+    await db.flush()
+    import_id = import_row.id
+
+    notices = list(parsed.notices)
+    counters = dict(parsed.counters)
+    counters.update(
+        products_matched=len(known),
+        unknown_products=len(ids - known),
+        suppliers_inserted=0, suppliers_updated=0, suppliers_deleted=0,
+        stock_levels_inserted=0, stock_levels_updated=0, stock_levels_deleted=0,
+    )
+
+    if not parsed.products:
+        notices.append({
+            "kind": "empty_export",
+            "message": f"{filename} contains no products. Nothing was imported.",
+            "source": "storehub_import",
+        })
+        _finalise(import_row, counters, notices)
+        return ImportResult(
+            import_id, PRODUCTS_KIND, filename, import_row.sha256, counters, notices
+        )
+
+    supplier_rows: list[dict] = []
+    level_rows: list[dict] = []
+    for product in parsed.products:
+        if product.product_id not in known:
+            continue
+        for position, name in enumerate(product.suppliers, start=1):
+            supplier_rows.append({
+                "product_id": product.product_id,
+                "supplier_name": name,
+                "position": position,
+                "import_id": import_id,
+                "first_seen_import_id": import_id,
+            })
+        for level in product.levels:
+            level_rows.append({
+                "product_id": product.product_id,
+                "store_id": level.store_id,
+                "warning_level": level.warning_level,
+                "ideal_level": level.ideal_level,
+                "import_id": import_id,
+                "first_seen_import_id": import_id,
+            })
+
+    scope_ids = sorted(ids & known)
+
+    await _upsert_and_converge(
+        db, model=ProductSupplier, rows=supplier_rows,
+        key=[ProductSupplier.product_id, ProductSupplier.supplier_name],
+        scope_ids=scope_ids, import_id=import_id, counters=counters,
+        inserted_key="suppliers_inserted", updated_key="suppliers_updated",
+        deleted_key="suppliers_deleted",
+    )
+    await _upsert_and_converge(
+        db, model=ProductStockLevel, rows=level_rows,
+        key=[ProductStockLevel.product_id, ProductStockLevel.store_id],
+        scope_ids=scope_ids, import_id=import_id, counters=counters,
+        inserted_key="stock_levels_inserted", updated_key="stock_levels_updated",
+        deleted_key="stock_levels_deleted",
+    )
+
+    if counters["unknown_products"]:
+        notices.append({
+            "kind": "unknown_products",
+            "message": (
+                f"{counters['unknown_products']} product(s) in the file have no "
+                f"row in the catalogue, so their suppliers and stock levels were "
+                f"not imported. Products are filled by the nightly job; this "
+                f"import never creates one."
+            ),
+            "source": "metrics.yaml: storehub.products.unknown_product",
+        })
+
+    if counters["suppliers_deleted"] or counters["stock_levels_deleted"]:
+        notices.append({
+            "kind": "links_removed_on_reimport",
+            "message": (
+                f"{counters['suppliers_deleted']} supplier link(s) and "
+                f"{counters['stock_levels_deleted']} stock level(s) were removed "
+                f"because this export no longer lists them. A re-import converges "
+                f"on the file rather than accumulating."
+            ),
+            "source": "metrics.yaml: storehub.products.idempotency",
+        })
+
+    _finalise(import_row, counters, notices)
+    return ImportResult(
+        import_id, PRODUCTS_KIND, filename, import_row.sha256, counters, notices
+    )

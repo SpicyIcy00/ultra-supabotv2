@@ -45,6 +45,7 @@ import type {
 const KINDS: { kind: ImportKind; label: string; file: string }[] = [
   { kind: 'purchase_orders', label: 'Purchase orders', file: 'Purchase_Orders_….csv' },
   { kind: 'stock_transfers', label: 'Stock transfers', file: 'StockTransfers_FROM-….csv' },
+  { kind: 'products', label: 'Products', file: 'Products_FROM-….csv' },
 ];
 
 const labelOf = (kind: string): string =>
@@ -68,7 +69,33 @@ function manila(iso: string | null): string | null {
  * the same import differently. A line about a problem is present only when
  * the server counted one; the two that say what landed are always present.
  */
-export function countLines(c: Record<string, number | undefined>): string[] {
+export function countLines(
+  c: Record<string, number | undefined>,
+  kind: string = 'purchase_orders',
+): string[] {
+  // A products export has no documents and no lines, and saying "0 documents"
+  // about it would be a fact about the wrong thing. It counts what it changed.
+  if (kind === 'products') {
+    const rows = [
+      `Products: ${n(c.products_matched)} matched in the catalogue`
+        + ` — ${n(c.products_seen)} in the file`,
+      `Suppliers: ${n(c.suppliers_inserted)} added · ${n(c.suppliers_updated)} unchanged · `
+        + `${n(c.suppliers_deleted)} removed`,
+      `Stock levels: ${n(c.stock_levels_inserted)} added · ${n(c.stock_levels_updated)} unchanged · `
+        + `${n(c.stock_levels_deleted)} removed`,
+    ];
+    if (c.unknown_products) {
+      rows.push(`Products in the file with no catalogue row: ${n(c.unknown_products)}`);
+    }
+    if (c.rows_without_product_id) {
+      rows.push(`Rows carrying no Product Id: ${n(c.rows_without_product_id)}`);
+    }
+    if (c.unresolved_locations) {
+      rows.push(`Locations that match no store: ${n(c.unresolved_locations)}`);
+    }
+    return rows;
+  }
+
   const lines = [
     `Documents: ${n(c.documents_inserted)} inserted · ${n(c.documents_updated)} updated`
       + ` — ${n(c.documents_seen)} in the file`,
@@ -111,7 +138,7 @@ function Result({ result, at }: { result: ImportResult; at: string | null }) {
       </p>
       {/* ABOVE the counts, because they say what the counts may not mean. */}
       <Notices notices={result.notices} />
-      {countLines(result.counters).map((line) => (
+      {countLines(result.counters, result.kind).map((line) => (
         <p key={line} className="r-item-of" style={{ marginTop: 8 }}>{line}</p>
       ))}
     </section>
@@ -120,7 +147,9 @@ function Result({ result, at }: { result: ImportResult; at: string | null }) {
 
 function LedgerRow({ row }: { row: ImportSummary }) {
   const [open, setOpen] = useState(false);
-  const counts = row as unknown as Record<string, number>;
+  // The whole counter dict when the ledger has it, the flat columns when it
+  // does not — an import recorded before the ledger carried `counters`.
+  const counts = row.counters ?? (row as unknown as Record<string, number>);
   return (
     <li className="r-item">
       <h3 className="r-item-name" style={{ fontSize: 15 }}>{row.filename}</h3>
@@ -128,7 +157,7 @@ function LedgerRow({ row }: { row: ImportSummary }) {
         {labelOf(row.kind)} · import {row.id} · {manila(row.uploaded_at) ?? 'no time recorded'}
         {' · '}{row.uploaded_by}
       </p>
-      {countLines(counts).map((line) => (
+      {countLines(counts, row.kind).map((line) => (
         <p key={line} className="r-item-of" style={{ marginTop: 6 }}>{line}</p>
       ))}
       {row.notices.length > 0 && (
@@ -190,7 +219,7 @@ export default function StorehubImportsPage() {
     <>
       <RoomHead
         title="StoreHub exports"
-        says="Purchase orders and stock transfers reach Bob from the files StoreHub exports. Choose which one, then drop the file. The same file twice changes nothing."
+        says="Purchase orders, stock transfers and the product list reach Bob from the files StoreHub exports. Choose which one, then drop the file. The same file twice changes nothing."
       />
 
       <div className="r-import">

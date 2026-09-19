@@ -48,7 +48,7 @@ from zoneinfo import ZoneInfo
 
 import yaml
 
-PARSER_VERSION = "1.0.0"
+PARSER_VERSION = "1.1.0"
 
 # The definitions file is shared with Bob's tools; the LOADER is not. The
 # backend runs with cwd=backend (see Procfile), so the repo root is not on
@@ -630,4 +630,259 @@ def parse(data: bytes, kind: str, defs: Optional[dict] = None) -> ParsedFile:
         documents=list(documents.values()),
         notices=notices,
         counters=counters,
+    )
+
+
+# ---------------------------------------------------------------------------
+# The products export — a different shape, and a different job
+#
+# Purchase orders and stock transfers are documents with lines. The products
+# export is one row per product, and what this reads out of it is the two facts
+# nothing else in the database holds: who supplies the product, and the stock
+# level somebody set for it at each store. Everything else in the file belongs
+# to the nightly job that fills `products` (metrics.yaml storehub.products).
+#
+# THE COLUMN LIST CANNOT BE FIXED. StoreHub writes three columns per STORE,
+# named after the store, so the file grows three columns when a store opens.
+# The leading and trailing blocks are matched exactly — a moved column would
+# read a cost as a price — and the middle is read structurally.
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ParsedProductLevel:
+    """The warning / ideal pair for one product at one location."""
+    location_raw: str
+    store_id: Optional[str]
+    resolved: bool
+    warning_level: Optional[Decimal] = None
+    ideal_level: Optional[Decimal] = None
+
+
+@dataclass
+class ParsedProduct:
+    product_id: str
+    sku_raw: Optional[str] = None
+    name_raw: Optional[str] = None
+    category_raw: Optional[str] = None
+    suppliers: list[str] = field(default_factory=list)
+    levels: list[ParsedProductLevel] = field(default_factory=list)
+    source_row: int = 0
+
+
+@dataclass
+class ParsedProducts:
+    products: list[ParsedProduct]
+    notices: list[dict]
+    counters: dict[str, int]
+    store_columns: list[str] = field(default_factory=list)
+    parser_version: str = PARSER_VERSION
+
+
+def _product_store_columns(header: list, spec: dict) -> list:
+    """
+    The per-store triples in the middle of the header.
+
+    Returns (store name, quantity index, warning index, ideal index) per store.
+    Raises if the middle is not whole triples each sharing one prefix — which is
+    what a renamed or dropped column looks like, and is not something to read
+    positionally and hope.
+    """
+    leading = list(spec["columns"]["leading"])
+    trailing = list(spec["columns"]["trailing"])
+    suffixes = spec["columns"]["per_store_suffixes"]
+    q_suf, w_suf, i_suf = suffixes["quantity"], suffixes["warning"], suffixes["ideal"]
+
+    if len(header) < len(leading) + len(trailing):
+        raise StorehubParseError(
+            f"The products export has {len(header)} columns, fewer than the "
+            f"{len(leading) + len(trailing)} fixed ones it must carry. This does "
+            f"not look like a StoreHub products export."
+        )
+
+    actual_leading = header[: len(leading)]
+    actual_trailing = header[len(header) - len(trailing):]
+    if actual_leading != leading or actual_trailing != trailing:
+        missing = [c for c in leading + trailing if c not in header]
+        raise StorehubParseError(
+            "The products export does not start and end with the columns it must. "
+            f"Missing: {missing}. It begins {actual_leading[:4]}. "
+            "The file is rejected rather than read positionally: a moved column "
+            "would import a cost as a price without any error. If StoreHub has "
+            "changed its export, update metrics.yaml storehub.products.columns."
+        )
+
+    middle = header[len(leading): len(header) - len(trailing)]
+    if len(middle) % 3 != 0:
+        raise StorehubParseError(
+            f"The products export has {len(middle)} per-store columns between its "
+            f"fixed blocks, which is not a whole number of "
+            f"(quantity, warning level, ideal level) triples. A column has been "
+            f"added or dropped and the stores can no longer be told apart."
+        )
+
+    out = []
+    for group in range(len(middle) // 3):
+        base = len(leading) + group * 3
+        q, w, i = header[base], header[base + 1], header[base + 2]
+        if not (q.endswith(q_suf) and w.endswith(w_suf) and i.endswith(i_suf)):
+            raise StorehubParseError(
+                f"Columns {base + 1}-{base + 3} of the products export are "
+                f"{[q, w, i]}, which is not one store's "
+                f"(quantity, warning level, ideal level) triple."
+            )
+        names = {q[: -len(q_suf)], w[: -len(w_suf)], i[: -len(i_suf)]}
+        if len(names) != 1:
+            raise StorehubParseError(
+                f"Columns {base + 1}-{base + 3} of the products export name more "
+                f"than one store: {sorted(names)}. The triples are out of order "
+                f"and a level would be stored against the wrong shop."
+            )
+        out.append((names.pop(), base, base + 1, base + 2))
+    return out
+
+
+def parse_products(data: bytes, defs: Optional[dict] = None) -> ParsedProducts:
+    """
+    Parse a StoreHub products export.
+
+    Raises StorehubParseError on anything that makes the file untrustworthy — an
+    unexpected column, a row with the wrong number of fields, a malformed
+    number, a product id listed twice. A partially understood file is not
+    imported.
+    """
+    defs = defs or load_defs()
+    spec = req(defs, "storehub.products")
+
+    text = data.decode(
+        req(defs, "storehub.text.decode"),
+        errors=req(defs, "storehub.text.decode_errors"),
+    )
+    reader = csv.reader(io.StringIO(text, newline=""))
+
+    try:
+        header = next(reader)
+    except StopIteration:
+        raise StorehubParseError("The file is empty — no header row.")
+
+    stores = _product_store_columns(header, spec)
+    index = {name: i for i, name in enumerate(header)}
+    key_column = spec["document_key_column"]
+    marker = spec["instruction_row"]["first_cell_startswith"]
+    separator = spec["supplier"]["separator"]
+
+    products = []
+    notices = []
+    seen_ids = {}
+    seen_locations = set()
+    counters = {
+        "products_seen": 0,
+        "rows_without_product_id": 0,
+        "suppliers_seen": 0,
+        "stock_levels_seen": 0,
+        "unresolved_locations": 0,
+        "instruction_rows_skipped": 0,
+    }
+
+    for offset, row in enumerate(reader):
+        row_no = offset + 2                      # +1 header, +1 for 1-based
+
+        if not any(_clean(v) for v in row):
+            continue
+
+        # StoreHub writes a row of instructions under the header. Identified by
+        # its first cell, never by its position — and checked BEFORE the field
+        # count, because it is StoreHub's own row and its width is StoreHub's
+        # business. Refusing the whole file over the shape of a row that is
+        # thrown away would reject an export that is perfectly good.
+        if (row[0] or "").startswith(marker):
+            counters["instruction_rows_skipped"] += 1
+            continue
+
+        if len(row) != len(header):
+            raise StorehubParseError(
+                f"Row {row_no} has {len(row)} fields where the header has "
+                f"{len(header)}. The file is rejected rather than padded: a short "
+                f"row would shift every store's level one column to the left."
+            )
+
+        product_id = _clean(row[index[key_column]])
+        if product_id is None:
+            counters["rows_without_product_id"] += 1
+            continue
+        product_id = product_id.strip()
+
+        if product_id in seen_ids:
+            raise StorehubParseError(
+                f"Row {row_no}: product id {product_id} appears twice (first at "
+                f"row {seen_ids[product_id]}). One id is one product; two rows "
+                f"means two sets of suppliers and levels for the same thing."
+            )
+        seen_ids[product_id] = row_no
+
+        parsed = ParsedProduct(
+            product_id=product_id,
+            sku_raw=_clean(row[index["SKU"]]),
+            name_raw=_clean(row[index["Product Name"]]),
+            category_raw=_clean(row[index["Category"]]),
+            source_row=row_no,
+        )
+
+        # Suppliers: free text, several per product, order kept, never tidied.
+        raw_suppliers = _clean(row[index["Supplier"]])
+        if raw_suppliers is not None:
+            for part in raw_suppliers.split(separator):
+                name = part.strip()
+                if name and name not in parsed.suppliers:
+                    parsed.suppliers.append(name)
+            counters["suppliers_seen"] += len(parsed.suppliers)
+
+        # Levels: a pair per store. Blank means never set and is not a row;
+        # zero means somebody set zero and is.
+        for store_name, _q_idx, w_idx, i_idx in stores:
+            warning = _to_decimal(
+                _clean(row[w_idx]), store_name + " warning stock level", row_no, defs
+            )
+            ideal = _to_decimal(
+                _clean(row[i_idx]), store_name + " ideal stock level", row_no, defs
+            )
+            if warning is None and ideal is None:
+                continue
+
+            store_id, resolved, notice = resolve_location(store_name, defs)
+            if notice is not None and store_name not in seen_locations:
+                seen_locations.add(store_name)
+                counters["unresolved_locations"] += 1
+                notices.append(notice)
+            if not resolved:
+                continue
+
+            parsed.levels.append(ParsedProductLevel(
+                location_raw=store_name,
+                store_id=store_id,
+                resolved=True,
+                warning_level=warning,
+                ideal_level=ideal,
+            ))
+            counters["stock_levels_seen"] += 1
+
+        products.append(parsed)
+        counters["products_seen"] += 1
+
+    if counters["rows_without_product_id"]:
+        skipped = counters["rows_without_product_id"]
+        notices.append({
+            "kind": "rows_without_product_id",
+            "message": (
+                f"{skipped} row(s) carry no Product Id and were skipped. The id is "
+                f"how a row is matched to the catalogue, and nothing else in the "
+                f"file identifies a product uniquely."
+            ),
+            "source": "metrics.yaml: storehub.products.document_key_column",
+        })
+
+    return ParsedProducts(
+        products=products,
+        notices=notices,
+        counters=counters,
+        store_columns=[s[0] for s in stores],
     )

@@ -19,7 +19,7 @@ import axios from 'axios';
 const API_BASE = '/api/v1/storehub-imports';
 
 /** The export kinds the server accepts — the same names the yaml uses. */
-export type ImportKind = 'purchase_orders' | 'stock_transfers';
+export type ImportKind = 'purchase_orders' | 'stock_transfers' | 'products';
 
 export interface ImportNotice {
   kind: string;
@@ -58,6 +58,12 @@ export interface ImportSummary {
   subtotal_mismatches: number;
   header_total_mismatches: number;
   mojibake_names: number;
+  /**
+   * Every counter that import kept. The flat fields above were named for
+   * documents and lines; a products import has neither, so it reports through
+   * here. Null for imports recorded before the ledger carried it.
+   */
+  counters: Record<string, number> | null;
   notices: ImportNotice[];
 }
 

@@ -77,16 +77,28 @@ def test_an_empty_file_and_an_unknown_kind_are_not_refusals():
     """422 means "the parser declined this file" and the page says so; these are not that."""
     with _client() as client:
         assert _upload(client, "stock_transfers", "empty.csv", b"").status_code == 400
-        assert _upload(client, "products", "products.csv", b"x").status_code == 404
+        assert _upload(client, "invoices", "invoices.csv", b"x").status_code == 404
 
 
-def test_products_is_not_an_upload_kind():
+def test_a_products_upload_never_writes_the_products_table():
     """
-    P3.h(c). `products` already has a writer: a job outside this repository
-    fills it nightly (new rows at 15:00-15:01 UTC, read 2026-09-19). A second
-    writer here would be two sources for one table with no rule between them.
+    `products` already has a writer: a job outside this repository fills it
+    nightly (new rows at 15:00-15:01 UTC, read 2026-09-19). The products import
+    added after it (the owner, 2026-09-19: "we need a new one for products ...
+    cause we have suppliers") takes ONLY what that job does not carry, and the
+    rule between the two writers is that this one never touches `products`.
+
+    Held here by reading the importer rather than by running it: the check is
+    that no statement in this repository writes that table.
     """
-    assert storehub_imports.KINDS == ("purchase_orders", "stock_transfers")
+    assert storehub_imports.KINDS == ("purchase_orders", "stock_transfers", "products")
+
+    source = (REPO / "backend/app/services/storehub_import.py").read_text(encoding="utf-8")
+    # `Product` is SELECTed to resolve ids and never inserted, updated or deleted.
+    assert "select(Product.id)" in source
+    for forbidden in ("pg_insert(Product)", "insert(Product)",
+                      "update(Product)", "delete(Product)"):
+        assert forbidden not in source, f"the importer writes products: {forbidden}"
 
 
 def test_the_page_exists_everywhere_a_page_has_to():

@@ -1,9 +1,9 @@
 """
 StoreHub CSV import routes.
 
-Upload a purchase-order or stock-transfer export; it is parsed, imported and
-recorded in the ledger, all in one transaction. Re-uploading the same window
-converges on the file rather than accumulating duplicates.
+Upload a purchase-order, stock-transfer or products export; it is parsed,
+imported and recorded in the ledger, all in one transaction. Re-uploading the
+same window converges on the file rather than accumulating duplicates.
 
 Every route is behind require_page("storehub_imports"). Access is denied by
 default until the page is granted to a role in the admin screen, which is the
@@ -36,7 +36,7 @@ router = APIRouter(tags=["storehub-imports"])
 
 _import_user = require_page("storehub_imports")
 
-KINDS = ("purchase_orders", "stock_transfers")
+KINDS = ("purchase_orders", "stock_transfers", "products")
 
 # The exports are text CSV. 151 POs / 642 lines and 771 transfers / 14,024 lines
 # are both comfortably under this; the cap exists so an accidental upload of
@@ -75,6 +75,11 @@ class ImportSummary(BaseModel):
     subtotal_mismatches: int
     header_total_mismatches: int
     mojibake_names: int
+    # Every counter this import kept, whatever its kind counts. The flat columns
+    # above were named for documents and lines; a products import has neither,
+    # and reporting its product count in `documents_seen` would be a lie in a
+    # column name. Null for imports made before the ledger carried this.
+    counters: Optional[dict]
     notices: List[dict]
 
 
@@ -183,6 +188,7 @@ async def list_imports(
             subtotal_mismatches=r.subtotal_mismatches,
             header_total_mismatches=r.header_total_mismatches,
             mojibake_names=r.mojibake_names,
+            counters=r.counters,
             notices=r.notices or [],
         )
         for r in rows

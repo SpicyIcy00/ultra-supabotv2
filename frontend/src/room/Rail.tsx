@@ -111,14 +111,15 @@ function useNow(): Date {
 /**
  * WHAT BOB READS THAT ONLY A FILE CAN FILL (P3.h).
  *
- * These are not screens on a menu — they are the two records Bob's purchasing
- * and movement answers stand on, and each is as old as the last file somebody
- * uploaded. The morning of 2026-09-19 said orders were 16 days old and
+ * These are not screens on a menu — they are the records Bob's purchasing,
+ * movement and supplier answers stand on, and each is as old as the last file
+ * somebody uploaded. The morning of 2026-09-19 said orders were 16 days old and
  * transfers 80; the rail is where that is visible without asking.
  */
 const SOURCES: { kind: string; label: string }[] = [
   { kind: 'purchase_orders', label: 'Purchase orders' },
   { kind: 'stock_transfers', label: 'Stock transfers' },
+  { kind: 'products', label: 'Products' },
 ];
 
 /** "3 Sep", in Manila. The heading says what the date is the date OF. */
@@ -230,7 +231,7 @@ export function Rail({ busy, needsYou, onNew, estate }: RailProps) {
           ))}
         </Group>
 
-        {/* SOURCES — the two records that arrive as files, and when each last
+        {/* SOURCES — the records that arrive as files, and when each last
             did. NOT the `Group` above: that swaps its rows for a line when
             there is nothing, and the way IN to the upload page would vanish
             on the one day it is most needed — the day nothing has been
