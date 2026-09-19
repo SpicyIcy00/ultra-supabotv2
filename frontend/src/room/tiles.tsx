@@ -107,6 +107,21 @@ export interface TileProps {
    */
   told?: boolean;
   /**
+   * THE ROWS THE THOUGHT ABOVE THIS FIGURE NAMES (P3.o, `page.focusFor`).
+   *
+   * Twenty-one rows were on screen — three charts of seven shops — to say that
+   * OPUS fell most and Greenhills' basket shrank while its tills got busier.
+   * When his sentence is about one or two of a read's rows, those are the
+   * evidence and the rest is a tap away: the figure draws the named rows and
+   * folds the others behind one line. Absent, it draws every row, as always —
+   * and an overview always is absent, because *"all stores still matter"*.
+   *
+   * FOLDED, NEVER DIMMED. Emphasis adds and never takes away (2026-09-18): the
+   * rows that are drawn are at full strength, and the ones that are not are
+   * not faint, they are not there until asked for.
+   */
+  focus?: string[];
+  /**
    * THE ORDER STORES ARE LISTED IN ACROSS AN ANSWER (the `speak` layout,
    * 2026-09-17): a comparison lists its stores in this order, so the eye finds
    * OPUS in the same place on every chart. Absent keeps the tool's own order.

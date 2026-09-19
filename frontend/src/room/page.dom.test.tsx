@@ -208,3 +208,93 @@ describe('what no paragraph cites', () => {
     expect(order.indexOf('other')).toBeGreaterThan(order.indexOf('para:Caveats'));
   });
 });
+
+/**
+ * ONE THOUGHT, THEN EXACTLY THE EVIDENCE FOR IT (P3.o).
+ *
+ * Twenty-one rows were on the owner's screen — three charts of seven shops — to
+ * say that OPUS fell most and Greenhills' basket shrank. He called it, fairly,
+ * a thing that *"still kinda feels off"*. So a paragraph splits where his
+ * thought moves to a new read, and a figure under a thought that names one or
+ * two rows draws those rows and folds the rest.
+ */
+describe('a thought, and the evidence for it', () => {
+  const shops = ['OPUS', 'Greenhills', 'Shangri-La', 'Magnolia', 'Rockwell'];
+  const TEXT2 = `Shops fell, in two ways.
+
+Shops: OPUS gave back 88,045, Greenhills 16,026 and Rockwell 4,901. The rest were up. OPUS I would leave alone: its tills lost 1,107 down to 999. Greenhills is the real one.`;
+  const TURN2 = {
+    role: 'bob', text: TEXT2, thinking: '', at: '2026-09-19T10:36:00Z',
+    reading: { claim: 'Shops fell, in two ways' },
+    toolCalls: [
+      read(1, 'Net sales', shops.map((store, i) => ({ store, value: i + 1,
+        change: [-88045, -16026, 5, 6, -4901][i] }))),
+      read(2, 'Transactions', shops.map((store, i) => ({ store, value: [999, 693, 525, 490, 359][i],
+        baseline: [1107, 677, 486, 509, 366][i] }))),
+    ],
+  } as unknown as AnswerTurn;
+  const PAGE2 = pageOf(TEXT2, 'Shops fell, in two ways', null, TURN2.toolCalls);
+  const draw2 = (board: BoardObject[]) => render(
+    <Board answers={[TURN2]} board={board} local={{}} focused={null} selection={[]}
+           live={false} retuned={{}} on={ACTIONS()} page={PAGE2} />,
+  );
+  const board = [block('sales', 1, { kind: 'dumbbell', claim: 'three fell', weight: 'lead' }),
+                 block('tills', 2, { kind: 'dumbbell', claim: 'the tills' })];
+
+  it('splits his paragraph where the thought moves to a new read', () => {
+    const { container } = draw2(board);
+    expect(flow(container)).toEqual(['para:Shops', 'sales', 'para:OPUS', 'tills']);
+  });
+
+  it('gives a carried-on thought less room than one that opens a paragraph', () => {
+    const { container } = draw2(board);
+    const paras = Array.from(container.querySelectorAll('[data-para]'));
+    expect(paras[0].getAttribute('data-opens')).toBeNull();      // the first thing on the page
+    expect(paras[1].getAttribute('data-opens')).toBeNull();      // carries on, mid-paragraph
+  });
+
+  it('leaves the overview whole — three names is everyone', () => {
+    const { container } = draw2(board);
+    const sales = container.querySelector('[data-figure="sales"]') as HTMLElement;
+    expect(sales.querySelectorAll('.r-mk-row')).toHaveLength(5);
+    expect(sales.querySelector('.r-mk-more')).toBeNull();
+  });
+
+  it('draws only the rows the thought names, and folds the rest to a line', () => {
+    const { container } = draw2(board);
+    const tills = container.querySelector('[data-figure="tills"]') as HTMLElement;
+    const names = Array.from(tills.querySelectorAll('.r-mk-row .r-mk-name-text, .r-mk-row .r-mk-name'))
+      .map((el) => el.textContent);
+    expect(tills.querySelectorAll('.r-mk-row')).toHaveLength(2);
+    expect(names.join(' ')).toContain('OPUS');
+    expect(names.join(' ')).toContain('Greenhills');
+    expect(tills.querySelector('.r-mk-more')?.textContent).toBe('3 more · show');
+  });
+
+  it('opens to every row, and folds back', () => {
+    const { container } = draw2(board);
+    const tills = container.querySelector('[data-figure="tills"]') as HTMLElement;
+    fireEvent.click(tills.querySelector('.r-mk-more') as HTMLElement);
+    expect(tills.querySelectorAll('.r-mk-row')).toHaveLength(5);
+    fireEvent.click(tills.querySelector('.r-mk-more') as HTMLElement);
+    expect(tills.querySelectorAll('.r-mk-row')).toHaveLength(2);
+  });
+
+  it('offers no fold under a single number, which has no rows to open', () => {
+    // His figure of ONE shop, over a read of five: already one row of it.
+    const { container } = draw2([block('sales', 1, { kind: 'dumbbell', claim: 'three fell', weight: 'lead' }),
+      block('opus-tills', 2, { kind: 'figure', subject: 'OPUS', claim: "OPUS's tills" })]);
+    const fig = container.querySelector('[data-figure="opus-tills"]') as HTMLElement;
+    expect(fig.querySelector('.r-mk-num')).not.toBeNull();
+    expect(fig.querySelector('.r-mk-more')).toBeNull();
+  });
+
+  it('never folds a figure drawn without the page — a kept page shows every row', () => {
+    const { container } = render(
+      <Board answers={[TURN2]} board={board} local={{}} focused={null} selection={[]}
+             live={false} retuned={{}} on={ACTIONS()} />,
+    );
+    expect(container.querySelector('.r-mk-more')).toBeNull();
+    expect(container.querySelector('[data-figure="tills"]')?.querySelectorAll('.r-mk-row')).toHaveLength(5);
+  });
+});

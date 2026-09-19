@@ -897,8 +897,6 @@ export default function Room() {
                       area says so — the reads running, each as it lands —
                       instead of an empty column that looks finished. A read
                       that failed is drawn as that, in the trail. */}
-                  <Earlier count={earlier.length} open={unfolded}
-                           onToggle={() => setUnfolded((o) => !o)} />
                   <Board
                     answers={answers}
                     offers={offers.onRows}
@@ -916,6 +914,15 @@ export default function Room() {
                     page={thoughts?.page}
                     sameOrder
                   />
+                  {/* AT THE FOOT (P3.o). This sat ABOVE the board, so the first
+                      thing on the right of every follow-up was a line of
+                      navigation — "2 things from earlier · show" — before his
+                      first word. What came before this answer is not where
+                      this answer starts; and what it opens is drawn below
+                      the newest turn's figures anyway, so the line now sits
+                      where the things it opens appear. */}
+                  <Earlier count={earlier.length} open={unfolded}
+                           onToggle={() => setUnfolded((o) => !o)} />
                 </>
               )}
             </FiguresArea>

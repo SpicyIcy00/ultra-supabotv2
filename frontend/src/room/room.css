@@ -756,6 +756,19 @@
   margin: 0; max-width: 68ch;
   white-space: pre-line; text-wrap: pretty;
 }
+/* A THOUGHT THAT OPENS ONE OF HIS PARAGRAPHS takes a paragraph's room above it;
+   one that carries on inside a paragraph sits closer, because it is the same
+   train of thought. The room a beat gets is the only thing that says which. */
+.r-para[data-opens="yes"] .r-page-say { padding-top: 18px; }
+
+/* THE ROWS HIS SENTENCE DID NOT NAME, folded — a label, so the frame's grey. */
+.r-mk-more {
+  font: 400 10.5px/1.6 var(--mono); letter-spacing: 0.04em;
+  color: var(--ink-3); background: none; border: 0; padding: 0;
+  margin: 8px 0 0; cursor: pointer; text-align: left;
+}
+.r-mk-more:hover { color: var(--ink); }
+
 /* UNDER A PARAGRAPH, A BLOCK'S OWN WORDS ARE A CAPTION. The paragraph has said
    what this shows; the claim stays, smaller, because a paragraph that cites
    three figures needs each one to say which it is. */

@@ -190,7 +190,7 @@ export function caveatUnshown(caveat: string | null | undefined, said: readonly 
  * line break ends one too: a list item or a heading line ("Where it sits:") is
  * its own piece, never glued to the line under it.
  */
-function sentencesOf(slice: string, from: number): { at: number; said: string }[] {
+export function sentencesOf(slice: string, from: number): { at: number; said: string }[] {
   const out: { at: number; said: string }[] = [];
   const push = (start: number, end: number) => {
     const raw = slice.slice(start, end);

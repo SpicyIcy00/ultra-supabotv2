@@ -15,7 +15,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { ToolCall } from '../types/bob';
-import { pageOf, sectionFor } from './page';
+import { focusFor, namedIn, pageOf, sectionFor } from './page';
 
 const ANSWER = `Down is **three shops and a handful of named products, and they are separate stories.**
 
@@ -41,8 +41,13 @@ const CALLS: ToolCall[] = [
   read(2, [{ store: 'OPUS', change: -88045, change_pct: -15.9 },
            { store: 'Greenhills', change: -16026, change_pct: -5.4 },
            { store: 'North Edsa', change: -4901, change_pct: -2.8 }]),
-  read(3, [{ store: 'OPUS', change_pct: -9.8 }]),
-  read(4, [{ store: 'OPUS', change_pct: -6.8 }]),
+  read(3, [{ store: 'OPUS', value: 999, change_pct: -9.8 }, { store: 'Greenhills', value: 693 },
+           { store: 'Shangri-La', value: 525 }, { store: 'Magnolia', value: 490 },
+           { store: 'Rockwell', value: 359 }]),
+  read(4, [{ store: 'OPUS', value: 467.57, change_pct: -6.8 },
+           { store: 'Greenhills', value: 401.54, change: -33.16 },
+           { store: 'Shangri-La', value: 424.15 }, { store: 'Magnolia', value: 426.53 },
+           { store: 'Rockwell', value: 576.04 }]),
   read(5, [{ product: 'bayberry', change: -30049, change_pct: -76.3 },
            { product: 'mango', change: -12139 }, { product: 'cuttlefish', change: -11186 }]),
 ];
@@ -50,9 +55,23 @@ const CALLS: ToolCall[] = [
 describe('his answer, as the page', () => {
   const page = pageOf(ANSWER, CLAIM, NEXT, CALLS);
 
-  it('is his paragraphs, in his order', () => {
+  /**
+   * ONE THOUGHT, THEN THE NEXT. The shops paragraph is two: the overview of all
+   * seven, and then what he makes of OPUS and Greenhills — which rests on two
+   * other reads. It splits exactly there, and nowhere else.
+   */
+  it('is his thoughts, in his order', () => {
     expect(page.map((s) => s.para.split(/[ :,]/)[0].replace(/\*/g, '')))
-      .toEqual(['Shops', 'Products', 'And', 'Caveats']);
+      .toEqual(['Shops', 'OPUS', 'Products', 'And', 'Caveats']);
+  });
+
+  it('keeps a sentence that cites nothing with the thought it follows', () => {
+    expect(page[0].para.endsWith('The other four were up.')).toBe(true);
+    expect(page[1].para).toContain('Greenhills is the real one');
+  });
+
+  it('knows which beats open one of his paragraphs', () => {
+    expect(page.map((s) => s.opens)).toEqual([true, false, true, true, true]);
   });
 
   it('leaves out the headline, which is drawn as the headline', () => {
@@ -76,22 +95,25 @@ describe('his answer, as the page', () => {
   });
 
   it('keeps his own emphasis, and adds none', () => {
-    expect(page[3].para.startsWith('**Caveats:**')).toBe(true);
+    expect(page[4].para.startsWith('**Caveats:**')).toBe(true);
     expect(page[0].para).not.toContain('**');
   });
 
-  it('knows which reads each paragraph rests on, in the order he cites them', () => {
-    expect(page[0].seqs).toEqual([2, 3, 4]);   // shops: the week, then transactions, then basket
-    expect(page[1].seqs).toEqual([5]);         // products
-    expect(page[2].seqs).toEqual([1]);         // the one thing the week hides
-    expect(page[3].seqs).toEqual([]);          // a caveat cites nothing, and is still on the path
+  it('knows which reads each thought rests on, in the order he cites them', () => {
+    expect(page[0].seqs).toEqual([2]);         // the shops, over the week
+    expect(page[1].seqs).toEqual([3, 4]);      // OPUS and Greenhills: transactions, then basket
+    expect(page[2].seqs).toEqual([5]);         // products
+    expect(page[3].seqs).toEqual([1]);         // the one thing the week hides
+    expect(page[4].seqs).toEqual([]);          // a caveat cites nothing, and is still on the path
   });
 
   it('puts a figure with the paragraph that is ABOUT its read', () => {
     const at = (seq: number) => sectionFor(page, CALLS.find((c) => c.seq === seq));
     expect(at(2)).toBe(0);
-    expect(at(5)).toBe(1);
-    expect(at(1)).toBe(2);
+    expect(at(3)).toBe(1);
+    expect(at(4)).toBe(1);
+    expect(at(5)).toBe(2);
+    expect(at(1)).toBe(3);
     expect(sectionFor(page, read(99, [{ value: 123456 }]))).toBe(-1);   // read, never talked about
     expect(sectionFor(page, undefined)).toBe(-1);
   });
@@ -105,14 +127,60 @@ describe('his answer, as the page', () => {
     const attention = read(0, [{ subject: 'Fairview', value: 9631, baseline: 22981 }]);
     const calls = [attention, ...CALLS];
     const paged = pageOf(ANSWER, CLAIM, NEXT, calls);
-    expect(sectionFor(paged, CALLS[0])).toBe(2);   // his Fairview read still belongs there
+    expect(sectionFor(paged, CALLS[0])).toBe(3);   // his Fairview read still belongs there
   });
 
   it('is not pulled into a paragraph by one coincidental number', () => {
     // A products read that happens to hold 5.4 — Greenhills' fall in the shops paragraph.
     const products = read(5, [{ product: 'bayberry', change: -30049, change_pct: -76.3 },
       { product: 'mango', change: -12139 }, { product: 'x', change_pct: 5.4 }]);
-    expect(sectionFor(page, products)).toBe(1);
+    expect(sectionFor(page, products)).toBe(2);
+  });
+});
+
+/**
+ * EVIDENCE SHOWS WHAT THE THOUGHT NAMES.
+ *
+ * Twenty-one rows were on screen — three charts of seven shops — to say that
+ * OPUS fell most and Greenhills' basket shrank. Under "OPUS I would leave alone
+ * … Greenhills is the real one" the evidence is OPUS's row and Greenhills' row,
+ * and the other five are one tap away.
+ */
+describe('which rows a thought names', () => {
+  const page = pageOf(ANSWER, CLAIM, NEXT, CALLS);
+  const call = (seq: number) => CALLS.find((c) => c.seq === seq);
+
+  it('finds a row by its own label in his sentence', () => {
+    expect(namedIn(page[1], call(3))).toEqual(['OPUS', 'Greenhills']);
+    expect(namedIn(page[0], call(2))).toEqual(['OPUS', 'Greenhills', 'North Edsa']);
+  });
+
+  it('finds "bayberry" in a row called something longer — and never by a word every row shares', () => {
+    const products = read(5, [{ product: 'aji champoy honey bayberry', change: -30049 },
+      { product: 'Aji Mango', change: -12139 }, { product: 'Aji Cuttlefish Japanese', change: -11186 },
+      { product: 'Aji Mix', change: -1 }]);
+    expect(namedIn(page[2], products))
+      .toEqual(['aji champoy honey bayberry', 'Aji Mango', 'Aji Cuttlefish Japanese']);
+    // "aji" is in all four labels and names none of them; "Aji Mix" is not in his words.
+  });
+
+  it('focuses a figure on one or two named rows', () => {
+    expect(focusFor(page[1], call(3))).toEqual(['OPUS', 'Greenhills']);
+    expect(focusFor(page[1], call(4))).toEqual(['OPUS', 'Greenhills']);
+  });
+
+  it('leaves an overview whole — three names is everyone, and all stores still matter', () => {
+    expect(focusFor(page[0], call(2))).toBeNull();
+  });
+
+  it('leaves a figure whole when the thought names none of its rows', () => {
+    expect(focusFor(page[4], call(2))).toBeNull();
+  });
+
+  it('never folds a single row away — that saves nothing and costs a tap', () => {
+    const three = read(9, [{ store: 'OPUS', value: 1 }, { store: 'Greenhills', value: 2 },
+      { store: 'Rockwell', value: 3 }]);
+    expect(focusFor(page[1], three)).toBeNull();
   });
 });
 

@@ -19,7 +19,7 @@ import { inOrder } from './board';
 import { retunedKey } from './tokenShape';
 import { FIGURE_GAP, columnsFor, needsWidth, placeFigures, revealAt } from './beside';
 import { CHILD_GAP, gather, type Relation } from './gather';
-import { sectionFor, type Section } from './page';
+import { focusFor, sectionFor, type Section } from './page';
 import { readIndexes } from './work';
 import { PROCESS, callOf, rowsOf, tableShape, type AnswerTurn, type Dimension } from './data';
 import { markFor } from './catalogue';
@@ -258,43 +258,69 @@ export function Board(p: BoardProps) {
   // THE FLOW'S ITEMS: his paragraphs and the figures, in ONE list, because both
   // are measured and placed by the same packer. With no page this is exactly
   // `plan.order` and every point spans, as before.
-  type Item = { kind: 'para'; key: string; text: string }
-    | { kind: 'fig'; o: BoardObject; point: boolean; told: boolean };
+  type Item = { kind: 'para'; key: string; text: string; opens: boolean }
+    | { kind: 'fig'; o: BoardObject; point: boolean; told: boolean;
+        /** The stem it sits directly under, when that stem is in the same beat. */
+        under?: string;
+        /** The rows this beat names, when it names one or two (`page.focusFor`). */
+        focus?: string[] };
   const items: Item[] = [];
   if (page.length) {
-    const inFlow = new Map(shown.map((o) => [o.key, o] as const));
-    const kin = new Map(plan.families.map((f) => [f.stem, f.under] as const));
-    const family = (stem: BoardObject) => [stem, ...(kin.get(stem.key) ?? [])
-      .map((k) => inFlow.get(k)).filter((x): x is BoardObject => Boolean(x))];
-    const stems = plan.order.filter((o) => !plan.parentOf[o.key]);
-    const where = new Map(stems.map((o) => [o.key, sectionOfObject(o)] as const));
+    // EVERY FIGURE GOES TO ITS OWN BEAT — the thought of his that cites its read
+    // most — and one that no thought cites goes where the point it hangs off
+    // goes. So what he gathered `under` a point can stand under a LATER thought
+    // when that is where he talks about it: the shops chart under the overview,
+    // Greenhills' basket under "Greenhills is the real one".
+    const own = new Map(plan.order.map((o) => [o.key, sectionOfObject(o)] as const));
+    const beatOf = (o: BoardObject) => {
+      const mine = own.get(o.key) ?? -1;
+      if (mine >= 0) return mine;
+      const up = plan.parentOf[o.key];
+      return up ? own.get(up) ?? -1 : -1;
+    };
     page.forEach((section, i) => {
-      items.push({ kind: 'para', key: `para-${newest}-${i}`, text: section.para });
-      const at = (o: BoardObject) => {
+      items.push({ kind: 'para', key: `para-${newest}-${i}`, text: section.para, opens: section.opens });
+      const cites = (o: BoardObject) => {
         const n = section.seqs.indexOf(seqOf(o) as number);
         return n < 0 ? section.seqs.length : n;
       };
-      const cited = stems.filter((o) => where.get(o.key) === i)
-        .sort((a, b) => Number(b.key === leadKey) - Number(a.key === leadKey) || at(a) - at(b));
+      const here = plan.order.filter((o) => beatOf(o) === i);
+      const keys = new Set(here.map((o) => o.key));
+      // In the order he brings them up; what hangs off a point in THIS beat
+      // stays with that point (`plan.order` already has it just after).
+      const anchor = (o: BoardObject) => {
+        const up = plan.parentOf[o.key];
+        return up && keys.has(up) ? here.find((x) => x.key === up) ?? o : o;
+      };
+      here.sort((x, y) => Number(anchor(y).key === leadKey) - Number(anchor(x).key === leadKey)
+        || cites(anchor(x)) - cites(anchor(y)));
       // ONE ACROSS THE TOP WHEN THERE IS ONE TO PUT THERE: the figure the answer
       // rests on, or the odd one out of an odd number. An even pair with no lead
       // sits side by side, because neither is the other's heading.
-      const head = cited.length % 2 === 1 || cited.some((o) => o.key === leadKey);
-      cited.forEach((stem, k) => {
-        for (const o of family(stem)) {
-          items.push({ kind: 'fig', o, told: true,
-                       point: o === stem && ((k === 0 && head) || kin.has(stem.key)) });
-        }
-      });
+      const peers = here.filter((o) => anchor(o) === o);
+      const head = peers.length % 2 === 1 || peers.some((o) => o.key === leadKey);
+      const parents = new Set(here.map((o) => plan.parentOf[o.key]).filter((k) => k && keys.has(k)));
+      for (const o of here) {
+        const up = plan.parentOf[o.key];
+        const under = up && keys.has(up) ? up : undefined;
+        items.push({
+          kind: 'fig', o, told: true, under,
+          point: !under && ((o === peers[0] && head) || parents.has(o.key)),
+          focus: focusFor(section, callOf(p.answers[o.turn], seqOf(o))) ?? undefined,
+        });
+      }
     });
-    // WHAT NO PARAGRAPH CITES comes after the prose: evidence he gathered and
-    // did not talk about, and everything from earlier turns.
-    for (const stem of stems.filter((o) => (where.get(o.key) ?? -1) < 0)) {
-      for (const o of family(stem)) items.push({ kind: 'fig', o, told: false, point: o === stem });
+    // WHAT NO THOUGHT CITES comes after the prose: evidence he gathered and did
+    // not talk about, and everything from earlier turns.
+    for (const o of plan.order.filter((x) => beatOf(x) < 0)) {
+      const up = plan.parentOf[o.key];
+      const under = up && beatOf(plan.order.find((x) => x.key === up) ?? o) < 0 ? up : undefined;
+      items.push({ kind: 'fig', o, told: false, under, point: !under });
     }
   } else {
     for (const o of plan.order) {
-      items.push({ kind: 'fig', o, told: false, point: !plan.parentOf[o.key] });
+      const under = plan.parentOf[o.key];
+      items.push({ kind: 'fig', o, told: false, under, point: !under });
     }
   }
   const objects = items.flatMap((it) => (it.kind === 'fig' ? [it.o] : []));
@@ -402,6 +428,7 @@ export function Board(p: BoardProps) {
           // figure: no wire runs to it and nothing counts it as one.
           return (
             <div key={it.key} className="r-para" data-para={it.key}
+                 data-opens={it.opens && at > 0 ? 'yes' : undefined}
                  ref={(el) => { if (el) nodes.current.set(it.key, el); else nodes.current.delete(it.key); }}
                  style={{ gridColumn: '1 / -1',
                           gridRowEnd: `span ${Math.max(1, (heights[it.key] ?? 0) + PARA_GAP)}` }}>
@@ -432,7 +459,7 @@ export function Board(p: BoardProps) {
             // the cap that stops a small figure spending 940px on one number.
             data-span={wideOf.get(o.key) ? 'yes' : undefined}
             data-told={it.told ? 'yes' : undefined}
-            data-under={plan.parentOf[o.key]}
+            data-under={it.under}
             data-relation={plan.relationOf[o.key]}
             data-weight={o.weight}
             className={['r-fig', out ? 'r-fig--out' : '', p.focused === o.key ? 'r-fig--open' : '',
@@ -442,7 +469,7 @@ export function Board(p: BoardProps) {
             // closes the flow's gap. The same constant the family's height was
             // summed with, or the columns drift and it jumps on the next pass.
             style={{ gridColumn: spans[at] && columns > 1 ? '1 / -1' : placed[at] + 1,
-                     gridRowEnd: `span ${Math.max(1, h + (plan.parentOf[o.key] ? CHILD_GAP : FIGURE_GAP))}` }}
+                     gridRowEnd: `span ${Math.max(1, h + (it.under ? CHILD_GAP : FIGURE_GAP))}` }}
           >
             <div className="r-fig-body">
               {plan.parentOf[o.key] && (
@@ -450,6 +477,7 @@ export function Board(p: BoardProps) {
               )}
               <Piece
                 told={it.told}
+                focus={it.focus}
                 chrome={chromeFor(index, out)}
                 order={order}
                 o={o}

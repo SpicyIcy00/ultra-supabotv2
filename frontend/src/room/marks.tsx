@@ -478,6 +478,8 @@ export function MarkBlock(p: TileProps) {
   // opened panel is about the tile's own subject. Local, because it is a
   // person looking at something and not a change to the board.
   const [revealed, setRevealed] = useState<string | null>(null);
+  // Whether the person asked for the rows his sentence did not name (`focus`).
+  const [whole, setWhole] = useState(false);
   const hueFor = useHueFor();
   const call = callFor(p);
   const rows = rowsOf(call);
@@ -489,7 +491,18 @@ export function MarkBlock(p: TileProps) {
     const had = Number((call?.result as { row_count?: unknown } | undefined)?.row_count ?? 0);
     return had > 0 ? <NotKept /> : <Missing what="rows" />;
   }
+  // THE SHAPE IS CHOSEN FROM EVERY ROW, then the named ones are drawn: two
+  // shops out of seven are still a comparison of shops, not a different chart.
   const mark: Mark = markFor(p.o, rows);
+  const named = p.focus?.length
+    ? rows.filter((r) => p.focus?.includes(String(subjectOf(r) ?? ''))) : [];
+  // ONLY A MARK THAT DRAWS ROWS CAN FOLD THEM. A single figure over a seventeen-
+  // row read is already one row of it; "15 more · show" under a number opened
+  // nothing (the first frame of this, 2026-09-19).
+  const drawsRows = mark === 'dumbbell' || mark === 'ranked' || mark === 'contributors'
+    || mark === 'table';
+  const folds = drawsRows && named.length > 0 && rows.length - named.length >= 2;
+  const drawn = folds && !whole ? named : rows;
   const lit = !p.earlier && p.o.weight !== 'quiet';
   // WHAT THIS BLOCK IS ABOUT IS ITS TITLE, NOT ITS COLOUR (P2.l). The tile used
   // to wear the subject's own hue as an edge and a wash; a board of seven shops
@@ -574,14 +587,23 @@ export function MarkBlock(p: TileProps) {
         </p>
         <div className="r-mk-body" data-mark={mark} data-read={readAt(meta?.snapshot_timestamp) ?? ''}>
           {mark === 'figure' && <Figure {...p} rows={rows} meta={meta} />}
-          {mark === 'dumbbell' && <Dumbbell rows={rows} meta={meta} o={p.o} order={p.order} {...offering} />}
-          {mark === 'ranked' && <Ranked rows={rows} meta={meta} o={p.o} {...offering} />}
-          {mark === 'contributors' && <Contributors rows={rows} meta={meta} o={p.o} {...offering} />}
+          {mark === 'dumbbell' && <Dumbbell rows={drawn} meta={meta} o={p.o} order={p.order} {...offering} />}
+          {mark === 'ranked' && <Ranked rows={drawn} meta={meta} o={p.o} {...offering} />}
+          {mark === 'contributors' && <Contributors rows={drawn} meta={meta} o={p.o} {...offering} />}
           {mark === 'line' && <Line rows={rows} meta={meta} o={p.o} subject={seriesOf} />}
-          {mark === 'table' && <Rows rows={rows} meta={meta} o={p.o} p={p} />}
+          {mark === 'table' && <Rows rows={drawn} meta={meta} o={p.o} p={p} />}
           {/* THE ELEVEN P2S.3 ADDED (shapes.tsx), framed exactly as the six. */}
           <Shape mark={mark} rows={rows} meta={meta} o={p.o} subject={seriesOf} {...offering} />
         </div>
+        {/* THE ROWS HIS SENTENCE DID NOT NAME — one line, and it opens. The count
+            is the length of a list this already holds, never a number anybody
+            wrote down (UI rule 8); no accent, because it is navigation. */}
+        {folds && (
+          <button type="button" className="r-mk-more" aria-expanded={whole}
+                  onClick={(e) => { e.stopPropagation(); setWhole((w) => !w); }}>
+            {whole ? 'only the ones he names' : `${rows.length - named.length} more · show`}
+          </button>
+        )}
         <Receipts meta={meta} tool={p.o.tool} chrome={p.chrome} />
       </Shell>
       {/* OPENED — below the tile, never inside it, because a tile clips its

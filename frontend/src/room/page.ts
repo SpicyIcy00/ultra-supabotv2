@@ -1,53 +1,58 @@
 /**
- * THE PAGE IS HIS ANSWER, and the figures are what it cites.
+ * THE PAGE IS HIS ANSWER — one thought, then exactly the evidence for it.
  *
- * The owner, six times over one day, of the live right-hand side: *"it still
- * just feels like here's this and here's this, not at all like the answers and
- * charts visuals and text are well thought out and put in an order to make you
- * understand better — that's the point of the page"*, and of the design he had
- * approved: *"you had it done well in the artifact but this doesn't feel like a
- * page with a well thought out path."*
+ * The owner, across one day, of the live right-hand side: *"it still just feels
+ * like here's this and here's this, not at all like the answers and charts
+ * visuals and text are well thought out and put in an order to make you
+ * understand better — that's the point of the page"*; of what he wanted it to
+ * feel like: *"Bob … actively working through the business with me, not
+ * generating a report"*; and, when I ported the design's layout instead of
+ * thinking: *"not just copy what the artifact did, think for yourself."*
  *
- * Five rounds changed the ARRANGEMENT of the figures. The path was never in the
- * figures. It was in what he wrote, which — read on its own — already is one:
+ * TWO THINGS WERE WRONG, AND THE FIRST HID THE SECOND.
  *
- *     Shops, on the closed week: OPUS …, Greenhills …. The other four were up.
- *     OPUS I would still leave alone — … Greenhills is the real one: …
+ * The room SHREDDED his answer. A sentence that cited a chart was moved under
+ * that chart or dropped because "the chart already says it"; what was left sat
+ * on the left with its context gone — *"The other four were up."* (the other
+ * four what?) — and the charts ran in his compose order, not the order he
+ * reasoned in. Making his PARAGRAPH the unit fixed that, and showed the second
+ * thing: a six-line slab of prose, then three seven-row charts repeating it.
+ * Twenty-one rows on screen to say that OPUS fell most and Greenhills' basket
+ * shrank while its tills got busier. An essay with an appendix is still a
+ * report.
  *
- *     Products: bayberry … Same conclusion as yesterday — empty shelves.
+ * What working THROUGH something feels like is a person at a whiteboard: one
+ * thought, then exactly the evidence for that thought, then the next. So:
  *
- *     And one thing the week hides: Fairview … one day is still one day.
+ *   THE UNIT IS THE BEAT. His sentences, in his order, grouped by which reads
+ *   they cite. A sentence that cites nothing carries on from the one before; a
+ *   sentence that brings up a new read starts a new beat.
  *
- *     Caveats: two windows above — …
+ *   EVIDENCE SHOWS WHAT THE BEAT NAMES. When a beat names one or two subjects,
+ *   the figures under it draw those rows and fold the rest; when it names three
+ *   or more, or none, the figure stays whole — an overview is about everyone,
+ *   and *"all stores still matter"* (the owner, 2026-09-15).
  *
- * and the room SHREDDED it. A sentence that cited a chart was moved under that
- * chart, or dropped because "the chart already says it"; what was left over
- * stayed on the left with its context gone — *"The other four were up."* (the
- * other four what?) — and the charts were ordered by his compose call, which
- * that turn ran shops → Greenhills → Fairview → products while his prose ran
- * shops → products → Fairview. Two reading paths, one of them scraps.
- *
- * So the unit of the page stops being the figure. It is the PARAGRAPH, in his
- * order, followed by the figures it cites. His paragraphs also do the gathering
- * for free: figures cited in one paragraph belong together, whether or not he
- * remembered to say `under`.
- *
- * NOTHING HERE WRITES A WORD OR COMPUTES A FIGURE. Every character drawn is a
- * slice of his own answer with his own emphasis put back; which figure a
- * paragraph cites is the same matcher the superscripts use (`figures.ts`), so
- * the page and the superscripts cannot disagree about where a number came from.
+ * NOTHING HERE WRITES A WORD, COMPUTES A FIGURE OR JUDGES IMPORTANCE. Every
+ * character drawn is a slice of his answer with his emphasis put back; which
+ * read a beat cites is the superscripts' own matcher (`figures.ts`); which rows
+ * it names is whether a row's own label appears in his sentence.
  */
 import type { ToolCall } from '../types/bob';
 import { figuresIn, placeFigures as figuresPlaced, readBehind } from './figures';
-import { claimAndStanding, remark, restated, unmark } from './beside';
+import { claimAndStanding, remark, restated, sentencesOf, unmark } from './beside';
+import { rowsOf, subjectOf } from './data';
 
+/** One beat of the page: a thought of his, and what it rests on. */
 export interface Section {
-  /** His paragraph, emphasis intact, as `Marked` draws it. */
+  /** His words for this beat, emphasis intact, as `Marked` draws them. */
   para: string;
-  /** The same words with the emphasis out — what the figure matcher reads. */
+  /** The same words with the emphasis out — what the matchers read. */
   plain: string;
   /** The reads it cites, in the order it cites them, each once. */
   seqs: number[];
+  /** True when this beat opens one of his paragraphs — it gets the room a paragraph does. */
+  opens: boolean;
 }
 
 /** Which reads a stretch of his prose cites, in order of first mention. */
@@ -60,14 +65,19 @@ function citedIn(text: string, calls: ToolCall[]): number[] {
 }
 
 /**
- * His answer as the page's sections.
+ * His answer as beats.
  *
- * TWO THINGS ARE LEFT OUT, because they are already drawn beside the page and a
+ * TWO THINGS ARE LEFT OUT, because they are drawn beside the page already and a
  * thing said twice is a thing people learn to skip: the SENTENCE the headline
- * is (it is the headline), and a paragraph that is only what he would do next
- * (it is under him, with its own rule). Everything else he said is here, whole
- * and in order — including the paragraphs that cite nothing, because a
+ * is, and a paragraph that is only what he would do next. Everything else he
+ * said is here, whole and in order — including what cites nothing, because a
  * conclusion and a caveat are part of the path too.
+ *
+ * A NEW BEAT STARTS where a sentence brings up a read the beat has not cited.
+ * One that cites nothing, or only what the beat already rests on, carries on —
+ * *"The other four were up."* belongs to the sentence it follows, and *"OPUS I
+ * would leave alone … Greenhills is the real one …"* are one thought over the
+ * same two reads. A paragraph break always starts a beat: that one is his.
  */
 export function pageOf(text: string | null | undefined, claimSpan: string | null | undefined,
                        next: string | null | undefined, calls: ToolCall[]): Section[] {
@@ -93,45 +103,56 @@ export function pageOf(text: string | null | undefined, claimSpan: string | null
       if (claimAt > a) slices.push([a, claimAt]);
       if (claimEnd < b) slices.push([claimEnd, b]);
     }
-    const drawn: string[] = [];
-    const bare: string[] = [];
-    for (const [s, e] of slices) {
-      const raw = plain.slice(s, e);
-      const said = raw.trim();
-      if (!said) continue;
-      bare.push(said);
-      drawn.push(remark(said, s + (raw.length - raw.trimStart().length), bold));
+    const sentences = slices.flatMap(([s, e]) => sentencesOf(plain.slice(s, e), s));
+    if (!sentences.length) continue;
+    const whole = sentences.map((x) => x.said).join(' ');
+    if (next && restated(whole, [next])) continue;
+
+    type Open = { from: number; to: number; seqs: number[] };
+    const push = (open: Open, opens: boolean) => {
+      const raw = plain.slice(open.from, open.to);
+      out.push({ para: remark(raw, open.from, bold), plain: raw, seqs: open.seqs, opens });
+    };
+    let beat: Open | null = null;
+    let pushed = false;
+    for (const { at, said } of sentences) {
+      const cites = citedIn(said, calls);
+      if (beat !== null) {
+        const current: Open = beat;
+        const fresh = cites.some((q) => !current.seqs.includes(q));
+        if (fresh && current.seqs.length) { push(current, !pushed); pushed = true; beat = null; }
+      }
+      if (beat === null) beat = { from: at, to: at + said.length, seqs: [] };
+      beat.to = at + said.length;
+      for (const q of cites) if (!beat.seqs.includes(q)) beat.seqs.push(q);
     }
-    if (!bare.length) continue;
-    const words = bare.join(' ');
-    if (next && restated(words, [next])) continue;
-    out.push({ para: drawn.join(' '), plain: words, seqs: citedIn(words, calls) });
+    if (beat !== null) push(beat, !pushed);
   }
   return out;
 }
 
-/** How many of a paragraph's figures one read holds. */
+/** How many of a beat's figures one read holds. */
 export function heldBy(section: Section, call: ToolCall | null | undefined): number {
   if (!call || !call.result || call.result.error) return 0;
   return figuresIn(section.plain).filter((f) => readBehind(f, [call]) !== null).length;
 }
 
 /**
- * Which paragraph a read's figure belongs with.
+ * Which beat a read's figure belongs with.
  *
  * THE ONE THAT CITES IT MOST, the earliest on a tie, and none (`-1`) when no
- * paragraph holds a figure of it — that one is drawn after the prose, because
- * it is evidence he gathered and did not talk about rather than a step of the
+ * beat holds a figure of it — that one is drawn after the prose, because it is
+ * evidence he gathered and did not talk about rather than a step of the
  * argument.
  *
  * NOT "the first read that holds the number", which is how a superscript picks
  * its read and is right for a superscript: two reads often hold the same number
  * — the attention read holds Fairview's day as well as the read he drew it from
  * — and first-holder would send his own figure to the foot of the page while a
- * machine-drawn table took its place. And not "any paragraph that holds one",
+ * machine-drawn table took its place. And not "any beat that holds one",
  * either: a products read that happens to hold `5.4` would be pulled up into
- * the shops paragraph by Greenhills' −5.4%. The paragraph that is ABOUT a read
- * cites it several times; a coincidence cites it once.
+ * the shops beat by Greenhills' −5.4%. The beat that is ABOUT a read cites it
+ * several times; a coincidence cites it once.
  */
 export function sectionFor(sections: readonly Section[], call: ToolCall | null | undefined): number {
   let best = -1;
@@ -141,4 +162,48 @@ export function sectionFor(sections: readonly Section[], call: ToolCall | null |
     if (n > most) { most = n; best = i; }
   });
   return best;
+}
+
+const escaped = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const saysWord = (text: string, word: string) => new RegExp(
+  `(?<![\\p{L}\\p{N}])${escaped(word)}(?![\\p{L}\\p{N}])`, 'iu').test(text);
+
+/**
+ * WHICH ROWS OF A READ A BEAT NAMES — by the rows' own labels, in his words.
+ *
+ * A row is named when its label is in the sentence ("OPUS", "North Edsa"), or
+ * when a word of its label that NO OTHER ROW of the read shares is — he writes
+ * "bayberry" for *aji champoy honey bayberry*, and never "aji", which every
+ * line carries and which therefore names none of them. Five letters or more,
+ * so a stray "mix" or "per" names nothing.
+ *
+ * It is a lookup, not a judgement: the label is the row's, the sentence is his,
+ * and a name that is not there is not found.
+ */
+export function namedIn(section: Section, call: ToolCall | null | undefined): string[] {
+  const labels = [...new Set(rowsOf(call ?? null).map((r) => subjectOf(r))
+    .filter((x): x is string => typeof x === 'string' && x.trim().length > 0))];
+  const words = (label: string) => label.toLowerCase().split(/[^\p{L}\p{N}]+/u)
+    .filter((w) => w.length >= 5);
+  const owners = new Map<string, number>();
+  for (const label of labels) for (const w of new Set(words(label))) owners.set(w, (owners.get(w) ?? 0) + 1);
+  return labels.filter((label) => saysWord(section.plain, label)
+    || words(label).some((w) => owners.get(w) === 1 && saysWord(section.plain, w)));
+}
+
+/**
+ * The rows a figure under this beat should draw, or `null` for all of them.
+ *
+ * ONE OR TWO NAMES FOCUS IT; three or more, or none, leave it whole. A thought
+ * about OPUS and Greenhills is served by their two rows and buried by seven; a
+ * thought about "three shops, and the other four were up" IS about all seven,
+ * and the owner's rule for an overview stands: *"all stores still matter"*.
+ * And never to hide a single row — folding one line away saves nothing and
+ * costs a tap.
+ */
+export function focusFor(section: Section, call: ToolCall | null | undefined): string[] | null {
+  const named = namedIn(section, call);
+  const rows = rowsOf(call ?? null).length;
+  if (named.length < 1 || named.length > 2) return null;
+  return rows - named.length >= 2 ? named : null;
 }
