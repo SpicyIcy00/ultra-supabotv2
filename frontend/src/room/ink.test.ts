@@ -69,6 +69,30 @@ describe('nothing is lowered to light something else', () => {
     expect(top('.r-tile--quiet', 'opacity')).toBe('1');
   });
 
+  /**
+   * WEIGHT AND GATHERING RECEDE BY MEASURE, NEVER BY STRENGTH (P2S.8).
+   *
+   * The owner asked for supporting detail to recede, and the nearest way to do
+   * it is the one he has already refused twice: fade it, or lay a band behind
+   * the thing you want read first. So what a quiet or gathered point may change
+   * is its SIZE and its WIDTH. Anything that makes it weaker, or gives it a
+   * ground of its own, fails here rather than in review.
+   */
+  it('a quiet or gathered point is smaller, never fainter and never on a ground', () => {
+    const wrong: string[] = [];
+    let seen = 0;
+    CSS.walkRules((rule) => {
+      if (!/\[data-weight=|\[data-under\]/.test(rule.selector)) return;
+      seen += 1;
+      rule.walkDecls(/^(opacity|filter|background|background-color|box-shadow|color)$/, (d) => {
+        wrong.push(`${rule.selector} { ${d.prop}: ${d.value} }`);
+      });
+    });
+    expect(wrong).toEqual([]);
+    // Not vacuous: a regex that matched nothing would pass the line above.
+    expect(seen).toBeGreaterThan(0);
+  });
+
   it('the row he pointed at gains weight and a ring, and no band behind it', () => {
     // A band was tried and refused the same day: "wtf happend here dont do that".
     const banded: string[] = [];

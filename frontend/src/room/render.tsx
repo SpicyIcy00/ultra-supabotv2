@@ -18,6 +18,7 @@ import type { BoardObject, Local } from './board';
 import { inOrder } from './board';
 import { retunedKey } from './tokenShape';
 import { FIGURE_GAP, columnsFor, needsWidth, placeFigures, revealAt } from './beside';
+import { CHILD_GAP, gather, placeFamilies, type Relation } from './gather';
 import { readIndexes } from './work';
 import { PROCESS, callOf, rowsOf, tableShape, type AnswerTurn, type Dimension } from './data';
 import { markFor } from './catalogue';
@@ -103,6 +104,20 @@ export interface BoardProps {
  * sentence about a shape he learnt to compose on the third try. A tool's
  * notice still surfaces, always; this is not one.
  */
+/**
+ * HOW A GATHERED POINT SITS UNDER ITS OWN, in words.
+ *
+ * An indent says two things belong together; it cannot say whether the second
+ * agrees with the first. That difference is the whole of what makes a
+ * composition an argument rather than a pile, so it is said — and said in the
+ * label line that already carries `ruled out`, not in chrome of its own.
+ */
+const RELATION_SAID: Record<Relation, string> = {
+  evidence: 'why',
+  counter: 'against',
+  scale: 'the scale of',
+};
+
 export function turnNotices(p: {
   answers: AnswerTurn[];
   board: BoardObject[];
@@ -156,9 +171,15 @@ export function Board(p: BoardProps) {
   const newest = p.answers.length - 1;
   const leadKey = p.lead && ordered.some((o) => o.key === p.lead) ? p.lead
     : ordered.find((o) => o.turn === newest && o.weight === 'lead')?.key ?? null;
-  const objects = leadKey
+  const led = leadKey
     ? [...ordered.filter((o) => o.key === leadKey), ...ordered.filter((o) => o.key !== leadKey)]
     : ordered;
+  // WHAT BELONGS TO WHAT (P2S.8). A block may name another as `under`; this
+  // puts each stem immediately before what it gathered, so a family is
+  // consecutive and can be placed as one item. A board that names nothing
+  // yields no families and every line below runs exactly as it did.
+  const plan = gather(led);
+  const objects = plan.order;
   const width = useViewport();
   // WHAT EACH FIGURE NEEDS, from what it draws (beside.needsWidth).
   const wide = objects.map((o) => {
@@ -216,7 +237,14 @@ export function Board(p: BoardProps) {
     });
     return () => seen.disconnect();
   }, [keys]);
-  const placed = placeFigures(objects.map((o) => heights[o.key] ?? 0), columns, spans);
+  // A FAMILY IS PLACED AS ONE ITEM, by the same packer and its same tie rules
+  // — so evidence can never be dropped into a different column from the point
+  // it belongs to. With no families this is `placeFigures`, called as before.
+  const tall = objects.map((o) => heights[o.key] ?? 0);
+  const placed = plan.families.length
+    ? placeFamilies(plan, tall, columns, spans, placeFigures)
+    : placeFigures(tall, columns, spans);
+  const byKey = new Map(objects.map((o) => [o.key, o] as const));
 
   // WHICH FIGURES HAVE ARRIVED. Keyed, so an answer that transforms a figure
   // in place does not make it arrive again.
@@ -259,19 +287,35 @@ export function Board(p: BoardProps) {
             data-arrived={arrived.has(o.key) ? 'yes' : 'no'}
             data-lead={leads[n] ? 'yes' : undefined}
             data-span={spans[n] ? 'yes' : undefined}
+            data-under={plan.parentOf[o.key]}
+            data-relation={plan.relationOf[o.key]}
+            data-weight={o.weight}
             className={['r-fig', out ? 'r-fig--out' : '', p.focused === o.key ? 'r-fig--open' : '',
                         leads[n] ? 'r-fig--lead' : '']
               .filter(Boolean).join(' ')}
+            // A gathered point sits tight under the one it belongs to, so it
+            // closes the flow's gap. The same constant the family's height was
+            // summed with, or the columns drift and it jumps on the next pass.
             style={{ gridColumn: spans[n] && columns > 1 ? '1 / -1' : placed[n] + 1,
-                     gridRowEnd: `span ${Math.max(1, h + FIGURE_GAP)}` }}
+                     gridRowEnd: `span ${Math.max(1, h + (plan.parentOf[o.key] ? CHILD_GAP : FIGURE_GAP))}` }}
           >
             <div className="r-fig-body">
               {/* WHICH READ THIS IS — the number his words' superscripts point
                   at, so a figure and the sentence citing it match by eye. Off
                   the turn's own calls, never a rank. `ruled out` is drawn when
                   a block says so; nothing sets it until P2S.3. */}
+              {/* WHAT IT IS TO THE POINT ABOVE IT, said in the line that
+                  already carries `ruled out` rather than in new chrome. The
+                  relation is a WORD, never a colour and never a box: a
+                  representation earns its place by communicating, and an
+                  indent alone cannot say whether this agrees or disagrees. */}
               <p className="r-fig-lbl">
                 read{index !== null ? ` ${index}` : ''}
+                {plan.parentOf[o.key] && (
+                  <> · {RELATION_SAID[plan.relationOf[o.key] ?? 'evidence']} read
+                    {' '}{readNumber(p.answers[byKey.get(plan.parentOf[o.key])?.turn ?? 0],
+                                     byKey.get(plan.parentOf[o.key])!) ?? '—'}</>
+                )}
                 {out && <> · <s>ruled out</s></>}
               </p>
               <Piece

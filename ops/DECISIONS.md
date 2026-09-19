@@ -9,6 +9,44 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-19 · P3.j — the unit of the page stopped being the read
+
+The owner, of the live right side: *"it's just kinda like widgets … the page
+itself is the composition"*, and, in the same breath, *"keep it generative — do
+not replace the current widgets with another rigid layout or template."* Both
+halves matter: the fix could not be a second template.
+
+**IT WAS NEVER STYLING.** One call made one block made one card, packed into
+whichever column was shortest, so the order you read was column heights. Nothing
+on the board knew how any two blocks related, and no restyling can join things
+that have no relation. So a block may now name another as `under`, with
+`relation: evidence | counter | scale`. The arrangement is derived from that.
+
+**TWO FIELDS, NOT FIVE.** Prominence was already `weight` — *"judgment made
+visible"*, set on every block since P1.f — and the room had been writing
+`data-lead` into the DOM with no CSS rule reading it. Not-the-answer was already
+`ruled_out`; a figure that may be wrong was already a notice. **Rejected:
+`because`**, a cause in an enum, which analysis may not invent; **`against`**,
+already a block field meaning a gauge's comparison column.
+
+**NO FLOOR, AND I HAD PROPOSED ONE.** I told the owner a read would be lifted
+when *"its rows crossed a floor the definitions set"*. `surface.attention` says
+`score`, `threshold` and `severity` are `not_supported` — a presentation layer
+computing importance is a business definition nobody set. Prominence is Bob's
+`weight`, which `ops/STANDARD.md:258` gives him.
+
+**NOTHING REFUSES.** An unresolvable `under`, a second level, a cycle or a bare
+`relation` drop with a coercion and the block stands alone — the board exactly as
+before. The fallback is the default, not a special case (P1.a's finding: a
+layout hint that did not land must not cost a round).
+
+**RECEDING IS SIZE, NEVER STRENGTH.** *"Supporting details recede"* nearly bought
+back the fade and the band the owner refused on 2026-09-18. `ink.test.ts` now
+fails on any rule giving `[data-under]` or `[data-weight]` an opacity, filter,
+ground or colour, and asserts it matched something.
+
+---
+
 ## 2026-09-15 — P2.b: a marker is a promise, and so is drawing nothing
 
 An underline already meant "there is something behind this". Nothing meant

@@ -639,6 +639,15 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                                                "against: a numeric COLUMN of the same row"},
                     "ruled_out": {"type": "boolean",
                                   "description": " ".join(str(voc["ruled_out"]["about"]).split())},
+                    # HOW TWO POINTS RELATE (P2S.8). The board stops being a
+                    # grid of reads the moment a block can say which other
+                    # block it is evidence for; the arrangement falls out of
+                    # it, so nothing here names a position, a column or a size.
+                    "under": {"type": "string",
+                              "description": " ".join(str(voc["under"]["about"]).split())},
+                    "relation": {"type": "string",
+                                 "enum": list(voc["relation"]["values"]),
+                                 "description": " ".join(str(voc["relation"]["about"]).split())},
                     "key": {"type": "string", "pattern": voc["key_pattern"],
                             "description": "a short slug naming this object; a later turn that "
                                            "composes the same key changes it in place"},
@@ -1356,7 +1365,15 @@ def _board_addendum(defs: dict) -> str:
         f"`claim`: the few words saying what it says, with no digits in them, "
         f"because the figure is drawn under it with its own receipts. A shape "
         f"carries no figure of yours: you choose the row, the value is the row's, "
-        f"and an edit carrying a figure, a colour or a size is refused. YOUR "
+        f"and an edit carrying a figure, a colour or a size is refused. "
+        f"SAY HOW THE POINTS RELATE, and the board arranges itself: a block that "
+        f"belongs to another names that block's key as `under`, and `relation` "
+        f"says how — " + ", ".join(
+            f"`{k}`" for k in req(voc, "relation.values")) + ", evidence if you "
+        f"do not say. The one named gets the room; what hangs off it gathers "
+        f"there. One level — what is under something may not itself have things "
+        f"under it. Leave both off and the block stands on its own, which is "
+        f"right for a point that is simply also true. YOUR "
         f"WORDS ARE NOT AN OBJECT: the reading is drawn above the board from what "
         f"you say this turn, always — so compose the evidence, name its three "
         f"slots here, and never a block to hold your prose. "

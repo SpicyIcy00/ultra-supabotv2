@@ -3124,8 +3124,15 @@ cleanup; he decides.
 
 - [parked] **P2S.8 the answer is a page under the mark** — **PARKED 2026-09-18 at
       the owner's word, the same day it was written: *"actually no more changing
-      how our ui works i like it right now"*.** The UI stays as it is live; the
-      render is kept as the record, and one word from him revives the card.
+      how our ui works i like it right now"*. SUPERSEDED 2026-09-19 by P3.j /
+      P3.k / P3.l, which are the work this card described, re-cut after he
+      unfroze the right side alone: *"Focus only on the right side of Bob's
+      workspace … the page itself is the composition."* This card said "replaces
+      the beside room's layout … text and blob on top"; he now wants the blob and
+      his words on the LEFT exactly as they are. It stays parked and is not
+      revived — reviving it would also break the plan contract, since `P2S.8`
+      counts in the headline total and in no phase's own size.** The UI stays as
+      it is live; the render is kept as the record.
       Written 2026-09-18 at the
       owner's word: *"it still builds widgets in mind when i think it should
       build more page like more loose … text and blob on top and build below
@@ -3646,6 +3653,75 @@ UI), P3.e (into P3.d), P3.f (into P3.b).
       export landed Thursday produce one morning line naming the match and
       the shortfall from the reads' own rows; an order with nothing landed is
       named as waiting. No eval.
+- [x] **P3.j the evidence sits under the finding** — the right side read as BI
+      widgets because the UNIT OF THE PAGE WAS THE READ: one call, one block,
+      one card with a label, a title, a field dump and a receipts line, dropped
+      into whichever masonry column was shortest, so what you read down the page
+      was column heights and not his reasoning. The owner, 2026-09-19:
+      *"evidence should relate spatially and visually … important findings
+      should naturally become more prominent while supporting details recede …
+      the page itself is the composition"*, and *"keep it generative — do not
+      replace the current widgets with another rigid layout or template"*.
+      **(a) the grammar**: a block may name another block's `key` as `under` and
+      say how it sits there — `relation: evidence | counter | scale`, evidence
+      if unsaid. Two fields, because prominence was already `weight`, not-the-
+      answer was already `ruled_out`, and a figure that may be wrong was already
+      a notice. NOT `because` (a cause in an enum, which analysis may not invent)
+      and NOT `against` (already a block field: a gauge's comparison column).
+      **(b) the arrangement**: `frontend/src/room/gather.ts` turns that into an
+      order and a placement, and `placeFamilies` delegates to the SAME packer at
+      family granularity, so evidence can never land in a different column from
+      the point it belongs to and every figure stays a direct child of one grid.
+      **(c) weight drawn**: `data-lead` had been written into the DOM since P2S.2
+      and no CSS rule read it. A gathered point sits in under one hairline — one
+      edge, not a box — and recedes by SIZE and MEASURE only; `ink.test.ts` now
+      fails on any rule that gives `[data-under]` or `[data-weight]` an opacity,
+      a filter, a ground or a colour. A line from him goes to each POINT, not to
+      each figure. **CLOSED 2026-09-19, unpushed.** Nothing refuses: an `under`
+      naming a key that is not there, a second level, a cycle and a `relation`
+      with no `under` are all dropped with a coercion and the block stands alone
+      — which is the board exactly as it was drawn before, so the fallback is
+      the default and not a special case. Suites exact: pure **2,123** (was
+      2,112; +11 on `under`), vitest **1,044** (was 1,026; +17 `gather.test.ts`,
+      +1 `ink.test.ts`), `tsc -b --force` clean. Prompt
+      **1,799 of 1,800 words, unchanged** — the grammar is taught on the compose
+      schema, never in SYSTEM_PROMPT. Frames: `situation` and `doing` unchanged
+      at 1440 and 1920, rail open and closed (3 figs/4 wires, 4 figs/5 wires,
+      columns 433/703 and 580/940, no scrollbar), and a new committed fixture
+      `ops/frames_fixtures/gathered.json` — a real recorded turn with the two
+      fields set — renders the gathering with 2 wires where there were 4.
+      **NOT DONE:** no live model has ever emitted `under`, so nothing here is
+      proven against a real turn until the phase close; and the design file
+      still holds the old right side, so its half of the frame is not yet
+      like-for-like (P3.l). No eval, at the owner's word.
+- [ ] **P3.k the table stops drawing the same column three times** — the owner's
+      cuttlefish read drew `days out of stock`, `current stockout run` and
+      `longest stockout run` as three columns holding THE SAME NUMBER in every
+      row. `data.ts:327` folds a column that is constant DOWN the rows; nothing
+      folds columns that duplicate each other ACROSS them. Add that to
+      `tableShape`, keeping its guards (three rows or more, never a money
+      column), and NAME what was dropped in the caption the table already draws
+      — a reader is entitled to know the column existed. **The bug it uncovers
+      ships in the same card:** `Rows` (`marks.tsx:384`) passes an already-sliced
+      `rows` to `tableShape`, so both folds are decided on 8 rows of N when the
+      table is collapsed — tolerable for a caption, not for deleting a column.
+      **Done when:** the recorded stockout read draws one column where it drew
+      three and says so; a read whose three columns genuinely differ still draws
+      all three; the fold is computed over every row, not the slice; and
+      `needsWidth` stops calling that table wide. No eval.
+- [ ] **P3.l chrome said once, and the design catches up** — nine blocks carry
+      nine labels and nine read times. Fold the `READ n` line and the per-figure
+      receipts into one line above the figures with a single `receipts` control,
+      **honouring UI rule 6 by the owner's reading of 2026-09-19: the page says
+      the read time once and a figure read at a different time prints its own.**
+      That reading is recorded in DECISIONS.md with the test that holds it before
+      it is built. Then `ops/ideal/bob-ahead-of-me.html` gains the same right
+      side, so the frame check compares like with like — **its fifteen
+      `data-scene` strips stay fifteen** (`test_plan_alignment_contract.py`), and
+      it is edited in place, never overwritten from the online artifact, which
+      does not carry the Bob rename. **Done when:** every figure reaches a source
+      and a time in at most one gesture; `situation` and `doing` rendered beside
+      the design at 1440 and 1920, rail open and closed, and looked at. No eval.
 - [ ] **P3.✓ close: the Seikyo arc, timed** — and the five scenes the ledger
       gives it, `morning`, `decide`, `build`, `life` and `run`, rendered by
       `ops/frames.py` beside the artifact's. End to end on the live build as

@@ -404,3 +404,116 @@ def test_a_one_row_read_takes_its_caption_from_the_confirmed_argument(defs):
     accepted, rejected, coerced = run(
         [{"kind": "figure", "key": "ne", "seq": 0}], defs, calls=_stated_read())
     assert rejected == [] and accepted[0]["subject"] == "North Edsa"
+
+
+# ---------------------------------------------------------------------------
+# 7. WHAT A POINT HANGS OFF (P2S.8) — settled after the list, never refused
+#
+# `under` is the only field whose truth depends on the WHOLE composition: it
+# names another block, which may arrive later in the same list. So it is
+# resolved in a second pass, and every way of getting it wrong drops it and
+# leaves the block standing on its own — which is the board exactly as it was
+# drawn before the field existed. A layout hint that did not land must never
+# cost a round trip; that is P1.a's whole finding, applied to a new field.
+# ---------------------------------------------------------------------------
+
+
+def _two(extra=None):
+    """A lead and a second block that may name it."""
+    return [{"kind": "ranked", "key": "shops", "seq": 1, "weight": "lead"},
+            {"kind": "figure", "key": "total", "seq": 0, "subject": "Rockwell",
+             **(extra or {})}]
+
+
+def test_a_block_that_names_another_is_gathered_under_it(defs):
+    accepted, rejected, _ = run(_two({"under": "shops"}), defs)
+    assert rejected == []
+    assert accepted[1]["under"] == "shops"
+
+
+def test_naming_what_it_is_under_is_enough_to_say_it_is_evidence(defs):
+    """
+    SAID ONCE, NOT THREE TIMES (composition.relation.default).
+
+    `weight: supporting` + `under: <the lead>` + `relation: evidence` states
+    the same thing three ways in the common case. The default is what keeps
+    the frequent case one field.
+    """
+    accepted, _, _ = run(_two({"under": "shops"}), defs)
+    assert accepted[1]["relation"] == req(defs, "composition.relation.default")
+
+
+def test_a_point_may_cut_the_other_way(defs):
+    accepted, rejected, _ = run(_two({"under": "shops", "relation": "counter"}), defs)
+    assert rejected == [] and accepted[1]["relation"] == "counter"
+
+
+def test_the_relation_words_are_the_definitions(defs):
+    """Not a list in this file, and none of them a causal claim."""
+    values = list(req(defs, "composition.relation.values"))
+    assert values == ["evidence", "counter", "scale"]
+    assert "because" not in values, "a cause belongs in his prose, not in an enum"
+
+
+def test_an_under_naming_nothing_leaves_the_block_standing_on_its_own(defs):
+    accepted, rejected, coerced = run(_two({"under": "nowhere"}), defs)
+    assert rejected == [], "a layout hint that did not land costs no round trip"
+    assert "under" not in accepted[1]
+    assert any("not a block of this composition" in c for c in coerced)
+
+
+def test_a_block_may_not_hang_off_itself(defs):
+    accepted, rejected, coerced = run(_two({"under": "total"}), defs)
+    assert rejected == [] and "under" not in accepted[1]
+    assert any("'total'" in c for c in coerced)
+
+
+def test_evidence_hangs_off_a_point_and_not_off_other_evidence(defs):
+    """
+    ONE LEVEL. A tree of evidence is an outline, and an outline is a report —
+    it is also a nested grid, which would break the one-grid invariant the
+    room depends on to keep a figure from remounting.
+    """
+    accepted, rejected, coerced = run(
+        [{"kind": "ranked", "key": "a", "seq": 1, "weight": "lead"},
+         {"kind": "figure", "key": "b", "seq": 0, "subject": "Rockwell", "under": "a"},
+         {"kind": "figure", "key": "c", "seq": 2, "under": "b"}], defs)
+    assert rejected == []
+    by = {b["key"]: b for b in accepted}
+    assert by["b"]["under"] == "a", "the first level stands"
+    assert "under" not in by["c"], "the second does not"
+    assert any("not off other evidence" in x for x in coerced)
+
+
+def test_a_cycle_leaves_both_standing_on_their_own(defs):
+    """Falls out of the one-level rule: each target is itself hung."""
+    accepted, rejected, _ = run(
+        [{"kind": "ranked", "key": "a", "seq": 1, "weight": "lead", "under": "b"},
+         {"kind": "figure", "key": "b", "seq": 0, "subject": "Rockwell", "under": "a"}],
+        defs)
+    assert rejected == []
+    assert all("under" not in b for b in accepted)
+
+
+def test_a_relation_with_nothing_to_relate_to_is_dropped(defs):
+    accepted, rejected, coerced = run(_two({"relation": "counter"}), defs)
+    assert rejected == [] and "relation" not in accepted[1]
+    assert any("none was named" in c for c in coerced)
+
+
+def test_an_empty_under_detaches_a_block_the_board_still_carries(defs):
+    """
+    THE ONLY WAY TO CLEAR IT. `board.carried()` copies every field an edit
+    sets and nothing removes one, so without a detach a block that was ever
+    gathered could never stand alone again without being dropped and re-put.
+    """
+    accepted, rejected, _ = run(_two({"under": ""}), defs)
+    assert rejected == []
+    assert accepted[1]["under"] == "" and "relation" not in accepted[1]
+
+
+def test_a_composition_that_says_nothing_carries_nothing(defs):
+    """The fallback is the default: no field, no gathering, today's board."""
+    accepted, rejected, _ = run(_two(), defs)
+    assert rejected == []
+    assert all("under" not in b and "relation" not in b for b in accepted)

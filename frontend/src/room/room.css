@@ -732,6 +732,25 @@
 .r-fig--lead .r-mk-title { font-size: 19px; line-height: 1.4; color: var(--ink); max-width: 64ch; }
 .r-fig--lead .r-fig-body { padding-bottom: 42px; }
 
+/* WHAT IS GATHERED UNDER A POINT (P2S.8). It sits in from the point it belongs
+   to, under one hairline — ONE EDGE, NOT A BOX. A border on four sides says
+   "an object someone placed here", which is the thing the owner had removed
+   (the log, 2026-09-17); a rule down the left says "this belongs to that", the
+   way a quotation does. It is also all the indent can say on its own: whether
+   this AGREES is said in words, in the label line above it. */
+.r-fig[data-under] { padding-left: 20px; border-left: 1px solid var(--edge); }
+.r-fig[data-under] .r-fig-body { padding-bottom: 16px; }
+.r-fig[data-under] .r-mk-title { font-size: 14.5px; line-height: 1.5; max-width: 52ch; }
+
+/* WEIGHT IS JUDGMENT MADE VISIBLE (metrics.yaml composition.weights) — and
+   until P2S.8 nothing drew it: Bob set it on every block, the loop enforced one
+   lead, the room wrote data-lead into the DOM, and no rule read it.
+   What is on screen because it is TRUE, not because it matters, is drawn
+   smaller and narrower. NEVER greyer, never faded: emphasis adds, it never
+   takes away (DECISIONS, 2026-09-18), and all of his prose stays --ink. */
+.r-fig[data-weight="quiet"] .r-mk-title { font-size: 14.5px; line-height: 1.5; max-width: 56ch; }
+.r-fig[data-weight="quiet"] .r-fig-body { padding-bottom: 22px; }
+
 /* A CHART IS NOT CUT AT THE AREA'S EDGE, IT FADES (the log, 2026-09-17: "some
    charts are still getting cut"): where there is more above or below, the
    figures area dissolves over its last 48px instead of slicing a figure. */
@@ -768,6 +787,10 @@
   .r-arr { display: none; }
   .r-flow { display: block; }
   .r-fig { grid-column: auto !important; grid-row: auto !important; }
+  /* The gathering still reads on a phone — it is one column everywhere, so the
+     indent is the only thing saying what belongs to what — but a 20px inset of
+     a 5vw page is a lot of the width, so it is narrower here. */
+  .r-fig[data-under] { padding-left: 12px; }
   .r-figs[data-more-up], .r-figs[data-more-down] { -webkit-mask-image: none; mask-image: none; }
 }
 

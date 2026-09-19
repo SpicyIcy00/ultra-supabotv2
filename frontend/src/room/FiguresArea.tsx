@@ -147,8 +147,13 @@ export function Wires({ frameRef, markRef, wordsRef, areaRef, version }: {
     const host = frameRef.current;
     if (!host) return;
     const area = areaRef.current;
+    // A LINE TO EACH POINT, NOT TO EACH FIGURE (P2S.8). What is gathered under
+    // a point reaches him THROUGH that point — that is what gathering means —
+    // and a line to every child would draw the composition back into the pile
+    // of separate things the gathering exists to end.
     const figures = area
-      ? Array.from(area.querySelectorAll<HTMLElement>('[data-figure][data-arrived="yes"]'))
+      ? Array.from(area.querySelectorAll<HTMLElement>(
+        '[data-figure][data-arrived="yes"]:not([data-under])'))
           .map((el) => ({ key: el.dataset.figure ?? '', box: boxOf(el) as Box }))
       : [];
     setWires(wireEnds({

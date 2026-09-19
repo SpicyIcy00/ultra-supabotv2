@@ -289,6 +289,91 @@ def _demote(key: str, lead_key: str, weights: list, coerced: list[str]) -> str:
     return below
 
 
+def _hang(accepted: list[dict], said: Mapping[str, tuple], voc: Mapping[str, Any],
+          coerced: list[str]) -> None:
+    """
+    Resolve `under` / `relation` once every key in the composition is known.
+
+    WHY A SECOND PASS. `under` names another block of the SAME composition,
+    and a block may name one that arrives after it. Nothing can be settled
+    while the list is still being read, so the loop only records what was
+    said and this decides what stands.
+
+    NOTHING HERE REFUSES. An `under` naming a key that is not in the
+    composition, a second level, a cycle, or a `relation` with no `under` all
+    simply fall away, and the block stands on its own — which is the board as
+    it was drawn before any of this existed. The arrangement degrades to the
+    old flow; it never breaks, and a bad relation costs no round trip.
+
+    ONE LEVEL. Evidence hangs off a point; it may not have evidence hanging
+    off it in turn. A tree is an outline and an outline is a report. The rule
+    also disposes of cycles for free: in `a under b, b under a` both targets
+    are themselves hung, so both fall away.
+    """
+    by_key = {b["key"]: b for b in accepted if isinstance(b.get("key"), str)}
+    rel = voc.get("relation") or {}
+    values = set(rel.get("values") or ())
+    default = str(rel.get("default") or "")
+    detach = str((voc.get("under") or {}).get("detach") or "")
+    stands: dict[str, tuple[str, Any]] = {}
+
+    for key, (under, relation) in said.items():
+        if key not in by_key:
+            continue                       # the block itself was refused
+        if isinstance(under, str) and under == detach:
+            # DETACHING IS SAYING SO. `board.carried()` copies every field an
+            # edit sets and nothing clears one, so without this a block that
+            # was ever gathered could never stand alone again without being
+            # dropped and re-put.
+            by_key[key].pop("under", None)
+            by_key[key].pop("relation", None)
+            by_key[key]["under"] = ""
+            continue
+        if not isinstance(under, str) or under == key or under not in by_key:
+            if under is not None:
+                coerced.append(
+                    f"{key!r}: `under` names {under!r}, which is not a block of this "
+                    f"composition, so it stands on its own"
+                )
+            elif relation is not None:
+                coerced.append(
+                    f"{key!r}: `relation` says how this sits under another block and "
+                    f"none was named, so it stands on its own"
+                )
+            continue
+        stands[key] = (under, relation)
+
+    # DECIDED FROM A SNAPSHOT, not as we go. Dropping one edge while still
+    # reading the rest makes the result depend on the order Bob listed his
+    # blocks in: a cycle `a under b, b under a` would lose only whichever came
+    # first, and the other would keep an edge into a block that no longer has
+    # one. Both are second levels; both fall away.
+    said_edges = dict(stands)
+    for key in {k for k, (u, _) in said_edges.items() if u in said_edges}:
+        parent = said_edges[key][0]
+        coerced.append(
+            f"{key!r}: {parent!r} is itself under {said_edges[parent][0]!r} — evidence "
+            f"hangs off a point, not off other evidence, so this stands on its own"
+        )
+        del stands[key]
+
+    for key, (under, relation) in stands.items():
+        by_key[key]["under"] = under
+        if isinstance(relation, str) and relation in values:
+            by_key[key]["relation"] = relation
+        else:
+            if relation is not None:
+                coerced.append(
+                    f"{key!r}: {relation!r} is not one of {', '.join(sorted(values))} "
+                    f"(metrics.yaml composition.relation), so it is evidence"
+                )
+            # SAID ONCE, NOT THREE TIMES (composition.relation.default). A block
+            # that names what it is under is evidence for it unless it says
+            # otherwise, so the common case costs one field, not two.
+            if default:
+                by_key[key]["relation"] = default
+
+
 def _claim(text: Any, voc: Mapping[str, Any], coerced: Optional[list[str]] = None,
            key: Optional[str] = None) -> str:
     """
@@ -419,6 +504,9 @@ def validate(
     rejected: list[dict] = []
     keys_seen: set[str] = set()
     lead_key: Optional[str] = None
+    # key -> (under, relation), as said. Settled by `_hang` once the whole
+    # composition is known, because `under` may name a block still to come.
+    hangs: dict[str, tuple] = {}
     coerced = [] if coerced is None else coerced
 
     blocks = submitted.get("blocks") if isinstance(submitted, Mapping) else submitted
@@ -475,6 +563,14 @@ def validate(
                 raise Rejected("every block needs a short key like 'rockwell' or 'seikyo-order'")
             if key in keys_seen:
                 raise Rejected(f"key {key!r} is edited twice in one turn")
+
+            # WHAT IT HANGS OFF, recorded now and settled after the loop:
+            # `under` names another block of this same composition, which may
+            # not have arrived yet. Every path out of this block — a change, a
+            # drop, a spec, a named widget — passes through here, so this is
+            # the one place it has to be caught. See `_hang`.
+            if "under" in item or "relation" in item:
+                hangs[key] = (item.get("under"), item.get("relation"))
 
             # An edit to something already on the board carries only what
             # changes. Nothing here can name a figure, so a partial edit is as
@@ -833,6 +929,7 @@ def validate(
         except Rejected as why:
             rejected.append({"block": item, "reason": str(why)})
 
+    _hang(accepted, hangs, voc, coerced)
     return accepted, rejected
 
 

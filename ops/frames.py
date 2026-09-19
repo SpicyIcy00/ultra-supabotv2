@@ -108,7 +108,15 @@ FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
               # 2026-09-17, after P2S.3 went live — the words column cut at its
               # top, and loop warnings drawn as caveats. Real rows: verification/.
               "howdoing": ROOT / "verification" / "frames_fixtures" / "howdoing.json",
-              "ordering": ROOT / "verification" / "frames_fixtures" / "ordering.json"}
+              "ordering": ROOT / "verification" / "frames_fixtures" / "ordering.json",
+              # P2S.8's own check. Every recorded run predates `under`, so no
+              # recorded turn has a point gathered under another and the browser
+              # would only ever exercise the fallback. This is a REAL recorded
+              # turn — the Rockwell follow-up, its rows and meta untouched —
+              # with the two new fields set to what a composer will say once the
+              # grammar is live: read 1 is why, read 2 cuts the other way.
+              # Committed, because a frame check nobody else can run is not one.
+              "gathered": ROOT / "ops" / "frames_fixtures" / "gathered.json"}
 SIZES = {1440: 900, 1920: 1080, 1857: 963}
 VOCAB_READS = ROOT / "frontend" / "src" / "room" / "__fixtures__" / "vocab-reads.json"
 MAX_ROWS = 200

@@ -6719,10 +6719,58 @@ composition:
 
   # A READ THE LADDER RULED OUT (P2S.3). A block may say it drew a read that was
   # checked and did not explain the thing — the holiday that was not it, the
-  # stock that was fine — and it is drawn `READ n · RULED OUT`, dimmed. It is
-  # a flag, never a sentence: the why is Bob's to say.
+  # stock that was fine — and it is drawn `READ n · RULED OUT`. It is a flag,
+  # never a sentence: the why is Bob's to say.
+  #
+  # NO LONGER "DIMMED" (P2S.8). It said dimmed until 2026-09-19, which had been
+  # untrue since the owner ended dimming on 2026-09-18 — emphasis adds, it never
+  # takes away. A ruled-out read is drawn small and marked, at full ink.
   ruled_out:
-    about: "true when this read was checked and ruled out as the explanation — drawn dimmed, marked ruled out"
+    about: "true when this read was checked and ruled out as the explanation — drawn small, marked ruled out"
+
+  # HOW TWO POINTS RELATE — the whole of P2S.8, and the smallest thing that
+  # turns a grid of reads into one argument.
+  #
+  # The owner, 2026-09-19, of the live right-hand side: "it's just kinda like
+  # widgets … evidence should relate spatially and visually. A discovery can
+  # lead into supporting evidence, a comparison, a contradiction, or another
+  # investigation." Nothing on the board knew how any two blocks related, so the
+  # renderer could only pack them into whichever column was shortest — what you
+  # read down the page was column heights, not his reasoning.
+  #
+  # WHY THESE TWO FIELDS AND NOT FIVE. Prominence is already `weight`, which is
+  # judgment made visible and which Bob already sets on every block; what a
+  # thing is instead of the answer is already `ruled_out`; a figure that may be
+  # wrong is already a notice. Only "this hangs off that" and "and it agrees /
+  # it cuts the other way" had nowhere to live. ONE LEVEL ONLY: a point hangs
+  # off a point, and what hangs off it may not itself be hung off — a tree of
+  # evidence is an outline, and an outline is a report.
+  #
+  # A DROPPED FIELD, NOT A REFUSED ONE. An `under` naming a key that is not in
+  # the composition, a second level, a cycle, or a `relation` with no `under`
+  # all fall away and the block stands on its own — which is the page as it is
+  # drawn today. The arrangement degrades to the old flow; it never breaks.
+  under:
+    about: "the key of another block in this composition that this one belongs to — it is drawn gathered under that block instead of beside it. One level only; an empty string detaches it"
+    detach: ""
+  relation:
+    about: "how this point sits under the one it names: `evidence` supports it, `counter` cuts the other way, `scale` is the wider frame it sits inside. Needs `under`; defaults to evidence"
+    values: [evidence, counter, scale]
+    default: evidence
+    requires: under
+    # NOT `because`, AND NOT `against`. Two words were rejected on the way here
+    # and the reasons are the point of the vocabulary.
+    #
+    # `because` would be a CAUSAL CLAIM IN AN ENUM. Analysis invents no cause
+    # (CLAUDE.md, levels of automation); a cause Bob believes belongs in prose
+    # where his own caveat can qualify it, not in a closed word the renderer
+    # then draws as settled.
+    #
+    # `against` is already a FIELD on a block — a gauge's `against` is the thing
+    # it is measured against, which is most of the meaning this value wanted,
+    # one field away. A model that sees both crosses them. `counter` cannot be
+    # mistaken for a column.
+    not_the_same_as_the_field: against
 
   # THE CLAIM-TITLE — the few words over a block, and the one thing on it
   # Bob writes rather than binds.
@@ -7131,7 +7179,7 @@ composition:
   # which `claim` now does under its own name.
   allowed_fields: [op, kind, key, weight, seq, subject, label,
                    argument, spec, emphasise, claim, thought,
-                   field, against, ruled_out]
+                   field, against, ruled_out, under, relation]
   # AN UNKNOWN FIELD IS DROPPED, NOT REFUSED — except these (the speed fix,
   # 2026-09-19). `claim_note` and `key_note` cost the P2S.✓ follow-up turn a
   # whole round, and the renderer never reads a field it does not know, so

@@ -445,6 +445,19 @@ export interface CompositionBlock {
   against?: string;
   /** The ladder checked this read and ruled it out; drawn `READ n · RULED OUT` (P2S.3). */
   ruled_out?: boolean;
+  /**
+   * WHAT THIS POINT BELONGS TO (P2S.8): the `key` of another block of the same
+   * composition. The board gathers this one under that one instead of placing
+   * it beside — which is how a grid of reads becomes one argument.
+   *
+   * ONE LEVEL, and the server has already settled it: an `under` naming a key
+   * that is not there, a second level and a cycle are all dropped before this
+   * reaches the room, so the renderer may trust it. An empty string means Bob
+   * detached it — nothing else can clear a field the board carries forward.
+   */
+  under?: string;
+  /** How it sits under that block (metrics.yaml `composition.relation`). */
+  relation?: 'evidence' | 'counter' | 'scale';
 }
 
 /** One node of a composed shape: a layout that arranges, or a mark that draws. */
