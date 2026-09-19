@@ -165,7 +165,7 @@ export function Rail({ busy, needsYou, onNew, estate }: RailProps) {
   const mayImport = user?.allowed_pages.includes('storehub_imports') ?? false;
   const imports = useQuery({
     queryKey: ['storehub-imports'],
-    queryFn: listImports,
+    queryFn: () => listImports(),
     staleTime: 60_000,
     retry: false,
     enabled: mayImport,

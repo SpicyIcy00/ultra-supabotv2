@@ -111,6 +111,9 @@ describe('nothing is cut, and nothing shows a scrollbar — rows 8 and 9', () =>
     const allowed = new Set([
       // a bar's track, whose fill is the bar: nothing is behind it to cut
       '.r-spec-bar-track', '.r-spec-bullet-whole',
+      // the import bar's track, the same case: it clips its own rounded fill
+      // and there is no figure underneath it (2026-09-19)
+      '.r-bar',
       // the grey completion, one line under the input
       '.r-ghost',
     ]);

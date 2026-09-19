@@ -67,15 +67,40 @@ export interface ImportSummary {
   notices: ImportNotice[];
 }
 
-export const uploadExport = async (kind: ImportKind, file: File): Promise<ImportResult> => {
+/**
+ * Send one export.
+ *
+ * `onSent` is the bytes that have LEFT THIS BROWSER, as a fraction — the only
+ * part of an import a browser can honestly measure. What happens after the
+ * last byte (parse, resolve, upsert, converge, all in one transaction) is the
+ * server's, and it reports no progress, so the page says "reading" for that
+ * part rather than inventing a percentage for it. A transfer export is
+ * several megabytes, so the sending half is worth drawing.
+ */
+export const uploadExport = async (
+  kind: ImportKind, file: File, onSent?: (fraction: number) => void,
+): Promise<ImportResult> => {
   const body = new FormData();
   body.append('file', file);
-  const { data } = await axios.post<ImportResult>(`${API_BASE}/${kind}`, body);
+  const { data } = await axios.post<ImportResult>(`${API_BASE}/${kind}`, body, {
+    onUploadProgress: onSent
+      ? (e) => onSent(e.total ? Math.min(1, e.loaded / e.total) : 0)
+      : undefined,
+  });
   return data;
 };
 
-export const listImports = async (): Promise<ImportSummary[]> => {
-  const { data } = await axios.get<ImportSummary[]>(API_BASE);
+/**
+ * The ledger, newest first. With a kind, only that kind's imports.
+ *
+ * The owner, 2026-09-19: "it shouldnt show all imports in all import pages it
+ * should be show past imports per tab". A products import under the orders tab
+ * is an answer to a question nobody asked there.
+ */
+export const listImports = async (kind?: ImportKind): Promise<ImportSummary[]> => {
+  const { data } = await axios.get<ImportSummary[]>(
+    API_BASE, kind ? { params: { kind } } : undefined,
+  );
   return data;
 };
 

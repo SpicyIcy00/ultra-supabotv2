@@ -18,10 +18,11 @@
  * list of pages, and dressing it as tiles would be the same mistake in the
  * other direction.
  */
-import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, type ReactNode } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useBob } from '../hooks/useBob';
+import { PAGES } from '../constants/pages';
 import { listApprovals } from '../services/workflowsApi';
 import { Rail } from './Rail';
 import './room.css';
@@ -29,6 +30,7 @@ import './room.css';
 export function RoomShell({ children }: { children: ReactNode }) {
   const bob = useBob();
   const navigate = useNavigate();
+  const location = useLocation();
   // The same read the board's rail makes, for the same reason: a count is a
   // claim about the world, so it is drawn from a result or not at all.
   const approvals = useQuery({
@@ -46,8 +48,14 @@ export function RoomShell({ children }: { children: ReactNode }) {
       <main className="r-main r-main--list">
         <div className="r-column">{children}</div>
       </main>
+      <AskBar from={screenName(location.pathname)} />
     </div>
   );
+}
+
+/** What this screen is called, for the line's placeholder and for Bob. */
+function screenName(path: string): string {
+  return PAGES.find((page) => page.path === path)?.label ?? 'this screen';
 }
 
 /**
@@ -68,5 +76,60 @@ export function RoomHead({ title, says, aside }: {
       </div>
       {says && <p className="r-note" style={{ marginTop: 8 }}>{says}</p>}
     </header>
+  );
+}
+
+/**
+ * THE LINE, ON EVERY SCREEN (the owner, 2026-09-19: "the text bar should be
+ * global same spot everypage").
+ *
+ * UI rule 1 says Bob is on every page, not a page you navigate to. He was not:
+ * the composer lived in the Room, so on Needs you, Kept, Systems or the
+ * StoreHub exports there was nowhere to say anything, and the way to ask was
+ * to leave the screen first.
+ *
+ * THIS IS NOT A SECOND COMPOSER. It is one line with no chips, no mentions and
+ * no voice, because none of those have anything to travel with here — nothing
+ * on these screens is picked. It uses `.r-line-wrap` / `.r-compose` / `.r-line`,
+ * the Room's own classes, so it is the same shape in the same place: fixed at
+ * the bottom, 840 centred, sliding with the rail.
+ *
+ * ASKING TAKES YOU TO THE ANSWER. The question goes to the same `ask` the Room
+ * uses, carrying THIS SCREEN as context (rule 1: he receives that page), and
+ * the board opens, because that is where an answer is drawn. A question asked
+ * into a screen with no room for the reply would be a question with nowhere to
+ * land.
+ */
+function AskBar({ from }: { from: string }) {
+  const bob = useBob();
+  const navigate = useNavigate();
+  const [draft, setDraft] = useState('');
+
+  const send = () => {
+    const question = draft.trim();
+    if (!question || bob.busy) return;
+    setDraft('');
+    // Not awaited: the board is where the turn is drawn, and it is already
+    // subscribed to the same stream.
+    void bob.ask(question, { pageContext: from });
+    navigate('/bob');
+  };
+
+  return (
+    <div className="r-line-wrap">
+      <div className="r-compose">
+        <div className="r-line">
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } }}
+            placeholder={bob.busy ? 'Bob is working…' : `ask about ${from.toLowerCase()}`}
+            aria-label="Ask Bob"
+          />
+          <button type="button" className="r-send" onClick={send}
+                  disabled={!draft.trim() || bob.busy} aria-label="Ask">↑</button>
+        </div>
+      </div>
+    </div>
   );
 }

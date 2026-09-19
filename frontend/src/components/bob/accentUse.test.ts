@@ -179,6 +179,27 @@ const IDENTITY_ALLOWED: Record<string, string> = {
   'room.css': 'declares the eight slots and --hue; draws the swatch and the opened object rule',
 };
 
+/* ----------------------------------------------- the outcome pair ----
+ *
+ * A THIRD FAMILY, ADDED 2026-09-19 at the owner's word: "it needs to be clear
+ * its processing with a bar and green if it went through and red if it
+ * failed". Nothing in the app could say that. The accent could not — it means
+ * "needs you", and a finished upload needs nobody — and `--up` / `--down`
+ * could not, because they mean a direction a tool MEASURED and an import
+ * landing is not a measurement.
+ *
+ * So `--landed` and `--refused` exist, and they are bounded the same way the
+ * other two families are: they may appear only where an action the PERSON
+ * took has an outcome they are waiting on. Not on a figure, not on a notice,
+ * not on a state of the world. Anywhere else is a third meaning for green.
+ */
+const OUTCOME = /var\(\s*--(landed|refused)\s*\)|--landed|--refused/;
+
+const OUTCOME_ALLOWED: Record<string, string> = {
+  'room.css': 'defines the pair, and draws the bar and the band that read it',
+  'StorehubImportsPage.tsx': 'the only place a person hands the app a file and waits',
+};
+
 /** Comments out, so a token NAMED in a docstring is not a token USED. */
 function noComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -238,6 +259,34 @@ describe('UI rule 5 — one colour means "needs you"', () => {
         `is an approval. Either use navy/slate, or add the file to ALLOWED with ` +
         `a reason.`,
     ).toEqual([]);
+  });
+
+  it('keeps the outcome pair to where a person is waiting on their own action', () => {
+    const offenders: string[] = [];
+    for (const [dir, files] of DIRS()) {
+      for (const name of files) {
+        const source = noComments(readFileSync(join(dir, name), 'utf8'));
+        if (!OUTCOME.test(source)) continue;
+        if (!(name in OUTCOME_ALLOWED)) offenders.push(name);
+      }
+    }
+    expect(
+      offenders,
+      `These files paint with --landed or --refused. Those two say what happened ` +
+        `to something the PERSON just did. A figure, a notice or a state of the ` +
+        `world is not that; use ink and position, or add the file to ` +
+        `OUTCOME_ALLOWED with a reason.`,
+    ).toEqual([]);
+  });
+
+  it('does not let the outcome pair borrow the accent or a data colour', () => {
+    const css = readFileSync(join(ROOM_DIR, 'room.css'), 'utf8');
+    // The pair is DEFINED, not aliased: --landed must not be var(--up) and
+    // --refused must not be var(--down) or var(--accent), or the separation
+    // this family exists for is a comment rather than a fact.
+    for (const line of css.split(/\r?\n/).filter((l) => /--(landed|refused):/.test(l))) {
+      expect(line).not.toMatch(/var\(\s*--(up|down|accent|flat|bob)\s*\)/);
+    }
   });
 
   it('is not used by a caveat, on any surface', () => {

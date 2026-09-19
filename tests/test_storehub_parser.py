@@ -630,3 +630,40 @@ def test_closed_transfers_still_parse_and_attribute_to_macopa():
     assert header["target_store_id"] == "67612230a740d90007464e26"      # Magnolia
     assert result.counters["unresolved_locations"] == 0
     assert header["received_date"].date().isoformat() == "2026-06-24"
+
+
+def test_a_byte_order_mark_does_not_refuse_a_good_export():
+    """
+    THE 2026-09-19 BREAKAGE. StoreHub began writing its exports with a UTF-8
+    BOM, so the first header cell arrived as "\ufeffP.O ID" and BOTH the orders
+    and the transfers export were refused, each with a column complaint naming a
+    column that was there all along. The owner saw the refusal twice and said
+    "its not working".
+
+    Held for both document kinds, because the mark is a fact about the FILE and
+    any kind can arrive carrying one.
+    """
+    mark = "﻿".encode("utf-8")
+
+    po = _po(
+        '"PO0710","09/02/2026 16:34","09/02/2026","09/02/2026 16:36","Dried Fruits DF001",'
+        '"(6) Aji Ichiban  OPUS","","","","","","","","","","10.00","Completed",'
+        '"","Tan Daniel","","","Tan Daniel"',
+        '"PO0710","09/02/2026 16:34","09/02/2026","09/02/2026 16:36","Dried Fruits DF001",'
+        '"(6) Aji Ichiban  OPUS","1","G35 sampaloc 1g","G35","","per gram","10","10","1.00",'
+        '"10.00","","Completed","","Tan Daniel","","","Tan Daniel"',
+    )
+    st = _st(
+        '"ST2993","09/02/2026 06:58","09/02/2026 07:00","09/02/2026 07:00","AJI MACOPA",'
+        '"AJI BARN","","","","","","","","","90.00","Completed","Atay Arjel","","","Atay Arjel"',
+        '"ST2993","09/02/2026 06:58","09/02/2026 07:00","09/02/2026 07:00","AJI MACOPA",'
+        '"AJI BARN","1","aji plum winter singapore","judyA7","","tradsnax","1","90.00","90.00",'
+        '"","Completed","Atay Arjel","","","Atay Arjel"',
+    )
+
+    for data, kind in ((po, "purchase_orders"), (st, "stock_transfers")):
+        clean = parse(data, kind)
+        marked = parse(mark + data, kind)
+        assert [d.external_id for d in marked.documents] ==                [d.external_id for d in clean.documents]
+        assert marked.counters == clean.counters
+        assert marked.notices == clean.notices

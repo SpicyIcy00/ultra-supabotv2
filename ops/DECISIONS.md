@@ -4757,3 +4757,19 @@ The owner's own 30 days (78 turns that read, 351 calls) asked the same reads pie
 **Not run against a database.** `y9z0a1b2c3d4` is the first new DDL since `x8y9z0a1b2c3` and there is no local Postgres, so it first runs on Railway at deploy. The importer is held instead by a recording session that compiles every statement it issues against the Postgres dialect.
 
 **Suites after:** pure 2,039 → 2,063, vitest 997 → 999, `tsc -b --force` clean. Unpushed.
+
+## 2026-09-19 · Three invisible bytes, and the four things the owner asked for after seeing it live
+
+**The owner uploaded all three exports to the live page and said "its not working i think products is the only one working."** He was right, and the cause was not the columns the refusal blamed.
+
+**STOREHUB NOW WRITES ITS EXPORTS WITH A UTF-8 BYTE ORDER MARK.** The first header cell arrived as `﻿P.O ID`, which is not `P.O ID`, so the header check refused both document exports and printed a complaint naming a column that was present all along. The products export happened not to carry one, which is why it alone worked and why the failure looked like a products-only success rather than a decoding bug. **The mark is stripped once, at decode, for every kind** (`storehub.text.strip_byte_order_mark`), not matched inside a column name — the mark is an encoding artifact of the FILE, and fixing it per column leaves the same trap for the next file that carries one. The owner's real `Purchase_Orders_09-19-2026.csv` now parses to 17 documents and 39 lines with the mark and without it, identically.
+
+**THE LINE IS ON EVERY SCREEN.** *"the text bar should be global same spot everypage".* UI rule 1 has said since the start that Bob is on every page and receives that page as context; he was on one. The room shell now renders one line — no chips, no mentions, no voice, because nothing on these screens is picked — inside `.r-line-wrap`, the board composer's own wrapper, so it is the same shape in the same fixed place. Asking names the screen it was asked from and opens the board, because an answer needs somewhere to land.
+
+**ONE TAB IS ONE RECORD.** *"it shouldnt show all imports in all import pages it should be show past imports per tab".* The ledger is read per kind from the server, with the kind in the query key, rather than filtered in the browser: the list is the server's answer to the question the tab asks.
+
+**EARLIER IS FOLDED AWAY, AND WHAT JUST HAPPENED IS LOUD.** *"it can just hide first and then when you upload i new file it needs to be clear its processing with a bar and green if it went through and red if it failed".* History is one line you can open. While a file goes up there is a bar: **sending has a real percentage** because bytes leaving the browser are countable, and **reading does not**, because the server parses, resolves and writes in one transaction and reports nothing — it says "reading" instead of drawing a number nobody computed.
+
+**A THIRD COLOUR FAMILY, BOUNDED LIKE THE OTHER TWO.** Green and red could not come from the accent, which means "needs you" and would stop meaning it, and could not come from `--up` / `--down`, which mean a direction a tool MEASURED — an import landing is not a measurement, and borrowing the rise colour would make "it worked" and "it went up" the same green. `--landed` and `--refused` are their own pair, defined not aliased, and `accentUse.test.ts` now holds them to the two files allowed to name them. The words beside the band say the same thing the colour does, so nothing depends on seeing the hue.
+
+**Suites after:** pure 2,063 → 2,064, vitest 999 → 1,006, `tsc -b --force` clean.

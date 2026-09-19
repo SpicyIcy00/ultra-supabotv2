@@ -1,11 +1,12 @@
 /**
  * /storehub-imports — StoreHub's exports, in (P3.h).
  *
- * WHY THIS PAGE EXISTS. Bob reads purchase orders and stock transfers from
- * tables that only a file fills. Until this page the only way to fill them
- * was a session with a superuser string, so the morning of 2026-09-19 said
- * purchase orders were 16 days old and transfers 80 — not because nothing had
- * happened, but because nobody who could export a file could also import it.
+ * WHY THIS PAGE EXISTS. Bob reads purchase orders, stock transfers and the
+ * supplier list from tables that only a file fills. Until this page the only
+ * way to fill them was a session with a superuser string, so the morning of
+ * 2026-09-19 said purchase orders were 16 days old and transfers 80 — not
+ * because nothing had happened, but because nobody who could export a file
+ * could also import it.
  *
  * WHAT IT DRAWS IS THE SERVER'S ANSWER, ALL OF IT. An import can succeed
  * completely while saying that six SKUs matched nothing or that a re-import
@@ -20,11 +21,27 @@
  * refused by name). Anything else — a lost connection, no access — is an
  * upload that did not happen, and says only that.
  *
+ * ONE TAB IS ONE RECORD (the owner, 2026-09-19: "it shouldnt show all imports
+ * in all import pages it should be show past imports per tab"). Choosing a
+ * kind changes what is uploaded AND what is listed; the ledger is read per
+ * kind from the server, not filtered in the browser, so the list is the
+ * server's answer to the question this tab asks.
+ *
+ * WHAT HAPPENED IS LOUD, WHAT HAPPENED BEFORE IS FOLDED AWAY (the owner, same
+ * day: "it can just hide first and then when you upload i new file it needs to
+ * be clear its processing with a bar and green if it went through and red if
+ * it failed"). So: a bar while it is going up, one outcome band when it lands,
+ * and the history closed behind a line you can open.
+ *
+ * THE OUTCOME COLOURS ARE NOT THE ACCENT AND NOT A MEASUREMENT (UI rule 5).
+ * `--landed` and `--refused` say what happened to the file this person just
+ * chose. They are not "needs you" — nothing is waiting on a decision — and
+ * they are not `--up` / `--down`, which mean a direction a tool measured.
+ * `accentUse.test.ts` holds all three families apart.
+ *
  * THE LEDGER IS A LOADED LIST (UI rule 8). Checking, failed and empty are
  * three renderings; "nothing imported yet" is a claim about the world and is
  * made only by a loaded, empty result.
- *
- * NO ACCENT ANYWHERE (UI rule 5). Importing a file is not an approval.
  *
  * Every count carries a time (UI rule 6): a ledger row its own `uploaded_at`,
  * and the result above it borrows the time of ITS ledger row once the list has
@@ -128,9 +145,39 @@ function Notices({ notices }: { notices: ImportNotice[] }) {
   );
 }
 
+/**
+ * The bar, in the four states a file can be in.
+ *
+ * `sending` is the only one with a real fraction, and it is the bytes that
+ * have left this browser. Once they all have, nothing measurable is
+ * happening in the browser at all — the server is parsing, resolving and
+ * writing, in one transaction, reporting nothing — so the bar goes to a
+ * moving stripe and says `reading`, which is true, instead of a number
+ * nobody computed.
+ */
+function Progress({ state, sent, says }: {
+  state: 'sending' | 'reading' | 'landed' | 'refused';
+  sent: number;
+  says: string;
+}) {
+  const pct = state === 'sending' ? Math.round(sent * 100) : 100;
+  return (
+    <div className="r-import-progress" data-state={state}>
+      <div className="r-bar" role="progressbar" aria-label={says}
+           aria-valuemin={0} aria-valuemax={100}
+           aria-valuenow={state === 'sending' ? pct : undefined}>
+        <span className="r-bar-fill" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="r-src" style={{ marginTop: 8 }}>
+        {says}{state === 'sending' ? ` · ${pct}%` : ''}
+      </p>
+    </div>
+  );
+}
+
 function Result({ result, at }: { result: ImportResult; at: string | null }) {
   return (
-    <section className="r-item" aria-label="This import">
+    <section className="r-item r-import-out" data-state="landed" aria-label="This import">
       <h2 className="r-item-name">{result.filename}</h2>
       <p className="r-src" style={{ marginTop: 6 }}>
         {labelOf(result.kind)} · import {result.import_id}
@@ -154,7 +201,7 @@ function LedgerRow({ row }: { row: ImportSummary }) {
     <li className="r-item">
       <h3 className="r-item-name" style={{ fontSize: 15 }}>{row.filename}</h3>
       <p className="r-src" style={{ marginTop: 6 }}>
-        {labelOf(row.kind)} · import {row.id} · {manila(row.uploaded_at) ?? 'no time recorded'}
+        import {row.id} · {manila(row.uploaded_at) ?? 'no time recorded'}
         {' · '}{row.uploaded_by}
       </p>
       {countLines(counts, row.kind).map((line) => (
@@ -177,23 +224,29 @@ export default function StorehubImportsPage() {
   const qc = useQueryClient();
   const [kind, setKind] = useState<ImportKind>('purchase_orders');
   const [over, setOver] = useState(false);
+  const [sent, setSent] = useState(0);
+  const [showEarlier, setShowEarlier] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
+  // PER TAB. The kind is in the key, so switching tabs is a different question
+  // with a different answer, and the orders tab never shows a products import.
   const ledger = useQuery({
-    queryKey: ['storehub-imports'],
-    queryFn: listImports,
+    queryKey: ['storehub-imports', kind],
+    queryFn: () => listImports(kind),
     staleTime: 30_000,
     retry: 1,
   });
 
   const upload = useMutation({
-    mutationFn: (file: File) => uploadExport(kind, file),
+    mutationFn: (file: File) => uploadExport(kind, file, setSent),
     // A refused file writes nothing, so only a success can change the ledger.
+    // The rail reads every kind, so its copy is invalidated too.
     onSuccess: () => qc.invalidateQueries({ queryKey: ['storehub-imports'] }),
   });
 
   const send = (file: File | undefined) => {
     if (!file || upload.isPending) return;
+    setSent(0);
     upload.mutate(file);
     if (input.current) input.current.value = '';   // the same file may be chosen again
   };
@@ -206,6 +259,8 @@ export default function StorehubImportsPage() {
 
   const chosen = KINDS.find((k) => k.kind === kind)!;
   const result = upload.data;
+  const refused = upload.isError && wasRefused(upload.error);
+  const filename = upload.variables?.name ?? 'the file';
   // The result's time is its ledger row's — the server's, once the list holds it.
   const resultAt = result
     ? manila(ledger.data?.find((row) => row.id === result.import_id)?.uploaded_at ?? null)
@@ -228,7 +283,12 @@ export default function StorehubImportsPage() {
             <button key={k.kind} type="button" role="radio" aria-checked={kind === k.kind}
                     className="r-import-kind" data-on={kind === k.kind ? 'yes' : 'no'}
                     disabled={upload.isPending}
-                    onClick={() => { setKind(k.kind); upload.reset(); }}>
+                    onClick={() => {
+                      if (k.kind === kind) return;
+                      setKind(k.kind);
+                      setShowEarlier(false);
+                      upload.reset();
+                    }}>
               {k.label}
             </button>
           ))}
@@ -245,19 +305,27 @@ export default function StorehubImportsPage() {
                  onChange={(e) => send(e.target.files?.[0])} />
           <span className="r-say" style={{ fontSize: 15 }}>
             {upload.isPending
-              ? `Importing ${upload.variables?.name ?? 'the file'}…`
+              ? `Importing ${filename}…`
               : `Drop the ${chosen.label.toLowerCase()} export here, or choose it`}
           </span>
           <span className="r-src">{chosen.file}</span>
         </label>
       </div>
 
+      {/* WHILE IT IS GOING. Sending is measured; reading is not, and does not
+          pretend to be. */}
+      {upload.isPending && (
+        <Progress state={sent < 1 ? 'sending' : 'reading'} sent={sent}
+                  says={sent < 1 ? `Sending ${filename}` : `Reading ${filename}`} />
+      )}
+
       {upload.isError && (
-        <section className="r-item" aria-label="This upload" role="alert">
-          <h2 className="r-item-name">
-            {wasRefused(upload.error)
-              ? `Refused — nothing was imported from ${upload.variables?.name ?? 'the file'}`
-              : `The upload did not go through`}
+        <section className="r-item r-import-out" data-state="refused"
+                 aria-label="This upload" role="alert">
+          <Progress state="refused" sent={1}
+                    says={refused ? 'Refused — nothing was imported' : 'The upload did not go through'} />
+          <h2 className="r-item-name" style={{ marginTop: 10 }}>
+            {refused ? `Refused — nothing was imported from ${filename}` : 'The upload did not go through'}
           </h2>
           {/* The server's sentence, verbatim: for a refusal it names the file
               to fetch instead, and a paraphrase would lose that. */}
@@ -269,20 +337,31 @@ export default function StorehubImportsPage() {
 
       {result && !upload.isError && <Result result={result} at={resultAt} />}
 
-      {/* No heading over nothing: when the only import there has ever been is
-          the one drawn above, there is no "earlier" to head. */}
-      {!(ledger.isSuccess && ledger.data.length > 0 && earlier.length === 0) && (
-        <h2 className="r-import-h">Earlier imports</h2>
+      {/* EARLIER IS FOLDED AWAY. One line saying how many there are, and the
+          list only if it is asked for. The count is a claim about the world,
+          so it is drawn from the loaded result and from nothing else. */}
+      {ledger.isPending && <p className="r-note" style={{ marginTop: 20 }}>Checking earlier imports…</p>}
+      {ledger.isError && (
+        <p className="r-say" style={{ fontSize: 15, marginTop: 20 }}>
+          Earlier {chosen.label.toLowerCase()} imports could not be read.
+        </p>
       )}
-      {ledger.isPending && <p className="r-note">Checking…</p>}
-      {ledger.isError && <p className="r-say" style={{ fontSize: 15 }}>The ledger could not be read.</p>}
-      {ledger.isSuccess && ledger.data.length === 0 && (
-        <p className="r-say" style={{ fontSize: 15 }}>No file has been imported yet.</p>
+      {ledger.isSuccess && earlier.length === 0 && !result && (
+        <p className="r-say" style={{ fontSize: 15, marginTop: 20 }}>
+          No {chosen.label.toLowerCase()} export has been imported yet.
+        </p>
       )}
-      {/* "No file yet" is a claim about the whole ledger, so it is made from
-          the whole loaded list, never from the list with this import left out. */}
       {ledger.isSuccess && earlier.length > 0 && (
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+        <div className="r-row-acts" style={{ marginTop: 20 }}>
+          <button type="button" className="r-act" aria-expanded={showEarlier}
+                  onClick={() => setShowEarlier((was) => !was)}>
+            {showEarlier ? 'Hide' : 'Show'} {earlier.length} earlier{' '}
+            {chosen.label.toLowerCase()} {earlier.length === 1 ? 'import' : 'imports'}
+          </button>
+        </div>
+      )}
+      {ledger.isSuccess && showEarlier && earlier.length > 0 && (
+        <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0 }}>
           {earlier.map((row) => <LedgerRow key={row.id} row={row} />)}
         </ul>
       )}

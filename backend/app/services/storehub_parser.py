@@ -48,7 +48,7 @@ from zoneinfo import ZoneInfo
 
 import yaml
 
-PARSER_VERSION = "1.1.0"
+PARSER_VERSION = "1.2.0"
 
 # The definitions file is shared with Bob's tools; the LOADER is not. The
 # backend runs with cwd=backend (see Procfile), so the repo root is not on
@@ -140,6 +140,29 @@ class ParsedFile:
 # ---------------------------------------------------------------------------
 # Scalar coercion
 # ---------------------------------------------------------------------------
+
+def _decode(data: bytes, defs: dict) -> str:
+    """
+    Bytes to text, with a leading byte order mark removed.
+
+    StoreHub started writing exports with a UTF-8 BOM. Nothing downstream can
+    see it — it is invisible in every editor — but it makes the first header
+    cell "\ufeffP.O ID", which does not match "P.O ID", so a perfectly good
+    export is refused. That happened to the owner's orders and transfers of
+    2026-09-19, and the refusal blamed the columns.
+
+    Stripped ONCE, here, for every kind. Not matched inside a column name: the
+    mark is an encoding artifact of the file, not a fact about its header, and
+    fixing it per column leaves the same trap for the next file.
+    """
+    text = data.decode(
+        req(defs, "storehub.text.decode"),
+        errors=req(defs, "storehub.text.decode_errors"),
+    )
+    if req(defs, "storehub.text.strip_byte_order_mark") and text.startswith("\ufeff"):
+        text = text[1:]
+    return text
+
 
 def _clean(value: Optional[str]) -> Optional[str]:
     """
@@ -349,10 +372,7 @@ def parse(data: bytes, kind: str, defs: Optional[dict] = None) -> ParsedFile:
     key_column = spec["document_key_column"]
     no_column = req(defs, "storehub.line_discriminator.column")
 
-    text = data.decode(
-        req(defs, "storehub.text.decode"),
-        errors=req(defs, "storehub.text.decode_errors"),
-    )
+    text = _decode(data, defs)
 
     # newline="" is required by the csv module so it can handle the newlines
     # embedded inside quoted Notes fields itself. Without it a note breaks a
@@ -753,10 +773,7 @@ def parse_products(data: bytes, defs: Optional[dict] = None) -> ParsedProducts:
     defs = defs or load_defs()
     spec = req(defs, "storehub.products")
 
-    text = data.decode(
-        req(defs, "storehub.text.decode"),
-        errors=req(defs, "storehub.text.decode_errors"),
-    )
+    text = _decode(data, defs)
     reader = csv.reader(io.StringIO(text, newline=""))
 
     try:

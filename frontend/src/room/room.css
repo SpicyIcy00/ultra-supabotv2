@@ -87,6 +87,19 @@
   --accent: 232, 176, 75;   /* #E8B04B */
   --on-accent: #17120a;
 
+  /* WHAT HAPPENED TO THE FILE YOU JUST CHOSE (the owner, 2026-09-19: "green if
+     it went through and red if it failed"). A THIRD family, apart from the
+     other two on purpose:
+       - not `--accent`, which means "needs you". A finished upload needs
+         nobody; the colour would stop meaning a decision is waiting.
+       - not `--up` / `--down`, which mean a direction a tool MEASURED. An
+         import landing is not a measurement, and painting it in the rise
+         colour would make "it worked" and "it went up" the same green.
+     Reachable only where an action the person took has an outcome, which
+     `accentUse.test.ts` holds to the files listed there. */
+  --landed: 47, 168, 116;
+  --refused: 232, 98, 75;
+
   --radius: 14px;
 
   /* THE COMPOSITION (P2S.1(b)) — the artifact's beside room, in numbers. Two
@@ -149,6 +162,7 @@
     --up: 26, 138, 90; --down: 200, 68, 43; --flat: 107, 112, 121;
     --bob: 16, 17, 19; --on-bob: #ffffff;
     --accent: 183, 121, 31; --on-accent: #ffffff;
+    --landed: 26, 138, 90; --refused: 200, 68, 43;
     --c-1: #2a78d6; --c-2: #eb6834; --c-3: #1baf7a; --c-4: #eda100;
     --c-5: #e87ba4; --c-6: #008300; --c-7: #4a3aa7; --c-8: #e34948;
     --g-cream: 247 248 248; --g-paper: 255 255 255; --g-line: 233 235 238;
@@ -166,6 +180,7 @@
   --up: 26, 138, 90; --down: 200, 68, 43; --flat: 107, 112, 121;
   --bob: 16, 17, 19; --on-bob: #ffffff;
   --accent: 183, 121, 31; --on-accent: #ffffff;
+  --landed: 26, 138, 90; --refused: 200, 68, 43;
   --c-1: #2a78d6; --c-2: #eb6834; --c-3: #1baf7a; --c-4: #eda100;
   --c-5: #e87ba4; --c-6: #008300; --c-7: #4a3aa7; --c-8: #e34948;
   --g-cream: 247 248 248; --g-paper: 255 255 255; --g-line: 233 235 238;
@@ -1361,6 +1376,39 @@
   font: 500 10px/1.2 var(--sans); letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--ink-3); margin: 34px 0 0;
 }
+
+/* THE BAR, AND THE BAND DOWN WHAT HAPPENED.
+   Sending has a width because bytes leaving the browser are countable. Reading
+   does not: the stripe moves so the page is visibly alive, and says "reading"
+   rather than drawing a number nobody computed. */
+.r-import-progress { margin-top: 18px; }
+.r-bar {
+  height: 4px; border-radius: 999px; background: var(--sunk); overflow: hidden;
+}
+.r-bar-fill {
+  display: block; height: 100%; border-radius: 999px;
+  background: var(--ink-3); transition: width 200ms var(--ease);
+}
+.r-import-progress[data-state='reading'] .r-bar-fill {
+  background: linear-gradient(90deg,
+    var(--sunk) 0%, var(--ink-3) 35%, var(--ink-3) 65%, var(--sunk) 100%);
+  background-size: 240% 100%;
+  animation: r-reading 1.15s linear infinite;
+}
+@keyframes r-reading { from { background-position: 100% 0; } to { background-position: -140% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .r-import-progress[data-state='reading'] .r-bar-fill { animation: none; background: var(--ink-3); }
+  .r-bar-fill { transition: none; }
+}
+.r-import-progress[data-state='landed'] .r-bar-fill { background: rgb(var(--landed)); }
+.r-import-progress[data-state='refused'] .r-bar-fill { background: rgb(var(--refused)); }
+
+/* The outcome band: a rule down the side of the block that says what happened.
+   Colour here is the ONLY thing these two tokens paint, and the words beside
+   it say the same thing, so nothing depends on seeing the hue. */
+.r-import-out { border-left: 3px solid var(--edge-strong); padding-left: 16px; }
+.r-import-out[data-state='landed'] { border-left-color: rgb(var(--landed)); }
+.r-import-out[data-state='refused'] { border-left-color: rgb(var(--refused)); }
 
 .r-newpage { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
 .r-field {

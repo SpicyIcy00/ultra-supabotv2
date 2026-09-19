@@ -3079,6 +3079,17 @@ storehub:
     flag_column: name_mojibake
     decode: "utf-8"
     decode_errors: "surrogateescape"
+
+    # A BYTE ORDER MARK IS STRIPPED BEFORE ANYTHING READS THE FILE.
+    # StoreHub began writing exports with a UTF-8 BOM: the owner's
+    # Purchase_Orders_09-19-2026.csv and Stock_Transfer_09-19-2026.csv of
+    # 2026-09-19 both start U+FEFF, and both were REFUSED because the first
+    # header cell read "﻿P.O ID" instead of "P.O ID" — a whole good export
+    # turned away by three invisible bytes. The mark is a file-encoding artifact
+    # and carries no data, so it is removed once, at decode, for every kind.
+    # It is NOT handled by matching it inside a column name: that would leave
+    # the same trap for the next file that carries one somewhere else.
+    strip_byte_order_mark: true
     requires_real_csv_parser: true
     embedded_newlines_in: ["Notes"]
 

@@ -28,8 +28,9 @@ const listImports = vi.fn();
 const uploadExport = vi.fn();
 vi.mock('../services/storehubImportsApi', async (original) => ({
   ...(await original<typeof import('../services/storehubImportsApi')>()),
-  listImports: () => listImports(),
-  uploadExport: (kind: string, file: File) => uploadExport(kind, file),
+  listImports: (kind?: string) => listImports(kind),
+  uploadExport: (kind: string, file: File, onSent?: (f: number) => void) =>
+    uploadExport(kind, file, onSent),
 }));
 afterEach(() => { cleanup(); listImports.mockReset(); uploadExport.mockReset(); });
 
@@ -85,11 +86,12 @@ describe('the StoreHub exports page', () => {
     listImports.mockResolvedValue([ledgerRow(FIRST, '2026-09-19T10:05:00+00:00')]);
     uploadExport.mockResolvedValue(FIRST);
     page();
-    await screen.findByText('No file has been imported yet.');
+    await screen.findByText('No purchase orders export has been imported yet.');
 
     choose('Purchase_Orders_09-19-2026.csv');
     const result = await screen.findByRole('region', { name: 'This import' });
-    expect(uploadExport).toHaveBeenCalledWith('purchase_orders', expect.any(File));
+    expect(uploadExport).toHaveBeenCalledWith(
+      'purchase_orders', expect.any(File), expect.any(Function));
 
     const text = result.textContent ?? '';
     expect(text).toContain('Documents: 57 inserted · 1 updated — 58 in the file');
@@ -103,16 +105,17 @@ describe('the StoreHub exports page', () => {
     await waitFor(() => expect(result.textContent).toContain('6:05'));
     // The ledger holds it now, so "no file yet" is gone — and the import is
     // drawn ONCE: it is not an earlier import, so nothing heads an empty list.
-    expect(screen.queryByText('No file has been imported yet.')).toBeNull();
+    expect(screen.queryByText('No purchase orders export has been imported yet.')).toBeNull();
     expect(screen.getAllByText('Purchase_Orders_09-19-2026.csv')).toHaveLength(1);
-    expect(screen.queryByText('Earlier imports')).toBeNull();
+    // Nothing EARLIER exists, so no line offers to open a list of nothing.
+    expect(screen.queryByText(/earlier purchase orders/)).toBeNull();
   });
 
   it('draws the same file again as what the server said: nothing inserted', async () => {
     listImports.mockResolvedValue([]);
     uploadExport.mockResolvedValue(AGAIN);
     page();
-    await screen.findByText('No file has been imported yet.');
+    await screen.findByText('No purchase orders export has been imported yet.');
     choose('Purchase_Orders_09-19-2026.csv');
     const result = await screen.findByRole('region', { name: 'This import' });
     expect(result.textContent).toContain('Documents: 0 inserted · 58 updated');
@@ -125,7 +128,10 @@ describe('the StoreHub exports page', () => {
     page();
     fireEvent.click(screen.getByRole('radio', { name: 'Stock transfers' }));
     choose('StockTransfers_FROM-ajiichiban.csv');
-    await waitFor(() => expect(uploadExport).toHaveBeenCalledWith('stock_transfers', expect.any(File)));
+    await waitFor(() => expect(uploadExport).toHaveBeenCalledWith(
+      'stock_transfers', expect.any(File), expect.any(Function)));
+    // ONE TAB IS ONE RECORD: the ledger is re-read for the chosen kind.
+    expect(listImports).toHaveBeenCalledWith('stock_transfers');
   });
 
   it('draws a refusal as a refusal, in the parser\'s own sentence', async () => {
@@ -158,28 +164,36 @@ describe('the StoreHub exports page', () => {
     let settle: (rows: ImportSummary[]) => void = () => {};
     listImports.mockReturnValue(new Promise<ImportSummary[]>((resolve) => { settle = resolve; }));
     page();
-    expect(screen.getByText('Checking…')).toBeTruthy();
-    expect(screen.queryByText('No file has been imported yet.')).toBeNull();
+    expect(screen.getByText('Checking earlier imports…')).toBeTruthy();
+    expect(screen.queryByText(/has been imported yet/)).toBeNull();
     settle([]);
-    await screen.findByText('No file has been imported yet.');
+    await screen.findByText('No purchase orders export has been imported yet.');
     cleanup();
 
     listImports.mockReset();
     listImports.mockRejectedValue(new Error('down'));
     page();
     // The page retries the ledger once before it says so; wait past that.
-    await screen.findByText('The ledger could not be read.', undefined, { timeout: 4000 });
-    expect(screen.queryByText('No file has been imported yet.')).toBeNull();
+    await screen.findByText('Earlier purchase orders imports could not be read.',
+                            undefined, { timeout: 4000 });
+    expect(screen.queryByText(/has been imported yet/)).toBeNull();
   });
 
-  it('lists earlier imports with who, when and the same lines the result uses', async () => {
+  it('folds earlier imports away until they are asked for', async () => {
     listImports.mockResolvedValue([
       ledgerRow(AGAIN, '2026-09-19T10:09:00+00:00'),
       ledgerRow(FIRST, '2026-09-19T10:05:00+00:00'),
     ]);
     page();
+    // The owner, 2026-09-19: "it can just hide first". One line, no list.
+    const opener = await screen.findByRole('button',
+      { name: 'Show 2 earlier purchase orders imports' });
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+
+    fireEvent.click(opener);
     const rows = await screen.findAllByRole('listitem');
     expect(rows).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Hide 2 earlier purchase orders imports' })).toBeTruthy();
     expect(rows[0].textContent).toContain('import 16');
     expect(rows[0].textContent).toContain('ice');
     expect(rows[0].textContent).toContain('6:09');
@@ -246,10 +260,45 @@ describe('the StoreHub exports page', () => {
     } as ImportSummary]);
     page();
 
+    fireEvent.click(screen.getByRole('radio', { name: 'Products' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Show 1 earlier products import' }));
+
     const row = await screen.findByText(PRODUCTS.filename);
     const item = row.closest('li')!;
     expect(item.textContent).toContain('Products: 4,810 matched in the catalogue');
     expect(item.textContent).not.toContain('Documents: 0 inserted');
+  });
+
+  it('draws a bar while it is going and an outcome when it lands', async () => {
+    listImports.mockResolvedValue([]);
+    let land: (r: ImportResult) => void = () => {};
+    uploadExport.mockImplementation((_k: string, _f: File, onSent: (n: number) => void) => {
+      onSent(0.4);
+      return new Promise<ImportResult>((resolve) => { land = resolve; });
+    });
+    page();
+    choose('Purchase_Orders_09-19-2026.csv');
+
+    // Sending is the one part a browser can measure, so it is the one part
+    // that shows a number.
+    const bar = await screen.findByRole('progressbar', { name: /Sending/ });
+    expect(bar.getAttribute('aria-valuenow')).toBe('40');
+    expect(screen.getByText(/Sending Purchase_Orders_09-19-2026.csv · 40%/)).toBeTruthy();
+
+    land(FIRST);
+    const result = await screen.findByRole('region', { name: 'This import' });
+    expect(result.getAttribute('data-state')).toBe('landed');
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
+  it('marks a refusal red and never green', async () => {
+    listImports.mockResolvedValue([]);
+    uploadExport.mockRejectedValue(refusal(422, 'not this file'));
+    page();
+    choose('Stock_Transfer_09-03-2026.csv');
+    const alert = await screen.findByRole('alert');
+    expect(alert.getAttribute('data-state')).toBe('refused');
+    expect(screen.queryByText(/data-state="landed"/)).toBeNull();
   });
 
 });
