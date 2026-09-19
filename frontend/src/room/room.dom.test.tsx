@@ -284,18 +284,29 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
     expect(at('grew').getAttribute('data-relation')).toBe('counter');
   });
 
-  it('says what a gathered point is to the one above it, in words', () => {
+  it('says what a gathered point is to the one above it, first and in words', () => {
+    // FIRST, NOT IN THE FOOT. For an hour on 2026-09-19 this asserted the words
+    // in `.r-src`, the smallest type on the page — the one word that turns two
+    // charts into an argument, filed with the chrome. The design says it
+    // before anything else the point says, and so does this.
     const { container } = draw([
       object('table', { key: 'fall', weight: 'lead' }),
       object('table', { key: 'grew', under: 'fall', relation: 'counter' }),
+      object('table', { key: 'cats', under: 'fall', relation: 'scale' }),
+      object('table', { key: 'stock', under: 'fall' }),
     ]);
-    const src = container
-      .querySelector<HTMLElement>('[data-figure="grew"] .r-src')?.textContent ?? '';
-    // The words, not the numbers: which read is which is `work.readIndexes`,
-    // and it has its own test. What this holds is that a gathered point SAYS
-    // it disagrees — an indent alone cannot, and that difference is the whole
-    // of what makes the page an argument rather than a pile.
-    expect(src).toMatch(/^read \d+ · against read \d+ · /);
+    const rel = (key: string) => container
+      .querySelector(`[data-figure="${key}"] .r-fig-rel`)?.textContent;
+    expect(rel('grew')).toBe('against that');
+    expect(rel('cats')).toBe('for scale');
+    expect(rel('stock')).toBe('why');
+    expect(rel('fall')).toBeUndefined();
+    // and the foot keeps only what is chrome
+    expect(container.querySelector('[data-figure="grew"] .r-src')?.textContent)
+      .not.toMatch(/against/);
+    // the label is the first thing in the point
+    const grew = container.querySelector('[data-figure="grew"] .r-fig-body') as HTMLElement;
+    expect(grew.firstElementChild?.className).toBe('r-fig-rel');
   });
 
   it('puts the figure the answer rests on first, at the size it needs (the log, 2026-09-17)', () => {
@@ -665,10 +676,10 @@ describe('a lead that needs no width does not span (frames, 2026-09-17)', () => 
     const first = container.querySelector('[data-figure]') as HTMLElement;
     expect(first.getAttribute('data-figure')).toBe('b');
     expect(first.getAttribute('data-lead')).toBe('yes');
-    // It still does not ASK for the width (`data-span` is `needsWidth`'s own
-    // answer, and a small ranking's is no); it is given it because it is a
-    // point, and held to `max-width` so it does not spend it.
-    expect(first.getAttribute('data-span')).toBe('yes');
+    // It does not ASK for the width (`data-span` is `needsWidth`'s own answer,
+    // and a small ranking's is no); it is given the row because it is a point,
+    // and held to `max-width` so it does not spend it.
+    expect(first.getAttribute('data-span')).toBeNull();
     expect(first.style.gridColumn).toBe('1 / -1');
   });
 });
@@ -704,6 +715,26 @@ describe('only what he wrote up is a section', () => {
   it('keeps every read when he wrote nothing up — then they ARE the answer', () => {
     const { container } = draw([machine('m1'), machine('m2')]);
     expect(container.querySelectorAll('[data-figure]')).toHaveLength(2);
+    expect(container.querySelector('.r-earlier-line')).toBeNull();
+  });
+
+  /**
+   * SHIPPED BROKEN FOR AN HOUR (2026-09-19). `thoughtsOf` moves a sentence that
+   * cites a read off the words column and under that read's chart. The fold
+   * took the chart, and the sentence went with it — out of the left column and
+   * onto nothing. Caught reading the code, so it is held here.
+   */
+  it('never folds a chart his own sentence landed on', () => {
+    const { container } = render(
+      <Board answers={[TURN]} board={[
+        { ...his('a'), turn: 0, touched: 0 } as unknown as BoardObject,
+        { ...machine('m1'), turn: 0, touched: 0 } as unknown as BoardObject,
+      ]} local={{}} focused={null} selection={[]} live={false} retuned={{}} on={ACTIONS()}
+             thoughts={new Map([[Number((machine('m1') as { seq?: number }).seq ?? 0),
+                                 ['He said this about that read.']]])} />,
+    );
+    expect(container.querySelector('[data-figure="m1"]')).not.toBeNull();
+    expect(container.textContent).toContain('He said this about that read.');
     expect(container.querySelector('.r-earlier-line')).toBeNull();
   });
 

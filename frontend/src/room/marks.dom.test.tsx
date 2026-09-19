@@ -89,6 +89,36 @@ describe('every block is framed the same way round', () => {
     expect(container.querySelector('.r-mk-title')?.textContent).toContain('the barn, not the shops');
   });
 
+  /**
+   * THE POINT AND WHAT HE THINKS OF IT ARE ONE PARAGRAPH (P3.m).
+   *
+   * They were two until 2026-09-19 — a 14px title over a 15px thought, so the
+   * point of a block was set smaller than its elaboration and every block read
+   * as a captioned chart. The owner: "it still just feels like here's this and
+   * here's this". In the design he approved, the claim is the bold opening of
+   * the paragraph and what he thinks runs on from it.
+   */
+  it('opens one paragraph with the claim and runs on into what he thinks', () => {
+    const { container } = draw({ kind: 'comparison', claim: 'OPUS gave back the most',
+                                 thought: 'The others barely moved.' }, COMPARED);
+    const say = container.querySelector('p.r-mk-say') as HTMLElement;
+    expect(say).not.toBeNull();
+    expect(say.querySelector('.r-mk-title')?.textContent).toBe('OPUS gave back the most');
+    expect(say.querySelector('.r-mk-thought')?.textContent).toBe('The others barely moved.');
+    // one paragraph, and the claim is closed before the thought begins
+    expect(say.textContent).toBe('OPUS gave back the most. The others barely moved.');
+    expect(container.querySelectorAll('p.r-mk-title, p.r-mk-thought')).toHaveLength(0);
+  });
+
+  it('does not double a full stop the claim already carries, or add one to a bare title', () => {
+    const asked = draw({ kind: 'comparison', claim: 'Is it the barn?',
+                         thought: 'It is.' }, COMPARED);
+    expect(asked.container.querySelector('p.r-mk-say')?.textContent).toBe('Is it the barn? It is.');
+    cleanup();
+    const bare = draw({ kind: 'comparison', claim: 'OPUS gave back the most' }, COMPARED);
+    expect(bare.container.querySelector('p.r-mk-say')?.textContent).toBe('OPUS gave back the most');
+  });
+
   it('still names its source when the read carried almost no meta', () => {
     const { container } = draw({ kind: 'table' }, [{ store: 'OPUS', value: 1 }],
                                { source_table: 'new_transactions', filters_applied: [] });

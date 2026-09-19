@@ -40,6 +40,7 @@ describe('everything Bob says is drawn in the full ink', () => {
     '.r-say--standing',       // the rest of what he said, under him
     '.r-caveat',              // his caveat
     '.r-next',                // what he'd do next
+    '.r-mk-say',              // the point and what he thinks of it, one paragraph
     '.r-mk-title',            // a chart's title
     '.r-mk-thought',          // a chart's thought
     '.r-doing-said',          // what he says while he works

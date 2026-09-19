@@ -5,21 +5,34 @@
  "blocks": [
   {
    "op": "put",
-   "key": "read-0",
-   "seq": 0,
+   "key": "read-1",
+   "seq": 1,
    "weight": "lead",
    "kind": "figure",
-   "claim": "Transactions held while the money did not"
+   "claim": "Rockwell took more money than the week before",
+   "thought": "One of the few shops going the other way this week, and not by a little."
   },
   {
    "op": "put",
-   "key": "read-1",
-   "seq": 1,
+   "key": "read-2",
+   "seq": 2,
    "weight": "supporting",
    "kind": "figure",
-   "under": "read-0",
+   "under": "read-1",
+   "relation": "evidence",
+   "claim": "Each visit was worth more",
+   "thought": "The basket grew faster than the takings did, so the rise is in what people bought, not in how many came."
+  },
+  {
+   "op": "put",
+   "key": "read-0",
+   "seq": 0,
+   "weight": "supporting",
+   "kind": "figure",
+   "under": "read-1",
    "relation": "counter",
-   "claim": "Net sales are up on the week, against that"
+   "claim": "Fewer people came through the door",
+   "thought": "Footfall slipped while the money rose — worth watching, because a basket can only carry a shop so far."
   }
  ],
  "default_blocks": [

@@ -114,34 +114,25 @@ export interface BoardProps {
  */
 const RELATION_SAID: Record<Relation, string> = {
   evidence: 'why',
-  counter: 'against',
-  scale: 'the scale of',
+  counter: 'against that',
+  scale: 'for scale',
 };
 
 /**
  * THE WHOLE OF A FIGURE'S OWN CHROME, in one string: `read 4`, or
- * `read 4 · why read 2`, or `read 3 · ruled out`.
+ * `read 3 · ruled out`.
  *
  * It used to be an uppercase banner over every block. The words are the same;
  * where they sit is the change (P3.k) — they ride the source line at the foot,
  * which was already drawn, so a block costs one line of chrome and not two.
  * The number stays because his prose's superscripts point at it.
  */
-function chromeFor(
-  o: BoardObject,
-  index: number | null,
-  out: boolean,
-  plan: { parentOf: Record<string, string>; relationOf: Record<string, Relation> },
-  byKey: Map<string, BoardObject>,
-  answers: AnswerTurn[],
-): string {
+function chromeFor(index: number | null, out: boolean): string {
+  // THE RELATION IS NOT HERE ANY MORE (P3.m). For an hour it was — `read 4 ·
+  // why read 2` — which put the one word that makes two charts an argument
+  // into the smallest type on the page. It is drawn above the point now
+  // (`.r-fig-rel`); this line keeps what is genuinely chrome.
   const parts = [`read${index !== null ? ` ${index}` : ''}`];
-  const up = plan.parentOf[o.key];
-  const parent = up ? byKey.get(up) : undefined;
-  if (parent) {
-    const n = readNumber(answers[parent.turn], parent);
-    parts.push(`${RELATION_SAID[plan.relationOf[o.key] ?? 'evidence']} read ${n ?? '—'}`);
-  }
   if (out) parts.push('ruled out');
   return parts.join(' · ');
 }
@@ -221,7 +212,17 @@ export function Board(p: BoardProps) {
   // A turn where he wrote nothing up keeps them all, because then they are
   // the whole answer and not the noise around it.
   const [unfolded, setUnfolded] = useState(false);
-  const unsaid = led.filter((o) => o.default && !o.claim && !o.thought);
+  // ...UNLESS HIS WORDS LANDED ON IT. `thoughtsOf` takes a sentence that cites a
+  // read off the words column and draws it under that read's chart. Folding
+  // the chart would take the sentence with it — out of the left column and
+  // onto nothing — so a default carrying his sentence is a point he made after
+  // all. (Shipped without this for an hour on 2026-09-19; caught reading the
+  // code, not by a test, so there is a test now.)
+  const spoken = (o: BoardObject) => {
+    const seq = o.seq ?? o.seqs?.[0];
+    return o.turn === newest && seq !== undefined && Boolean(p.thoughts?.get(seq)?.length);
+  };
+  const unsaid = led.filter((o) => o.default && !o.claim && !o.thought && !spoken(o));
   const said = led.filter((o) => !unsaid.includes(o));
   const shown = !said.length ? led : (unfolded ? [...said, ...unsaid] : said);
   const plan = gather(shown);
@@ -297,7 +298,6 @@ export function Board(p: BoardProps) {
   // The stem spans, which resets both columns to its foot, so its children
   // land side by side under it without anything having to group them.
   const placed = placeFigures(objects.map((o) => heights[o.key] ?? 0), columns, spans);
-  const byKey = new Map(objects.map((o) => [o.key, o] as const));
 
   // WHICH FIGURES HAVE ARRIVED. Keyed, so an answer that transforms a figure
   // in place does not make it arrive again.
@@ -339,7 +339,10 @@ export function Board(p: BoardProps) {
             data-col={placed[n]}
             data-arrived={arrived.has(o.key) ? 'yes' : 'no'}
             data-lead={leads[n] ? 'yes' : undefined}
-            data-span={spans[n] ? 'yes' : undefined}
+            // WHETHER IT NEEDS THE WIDTH, not whether it has it. Every point
+            // spans now, so `spans` would say yes to all of them and switch off
+            // the cap that stops a small figure spending 940px on one number.
+            data-span={wide[n] ? 'yes' : undefined}
             data-under={plan.parentOf[o.key]}
             data-relation={plan.relationOf[o.key]}
             data-weight={o.weight}
@@ -353,8 +356,11 @@ export function Board(p: BoardProps) {
                      gridRowEnd: `span ${Math.max(1, h + (plan.parentOf[o.key] ? CHILD_GAP : FIGURE_GAP))}` }}
           >
             <div className="r-fig-body">
+              {plan.parentOf[o.key] && (
+                <p className="r-fig-rel">{RELATION_SAID[plan.relationOf[o.key] ?? 'evidence']}</p>
+              )}
               <Piece
-                chrome={chromeFor(o, index, out, plan, byKey, p.answers)}
+                chrome={chromeFor(index, out)}
                 order={order}
                 o={o}
                 turn={turn}

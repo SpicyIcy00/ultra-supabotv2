@@ -736,7 +736,7 @@
 }
 /* THE FIGURE THE ANSWER RESTS ON (the log, 2026-09-17) spans the area and
    reads larger: its say line in his serif at the claim's own weight. */
-.r-fig--lead .r-mk-title { font-size: 19px; line-height: 1.4; color: var(--ink); max-width: 64ch; }
+.r-fig--lead .r-mk-say { font-size: 21px; line-height: 1.36; letter-spacing: -0.01em; max-width: 44ch; margin-bottom: 20px; }
 .r-fig--lead .r-fig-body { padding-bottom: 42px; }
 
 /* WHAT IS GATHERED UNDER A POINT (P2S.8). It sits in from the point it belongs
@@ -747,7 +747,16 @@
    this AGREES is said in words, in the label line above it. */
 .r-fig[data-under] { padding-left: 20px; border-left: 1px solid var(--edge); }
 .r-fig[data-under] .r-fig-body { padding-bottom: 16px; }
-.r-fig[data-under] .r-mk-title { font-size: 14.5px; line-height: 1.5; max-width: 52ch; }
+.r-fig[data-under] .r-mk-say { font-size: 15px; line-height: 1.5; max-width: 52ch; }
+/* WHAT IT IS TO THE POINT ABOVE IT, said first and in words: WHY, AGAINST THAT,
+   FOR SCALE. For an hour on 2026-09-19 this rode the source line at the foot,
+   in the smallest type on the page — the one word that turns two charts into an
+   argument, hidden in the chrome. In the design it is the first thing a
+   gathered point says, and it is again. A label, so it takes the frame's grey. */
+.r-fig-rel {
+  font: 500 10px/1.6 var(--mono); letter-spacing: 0.11em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 8px;
+}
 
 /* WEIGHT IS JUDGMENT MADE VISIBLE (metrics.yaml composition.weights) — and
    until P2S.8 nothing drew it: Bob set it on every block, the loop enforced one
@@ -755,7 +764,7 @@
    What is on screen because it is TRUE, not because it matters, is drawn
    smaller and narrower. NEVER greyer, never faded: emphasis adds, it never
    takes away (DECISIONS, 2026-09-18), and all of his prose stays --ink. */
-.r-fig[data-weight="quiet"] .r-mk-title { font-size: 14.5px; line-height: 1.5; max-width: 56ch; }
+.r-fig[data-weight="quiet"] .r-mk-say { font-size: 14.5px; line-height: 1.5; max-width: 56ch; }
 .r-fig[data-weight="quiet"] .r-fig-body { padding-bottom: 22px; }
 
 /* A CHART IS NOT CUT AT THE AREA'S EDGE, IT FADES (the log, 2026-09-17: "some
@@ -1597,16 +1606,26 @@ tr[data-lit="yes"] td { font-weight: 600; }
  * DIGITS ARE MONO AND TABULAR wherever a column of them can form, so figures
  * line up down the block instead of drifting with their glyph widths.
  */
-.r-mk-title {
-  font: 400 14px/1.45 var(--serif);
+/* THE POINT, THEN WHAT HE THINKS OF IT — ONE PARAGRAPH (P3.m).
+ *
+ * These were two paragraphs until 2026-09-19: a title at 14px over a thought at
+ * 15px. The point of a block was set SMALLER than its elaboration and at the
+ * same weight, so nothing said "this sentence is the finding", and every block
+ * read as a chart with a caption — the owner: "here's this and here's this".
+ * Now the claim is the bold opening of the paragraph and what he thinks runs on
+ * from it, the way an article opens a paragraph, and the WEIGHT he gave the
+ * block sets the size (below, by `.r-fig--lead` / `[data-under]` / quiet).
+ * All of it his prose, so all of it --ink (ink.test.ts).
+ */
+.r-mk-say {
+  font: 400 16.5px/1.5 var(--serif);
   color: var(--ink);
-  margin: 0 0 12px;
-  max-width: 60ch;
+  margin: 0 0 14px;
+  max-width: 62ch;
+  text-wrap: pretty;
 }
-.r-mk-thought {
-  font: 400 15px/1.5 var(--serif); color: var(--ink);
-  margin: -4px 0 14px; max-width: 62ch;
-}
+.r-mk-title { font-weight: 600; color: var(--ink); }
+.r-mk-thought { font-weight: 400; color: var(--ink); }
 .r-mk-sub {
   font: 400 10px/1.5 var(--mono);
   color: var(--ink-3);
