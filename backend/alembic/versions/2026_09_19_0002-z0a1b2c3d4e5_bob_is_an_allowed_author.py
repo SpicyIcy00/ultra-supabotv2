@@ -53,27 +53,38 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # The rows first: the constraints below refuse to be created while a row
-    # violates them, which is exactly the guard that should have existed.
+    # DROP, THEN UPDATE, THEN CREATE — and the order is the whole of this
+    # migration's first attempt failing in production.
+    #
+    # Updating first looked safer: create a constraint only once every row
+    # satisfies it. But the OLD constraints are what the rows are being moved
+    # out of. `ck_posts_actor` reads
+    #     (author = 'user' AND author_user IS NOT NULL) OR author = 'george'
+    # so setting author = 'bob' makes both branches false and Postgres refuses
+    # the UPDATE itself:
+    #     CheckViolation: new row for relation "posts" violates check
+    #     constraint "ck_posts_actor"
+    # The migration aborted, the schema check then refused to serve against a
+    # database one revision behind the code, and the app would not boot at all.
+    # An old rule cannot be satisfied by rows on their way to a new one.
+    op.drop_constraint('ck_posts_actor', 'posts', schema='george', type_='check')
+    op.drop_constraint('ck_posts_author', 'posts', schema='george', type_='check')
+    op.drop_constraint('ck_page_events_actor', 'page_events', schema='george',
+                       type_='check')
+
     op.execute("UPDATE george.posts SET author = 'bob' WHERE author = 'george'")
     op.execute("UPDATE george.page_events SET actor = 'bob' WHERE actor = 'george'")
 
-    op.drop_constraint('ck_posts_author', 'posts', schema='george', type_='check')
     op.create_check_constraint(
         'ck_posts_author', 'posts',
         "author IN ('bob', 'user')", schema='george',
     )
-
     # Bob has no account, so his posts carry no author_user; a person's must.
-    op.drop_constraint('ck_posts_actor', 'posts', schema='george', type_='check')
     op.create_check_constraint(
         'ck_posts_actor', 'posts',
         "(author = 'user' AND author_user IS NOT NULL) OR author = 'bob'",
         schema='george',
     )
-
-    op.drop_constraint('ck_page_events_actor', 'page_events', schema='george',
-                       type_='check')
     op.create_check_constraint(
         'ck_page_events_actor', 'page_events',
         "actor IN ('user', 'bob')", schema='george',
@@ -81,24 +92,24 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Same order, for the same reason, in reverse.
+    op.drop_constraint('ck_posts_actor', 'posts', schema='george', type_='check')
+    op.drop_constraint('ck_posts_author', 'posts', schema='george', type_='check')
+    op.drop_constraint('ck_page_events_actor', 'page_events', schema='george',
+                       type_='check')
+
     op.execute("UPDATE george.posts SET author = 'george' WHERE author = 'bob'")
     op.execute("UPDATE george.page_events SET actor = 'george' WHERE actor = 'bob'")
 
-    op.drop_constraint('ck_posts_author', 'posts', schema='george', type_='check')
     op.create_check_constraint(
         'ck_posts_author', 'posts',
         "author IN ('george', 'user')", schema='george',
     )
-
-    op.drop_constraint('ck_posts_actor', 'posts', schema='george', type_='check')
     op.create_check_constraint(
         'ck_posts_actor', 'posts',
         "(author = 'user' AND author_user IS NOT NULL) OR author = 'george'",
         schema='george',
     )
-
-    op.drop_constraint('ck_page_events_actor', 'page_events', schema='george',
-                       type_='check')
     op.create_check_constraint(
         'ck_page_events_actor', 'page_events',
         "actor IN ('user', 'george')", schema='george',
