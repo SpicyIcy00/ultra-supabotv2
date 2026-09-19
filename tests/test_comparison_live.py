@@ -142,9 +142,18 @@ def test_an_unknown_shop_in_the_list_refuses_by_that_name_and_draws_nothing():
     assert board_frame("get_sales", args, result, 0, DEFS) == []
 
 
-def test_the_comparison_words_are_the_definitions_and_the_shop_is_a_replay_scope():
-    # The two halves that make this a replay at all, restated against the live
-    # definitions the running process loaded.
-    assert SEL["comparison"]["replays_by_dimension"]["store"] == "store"
-    assert "compare these" in SEL["comparison"]["spoken"]
+def test_the_shop_is_a_replay_scope_and_is_identified_by_its_id():
+    """
+    THE `comparison` BLOCK IS GONE AND SO ARE THE TWO ASSERTIONS THAT READ IT.
+
+    This checked `selection.comparison.replays_by_dimension` and the words
+    "compare these" on the spoken shortcut. That shortcut was removed on
+    2026-09-15 — the log: *"compare" still did not compare, so the shortcut was
+    removed* — and the definitions no longer carry the block, so the test has
+    failed on a feature that was deliberately deleted ever since.
+
+    What survives is the half that is still true and still load-bearing: a
+    subject is carried by its ID, never by the label a row happened to show.
+    """
+    assert "comparison" not in SEL, "the shortcut is back; give it its own test"
     assert SEL["identity"]["store"] == "store_id"

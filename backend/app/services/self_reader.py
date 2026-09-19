@@ -28,6 +28,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services import belief_store, decisions
 
+
+def _stance_words() -> dict[str, str]:
+    """
+    What each stance is CALLED, from `judgment.stance_words`.
+
+    Read at call time like every other definition, and cached by the loader.
+    A stance the file does not name is absent here, so the surface draws the
+    key — visibly wrong, rather than quietly renamed by this module.
+    """
+    from tools._common import load_defs
+
+    words = (load_defs().get("judgment") or {}).get("stance_words") or {}
+    return {str(k): str(v) for k, v in words.items()}
+
 # What he believes is a short list by design — agent/beliefs.py caps what he
 # may form in a turn, and a view he holds about everything is a view about
 # nothing.
@@ -78,6 +92,11 @@ async def read_memory(session: AsyncSession, *, username: str) -> dict:
             "subject": b.get("subject"),
             "subject_kind": b.get("subject_kind"),
             "stance": b.get("stance"),
+            # WHAT THAT STANCE IS CALLED, from the definitions. The surface
+            # drew the key — `NEEDS_ATTENTION`, uppercased by CSS — because
+            # nothing carried the word. A stance with no word declared is left
+            # as its key rather than invented here.
+            "stance_said": _stance_words().get(str(b.get("stance") or "")),
             "claim": b.get("claim"),
             "held_since": b.get("held_since"),
             "last_checked": confirmed,

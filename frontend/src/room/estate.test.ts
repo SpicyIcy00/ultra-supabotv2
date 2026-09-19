@@ -4,8 +4,15 @@
  * Everything here is driven from a SERVED shape: the parts, their words and
  * their places all come from `/definitions/desk`, which is metrics.yaml. What
  * this module decides is only which part is on and what travels — and the one
- * guarantee worth more than the rest is that the default travels as NOTHING,
- * so a switch nobody touched cannot change an answer that was already right.
+ * guarantee worth more than the rest is that THE PILL AND THE SCOPE AGREE: if
+ * the switch says Aji Ichiban, the question was scoped to Aji Ichiban.
+ *
+ * That used to be guaranteed a different way: the default travelled as
+ * nothing, and the default was `all`. The owner moved the default to Aji
+ * Ichiban on 2026-09-19 ("default room should be aji ichiban not all"), and
+ * "the default" and "the part that narrows nothing" stopped being the same
+ * part. Reading the default would now draw his shops' pill over answers that
+ * had counted the vending business.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -18,9 +25,11 @@ const SHOPS = ['Rockwell', 'Fairview', 'Greenhills', 'North Edsa',
 const defs = {
   estate: {
     label: 'estate',
-    default: 'all',
+    default: 'aji_ichiban',
     parts: [
-      { key: 'all', label: 'All', says: null,
+      // THE ONE PART THAT NARROWS NOTHING, and it says so itself rather than
+      // being inferred from happening to be the default.
+      { key: 'all', label: 'All', says: null, everything: true,
         places: [...SHOPS, 'AJI BARN', 'AJI CMG'] },
       // ONE BUSINESS, ONE PILL. The shops and both warehouses, because a
       // warehouse is a place inside a business and a place is the selection's
@@ -37,14 +46,31 @@ const defs = {
 
 describe('the estate switch', () => {
   it('is on the definitions own default before anybody presses anything', () => {
-    expect(partOn(defs, null)?.key).toBe('all');
-    expect(pillsFor(defs, null).find((p) => p.on)?.key).toBe('all');
+    expect(partOn(defs, null)?.key).toBe('aji_ichiban');
+    expect(pillsFor(defs, null).find((p) => p.on)?.key).toBe('aji_ichiban');
   });
 
-  it('travels as nothing on the default, which is what every question meant', () => {
-    expect(estateFor(defs, null)).toBeUndefined();
+  it('travels as nothing only on the part that narrows nothing', () => {
     expect(estateFor(defs, 'all')).toBeUndefined();
     expect(scopeChip(defs, 'all')).toBeNull();
+  });
+
+  it('sends the default as a real scope, because the default now narrows', () => {
+    // The whole point of the change. Untouched, the board is on Aji Ichiban
+    // and the question carries Aji Ichiban — not silently everything.
+    expect(estateFor(defs, null)).toBe('aji_ichiban');
+    expect(scopeChip(defs, null)).toEqual({ key: 'aji_ichiban', label: 'Aji Ichiban' });
+  });
+
+  it('never lets the pill say one thing and the scope another', () => {
+    for (const picked of [null, 'all', 'aji_ichiban', 'vending', 'ffr']) {
+      const on = pillsFor(defs, picked).find((p) => p.on);
+      const travels = estateFor(defs, picked);
+      const part = partOn(defs, picked);
+      expect(on?.key).toBe(part?.key);
+      // Either the scope IS the lit pill, or the lit pill is the whole estate.
+      expect(travels ?? (part?.everything ? part.key : null)).toBe(part?.key);
+    }
   });
 
   it('travels as the part key once a business is picked', () => {
@@ -69,9 +95,9 @@ describe('the estate switch', () => {
   it('drops a picked part this build no longer declares rather than lighting it', () => {
     // Only across a deploy that removed a part. A pill lit for something the
     // server will refuse is worse than the switch appearing to reset.
-    expect(partOn(defs, 'ffr')?.key).toBe('all');
-    expect(estateFor(defs, 'ffr')).toBeUndefined();
-    expect(pillsFor(defs, 'ffr').filter((p) => p.on).map((p) => p.key)).toEqual(['all']);
+    expect(partOn(defs, 'ffr')?.key).toBe('aji_ichiban');
+    expect(estateFor(defs, 'ffr')).toBe('aji_ichiban');
+    expect(pillsFor(defs, 'ffr').filter((p) => p.on).map((p) => p.key)).toEqual(['aji_ichiban']);
   });
 
   it('is nothing at all until the definitions arrive', () => {

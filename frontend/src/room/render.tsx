@@ -167,7 +167,10 @@ export function Board(p: BoardProps) {
     const rows = rowsOf(call);
     if (!rows.length) return false;
     const mark = markFor(o, rows);
-    return needsWidth(mark, rows.length, tableShape(rows, call?.result?.meta ?? null).columns.length);
+    // The column NAMES too, so a table of four long headings takes the width
+    // instead of scrolling inside half of it.
+    const shown = tableShape(rows, call?.result?.meta ?? null).columns;
+    return needsWidth(mark, rows.length, shown.length, shown);
   });
   const columns = columnsFor(objects.length, width, objects.length === 1 && wide[0]);
   // ONE STORE ORDER: the first figure of this answer that lists stores sets it.
@@ -311,6 +314,35 @@ export function Board(p: BoardProps) {
   );
 }
 
+/** Which edge of the tip sits on the mark. */
+export type TipAnchor = 'start' | 'middle' | 'end';
+
+/**
+ * HOW FAR FROM AN EDGE A CENTRED TIP CAN STILL SIT.
+ *
+ * The tip is one line of mono and a name — the widest seen is about
+ * "Rockwell · 2026-08-10 · ₱199,949 · read Sep 18 16:58", ~46 characters at
+ * 11.5px, so ~260px, half of it 130. Rounded up, because being wrong here
+ * costs a tip that hangs slightly inside the column rather than one cut in
+ * half by it.
+ */
+const TIP_HALF = 150;
+
+/**
+ * Which edge of the tip to hang on the mark, given where the mark is.
+ *
+ * The figures area clips horizontally — it must, or a wide mark would spill
+ * into the words — so a tip centred on a mark near the left edge lost its
+ * first characters. The owner sent a screenshot of exactly that. Near an edge
+ * the tip hangs from that side instead; anywhere else it is centred, which is
+ * how the design draws it.
+ */
+export function anchorFor(x: number, width: number): TipAnchor {
+  if (x < TIP_HALF) return 'start';
+  if (width - x < TIP_HALF) return 'end';
+  return 'middle';
+}
+
 /**
  * TOUCHING A MARK (P2S.2(f)) — the design's tooltip: the exact figure, and
  * when it was read. Hover shows it; a tap pins it, and a second tap on the
@@ -322,17 +354,25 @@ export function Board(p: BoardProps) {
  * A tap on a mark is the mark's: it does not also open the figure behind it.
  */
 function useTouch() {
-  const [tip, setTip] = useState<{ text: string; read: string; x: number; y: number; pinned: boolean } | null>(null);
+  const [tip, setTip] = useState<
+    { text: string; read: string; x: number; y: number; anchor: TipAnchor; pinned: boolean }
+    | null>(null);
   // Placed in the board's own coordinates, so it scrolls with the figures and
   // no transformed ancestor can throw it off.
   const at = (el: Element, host: Element, pinned: boolean) => {
     const r = el.getBoundingClientRect();
     const h = host.getBoundingClientRect();
+    const x = r.left - h.left + r.width / 2;
     return {
       text: el.getAttribute('data-v') ?? '',
       read: el.closest('[data-read]')?.getAttribute('data-read') ?? '',
-      x: r.left - h.left + r.width / 2,
+      x,
       y: r.top - h.top,
+      // WHICH SIDE IT HANGS FROM, so it is never drawn outside the figures
+      // and clipped by them (the owner, 2026-09-19: "when hovering some are
+      // cut it should not"). Centred on the mark is the design's placement
+      // and stays the placement everywhere there is room for it.
+      anchor: anchorFor(x, h.width),
       pinned,
     };
   };
@@ -355,6 +395,7 @@ function useTouch() {
     },
     tip: tip && tip.text ? (
       <div className="r-tip" role="tooltip" data-pinned={tip.pinned ? 'yes' : 'no'}
+           data-anchor={tip.anchor}
            style={{ left: tip.x, top: tip.y }}>
         <b>{tip.text}</b>
         {/* UI rule 6: a figure without its time is a claim with no expiry, so

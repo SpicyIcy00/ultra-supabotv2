@@ -160,12 +160,41 @@ export function Working({ turn, live, status }: {
     return <p className={`r-work${status ? ' r-doing-line' : ''}`}>thinking…{clock}</p>;
   }
 
+  // ONE LINE AT A TIME (the owner, 2026-09-19: "i dont need to see it reading
+  // maybe a more cleaner way like 1 reading sales with progess and secounds
+  // and then done and then another … just do whats optimal and ideal and
+  // simple").
+  //
+  // Eighteen lines of "read sales 7 rows 192ms" is a log, and a log is a thing
+  // you read afterwards, not a thing you watch. What a person waiting needs is
+  // what is happening NOW and how far along it is. So: the read running, or
+  // the last to land if none is; and one quiet count of what is behind it.
+  //
+  // NOTHING IS HIDDEN THAT ISN'T SOMEWHERE ELSE. Every read's rows, timing and
+  // receipts stay on the figure it produced — UI rule 3, every number is
+  // inspectable where it is drawn — and the count below is a loaded fact, not
+  // a summary anybody wrote.
+  const running = steps.filter((s) => s.state === 'running');
+  const now = running.length ? running[running.length - 1] : steps[steps.length - 1];
+  // A REFUSAL IS NOT PART OF THE LOG HE ASKED TO LOSE. A read that declined is
+  // the tool saying it will not produce a misleading number, in its own
+  // sentence, and it stays on screen however many reads have gone past it.
+  // What goes is the successful ones: "read sales 7 rows 192ms", eighteen
+  // times, which says nothing a person waiting needs.
+  const shown = steps.filter((s) => s === now || s.state === 'declined');
+  const behind = steps.filter((s) => !shown.includes(s) && s.state !== 'running').length;
+
   return (
     <div className="r-work-trail">
-      {steps.map((step) => (
+      {shown.map((step) => (
         <StepLine key={step.key} step={step} open={open === step.key}
                   onToggle={() => setOpen(open === step.key ? null : step.key)} />
       ))}
+      {behind > 0 && (
+        <p className="r-work r-work--done r-work--behind">
+          {behind === 1 ? '1 read done' : `${behind} reads done`}
+        </p>
+      )}
       {/* At the FOOT of the trail, not beside the running line: a call that
           lands moves that line's words, and a number that jumped with it
           would read as part of the call rather than as the wait. */}

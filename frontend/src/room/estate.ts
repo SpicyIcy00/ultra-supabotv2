@@ -78,22 +78,27 @@ export function pillsFor(defs: DeskDefinitions | null | undefined,
 }
 
 /**
- * WHAT TRAVELS ON THE QUESTION. The part's key, or nothing at all on the
- * default — which is the whole guarantee that this feature cannot change an
- * answer nobody asked it to change.
+ * WHAT TRAVELS ON THE QUESTION: the part's key, unless the part is the whole
+ * estate, which is what a question means untouched.
+ *
+ * IT USED TO BE "unless the part is the default", and those were the same
+ * sentence only while the default narrowed nothing. The owner moved the
+ * default to Aji Ichiban on 2026-09-19; had this kept reading the default, the
+ * board would have drawn his shops' pill over answers that had counted the
+ * vending business — the switch saying one thing and the figures another.
  */
 export function estateFor(defs: DeskDefinitions | null | undefined,
                           picked: string | null): string | undefined {
   const estate = estateOf(defs);
   const part = partOn(defs, picked);
-  if (!estate || !part || part.key === estate.default) return undefined;
+  if (!estate || !part || part.everything) return undefined;
   return part.key;
 }
 
 /**
  * The chip above the line, when the question is carrying a scope — the same
- * thing the pill says, where the rest of what travels is drawn. Null on the
- * default, because nothing is travelling.
+ * thing the pill says, where the rest of what travels is drawn. Null only on
+ * the whole estate, because only then is nothing travelling.
  */
 export function scopeChip(defs: DeskDefinitions | null | undefined,
                           picked: string | null): { key: string; label: string } | null {

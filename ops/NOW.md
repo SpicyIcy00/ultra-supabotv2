@@ -3734,7 +3734,7 @@ prompt, is **Bob, The Build Plan** in §6.
 Run from the repo root. The interpreter is `.venv\Scripts\python.exe`; a system
 `python` cannot import the backend (pinned SQLAlchemy).
 
-    .venv\Scripts\python.exe ops/verify_integration.py pure     # 2,106 here (P3.h + products + the BOM fix + the supplier read + the lost-answer fixes, 2026-09-19); CI not re-counted
+    .venv\Scripts\python.exe ops/verify_integration.py pure     # 2,112 here (P3.h + products + the fixes of 2026-09-19); CI not re-counted
 
 **THE PURE COUNT IS FOUR HIGHER HERE THAN IN CI, and that is not a fault.**
 `tests/test_eval_report_contract.py` parametrizes over every
@@ -3775,7 +3775,7 @@ with each other, across builds with `--since`.        # the weekly sweep
     .venv\Scripts\python.exe ops/turn_clock.py --days 7        # the clock (P0.3)
     .venv\Scripts\python.exe ops/turn_clock.py --days 30 --user-only
     cd frontend && npm ci                                       # after any merge
-    cd frontend && npx vitest run                               # 1,006 expected (P3.h + products + the BOM fix, 2026-09-19)
+    cd frontend && npx vitest run                               # 1,026 expected (P3.h + products + the fixes of 2026-09-19)
     .venv\Scripts\python.exe ops/record_vocab_reads.py --matrix  # the shapes' recorded reads (P2S.3)
     .venv\Scripts\python.exe ops/frames.py                      # the room beside the design, headless Chrome
     .venv\Scripts\python.exe ops/frames.py --scenes draw memory --out verification/frames/p2s2

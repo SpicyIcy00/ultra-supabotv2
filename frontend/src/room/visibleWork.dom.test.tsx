@@ -73,25 +73,47 @@ const WHY: AnswerTurn = {
 } as AnswerTurn;
 
 describe('the steps, while he works', () => {
-  it('shows every call with what it is, what came back and how long it took', () => {
+  it('shows the one call happening now, with what it is and how long it took', () => {
+    // ONE LINE, NOT A LOG (the owner, 2026-09-19: "i dont need to see it
+    // reading maybe a more cleaner way like 1 reading sales with progess and
+    // secounds and then done and then another"). Eighteen lines of
+    // "read sales 7 rows 192ms" is something you read afterwards; what a
+    // person waiting needs is what is happening now.
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-09-14T08:00:00Z'));
     const { container } = render(<Working turn={WHY} live />);
     const lines = Array.from(container.querySelectorAll('.r-work'))
       .map((e) => e.textContent ?? '');
-    // Four reads, each with its own clock off its own frame.
-    expect(lines[0]).toContain('read sales');
-    expect(lines[0]).toContain('412ms');
-    expect(lines[3]).toContain('counted stock');
-    expect(lines[3]).toContain('155ms');
-    expect(lines.filter((l) => /\d+ms/.test(l))).toHaveLength(5);
+    // The last step of this turn, and its own clock off its own frame.
+    expect(lines[0]).toContain('arranged the workspace');
+    expect(lines[0]).toContain('9ms');
+    // The reads behind it are counted, not listed.
+    expect(lines.join(' ')).toMatch(/\d+ reads done/);
+    expect(lines.filter((l) => /\d+ms/.test(l))).toHaveLength(1);
     vi.useRealTimers();
   });
 
-  it('opens one step on its own receipts, and closes it again', () => {
+  it('shows the call still running in preference to one that landed', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-09-14T08:00:00Z'));
-    const { container } = render(<Working turn={WHY} live />);
+    const mid = {
+      ...WHY,
+      toolCalls: [...WHY.toolCalls.slice(0, 2),
+                  { ...WHY.toolCalls[2], result: undefined }],
+    } as AnswerTurn;
+    const { container } = render(<Working turn={mid} live />);
+    const first = container.querySelector('.r-work')?.textContent ?? '';
+    // A running call ends in an ellipsis and carries no duration of its own.
+    expect(first).toMatch(/…/);
+    expect(first).not.toMatch(/\d+ms/);
+    vi.useRealTimers();
+  });
+
+  it('opens the line on its own receipts, and closes it again', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-14T08:00:00Z'));
+    const one = { ...WHY, toolCalls: WHY.toolCalls.slice(0, 1) } as AnswerTurn;
+    const { container } = render(<Working turn={one} live />);
     const step = container.querySelectorAll('.r-work--step')[0];
     fireEvent.click(step);
     expect(container.querySelector('.r-work-receipts')?.textContent)

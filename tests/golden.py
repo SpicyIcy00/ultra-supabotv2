@@ -75,6 +75,15 @@ VENDING_ALL = ("2025-06-01", "2026-09-01")
 SNAPSHOT_DAY = "2026-08-31"
 # Two closed weeks, for previous_period: 24-31 Aug against 17-24 Aug.
 WEEK_AUG_24 = ("2026-08-24", "2026-08-31")
+# THE SHOP'S NAME IS READ FROM THE DEFINITIONS, NOT TYPED.
+#
+# These four tests filtered on "Shang" and stopped resolving on 2026-09-10 when
+# the shop's display name became "Shangri-La" — four red tests for a rename,
+# with the tools working perfectly. `filters.store` matches a display name, and
+# a display name is a thing metrics.yaml owns.
+SHANG = next(s["display_name"] for s in load_defs()["stores"]["active_retail"]
+             if s["name"] == "Ajiichiban SHANG")
+
 # Shang first traded on 2026-04-05, so the week of 30 Mar has a current
 # figure and the week before it has none — the no-baseline edge, closed.
 SHANG_FIRST_WEEK = ("2026-03-30", "2026-04-06")
@@ -1058,7 +1067,7 @@ def test_no_baseline_is_reported_not_invented():
     so SUM is NULL: the current figure stands alone, change_pct is null, and
     a notice says which subject and why. Nothing is coerced to zero.
     """
-    r = sales.get_sales([], SHANG_FIRST_WEEK, filters={"store": "Shang"},
+    r = sales.get_sales([], SHANG_FIRST_WEEK, filters={"store": SHANG},
                         metric="net_sales", compare_to="previous_period")
     row = r["rows"][0]
     assert row["value"] == pytest.approx(41242.0, abs=0.01)
@@ -1071,7 +1080,7 @@ def test_no_baseline_is_reported_not_invented():
 
 def test_zero_baseline_keeps_the_count_and_nulls_the_percentage():
     """COUNT over the same empty week is 0, not NULL — a different status."""
-    r = sales.get_sales([], SHANG_FIRST_WEEK, filters={"store": "Shang"},
+    r = sales.get_sales([], SHANG_FIRST_WEEK, filters={"store": SHANG},
                         metric="transaction_count", compare_to="previous_period")
     row = r["rows"][0]
     assert row["value"] == 93 and row["baseline"] == 0
@@ -1082,7 +1091,7 @@ def test_zero_baseline_keeps_the_count_and_nulls_the_percentage():
 
 def test_an_undefined_ratio_is_null_with_a_notice():
     """ATP over a week with no transactions: NULL, and it says so. Never zero."""
-    r = sales.get_sales([], ("2026-03-23", "2026-03-30"), filters={"store": "Shang"},
+    r = sales.get_sales([], ("2026-03-23", "2026-03-30"), filters={"store": SHANG},
                         metric="average_transaction_value")
     assert r["rows"] == [{"value": None}]
     assert r["meta"]["notice"]["kind"] == "ratio_undefined"
@@ -1094,10 +1103,10 @@ def test_a_store_per_row_comparison_reports_the_one_with_no_baseline():
     r = sales.get_sales("store", SHANG_FIRST_WEEK, metric="net_sales",
                         compare_to="previous_period")
     by_store = {x["store"]: x["baseline_status"] for x in r["rows"]}
-    assert by_store["Shang"] == "no_baseline"
+    assert by_store[SHANG] == "no_baseline"
     assert sum(1 for st in by_store.values() if st == "ok") == 6
     note = next(n for n in _notices(r) if n["kind"] == "comparison_incomplete")
-    assert "Shang" in note["message"]
+    assert SHANG in note["message"]
 
 
 def test_a_preset_comparison_anchors_both_windows_on_the_same_day():

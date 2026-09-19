@@ -273,15 +273,34 @@ def test_the_store_groups_are_a_definition_and_cover_every_group_present():
 # ------------------------------------------------ the sentence Bob is told
 
 
-def test_the_default_says_nothing_at_all():
+#: The one part that narrows nothing. NOT "whichever part is the default" —
+#: those were the same part until 2026-09-19, when the owner moved the default
+#: to Aji Ichiban ("default room should be aji ichiban not all"). Reading the
+#: default after that would have told Bob nothing about a scope the board was
+#: visibly showing.
+EVERYTHING = next(p["key"] for p in ESTATE["parts"] if p.get("everything"))
+
+
+def test_the_part_that_narrows_nothing_says_nothing_at_all():
     """
     THE WHOLE GUARANTEE THAT THIS FEATURE CANNOT BREAK AN ANSWER THAT WAS
-    ALREADY RIGHT. `all` is what every question has meant until today, so a
-    question asked on it must produce the identical request.
+    ALREADY RIGHT. `all` is what every question has meant, so a question asked
+    on it must produce the identical request.
     """
-    assert surface._estate_words(ESTATE["default"], DEFS) is None
-    assert surface.desk_sentence({"estate": ESTATE["default"]}, DEFS) is None
+    assert surface._estate_words(EVERYTHING, DEFS) is None
+    assert surface.desk_sentence({"estate": EVERYTHING}, DEFS) is None
     assert surface.desk_sentence({"estate": None}, DEFS) is None
+
+
+def test_the_default_now_narrows_and_therefore_speaks():
+    """
+    The other half, and the reason the two had to be separated. The board opens
+    on Aji Ichiban, so an untouched question IS scoped, and Bob has to be told
+    — otherwise the pill says the shops and the answer counts vending.
+    """
+    assert ESTATE["default"] != EVERYTHING
+    said = surface._estate_words(ESTATE["default"], DEFS)
+    assert said and req(DEFS, "surface.desk.business.name") in said
 
 
 def test_a_part_the_definitions_do_not_declare_says_nothing():
@@ -404,10 +423,10 @@ def test_the_estate_reaches_bob_on_the_question_and_not_in_the_prompt(monkeypatc
     assert "scoped to the vending business" not in text
 
 
-def test_the_default_leaves_the_question_exactly_as_it_was(monkeypatch):
-    """A switch nobody touched adds not one byte to the turn."""
+def test_the_part_that_narrows_nothing_leaves_the_question_exactly_as_it_was(monkeypatch):
+    """Choosing `all` adds not one byte to the turn."""
     plain = _drive(monkeypatch, "how are we doing?", None)
-    defaulted = _drive(monkeypatch, "how are we doing?", {"estate": ESTATE["default"]})
+    defaulted = _drive(monkeypatch, "how are we doing?", {"estate": EVERYTHING})
     a = [m for m in plain[-1]["messages"] if m["role"] == "user"][-1]["content"]
     b = [m for m in defaulted[-1]["messages"] if m["role"] == "user"][-1]["content"]
     assert a == b
@@ -468,7 +487,9 @@ def test_the_endpoint_serves_the_pills_with_their_places_resolved():
     # drawing a pill has no use for either, and serving them would invite one
     # to act on a business rule it cannot read the reasoning for.
     fields = set(out.estate.parts[0].model_dump())
-    assert fields == {"key", "label", "says", "places"}
+    assert fields == {"key", "label", "says", "places", "everything"}
+    # And exactly one part narrows nothing, or "what travels" has no answer.
+    assert [p.key for p in out.estate.parts if p.everything] == [EVERYTHING]
     assert not fields & {"domain", "answers_with", "warehouses_not_in",
                          "not_joined_to", "noun", "places_from", "count_places"}
 

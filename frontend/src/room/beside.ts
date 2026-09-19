@@ -344,10 +344,19 @@ export function columnsFor(count: number, viewport: number, onlyOneNeedsWidth = 
  * out. Everything else — a figure, a ranking, a comparison, contributors —
  * says all it says in one column.
  */
-export function needsWidth(mark: string | null, points: number, columns: number): boolean {
+export function needsWidth(mark: string | null, points: number, columns: number,
+                           names: readonly string[] = []): boolean {
   if (mark === 'spec') return true;
   if (mark === 'line' || mark === 'area') return points > 8;
-  if (mark === 'table') return columns > 4;
+  // A TABLE NEEDS THE WIDTH ITS COLUMNS NEED, NOT A COUNT OF THEM.
+  //
+  // This was `columns > 4`, and the owner found what that misses: a stockout
+  // read with FOUR columns — store, days out of stock, current stockout run,
+  // longest stockout run — sixty characters of heading, drawn in half the
+  // area, cut off and scrolling sideways while the other half stood empty.
+  // "why is there a scroller on this chart when theres clearly space on the
+  // right". Four short columns fit; four long ones never did.
+  if (mark === 'table') return columns > 4 || tableChars(names) > HALF_WIDTH_CHARS;
   // P2S.3, seen in the vocab frames: upright bars share the width between
   // their names, so past four a name broke mid-word ("OPU S"); a grid of many
   // cells shrinks its cells below a readable size in half the area.
@@ -355,6 +364,31 @@ export function needsWidth(mark: string | null, points: number, columns: number)
   if (mark === 'heatmap') return points > 48;
   return false;
 }
+
+/**
+ * How wide a table is, in characters, counting what each column must show.
+ *
+ * A column is at least its heading and never narrower than the figures under
+ * it, which `.r-rows td` keeps on one line; the two either side of it cost the
+ * cell padding. Approximate on purpose — it decides a layout, never a figure.
+ */
+export function tableChars(names: readonly string[]): number {
+  return names.reduce((n, c) => n + Math.max(c.replace(/_/g, ' ').length, MIN_COLUMN_CHARS)
+    + COLUMN_PADDING_CHARS, 0);
+}
+
+/**
+ * The characters that fit across ONE of the two figure columns.
+ *
+ * Measured from the composition rather than chosen: the figures area is 47 of
+ * 76 parts of a composition capped at `--comp-max`, split into two columns
+ * with `--comp-gap` between, and `.r-rows` is 12.5px — about 0.55em a
+ * character in this face. That is roughly 60; 56 is used so a table sitting
+ * exactly on the line takes the width rather than the scrollbar.
+ */
+const HALF_WIDTH_CHARS = 56;
+const MIN_COLUMN_CHARS = 6;
+const COLUMN_PADDING_CHARS = 2;
 
 /** The artifact's gap between two figures in one column (`.bs-col` gap). */
 export const FIGURE_GAP = 34;

@@ -16,7 +16,7 @@ import { cleanup, fireEvent, render } from '@testing-library/react';
 import { fmt, readAt, subjectOf, unitOf, valueOf, type AnswerTurn } from './data';
 import type { BoardObject } from './board';
 import type { TileActions } from './tiles';
-import { Board } from './render';
+import { Board, anchorFor } from './render';
 import recorded from './__fixtures__/recorded-runs.json';
 
 vi.mock('./ObjectPanel', () => ({ ObjectPanel: () => null, kindOf: () => null }));
@@ -147,5 +147,31 @@ describe('a figure draws itself in', () => {
   it('draws the line as a path of length one, so it can be drawn without measuring', () => {
     const { container } = drawRecorded(WHY, 3, 'line');
     expect(container.querySelector('.r-mk-series-line')?.getAttribute('pathLength')).toBe('1');
+  });
+});
+
+describe('the tip never hangs outside the figures', () => {
+  // The owner, 2026-09-19, of a hover on a line chart: "when hovering some are
+  // cut it should not". The figures area clips horizontally — it must, or a
+  // wide mark would spill into his words — so a tip centred on a mark near the
+  // left edge lost its first characters.
+  it('hangs from the left edge when the mark is near it', () => {
+    expect(anchorFor(10, 900)).toBe('start');
+    expect(anchorFor(0, 900)).toBe('start');
+  });
+
+  it('hangs from the right edge when the mark is near that one', () => {
+    expect(anchorFor(895, 900)).toBe('end');
+  });
+
+  it('is centred on the mark everywhere there is room, as the design draws it', () => {
+    expect(anchorFor(450, 900)).toBe('middle');
+    expect(anchorFor(300, 900)).toBe('middle');
+  });
+
+  it('prefers the left edge in a column too narrow for either', () => {
+    // A tip wider than the space it is in has to start somewhere, and the
+    // start of the words is the half worth keeping.
+    expect(anchorFor(60, 120)).toBe('start');
   });
 });

@@ -4854,3 +4854,33 @@ So from the moment that deploy went live, **every post Bob authored was rejected
 **An old rule cannot be satisfied by rows on their way to a new one.** Drop, then update, then create, in both directions. Applied by hand to restore service, then pushed; head `z0a1b2c3d4e5`, the three constraints name bob, 176 answer posts moved across, healthy at 05:01:35 UTC on build `2f57a400`.
 
 **Suites after:** pure 2,098 → 2,106. No frontend change.
+
+## 2026-09-19 · The table drew columns most of its rows could not fill, and five other things the owner found in one message
+
+**"what does this chart mean and is it a bug its showed up like this in multiple answers?"** It was a bug, and a general one.
+
+**A READ MAY RETURN ROWS OF MORE THAN ONE SHAPE, AND THE TABLE ASSUMED IT NEVER DID.** `tableShape` took its columns from `rows[0]`. `get_attention` returns three shapes — a shop whose sales moved, a product that went out of stock, one that went dead — sharing only `subject`, `rank` and `size`, so the first row's private fields were advertised for all seventeen and fifteen rows drew an em dash under VALUE, CHANGE PCT and UNIT. Three separate faults, each fixed where it was:
+
+- the keys are the union over every row;
+- **once the rows are of more than one shape, the table draws what they have in common.** A column only some rows carry reads as a measurement that came back empty rather than one that was never taken. Where every column is whole, which is nearly every read, nothing changed;
+- the tool's machinery — `identity`, `section`, `floor`, `measure`, `source`, `threshold_applied` — is no longer eligible to be a column, and `subject` has a rank so it stops losing the five-column cap to fields nobody can read. Raw diagnostics never reach the answer (UI rule 4), and this is where they were reaching it.
+
+**A UNIT BELONGS TO A MEASUREMENT, NOT TO EVERY NUMBER IN A ROW.** `unitOf(row)` says what the row's VALUE is measured in and was applied to every numeric cell, so the attention table drew its rank as `₱1`. `unitFor` returns none for a position or a count.
+
+**WHAT IS STILL OPEN AND WAS NOT FAKED:** attention now draws `subject · rank · size`, and `size` is the tool's word for how big the thing that crossed its floor is — ₱13,350 on one row and 5 on the next, each correct, the header jargon. Three different measurements in one result want their own drawing rather than a table. Logged as a card rather than papered over with a relabelling nobody chose.
+
+**THE DEFAULT ESTATE IS AJI ICHIBAN, AND THE HARD HALF WAS NOT THE DEFAULT.** "The default" and "the part that narrows nothing" were the same part, and three places read the default to mean "nothing travels": `estateFor` in the room, `_estate_words` in the surface, and the endpoint. Had they kept reading it, the board would have drawn his shops' pill over answers that had counted the vending business — the switch saying one thing and the figures another. The part that means everything now says so (`everything: true`), and the estate tests assert the invariant directly rather than the old proxy for it: the pill and the scope never disagree.
+
+**A WIDE TABLE TAKES THE ROOM INSTEAD OF SCROLLING INSIDE HALF OF IT.** `needsWidth` asked whether a table had more than four columns; the one he found has four and sixty characters of heading. It measures what the columns need now.
+
+**THE WORK TRAIL IS ONE LINE.** Eighteen lines of `read sales · 7 rows · 192ms` is a log, and a log is something you read afterwards. The read happening now, and a count of what is behind it. **A refusal is not part of the log that went** — a read that declined stays on screen however many have gone past it, because it is the tool saying in its own sentence that it will not produce a misleading number.
+
+**A STANCE IS DRAWN AS A WORD.** `judgment.stance_words` names all seven; the memory read carries `stance_said`; the CSS stopped uppercasing it, because the transform was hiding an enum's underscores and uppercasing a word turns it back into a label.
+
+**TWO OR MORE NOTICES FOLD TO ONE LINE.** At his word, and it gives up nothing UI rule 4 is for: the line sits where the notices were and says how many there are, so a person cannot look at the figure without seeing that something qualifies it. One notice stays open.
+
+**THE HOVER TIP HANGS FROM WHICHEVER EDGE IT IS NEAR.** The figures area clips horizontally — it must, or a wide mark would spill into his words — and a tip centred on a mark near the left edge lost its first characters.
+
+**AND FIVE LIVE TESTS THAT HAD BEEN RED SINCE A RENAME.** Four in `golden.py` filtered on the literal `"Shang"` and stopped resolving when the display name became "Shangri-La"; they read it from `stores.active_retail` now. One read `selection.comparison`, deleted with the compare shortcut on 2026-09-15; it asserts the absence and keeps the half still true.
+
+**Suites after:** pure 2,107 → 2,112, vitest 1,019 → 1,026, `tsc -b --force` clean.

@@ -59,6 +59,11 @@ export interface DeskEstatePart {
    * places are not shops — vending's are machines, which live in Weimi.
    */
   places: string[];
+  /**
+   * The one part that narrows nothing. Sending it would scope a question to
+   * the whole estate, which is what a question means anyway.
+   */
+  everything?: boolean;
 }
 
 /** The switch: what it is called, what a question means untouched, its parts. */

@@ -91,6 +91,14 @@ describe('the figures flow into columns — his rows 6 and 7', () => {
     expect(needsWidth('line', 5, 2)).toBe(false);
     expect(needsWidth('table', 12, 6)).toBe(true);
     expect(needsWidth('table', 12, 3)).toBe(false);
+    // FOUR LONG HEADINGS NEED THE WIDTH TOO, which a count alone never saw.
+    // The owner's stockout read, 2026-09-19: four columns, sixty characters
+    // of heading, drawn in half the area and scrolling sideways with the
+    // other half empty.
+    expect(needsWidth('table', 5, 4, ['store', 'days_out_of_stock',
+                                      'current_stockout_run', 'longest_stockout_run'])).toBe(true);
+    // And four short ones still sit in a column, as they always did.
+    expect(needsWidth('table', 5, 4, ['store', 'value', 'change_pct', 'rank'])).toBe(false);
     expect(needsWidth('spec', 0, 0)).toBe(true);
     // P2S.3: bars past four names, an area like a line, a grid of many cells.
     expect(needsWidth('bar', 7, 3)).toBe(true);

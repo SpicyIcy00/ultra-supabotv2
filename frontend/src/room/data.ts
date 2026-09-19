@@ -255,25 +255,72 @@ export interface TableShape {
 }
 
 /** Never a column: an id nobody reads, and the machinery of a comparison. */
-const NOT_A_COLUMN = ['seq', 'call_seq', 'direction', 'baseline_status'];
+const NOT_A_COLUMN = [
+  'seq', 'call_seq', 'direction', 'baseline_status',
+  // TOOL INTERNALS, NEVER COLUMNS (prompt rule 17, UI rule 4: raw diagnostics
+  // never reach the answer). The attention read carries the machinery it used
+  // to judge a row — which source, which floor definition, which section, the
+  // identity string it keys on — and the owner was shown a table of it:
+  // "what does this report mean i dont understand is there something wrong?"
+  'identity', 'section', 'floor', 'measure', 'source', 'threshold_applied',
+];
 
 /** Subject first, then the figure, then what it moved against. */
 const COLUMN_RANK: Record<string, number> = {
   product: 0, store: 0, category: 0, name: 0, supplier: 0, label: 0, day: 0, week: 0, month: 0,
-  sku: 1, value: 2, change_pct: 3, change: 6, baseline: 7,
+  // `subject` is what the attention read calls the thing a row is about, and
+  // it had no rank at all — so it lost the five-column cap to `value` and
+  // `change_pct`, which fifteen of seventeen rows could not fill. The table
+  // named nothing and measured nothing.
+  subject: 0,
+  rank: 1, sku: 1, value: 2, change_pct: 3, change: 6, baseline: 7,
 };
 
 /** How many columns a table draws. Past this it is a spreadsheet, not a mark. */
 const COLUMNS_MAX = 5;
+
+/**
+ * Columns a read's unit does not describe.
+ *
+ * `unitOf(row)` says what the row's VALUE is measured in. It was applied to
+ * every numeric cell, so the attention table drew its rank column as `₱1`,
+ * `₱2` — a position in a list, in pesos. A unit belongs to a measurement.
+ */
+const UNITLESS = /^(rank|position|seq|count|rows?|n|line_count|[a-z_]+_count|days?|days_[a-z_]+)$/;
+
+/** The unit to format one column's cells in, or none. */
+export function unitFor(
+  column: string,
+  row: Record<string, unknown>,
+  meta?: ToolMeta | null,
+): string | null {
+  if (UNITLESS.test(column)) return null;
+  return unitOf(row) ?? unitOf(meta) ?? null;
+}
 
 export function tableShape(
   rows: Record<string, unknown>[],
   meta: ToolMeta | null | undefined,
 ): TableShape {
   if (!rows.length) return { constant: [], columns: [] };
-  const keys = Object.keys(rows[0]).filter(
-    (k) => !k.endsWith('_id') && !NOT_A_COLUMN.includes(k));
+  // EVERY ROW'S KEYS, NOT THE FIRST ROW'S.
+  //
+  // A read can return rows of more than one shape — the attention read returns
+  // a shop whose sales moved beside a product that went out of stock, and they
+  // share almost nothing. Reading the columns off `rows[0]` advertised the
+  // first shape's columns for all of them, so fifteen of seventeen rows drew
+  // an em dash under VALUE, CHANGE PCT and UNIT. The owner saw it in several
+  // answers and asked whether it was a bug. It was.
+  const keys: string[] = [];
+  for (const row of rows) {
+    for (const k of Object.keys(row)) {
+      if (!keys.includes(k) && !k.endsWith('_id') && !NOT_A_COLUMN.includes(k)) keys.push(k);
+    }
+  }
   const readable = (v: unknown) => v === null || v === undefined || typeof v !== 'object';
+  const filled = (v: unknown) => v !== null && v !== undefined && v !== '';
+  const coverage = new Map<string, number>(
+    keys.map((k) => [k, rows.filter((r) => filled(r[k])).length]));
   const constant: string[] = [];
   const cols: string[] = [];
   for (const k of keys) {
@@ -290,8 +337,31 @@ export function tableShape(
       cols.push(k);
     }
   }
-  const columns = cols.slice()
-    .sort((a, b) => (COLUMN_RANK[a] ?? 4) - (COLUMN_RANK[b] ?? 4) || cols.indexOf(a) - cols.indexOf(b))
+  // A COLUMN EVERY ROW CAN FILL COMES FIRST, and one no row can fill is not a
+  // column at all. Where the rows are all one shape — which is nearly every
+  // read — this changes nothing, because every column is full. Where they are
+  // not, the table draws what the rows have in common instead of spending its
+  // five columns on the first row's private fields.
+  const whole = (k: string) => (coverage.get(k) ?? 0) === rows.length;
+  // A column nobody can fill is not a column, and one whose every value is a
+  // nested object is where `[object Object]` came from.
+  let drawable = cols.filter((k) => (coverage.get(k) ?? 0) > 0
+    && rows.some((r) => filled(r[k]) && readable(r[k])));
+
+  // A MIXED TABLE DRAWS WHAT ITS ROWS HAVE IN COMMON.
+  //
+  // Once the rows are of more than one shape, a column only some of them carry
+  // is a promise the table cannot keep: it reads as a measurement that came
+  // back empty rather than one that was never taken. The attention read drew
+  // three such columns over fifteen rows. Where every column is whole — nearly
+  // every read — this does nothing.
+  const wholes = drawable.filter(whole);
+  if (wholes.length >= 2 && wholes.length < drawable.length) drawable = wholes;
+
+  const columns = drawable
+    .sort((a, b) => Number(whole(b)) - Number(whole(a))
+      || (COLUMN_RANK[a] ?? 4) - (COLUMN_RANK[b] ?? 4)
+      || cols.indexOf(a) - cols.indexOf(b))
     .slice(0, COLUMNS_MAX);
   return { constant, columns };
 }

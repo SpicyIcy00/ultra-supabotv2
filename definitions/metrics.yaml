@@ -6447,6 +6447,26 @@ judgment:
     # category out of their lists and their receipts say so.
     leave_out: "a category they said to leave out"
 
+  # WHAT A STANCE IS CALLED ON SCREEN (2026-09-19).
+  #
+  # Found on the P2S close frames and open in the dogfood log since: the memory
+  # screen printed the enum, uppercased by CSS — `NEEDS_ATTENTION`, `MEANS` —
+  # which is the tool's key wearing a label's job. The design says Noticed and
+  # Checked; raw diagnostics never reach the answer (UI rule 4).
+  #
+  # HERE, NOT IN THE CLIENT, because it is what the word MEANS and the file
+  # says where meaning lives. A stance with no word here is drawn as its key,
+  # which is ugly and true; `test_stance_words_contract` fails instead of
+  # letting one go unnamed.
+  stance_words:
+    needs_attention: "Noticed"
+    unremarkable: "Checked"
+    unexplained: "Still open"
+    not_visible: "Cannot see"
+    waiting: "Waiting"
+    means: "You told me"
+    leave_out: "You told me"
+
   # WHAT A PERSON TEACHES HIM, and why it is a belief rather than a setting.
   #
   # A belief names the reads behind it (agent/beliefs.py rule 1) because an
@@ -7489,10 +7509,19 @@ surface:
     # -------------------------------------------------------------------------
     estate:
       label: estate
-      # A part is a NARROWING. Nothing chosen is the whole estate, which is
-      # what every question has meant until today, so the default changes no
-      # answer that was already right.
-      default: all
+      # WHICH PART THE BOARD OPENS ON. The owner, 2026-09-19: "default room
+      # should be aji ichiban not all" (and, the same day in the log, "not
+      # vending"). He runs the shops; the vending business is a different
+      # catalogue, different machines, different everything, and it was being
+      # folded into every figure he saw first thing.
+      #
+      # THIS ONE DOES NARROW, AND THAT IS THE POINT. Until now the default was
+      # `all`, which narrows nothing, and `estateFor` read "the default" as
+      # "nothing travels". Those were the same thing and are not any more, so
+      # the part that means EVERYTHING now says so with `everything: true` and
+      # the default is free to be a real scope. Without that split the pill
+      # would read "Aji Ichiban" over an answer that had counted vending.
+      default: aji_ichiban
       travels_as: store_scope
       # WHICH DATA WORLD A PART LIVES IN, and there are two: the STORE domain
       # (StoreHub — `stores`, transactions, inventory) and the VENDING domain
@@ -7511,8 +7540,11 @@ surface:
       parts:
         - key: all
           label: "All"
-          # Every place, and the machines beside them. The default: what a
-          # question has meant since before this switch existed.
+          # Every place, and the machines beside them. THE ONE PART THAT IS NOT
+          # A NARROWING: choosing it sends no scope, because there is nothing
+          # to narrow to. `everything` is what says so — not the fact that it
+          # happens to be the default, which it no longer is.
+          everything: true
           places_from: [stores.active_retail, stores.warehouse,
                         stores.vending_stock_location]
           domain: both

@@ -2803,14 +2803,20 @@ class DeskEstatePart(BaseModel):
     #: The display names of the places this part covers, from `stores`. Empty
     #: for a business whose places are not shops — vending's are machines.
     places: List[str]
+    #: True for the one part that narrows nothing, so a client knows which key
+    #: sends no scope. It used to be "whichever key is the default", and on
+    #: 2026-09-19 the default became a real narrowing (Aji Ichiban) — at which
+    #: point those two meanings had to stop being one field.
+    everything: bool = False
 
 
 class DeskEstate(BaseModel):
     """The switch itself: what it is called, what it does when untouched, its parts."""
 
     label: str
-    #: The part a question is on before anybody presses anything. It narrows
-    #: nothing and is not sent.
+    #: The part a question is on before anybody presses anything. It MAY narrow
+    #: — since 2026-09-19 it is Aji Ichiban — and is sent like any other part.
+    #: The part that narrows nothing is the one carrying `everything`.
     default: str
     parts: List[DeskEstatePart]
 
@@ -2975,6 +2981,7 @@ def _desk_estate(defs: Mapping[str, Any]) -> DeskEstate:
             label=str(label),
             says=(str(part["says"]) if part.get("says") else None),
             places=places,
+            everything=bool(part.get("everything", False)),
         ))
     return DeskEstate(label=str(_req(estate, "label")),
                       default=str(_req(estate, "default")), parts=parts)

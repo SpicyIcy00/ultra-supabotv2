@@ -227,8 +227,12 @@ describe('the two voices of the room', () => {
     const container = surfaces();
     const mono = wearing(container, MONO);
     expect(wearing(container, SANS).filter((e) => mono.includes(e))).toEqual([]);
-    // And both faces are actually ON the surfaces being scanned.
-    expect(mono.length).toBeGreaterThan(5);
+    // And both faces are actually ON the surfaces being scanned, so the scan
+    // above cannot pass by finding nothing. The bound was 5 while the work
+    // trail listed every call; it draws the one happening now and any refusal
+    // since 2026-09-19, so the same surfaces carry fewer mono elements and
+    // the same guarantee.
+    expect(mono.length).toBeGreaterThanOrEqual(4);
     expect(wearing(container, SANS).length).toBeGreaterThan(5);
   });
 

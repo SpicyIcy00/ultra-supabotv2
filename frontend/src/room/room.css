@@ -649,6 +649,11 @@
   .r-doing .r-work { justify-content: flex-start; }
 }
 .r-doing-line .r-work-clock { margin-left: 10px; color: var(--ink-3); }
+
+/* WHAT IS BEHIND THE LINE HAPPENING NOW — a count, not a list (the owner,
+   2026-09-19: "i dont need to see it reading"). Quieter than the step above
+   it, because it is context for the wait rather than the wait itself. */
+.r-work--behind { color: var(--ink-4); }
 .r-doing-said { color: var(--ink); max-width: 46ch; }
 .r-words .r-reading { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; margin: 0; max-width: none; }
 .r-words .r-caveats { border-left: 0; border-right: 2px solid var(--edge-strong); padding: 0 12px 0 0; }
@@ -1845,6 +1850,12 @@ button.r-mk-name[aria-pressed="true"], .r-mk-cellname[aria-pressed="true"] {
   font: 400 11.5px/1.45 var(--mono); white-space: nowrap;
   transform: translate(-50%, -100%) translateY(-8px);
 }
+/* NEVER OUTSIDE THE FIGURES, which clip horizontally and cut it (the owner,
+   2026-09-19: "when hovering some are cut it should not"). Near an edge the
+   tip hangs from that edge; `anchorFor` decides which, from where the mark is
+   in the board. A few pixels of inset so it does not touch the boundary. */
+.r-tip[data-anchor='start'] { transform: translate(0, -100%) translateY(-8px); margin-left: -6px; }
+.r-tip[data-anchor='end'] { transform: translate(-100%, -100%) translateY(-8px); margin-left: 6px; }
 .r-tip b { display: block; font: 500 12.5px/1.4 var(--sans); }
 
 /* THE RECEIPT LINE IS A BUTTON (UI rule 3): a tap opens the source and every
@@ -1981,7 +1992,11 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 .r-belief { display: grid; gap: 5px; justify-items: start; max-width: 62ch; }
 .r-belief-claim { margin: 0; font: 400 13px/1.6 var(--sans); color: var(--ink); }
 .r-belief-stance {
-  font: 500 9.5px/1.5 var(--mono); color: var(--ink-3); text-transform: uppercase;
+  /* NOT UPPERCASED ANY MORE. The transform was here because the value was an
+     enum and shouting it hid the underscores; it now carries a word from
+     `judgment.stance_words` — Noticed, Checked, Still open — and uppercasing
+     a word makes it a label again. */
+  font: 500 9.5px/1.5 var(--mono); color: var(--ink-3);
   letter-spacing: 0.06em;
 }
 .r-belief-life { margin: 0; font: 400 11px/1.6 var(--mono); color: var(--ink-3); }

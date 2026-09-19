@@ -498,11 +498,46 @@ function Caveat({ notice }: { notice: BobNotice }) {
   );
 }
 
+/**
+ * THE CAVEATS, FOLDED (the owner, 2026-09-19: "disclaimers can be hid and you
+ * can open it if you want to see it").
+ *
+ * WHAT IS NOT GIVEN UP. UI rule 4 draws a notice that says a figure may be
+ * WRONG, above the figure, and this still does: a person cannot look at the
+ * number without seeing that something qualifies it. What folds is the WORDS,
+ * not the warning — the line above says how many there are and stays exactly
+ * where the notices were.
+ *
+ * `data-caveats` keeps its count either way, so the tests and the scans that
+ * read it see the same surface they always did.
+ *
+ * ONE STAYS OPEN. Folding a single sentence behind a word that is nearly as
+ * long saves nothing and costs a click. It is two or more — the case he was
+ * looking at, where a read carried a paragraph about its sources and another
+ * about a section that does not exist — that becomes a line.
+ */
 export function Caveats({ notices }: { notices?: BobNotice[] }) {
+  const [open, setOpen] = useState(false);
   if (!notices || notices.length === 0) return null;
+  const folded = notices.length > 1 && !open;
   return (
-    <div className="r-caveats" data-caveats={notices.length}>
-      {notices.map((n, i) => <Caveat key={`${n.kind}-${i}`} notice={n} />)}
+    <div className="r-caveats" data-caveats={notices.length} data-folded={folded ? 'yes' : 'no'}>
+      {folded ? (
+        <p className="r-caveat">
+          <button type="button" className="r-more" onClick={() => setOpen(true)}>
+            {notices.length} notes on these figures
+          </button>
+        </p>
+      ) : (
+        <>
+          {notices.map((n, i) => <Caveat key={`${n.kind}-${i}`} notice={n} />)}
+          {notices.length > 1 && (
+            <p className="r-caveat">
+              <button type="button" className="r-more" onClick={() => setOpen(false)}>less</button>
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -666,7 +701,13 @@ export function MemoryTile(p: TileProps) {
             <li key={id || String(row.claim)} className="r-belief"
                 data-forgotten={gone ? true : undefined}>
               <p className="r-belief-claim">
-                <span className="r-belief-stance">{String(row.stance ?? '')}</span>
+                {/* THE WORD, NOT THE KEY. `stance_said` comes from
+                    metrics.yaml judgment.stance_words through the memory read;
+                    the key is drawn only where the file names no word for it,
+                    which is visible and true rather than invented here. */}
+                <span className="r-belief-stance">
+                  {String(row.stance_said ?? row.stance ?? '')}
+                </span>
                 {' '}
                 {/* A VIEW ABOUT A STORE WEARS THAT STORE'S SWATCH (P2S.2(e)) —
                     the same hue it has in every figure, by what the row says

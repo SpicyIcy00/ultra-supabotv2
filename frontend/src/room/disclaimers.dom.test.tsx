@@ -9,10 +9,10 @@
  * no longer repeats a sentence the answer already says.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { AnswerTurn } from './data';
 import type { BoardObject } from './board';
-import type { TileActions } from './tiles';
+import { Caveats, type TileActions } from './tiles';
 import { Board } from './render';
 import { Reading, unsaid } from './Reading';
 import { ExplainsOnlyContext, drawnOnly, explainsOnlyFrom } from './noticeDrawing';
@@ -89,5 +89,39 @@ describe("the turn's caveat", () => {
     const { container } = render(<Reading text={said} reading={{ caveat, claim: 'weighed mix' } as never} />);
     const count = (container.textContent ?? '').split('a bit over half the week').length - 1;
     expect(count).toBe(1);
+  });
+});
+
+describe('more than one note folds, and opens when asked', () => {
+  // The owner, 2026-09-19: "disclaimers can be hid and you can open it if you
+  // want to see it". Said of the attention read, which carried a paragraph
+  // about its stale sources and another about a section that does not exist.
+  const TWO = [
+    { kind: 'stale_sources', message: 'These sources are too old to say what changed since yesterday.' },
+    { kind: 'no_low_stock_level', message: "There is no 'newly low on stock' section." },
+  ] as unknown as Parameters<typeof Caveats>[0]['notices'];
+
+  it('says how many there are rather than saying them', () => {
+    const { container } = render(<Caveats notices={TWO} />);
+    expect(container.querySelector('.r-caveats')?.getAttribute('data-folded')).toBe('yes');
+    // THE WARNING IS STILL THERE, which is what UI rule 4 is for: a person
+    // cannot look at the figures without seeing that something qualifies them.
+    expect(container.textContent).toContain('2 notes on these figures');
+    expect(container.textContent).not.toContain('too old');
+  });
+
+  it('opens on the line and closes again', () => {
+    const { container } = render(<Caveats notices={TWO} />);
+    fireEvent.click(screen.getByRole('button', { name: '2 notes on these figures' }));
+    expect(container.textContent).toContain('too old');
+    expect(container.textContent).toContain("newly low on stock");
+    fireEvent.click(screen.getByRole('button', { name: 'less' }));
+    expect(container.textContent).not.toContain('too old');
+  });
+
+  it('leaves a single note in the open, where folding would save nothing', () => {
+    const { container } = render(<Caveats notices={[TWO![0]]} />);
+    expect(container.querySelector('.r-caveats')?.getAttribute('data-folded')).toBe('no');
+    expect(container.textContent).toContain('too old');
   });
 });

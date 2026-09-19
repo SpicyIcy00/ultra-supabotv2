@@ -242,9 +242,16 @@ def _estate_words(part_key: Any, defs: Mapping[str, Any]) -> Optional[str]:
     reason is. The places come from the `stores` lists the part names and from
     nowhere else, so opening a shop moves this sentence with it.
 
-    THE DEFAULT SAYS NOTHING. `all` is what every question has meant until
-    today, so a question asked with nothing switched is byte-identical to one
-    asked before this card existed — the switch can only narrow.
+    THE PART THAT NARROWS NOTHING SAYS NOTHING. That is `all`, which is what a
+    question has always meant, so asking on it is byte-identical to asking
+    before this card existed.
+
+    IT WAS "THE DEFAULT SAYS NOTHING" UNTIL 2026-09-19, and those were one
+    sentence only while the default was `all`. The owner moved the default to
+    Aji Ichiban — "default room should be aji ichiban not all" — and reading
+    the default here would have told Bob nothing about a scope the board was
+    visibly showing: his shops' pill lit, the vending business counted in the
+    answer. The part now carries `everything` and that is what is read.
 
     WHAT IT DOES NOT DO. It rewrites no call and filters no row. Scoping to the
     warehouse and asking for sales is refused by the sales tool in its own
@@ -255,11 +262,11 @@ def _estate_words(part_key: Any, defs: Mapping[str, Any]) -> Optional[str]:
     """
     spec = req(defs, "surface.desk.estate")
     key = " ".join(str(part_key or "").split())
-    if not key or key == str(spec.get("default")):
+    if not key:
         return None
     part = next((p for p in req(spec, "parts")
                  if isinstance(p, Mapping) and str(p.get("key")) == key), None)
-    if part is None:
+    if part is None or part.get("everything"):
         return None
 
     label = _label_of(part, defs, key)

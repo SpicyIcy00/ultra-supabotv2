@@ -123,11 +123,17 @@ describe('a figure says which read it came out of', () => {
       toolCalls: CALLS, notices: [], pinned: [], saved: [], pageChanges: [],
       done: { duration_ms: 9_000 },
     } as unknown as AnswerTurn;
-    const { container } = render(<Working turn={turn} live />);
-    const drawn = Array.from(container.querySelectorAll('.r-work-i'))
-      .map((n) => n.textContent);
-    // Three reads numbered, the compose not — it read nothing.
-    expect(drawn).toEqual(['1', '2', '3']);
+    // The trail draws the call happening now rather than all of them (the
+    // owner, 2026-09-19), so what is checked here is that the line it DOES
+    // draw wears the number `readIndexes` gave that read — the marker in the
+    // claim and the step point at one thing.
+    const { container } = render(
+      <Working turn={{ ...turn, toolCalls: CALLS.slice(0, 2) } as unknown as AnswerTurn} live />);
+    expect(container.querySelector('.r-work-i')?.textContent).toBe('2');
+
+    // And the compose, which read nothing, is numbered by neither.
+    const all = render(<Working turn={turn} live />);
+    expect(all.container.querySelectorAll('.r-work-i')).toHaveLength(0);
   });
 
   it('does not number a read that was refused', () => {

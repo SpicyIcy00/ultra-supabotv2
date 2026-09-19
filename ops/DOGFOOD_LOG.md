@@ -57,52 +57,6 @@ on compose frame" does.
 
 ## Open
 
-### 2026-09-19 — "default should be aji ichiban not all not vending"
-
-> *"also default should be aji ichiban not all not vending"*
-
-The estate switch above the board opens on All. He wants it to open on Aji
-Ichiban (the retail shops), not All and not vending.
-
-### 2026-09-19 — "disclaimers can be hid and you can open it if you want to see it"
-
-> *"disclaimers can be hid and you can open it if you want to see it"*
-
-Said of the two notices drawn above the attention read ("These sources are
-too old…", "There is no 'newly low on stock' section…"). He wants notices
-collapsed by default with a way to open them. UI rule 4 draws a notice that
-says a figure may be wrong above the number; the ask is a collapsed drawing of
-the same notice, not its removal.
-
-### 2026-09-19 — "when hovering some are cut it should not"
-
-> *"also when hovering some are cut it should not"*
-
-Screenshot: the hover on a line chart ("Rockwell · 2026-08-10 · ₱199,949 ·
-read Sep 18 16:58") drawn past the left edge of the figures column, its first
-letters cut off. The tooltip is positioned at the point and not kept inside
-the room.
-
-### 2026-09-19 — "what does this report mean i dont understand is there something wrong?"
-
-> *"also what does this report mean i dont understand is there something wrong?"*
-
-Screenshot: the attention read drawn as a table with its internal names —
-`sales_vs_same_weekday|Fairview|`, `stock_crossed_out|Aji Kiamoy King
-Seedless|Magnolia`, a MEASURE column saying "change" and "was", a "kept no"
-label, values of "—". The rows are the tool's own identity strings, not words
-a person reads (prompt rule 17 / UI rule 4: raw diagnostics never reach the
-answer); and the notice's "which ones" link opens nothing readable. The data
-behind it was checked the same day (see the session's answer in chat); the
-drawing is the defect.
-
-### 2026-09-18 — found by the session: the memory figure prints a stance as its raw name
-
-`what do you remember?` draws each belief's stance as the enum, uppercased by
-CSS: `NEEDS_ATTENTION`, `MEANS` (`frontend/src/room/tiles.tsx`,
-`r-belief-stance`). The design says *Noticed*, *Checked*, *Still open*. Seen on
-the P2S.✓ frame `memory-1920-open-room.png`. Not fixed: the close.
-
 ### 2026-09-18 — found by the session: the sales record has no autumn 2024
 
 Found building P2S.4 (year over year). `new_transactions` has every shop on
@@ -116,18 +70,6 @@ figures are missing. **Needs the owner:** a StoreHub transaction export for
 2024-09-01 to 2024-12-31, if StoreHub still holds it. Fairview's first sale on
 record (2024-10-01) and Magnolia's (2025-01-01) fall at the edges of the hole,
 so either may have opened earlier than the record shows.
-
-### 2026-09-18 — found by the session: five live tests fail on HEAD
-
-`tests/golden.py` — `test_no_baseline_is_reported_not_invented`,
-`test_zero_baseline_keeps_the_count_and_nulls_the_percentage`,
-`test_an_undefined_ratio_is_null_with_a_notice`,
-`test_a_store_per_row_comparison_reports_the_one_with_no_baseline` — filter on
-`"Shang"`, which stopped resolving when the shop became "Shangri-La"
-(2026-09-10). `tests/test_comparison_live.py::test_the_comparison_words_are_the_definitions_and_the_shop_is_a_replay_scope`
-reads `surface.desk.selection.comparison`, which the definitions no longer
-have. The tools are fine; the tests are stale. Checked by running them with
-P2S.4's changes stashed. Not fixed: not the card.
 
 ### 2026-09-17 — "its failing here" (an ordering system for the top 5 suppliers)
 
@@ -273,6 +215,19 @@ shell for every screen, sending that screen as context (the page id on a kept
 page, the screen's name elsewhere) and opening the answer in the room. **Bigger
 than an hour** — it touches every shell and the BI `Layout` — so by §2b it
 becomes a card rather than a same-day fix, unless he says to jump the queue.
+
+**PARTLY FIXED 2026-09-19**, after he asked again in the same words: *"also
+remeber the text bar should be global same spot everypage"*. The room's shell
+now draws one line — no chips, no mentions, no voice, because nothing on those
+screens is picked — inside `.r-line-wrap`, the board composer's own wrapper, so
+it is the same shape in the same fixed place. It names the screen it was asked
+from and opens the board, because an answer needs somewhere to land.
+
+**WHAT IS STILL OPEN:** the BI pages (Dashboard, Analytics, Warehouse, Packing,
+StoreHub exports is in Bob's chrome and has it) draw no line, because they are
+in the other shell entirely; and a kept page still has its own different ask box
+at its foot rather than this one. Two shells, one line, is the rest of the
+card.
 
 ### 2026-09-17 — found by the session: a product chart names every row after its shop
 
@@ -442,6 +397,137 @@ once changes the next answer. That is the card's own done-when.
 ---
 
 ## Fixed
+
+### 2026-09-19 — "what does this chart mean and is it a bug its showed up like this in multiple answers?"
+
+> *"what does this chart mean and is it a bug its showed up like this in multiple answers?"*
+
+The attention read, drawn as VALUE · CHANGE PCT · RANK · SIZE · UNIT over
+seventeen rows, of which two carried a value and fifteen drew an em dash. The
+rank column was drawn in pesos — `₱1`, `₱2` — and nothing named what any row
+was about. It is the same defect as the 2026-09-19 entry above it, which
+reported the tool's identity strings; the columns changed, the table stayed
+unreadable.
+
+**Fixed 2026-09-19. Three faults, all in `tableShape`:**
+
+1. **The columns were read off `rows[0]`.** `get_attention` returns rows of
+   three shapes — a shop whose sales moved, a product that went out of stock,
+   one that went dead — sharing only `subject`, `rank` and `size`. The first
+   row's private fields were advertised as columns for all seventeen. The
+   keys are now the union over every row.
+2. **A column most rows cannot fill is not drawn at all.** Once the rows are
+   of more than one shape, the table draws what they have in common; a column
+   only two of them carry reads as a measurement that came back empty rather
+   than one that was never taken. Where every column is whole — nearly every
+   read — nothing changed.
+3. **The tool's machinery was eligible to be a column.** `identity`,
+   `section`, `floor`, `measure`, `source` and `threshold_applied` joined
+   `NOT_A_COLUMN`, and `subject` got a rank so it stops losing the
+   five-column cap to fields nobody can read.
+
+And the row's unit is applied per COLUMN now (`unitFor`), so a rank is a rank
+and not money. `src/room/tableShape.test.ts`, 10 tests, built on the real row
+shapes read from the live tool.
+
+**Still open, deliberately:** the attention read draws `subject · rank · size`,
+and `size` is the tool's word for "how big the thing that crossed its floor
+is" — ₱13,350 on one row and 5 on the next, each correct, the header jargon.
+Attention is three different measurements in one result and wants its own
+drawing rather than a table. That is a card.
+
+### 2026-09-19 — "why is there a scroller on this chart when theres clearly space on the right"
+
+> *"also why is there a scroller on this chart when theres clearly space on the right if it needed to be bigger"*
+
+A stockout read — store, days out of stock, current stockout run, longest
+stockout run — drawn in half the figures area, cut off at the right with a
+scrollbar, while the other half stood empty.
+
+**Fixed 2026-09-19.** `needsWidth` asked whether a table had more than four
+columns. This one has four, and sixty characters of heading. It now measures
+what the columns NEED: each column is at least its heading and never narrower
+than the figures under it, and past what fits across one of the two figure
+columns the table takes the whole area instead of scrolling inside half of it.
+Four short columns still sit in a column, as they always did.
+
+### 2026-09-19 — "i dont need to see it reading"
+
+> *"also it i dont need to see it reading maybe a more cleaner way like 1 reading sales with progess and secounds and then done and then another just do whats optimal and ideal and simple"*
+
+Eighteen lines of `read sales · 7 rows · 192ms` down the side of a turn.
+
+**Fixed 2026-09-19.** The trail draws the read happening now — or the last to
+land, if none is running — and one quiet count of what is behind it ("7 reads
+done"). A log is something you read afterwards; what a person waiting needs is
+what is happening now and how long it has taken.
+
+**A REFUSAL IS NOT PART OF THE LOG THAT WENT.** A read that declined stays on
+screen however many have gone past it: it is the tool saying, in its own
+sentence, that it will not produce a misleading number. Nothing else is lost —
+every read's rows, timing and receipts are on the figure it produced, which is
+UI rule 3.
+
+### 2026-09-19 — "default should be aji ichiban not all not vending"
+
+> *"also default room should be aji ichiban not all"*
+
+**Fixed 2026-09-19.** `surface.desk.estate.default` is `aji_ichiban`.
+
+**AND THE HARD HALF, which would have made this a lie on screen.** "The
+default" and "the part that narrows nothing" were the same part, and three
+places read the default to mean "nothing travels" — `estateFor` in the room,
+`_estate_words` in the surface, and the endpoint's own docstring. Had those
+kept reading the default, the board would have drawn his shops' pill over
+answers that had counted the vending business. The part that means everything
+now says so (`everything: true`) and that is what all three read. The estate
+tests assert the invariant directly: the pill and the scope never disagree.
+
+### 2026-09-19 — "disclaimers can be hid and you can open it if you want to see it"
+
+> *"disclaimers can be hid and you can open it if you want to see it"*
+
+**Fixed 2026-09-19.** Two or more notices fold to one line — "2 notes on these
+figures" — in the place the notices were, and open on it.
+
+**WHAT IS NOT GIVEN UP.** UI rule 4 draws a notice that says a figure may be
+WRONG, above the figure, and this still does: a person cannot look at the
+number without seeing that something qualifies it. What folds is the words.
+One notice stays open, because folding a sentence behind a word nearly as long
+saves nothing and costs a click.
+
+### 2026-09-19 — "when hovering some are cut it should not"
+
+> *"also when hovering some are cut it should not"*
+
+**Fixed 2026-09-19.** The figures area clips horizontally — it must, or a wide
+mark would spill into his words — and the tip was centred on the mark, so one
+near the left edge lost its first characters. `anchorFor` hangs the tip from
+whichever edge it is near and centres it everywhere else, which is how the
+design draws it.
+
+### 2026-09-18 — found by the session: the memory figure prints a stance as its raw name
+
+**Fixed 2026-09-19.** `judgment.stance_words` names all seven — *Noticed*,
+*Checked*, *Still open*, *Cannot see*, *Waiting*, *You told me* — the memory
+read carries `stance_said` beside the stance, and the room draws the word,
+falling back to the key where the file names none. The CSS no longer
+uppercases it: the transform was there to hide an enum's underscores, and
+uppercasing a word turns it back into a label.
+`tests/test_stance_words_contract.py` fails if a stance goes unnamed, if a
+word is its own key, or if the uppercase comes back.
+
+### 2026-09-18 — found by the session: five live tests fail on HEAD
+
+**Fixed 2026-09-19.** The four in `tests/golden.py` filtered on the literal
+`"Shang"`, which stopped resolving when the shop's display name became
+"Shangri-La" on 2026-09-10; they read the name out of `stores.active_retail`
+now, so the next rename moves them with it.
+`test_comparison_live.py::test_the_comparison_words_are_the_definitions_and_the_shop_is_a_replay_scope`
+read `surface.desk.selection.comparison`, which went when the "compare"
+shortcut was removed on 2026-09-15 — it asserts the block is absent and keeps
+the half that is still true, that a subject travels by id. All five run green
+against the live database.
 
 ### 2026-09-19 — "get rid of this" (the cold open's "Morning. / What are we looking at?")
 

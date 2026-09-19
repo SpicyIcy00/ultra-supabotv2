@@ -34,7 +34,8 @@
 import { useState, type CSSProperties } from 'react';
 import type { ToolMeta } from '../types/bob';
 import {
-  changeOf, fmt, measureOf, readAt, rowUnderClaim, rowsOf, sorted, subjectOf, tableShape, unitOf,
+  changeOf, fmt, measureOf, readAt, rowUnderClaim, rowsOf, sorted, subjectOf, tableShape,
+  unitFor, unitOf,
   valueOf,
   type Change,
 } from './data';
@@ -381,7 +382,10 @@ function Rows({ rows: all, meta, o, p }: { rows: Row[]; meta: Meta; o: TileProps
   // board and the same read at its rung in the walk agree about what is a
   // column and what is a caption.
   const { constant, columns: shown } = tableShape(rows, meta);
-  const unit = (row: Row) => unitOf(row) ?? unitOf(meta);
+  // PER COLUMN, not per row: a read's unit says what its VALUE is measured in,
+  // and applying it to every numeric cell drew the attention table's rank as
+  // `₱1`. `unitFor` returns none for a column that is a position or a count.
+  const unit = (row: Row, column: string) => unitFor(column, row, meta);
 
   return (
     <div className="r-mk r-mk-table">
@@ -424,14 +428,14 @@ function Rows({ rows: all, meta, o, p }: { rows: Row[]; meta: Meta; o: TileProps
                     return (
                       <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}
                           data-v={typeof row[c] === 'number'
-                            ? told(subject, c.replace(/_/g, ' '), fmt(c, row[c], unit(row))) : undefined}>
+                            ? told(subject, c.replace(/_/g, ' '), fmt(c, row[c], unit(row, c))) : undefined}>
                         {c === 'change_pct' ? <Delta change={changeOf(row)} />
                           : isSubject ? (
                             <RowName name={subject} className="r-mk-cellname" pickable
                                      dimension={dimensionOf(all, subject)}
                                      onPick={(x) => p.on.pick(x, dimensionOf(all, x))}
                                      picked={p.selection?.includes(subject)} />
-                          ) : fmt(c, row[c], unit(row))}
+                          ) : fmt(c, row[c], unit(row, c))}
                       </td>
                     );
                   })}
