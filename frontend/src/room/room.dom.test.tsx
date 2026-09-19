@@ -20,12 +20,18 @@
  * intent. They mock nothing below the component — the board fold, the call
  * resolver and every tile run for real.
  */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Board } from './render';
 import type { AnswerTurn } from './data';
 import type { BoardObject } from './board';
 import type { TileActions } from './tiles';
+
+/** The rule that stops a spanning figure spending the width it was given. */
+const CSS_MAX_FIG = (readFileSync(join(__dirname, 'room.css'), 'utf8')
+  .split('.r-fig-body {')[1] ?? '').split('}')[0];
 
 vi.mock('./ObjectPanel', () => ({
   // The panel fetches; the board does not. Its own behaviour is not what these
@@ -246,24 +252,50 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
   // A ranking says what it says in a column; a nine-column table would need the
   // whole width (beside.needsWidth), which is a different test.
   const many = (n: number) => Array.from({ length: n }, (_, i) => object('ranked', { key: `f${i}` }));
-  const columnsOf = () => Array.from(document.querySelectorAll('[data-figure]'))
-    .map((el) => Number(el.getAttribute('data-col')));
-
-  it.each([
-    // ONE COLUMN SINCE 2026-09-19 (P3.k). This asserted two until the owner
-    // said of the live board: "it still feels like the widgets, it's not the
-    // page style". Two columns is a dashboard — the eye reads across and the
-    // order you see is the packer's, not his. One column makes his order the
-    // page's order, which is what a page is.
-    [1, 1, [0]],
-    [2, 1, [0, 0]],
-    [3, 1, [0, 0, 0]],
-    [4, 1, [0, 0, 0, 0]],
-    [5, 1, [0, 0, 0, 0, 0]],
-  ])('puts %i figures in %i column, in his order', (n, cols, want) => {
+  /**
+   * A POINT TAKES THE WHOLE WIDTH; ONLY WHAT IS GATHERED UNDER ONE SHARES IT.
+   *
+   * Three tries got here (P3.l). Two columns packed shortest-first was a
+   * dashboard — the order you read was column heights. One column everywhere
+   * was *"just one scroll"*, which flattened a point and its evidence into
+   * three stacked blocks. This is the design's own shape: the finding across
+   * the top, what supports it and what cuts against it side by side beneath.
+   */
+  it.each([[1], [2], [3], [4], [5]])('gives each of %i points the whole width', (n) => {
     const { container } = draw(many(n as number));
-    expect(container.querySelector('.r-flow')?.getAttribute('data-columns')).toBe(String(cols));
-    expect(columnsOf()).toEqual(want);
+    expect(container.querySelector('.r-flow')?.getAttribute('data-columns')).toBe('2');
+    const figs = Array.from(container.querySelectorAll<HTMLElement>('[data-figure]'));
+    expect(figs).toHaveLength(n as number);
+    for (const el of figs) expect(el.style.gridColumn).toBe('1 / -1');
+  });
+
+  it('lays what is gathered under a point side by side beneath it', () => {
+    const { container } = draw([
+      object('ranked', { key: 'fall', weight: 'lead' }),
+      object('ranked', { key: 'stock', under: 'fall', relation: 'evidence' }),
+      object('ranked', { key: 'grew', under: 'fall', relation: 'counter' }),
+    ]);
+    const at = (key: string) => container
+      .querySelector<HTMLElement>(`[data-figure="${key}"]`) as HTMLElement;
+    expect(at('fall').style.gridColumn).toBe('1 / -1');
+    expect(at('stock').style.gridColumn).toBe('1');
+    expect(at('grew').style.gridColumn).toBe('2');
+    expect(at('stock').getAttribute('data-under')).toBe('fall');
+    expect(at('grew').getAttribute('data-relation')).toBe('counter');
+  });
+
+  it('says what a gathered point is to the one above it, in words', () => {
+    const { container } = draw([
+      object('table', { key: 'fall', weight: 'lead' }),
+      object('table', { key: 'grew', under: 'fall', relation: 'counter' }),
+    ]);
+    const src = container
+      .querySelector<HTMLElement>('[data-figure="grew"] .r-src')?.textContent ?? '';
+    // The words, not the numbers: which read is which is `work.readIndexes`,
+    // and it has its own test. What this holds is that a gathered point SAYS
+    // it disagrees — an indent alone cannot, and that difference is the whole
+    // of what makes the page an argument rather than a pile.
+    expect(src).toMatch(/^read \d+ · against read \d+ · /);
   });
 
   it('puts the figure the answer rests on first, at the size it needs (the log, 2026-09-17)', () => {
@@ -277,17 +309,23 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
     const first = container.querySelector('[data-figure]') as HTMLElement;
     expect(first.getAttribute('data-figure')).toBe('c');
     expect(first.getAttribute('data-lead')).toBe('yes');
-    expect(first.style.gridColumn).not.toBe('1 / -1');
     expect(container.querySelectorAll('[data-lead="yes"]')).toHaveLength(1);
+    // "NOT WASTING THE SIZE" MOVED OFF THE COLUMN AND ONTO THE FIGURE (P3.l).
+    // It used to be said by NOT spanning — a small lead sat in one of two
+    // columns. Every point spans now, so a chart that needs less is held to
+    // less by `.r-fig-body { max-width }`, which is nearer what he asked for:
+    // the figure takes what it needs instead of what the grid happens to give.
+    expect(first.style.gridColumn).toBe('1 / -1');
+    expect(CSS_MAX_FIG).toMatch(/max-width:\s*\d+px/);
   });
 
-  it('still knows which figure needs the width, though one column gives it anyway', () => {
-    // `data-span` is what a second column would read. It is kept and asserted
-    // so that bringing one back is a decision, not a rebuild (P3.k).
+  it('still knows which figure needs the width of its own accord', () => {
+    // Every point spans, so this no longer decides the column for a point. It
+    // decides it for a GATHERED figure, which otherwise takes half.
     const { container } = draw([object('ranked', { key: 'a' }), object('table', { key: 'wide' })]);
     const wide = container.querySelector('[data-figure="wide"]') as HTMLElement;
     expect(wide.getAttribute('data-span')).toBe('yes');
-    expect(wide.style.gridColumn).toBe('1');
+    expect(wide.style.gridColumn).toBe('1 / -1');
   });
 
   it('says which read every figure came from, as the superscripts do', () => {
@@ -627,7 +665,10 @@ describe('a lead that needs no width does not span (frames, 2026-09-17)', () => 
     const first = container.querySelector('[data-figure]') as HTMLElement;
     expect(first.getAttribute('data-figure')).toBe('b');
     expect(first.getAttribute('data-lead')).toBe('yes');
-    expect(first.getAttribute('data-span')).toBeNull();
-    expect(first.style.gridColumn).not.toBe('1 / -1');
+    // It still does not ASK for the width (`data-span` is `needsWidth`'s own
+    // answer, and a small ranking's is no); it is given it because it is a
+    // point, and held to `max-width` so it does not spend it.
+    expect(first.getAttribute('data-span')).toBe('yes');
+    expect(first.style.gridColumn).toBe('1 / -1');
   });
 });

@@ -329,17 +329,15 @@ export function composition(viewport: number, sideOpen: boolean): Composition {
  */
 export function columnsFor(count: number, viewport: number, onlyOneNeedsWidth = false): 1 | 2 {
   if (viewport <= PHONE) return 1;
-  // ONE COLUMN SINCE 2026-09-19 (P3.k). Two columns is a dashboard: the eye
-  // reads across, the order you see is the packer's, and each item has to
-  // carry its own label to say what it is — which is the whole of what the
-  // owner kept calling widgets. *"the right should feel like a page of that
-  // answer with text"*, and a page has one column. His order is then the
-  // page's order, and a figure that needs the width simply has it.
-  //
-  // `onlyOneNeedsWidth` and the `spans` it feeds are kept and now do nothing
-  // here, because they are what would come back if a second column ever did.
-  if (count <= 1) return onlyOneNeedsWidth ? 1 : 1;
-  return 1;
+  // TWO COLUMNS THAT ARE NOT A GRID OF WIDGETS (P3.l). This said 2 until the
+  // morning of 2026-09-19, then 1 for an hour, and is 2 again — with the rule
+  // above it changed, which is what actually mattered. A FIGURE NOW SPANS BOTH
+  // UNLESS IT IS GATHERED UNDER ANOTHER (render.tsx), so a board that relates
+  // nothing runs down one flow — the page the owner asked for — while a point
+  // with evidence under it keeps that evidence BESIDE ITSELF, two up, the way
+  // the design does it. The columns exist for the gathering and nothing else.
+  if (count <= 1) return onlyOneNeedsWidth ? 1 : 2;
+  return 2;
 }
 
 /**

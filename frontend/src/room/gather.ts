@@ -16,14 +16,14 @@
  * NOTHING about what is important — `weight` already carries that, and Bob sets
  * it — and it computes no figure: every number here is a pixel.
  *
- * IT DOES NOT PACK. `beside.placeFigures` still does all the packing, and its
- * shortest-column-first arithmetic and tie rules are untouched. What changes is
- * only WHAT IS PACKED: a family — a point and everything gathered under it —
- * is placed as one item, so evidence can never land in a different column from
- * the finding it belongs to. The output shape is the same `number[]`, one
- * column per object, because every figure has to stay a direct child of the one
- * grid: a figure that remounts loses an opened panel and replays its arrival
- * (see the Board docstring in render.tsx).
+ * IT DOES NOT PLACE ANYTHING. It says what belongs to what and in what order;
+ * `beside.placeFigures` still does every bit of the packing, untouched.
+ *
+ * It USED to hand the packer whole families as single items, so a family could
+ * not be split across columns. That turned out to be a longer way round: a
+ * point spans both columns (render.tsx), which resets them to its foot, and
+ * its children then fall into them side by side on their own. One rule in the
+ * renderer replaced a function here, so the function went.
  *
  * THE FALLBACK IS THE DEFAULT, NOT A SPECIAL CASE. A board where nothing names
  * an `under` — every board composed before this existed, every default
@@ -40,9 +40,8 @@ import type { BoardObject } from './board';
 /**
  * The space between a point and what is gathered under it, in px.
  *
- * ONE CONSTANT, TWO USES — the sum below and the row span in render.tsx. If
- * they disagree the measured column heights drift and a family jumps column on
- * the second measuring pass, which is the remount the grid exists to avoid.
+ * Smaller than the gap between points (`beside.FIGURE_GAP`), because that gap
+ * is what says two things are separate and this one says they are not.
  */
 export const CHILD_GAP = 14;
 
@@ -111,45 +110,4 @@ export function gather(objects: readonly BoardObject[]): Gathered {
     families.push({ stem: o.key, under: kin.map((k) => k.key) });
   }
   return { order, families, parentOf, relationOf };
-}
-
-/**
- * The runs of `order` that place as one item: a stem plus its children, or a
- * lone object. Every family is consecutive in `order` by construction.
- */
-export function runsOf(g: Gathered): number[][] {
-  const size = new Map(g.families.map((f) => [f.stem, f.under.length + 1] as const));
-  const runs: number[][] = [];
-  for (let n = 0; n < g.order.length;) {
-    const span = size.get(g.order[n].key) ?? 1;
-    runs.push(Array.from({ length: span }, (_, k) => n + k));
-    n += span;
-  }
-  return runs;
-}
-
-/**
- * Place families with the packer the room already uses, then give every member
- * its family's column.
- *
- * `place` is `beside.placeFigures`, passed in rather than imported so this file
- * stays free of the frame arithmetic and can be read on its own.
- */
-export function placeFamilies(
-  g: Gathered,
-  heights: readonly number[],
-  columns: number,
-  spans: readonly boolean[],
-  place: (h: readonly number[], c: number, s?: readonly boolean[]) => number[],
-): number[] {
-  const runs = runsOf(g);
-  const tall = runs.map((run) => run.reduce(
-    (sum, n, k) => sum + Math.max(0, heights[n] ?? 0) + (k ? CHILD_GAP : 0), 0));
-  // A family needs the width when ANY member does — the stem and its evidence
-  // are one item, and half of one is not a placement.
-  const wide = runs.map((run) => run.some((n) => spans[n]));
-  const placed = place(tall, columns, wide);
-  const out = new Array<number>(g.order.length).fill(0);
-  runs.forEach((run, i) => { for (const n of run) out[n] = placed[i]; });
-  return out;
 }

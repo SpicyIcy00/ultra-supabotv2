@@ -75,19 +75,18 @@ describe('the composition is the design\'s, and it stays centred', () => {
 
 describe('the figures flow into columns — his rows 6 and 7', () => {
   /**
-   * ONE COLUMN, EVERYWHERE, SINCE 2026-09-19.
+   * TWO COLUMNS ARE OFFERED; WHAT USES THEM IS THE PAGE RULE (P3.l).
    *
-   * This test asserted two until today. The owner, of the live board: *"it
-   * still feels like the widgets, it's not the page style"* — and two columns
-   * is what makes it a dashboard rather than a page. The eye reads across, the
-   * order you see is the packer's rather than his, and every item has to carry
-   * a label to say what it is. Three went in September for cutting names; two
-   * go for the same reason one level up.
+   * This function says how many columns the area HAS. Since 2026-09-19 a
+   * figure spans all of them unless it is gathered under another point
+   * (render.tsx), so on an ordinary answer the two columns are one flow and
+   * the columns only appear where a point has evidence to hold beside itself.
+   * The number here stayed 2 through all of that; the rule above it changed.
    */
-  it('uses one column, on a desk as on a phone, whatever the count', () => {
-    expect(columnsFor(1, 1920)).toBe(1);
+  it('offers two columns on a desk and one on a phone', () => {
+    expect(columnsFor(1, 1920)).toBe(2);
     expect(columnsFor(1, 1920, true)).toBe(1);
-    for (const n of [2, 3, 4, 5, 6, 9]) expect(columnsFor(n, 1920)).toBe(1);
+    for (const n of [2, 3, 4, 5, 6, 9]) expect(columnsFor(n, 1920)).toBe(2);
   });
 
   it('knows which figures need the width, from what they draw', () => {
@@ -123,25 +122,29 @@ describe('the figures flow into columns — his rows 6 and 7', () => {
     expect(placeFigures([400, 100, 200, 100], 2, [false, false, true, false])).toEqual([0, 1, 0, 0]);
   });
 
-  it('takes one column at 900px and under, and now above it too', () => {
+  it('takes one column at 900px and under', () => {
     for (const n of [1, 3, 7]) expect(columnsFor(n, 900)).toBe(1);
-    expect(columnsFor(3, 901)).toBe(1);
+    expect(columnsFor(3, 901)).toBe(2);
   });
 
-  it.each([[2], [3], [4], [5]])('places %i figures down one flow, in his order', (n) => {
+  it.each([
+    [2, [0, 1]],
+    [3, [0, 1, 0]],
+    [4, [0, 1, 0, 1]],
+    [5, [0, 1, 0, 1, 0]],
+  ])('packs %i equal figures left to right, then down', (n, want) => {
+    // This is the packer's own arithmetic, unchanged since P2S.1. In the room
+    // it is reached only by figures gathered under a point, because every
+    // point spans — which is why a page reads as one flow and a gathering
+    // reads as two things side by side.
     const heights = new Array(n as number).fill(200);
-    const want = new Array(n as number).fill(0);
     expect(placeFigures(heights, columnsFor(n as number, 1920))).toEqual(want);
   });
 
-  /**
-   * THE PACKER STILL PACKS. `columnsFor` stopped asking for two columns; it
-   * did not stop being able to place them, and `placeFamilies` still leans on
-   * exactly this arithmetic. Held so that a second column is a decision to
-   * make again, not a capability to rebuild.
-   */
-  it('still packs two columns when it is asked for two', () => {
-    expect(placeFigures([200, 200, 200], 2)).toEqual([0, 1, 0]);
+  it('a spanning figure resets both columns, so what follows starts beside it', () => {
+    // THE WHOLE OF THE PAGE LAYOUT, in one call: a point spans (true), its two
+    // children do not, and they land side by side under it rather than stacked.
+    expect(placeFigures([300, 100, 100], 2, [true, false, false])).toEqual([0, 0, 1]);
   });
 
   it('sends each figure to the SHORTEST column, so nothing leaves a hole', () => {

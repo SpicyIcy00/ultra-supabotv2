@@ -18,7 +18,7 @@ import type { BoardObject, Local } from './board';
 import { inOrder } from './board';
 import { retunedKey } from './tokenShape';
 import { FIGURE_GAP, columnsFor, needsWidth, placeFigures, revealAt } from './beside';
-import { CHILD_GAP, gather, placeFamilies, type Relation } from './gather';
+import { CHILD_GAP, gather, type Relation } from './gather';
 import { readIndexes } from './work';
 import { PROCESS, callOf, rowsOf, tableShape, type AnswerTurn, type Dimension } from './data';
 import { markFor } from './catalogue';
@@ -232,8 +232,16 @@ export function Board(p: BoardProps) {
     }
     return undefined;
   })() : undefined;
-  // A FIGURE SPANS ONLY WHEN IT NEEDS THE WIDTH, whoever leads.
-  const spans = wide;
+  // A FIGURE TAKES THE WHOLE WIDTH UNLESS IT IS GATHERED UNDER ANOTHER (P3.l).
+  //
+  // This is the whole of what makes the board a page instead of a grid, and it
+  // took three tries. Two columns packed shortest-first was a dashboard. One
+  // column everywhere was *"just one scroll"* — it flattened a point and its
+  // evidence into three stacked blocks. So: a point spans, and only what
+  // belongs to a point shares the width with its siblings, which is how the
+  // design draws it — the finding across the top, its because and its against
+  // side by side beneath.
+  const spans = objects.map((o, i) => !plan.parentOf[o.key] || wide[i]);
   const leads = objects.map((o) => o.key === leadKey);
   const keys = objects.map((o) => o.key).join('|');
 
@@ -268,10 +276,9 @@ export function Board(p: BoardProps) {
   // A FAMILY IS PLACED AS ONE ITEM, by the same packer and its same tie rules
   // — so evidence can never be dropped into a different column from the point
   // it belongs to. With no families this is `placeFigures`, called as before.
-  const tall = objects.map((o) => heights[o.key] ?? 0);
-  const placed = plan.families.length
-    ? placeFamilies(plan, tall, columns, spans, placeFigures)
-    : placeFigures(tall, columns, spans);
+  // The stem spans, which resets both columns to its foot, so its children
+  // land side by side under it without anything having to group them.
+  const placed = placeFigures(objects.map((o) => heights[o.key] ?? 0), columns, spans);
   const byKey = new Map(objects.map((o) => [o.key, o] as const));
 
   // WHICH FIGURES HAVE ARRIVED. Keyed, so an answer that transforms a figure
