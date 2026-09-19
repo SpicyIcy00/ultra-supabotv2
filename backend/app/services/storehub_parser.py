@@ -365,6 +365,15 @@ def parse(data: bytes, kind: str, defs: Optional[dict] = None) -> ParsedFile:
     expected = list(spec["columns"])
     actual = list(reader.fieldnames)
     if actual != expected:
+        # A KNOWN wrong export is refused by name, in the yaml's own words,
+        # before the generic mismatch: "missing: [...]" is true of StoreHub's
+        # document-only transfer export and tells the uploader nothing about
+        # which file to fetch instead. Still a refusal — never a looser read.
+        # The sentence is the whole message: the page renders it verbatim, and
+        # an internal name on the end of it is a raw diagnostic in a person's face.
+        for shape in (spec.get("refused_shapes") or {}).values():
+            if actual == list(shape["columns"]):
+                raise StorehubParseError(shape["reason"].strip())
         missing = [c for c in expected if c not in actual]
         extra = [c for c in actual if c not in expected]
         raise StorehubParseError(

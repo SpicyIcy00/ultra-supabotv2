@@ -439,6 +439,43 @@ def test_unexpected_header_is_rejected():
         parse(bad, "stock_transfers")
 
 
+# StoreHub's OTHER stock-transfer export, header and first row exactly as the
+# file of 2026-09-03 carried them (Stock_Transfer_09-03-2026.csv).
+ST_DOCUMENT_ONLY = (
+    '"S.T ID","Created Date","Shipped Date","Received Date","Source Store",'
+    '"Target Store","Status","Sent By","Cancelled By","Cancelled Date","Received By"\n'
+    '"ST3008","09/03/2026 17:16","09/03/2026 17:18","09/03/2026 17:18",'
+    '"Aji Packing","AJI BARN","Completed","Atay Arjel","","","Atay Arjel"\n'
+).encode("utf-8")
+
+
+def test_document_only_transfer_export_is_refused_by_name():
+    """
+    P3.h. The 11-column export lists transfers with no lines; the converge step
+    would delete every line those transfers hold. The refusal names the file
+    and the one to fetch instead, in the yaml's words — not "missing: [...]".
+    """
+    with pytest.raises(StorehubParseError) as refused:
+        parse(ST_DOCUMENT_ONLY, "stock_transfers")
+    said = str(refused.value)
+    declared = load_defs()["storehub"]["stock_transfers"]["refused_shapes"]["document_only"]
+    # The yaml's sentence and nothing else: the page shows it to a person verbatim.
+    assert said == declared["reason"].strip()
+    assert "document-only" in said and "StockTransfers_FROM-" in said
+    assert "does not match the expected" not in said
+
+
+def test_the_refused_shape_is_the_real_files_header_and_nothing_looser():
+    """One column renamed is an UNKNOWN file again: the generic refusal, not the named one."""
+    near = ST_DOCUMENT_ONLY.replace(b'"Sent By"', b'"Sender"')
+    with pytest.raises(StorehubParseError, match="does not match the expected"):
+        parse(near, "stock_transfers")
+    # And the named refusal belongs to transfers: the same bytes offered as
+    # purchase orders are simply not a purchase-order export.
+    with pytest.raises(StorehubParseError, match="does not match the expected"):
+        parse(ST_DOCUMENT_ONLY, "purchase_orders")
+
+
 def test_duplicate_document_header_is_rejected():
     data = _st(
         '"ST9013","09/02/2026 16:20","","","AJI BARN","AJI ONLINE","","","","","","","","",'

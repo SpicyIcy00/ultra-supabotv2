@@ -100,6 +100,12 @@ const navIcons = {
         d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10m0-10l8-4M4 7v10l8 4" />
     </svg>
   ),
+  imports: (
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4" />
+    </svg>
+  ),
   admin: (
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -128,6 +134,9 @@ const navItems = [
   // Warehouse owns two tabs: Replenishment Reports and Barcode Generator
   { to: '/warehouse', page: 'warehouse', icon: navIcons.warehouse, label: 'Warehouse', match: (p: string) => p === '/warehouse' },
   { to: '/packing', page: 'packing', icon: navIcons.packing, label: 'Packing', match: (p: string) => p === '/packing' },
+  // P3.h: StoreHub's exports in. Shown only to a role granted `storehub_imports`;
+  // it opens in the room's chrome, as Bob does, which links back here.
+  { to: '/storehub-imports', page: 'storehub_imports', icon: navIcons.imports, label: 'StoreHub exports', match: (p: string) => p === '/storehub-imports' },
   { to: '/settings', page: 'settings', icon: navIcons.settings, label: 'Settings', match: (p: string) => p === '/settings' },
   { to: '/admin/page-access', page: 'admin', icon: navIcons.admin, label: 'Admin', match: (p: string) => p.startsWith('/admin') },
 ];

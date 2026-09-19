@@ -1335,6 +1335,33 @@
 .r-link { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
 .r-link:hover { color: rgb(var(--bob)); }
 
+/* STOREHUB EXPORTS (P3.h) - choose the kind, drop the file. Ink and edges
+   only: importing a file is not an approval, so nothing here wears the accent
+   (UI rule 5), and the chosen kind is marked by weight and a rule, never by
+   dimming the other (emphasis adds). */
+.r-import { padding: 26px 0 8px; }
+.r-import-kind {
+  border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer;
+  font: 400 14px/1.2 var(--sans); color: var(--ink); padding: 4px 0;
+}
+.r-import-kind[data-on='yes'] { font-weight: 600; border-bottom-color: var(--ink); }
+.r-import-kind:disabled { cursor: default; }
+.r-drop {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  margin-top: 18px; padding: 30px 22px; cursor: pointer;
+  border: 1px dashed var(--edge-strong); border-radius: 12px;
+  transition: border-color 160ms var(--ease);
+}
+.r-drop:hover, .r-drop[data-over='yes'], .r-drop:focus-within { border-color: var(--ink); }
+.r-drop[data-busy='yes'] { cursor: progress; }
+.r-drop-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.r-import-notices { list-style: none; margin: 12px 0 4px; padding: 0 0 0 12px; border-left: 2px solid var(--edge-strong); }
+.r-import-notices li + li { margin-top: 8px; }
+.r-import-h {
+  font: 500 10px/1.2 var(--sans); letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-3); margin: 34px 0 0;
+}
+
 .r-newpage { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
 .r-field {
   width: 230px; max-width: 100%;

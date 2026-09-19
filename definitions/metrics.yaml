@@ -3473,6 +3473,49 @@ storehub:
     # movement.destination_attribution, which is scoped by basis.
     names_source_and_destination: true
 
+    # -------------------------------------------------------------------------
+    # A SECOND EXPORT WITH THE SAME NAME, REFUSED BY NAME (P3.h, 2026-09-19).
+    #
+    # StoreHub's BackOffice produces TWO stock-transfer CSVs. The one above
+    # (`StockTransfers_FROM-...csv`, 20 columns) carries line rows. The other
+    # (`Stock_Transfer_MM-DD-YYYY.csv`, 11 columns) is one row per document:
+    # no products, no quantities, no totals. Seen for real 2026-09-03, when a
+    # "fresh exports" drop held the PO file in the full shape and the transfer
+    # file in this one.
+    #
+    # It is refused, and it must STAY refused. The importer converges a
+    # document's lines on the file (see idempotency below), so a file listing
+    # a document with no lines would delete every line that document holds.
+    # On 2026-09-03 that was 127 lines for ST2743-ST2749 alone.
+    #
+    # The generic header-mismatch refusal is correct and tells a person
+    # nothing they can act on. A header matching a shape declared here is
+    # refused in these words instead, so the page can say which export to
+    # fetch. Matching is on the exact column list, the same rule as `columns`.
+    # -------------------------------------------------------------------------
+    refused_shapes:
+      document_only:
+        filename_pattern: "Stock_Transfer_MM-DD-YYYY.csv"
+        columns:
+          - "S.T ID"
+          - "Created Date"
+          - "Shipped Date"
+          - "Received Date"
+          - "Source Store"
+          - "Target Store"
+          - "Status"
+          - "Sent By"
+          - "Cancelled By"
+          - "Cancelled Date"
+          - "Received By"
+        reason: >-
+          This is StoreHub's document-only stock transfer export
+          (Stock_Transfer_MM-DD-YYYY.csv): one row per transfer, with no
+          products, quantities or totals. It is refused because importing it
+          would remove the product lines already held for every transfer it
+          lists. Export the transfers WITH their items instead - the file
+          named StockTransfers_FROM-... - and upload that.
+
   # ---------------------------------------------------------------------------
   # IDEMPOTENCY. A RE-IMPORT CONVERGES TO THE FILE; IT DOES NOT ACCUMULATE.
   #

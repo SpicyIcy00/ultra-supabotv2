@@ -37,22 +37,12 @@ export const PAGES: PageDef[] = [
   { key: 'ai_chat', path: '/ai-chat', label: 'AI Chat' },
   { key: 'warehouse', path: '/warehouse', label: 'Warehouse' },
   { key: 'packing', path: '/packing', label: 'Packing' },
+  // P3.h: the upload page for StoreHub's purchase-order and stock-transfer
+  // exports. Rendered in the room's chrome; granted by name in the admin screen.
+  { key: 'storehub_imports', path: '/storehub-imports', label: 'StoreHub exports' },
   { key: 'settings', path: '/settings', label: 'Settings' },
   { key: 'admin', path: '/admin/page-access', label: 'Admin' },
 ];
-
-// DELIBERATELY ABSENT: 'storehub_imports'.
-//
-// This array maps a page_key to a ROUTE, and no React route renders at
-// /storehub-imports — only the API endpoint exists
-// (POST /api/v1/storehub-imports/{kind}). An entry here would give
-// landingPathFor and pathForPage a path that does not resolve.
-//
-// The page_key itself still exists in PAGE_KEYS (backend
-// app/models/role_page_access.py) and is granted in role_page_access, because
-// require_page("storehub_imports") reads that table directly and never consults
-// this file. The endpoint stays reachable; it is simply not somewhere a person
-// can click to. Add the entry when the page is built.
 
 export const pathForPage = (key: string): string =>
   PAGES.find((p) => p.key === key)?.path ?? '/no-access';

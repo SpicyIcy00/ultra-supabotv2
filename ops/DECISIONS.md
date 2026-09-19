@@ -4721,3 +4721,13 @@ The owner's own 30 days (78 turns that read, 351 calls) asked the same reads pie
 **Five sources added to Phase 4** that only the owner can supply: the vending aisle feed (stopped 2026-08-05), expenses, customers/promotions/events, the low-stock level in StoreHub, the autumn of 2024.
 **Phase 5 is three decisions, not cards:** what "build it" means, what Bob connects to, what happens to the old app. The owner: "dont have an answer and dont need one" — parked, not cut into cards. The room at phone width is owed and unmeasured.
 **Note-only pushes redeploy Railway** — seen 2026-09-19 (`1910f428` served after a docs commit) and probably behind the owner's 404. NOW.md's claim that they do not was wrong; notes now ride the next real push.
+
+## 2026-09-19 · P3.h: StoreHub's exports go in from a page, and the API is a source, not a card
+
+**The API question, with its source:** StoreHub publishes no API reference (searched 2026-09-19); its help centre says only that a key is requested from Customer Care by the master email. Unauthenticated, the API answers 403 on `/purchaseOrders`, `/products`, `/transactions`, `/stores`, `/inventory/{id}` and 404 `ResourceNotFound` on every spelling of stock transfers — so orders look readable, transfers do not. No pull was built on a payload nobody has seen; it is source S.12.
+**A known wrong file is refused in words a person can act on, and the words live in the yaml** (`storehub.stock_transfers.refused_shapes`): the exact header, and the sentence. The parser raises that sentence and nothing else — an internal shape name on the end of it was a raw diagnostic, seen in the first frame and removed.
+**The page has its OWN key, `storehub_imports`, not Bob's:** being allowed to talk to him does not grant writing to the procurement tables. It renders in the room's chrome and is reached from the Supabot sidebar; the rail was not touched (the UI is frozen).
+**A 422 is a refusal and everything else is a failed upload**, and they are worded differently, because only the first means "nothing was written, fetch another file".
+**The import just made is not drawn again under "Earlier imports"**, and "no file yet" is claimed from the whole loaded ledger, never the filtered one (UI rule 8).
+**`products` gets no upload kind:** a job outside this repo writes it nightly at 15:00 UTC; a second writer on one table needs a rule between them first. Held by a test.
+**Closed as built:** the live done-when needs his push, his export and his upload. Pure 2,031 → 2,039, vitest 986 → 993, tsc clean.

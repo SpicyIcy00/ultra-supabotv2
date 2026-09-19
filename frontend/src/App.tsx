@@ -35,6 +35,7 @@ const Room = React.lazy(() => import('./room/Room'));
 const InboxPage = React.lazy(() => import('./pages/InboxPage'));
 const PagesPage = React.lazy(() => import('./pages/PagesPage'));
 const WorkflowsPage = React.lazy(() => import('./pages/WorkflowsPage'));
+const StorehubImportsPage = React.lazy(() => import('./pages/StorehubImportsPage'));
 
 // The existing application. AIChatPage is the legacy NL->SQL chatbot and is
 // not Bob; it stays reachable under Operations, unchanged.
@@ -137,6 +138,12 @@ function App() {
                   <Route path="/pages" element={bob(<PagesPage />)} />
                   <Route path="/pages/:pageId" element={bob(<PagesPage />)} />
                   <Route path="/workflows" element={bob(<WorkflowsPage />)} />
+                  {/* The room's chrome, its OWN page key (P3.h): talking to Bob
+                      does not grant writing to the procurement tables. */}
+                  <Route
+                    path="/storehub-imports"
+                    element={<RequirePage pageKey="storehub_imports"><StorehubImportsPage /></RequirePage>}
+                  />
                 </Route>
 
                 {/* Where Bob used to live. Every one of these still resolves. */}
