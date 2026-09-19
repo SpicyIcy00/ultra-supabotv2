@@ -4798,3 +4798,29 @@ The first says who you are meant to buy from; the second says who you did. **The
 **Verified against the live data, not a fixture.** Aji Mix reads back with its five suppliers in export order; SH1206 carries 10/20 at SM North Edsa and 10/25 at Magnolia; every result names import 18 and the file it came from.
 
 **Suites after:** pure 2,064 → 2,083, vitest 1,006 unchanged, `tsc -b --force` clean.
+
+## 2026-09-19 · A Decimal in a composition block cost the owner a conversation
+
+**The owner: "my most recent chat just disappears after i hard refresh which didnt happen before."** One turn in his data had a conversation row holding the whole answer, a question post, and no answer post. Every other turn he has ever had has both.
+
+**THE CHAIN, AND IT IS SIX LINKS LONG.**
+
+1. `_answer_payload` passed five of its six fields straight to `json.dumps`. Only `charted` had been through `_json_safe`, because it is sanitised where it is collected. A `Decimal` or a `datetime` in a composition block, a reading, an offered action or a page read raised `TypeError`.
+2. The raise was outside `_exec`'s swallow **and** outside the turn's own try/except — `log.posts` is called after them — so it escaped and killed the generator.
+3. The question post was already written. The answer post never was.
+4. No answer post meant no `post` frame.
+5. No `post` frame meant the room never called `setStoredThread`, so the url stayed `/bob` instead of becoming `/w/<thread>`.
+6. A hard refresh had no address to return to.
+
+**The answer was in `george.conversations` the whole time and unreachable from the room.** It still is reachable from Earlier, because the chat list is built from the conversation log rather than from the timeline — so the prose came back and only that turn's charts are gone.
+
+**"LOGGING MUST NEVER BREAK THE ANSWER" WAS ENFORCED ONE LAYER TOO LOW.** `_exec` has always swallowed a failed *statement*. Nothing swallowed a failure while *building* one, and that is the whole defect. Both are fixed, and either alone would have prevented it:
+
+- **Every field through the sanitiser**, not just the charts. The asymmetry is what made this unpredictable: which field carries a Decimal depends on what Bob read that turn.
+- **`posts()` may not raise.** The body moved to `_posts` and the public method guards it, recording into `log.errors` exactly as a failed statement does.
+
+**AND IF SOMETHING STILL WILL NOT SERIALISE, THE POST IS STILL WRITTEN.** A type the sanitiser does not know is a bug to fix, not a reason to lose the thread. Each part is tried alone, whatever survives is kept, what was dropped is named in the payload under `_reduced`, and a gap is logged. A reopened thread then draws the prose and whatever it still has — which is what the method already promised for a post that carried nothing.
+
+**Why it started when it did:** the turn before it saved fine at 00:13; this one was the first after the rename and speed-fix deploy went live at 00:54. Which of that deploy's changes put a Decimal into one of those five fields was not chased, because the hole would have opened on any of them eventually and the fix is the same either way.
+
+**Suites after:** pure 2,083 → 2,098. No frontend change.

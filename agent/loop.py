@@ -2263,6 +2263,11 @@ def _forced_caveats(missing: list[dict]) -> str:
 # Logging — separate identity, insert-only
 # --------------------------------------------------------------------------
 
+# Named in a payload that could not be stored whole, so a reader can tell a
+# post that carried nothing from one that lost something on the way in.
+REDUCED_KEY = "_reduced"
+
+
 def _answer_payload(charted: Optional[list], calls: Optional[list],
                     page_context: Optional[dict] = None,
                     reading: Optional[dict] = None,
@@ -2287,29 +2292,31 @@ def _answer_payload(charted: Optional[list], calls: Optional[list],
     page scope be restored after a reload (pageScope.ts).
     """
     payload: dict = {}
-    if charted:
-        payload["charted"] = charted
-    if calls:
-        payload["calls"] = calls
-    if page_context:
-        payload["page_context"] = page_context
-    # The reading's slots that stood (P1.f, 2026-09-14). Stored with the
-    # snapshot so a reopened thread draws the answer the way it was drawn live
-    # — the caveat above the figures, the next sentence last — and only ever
-    # the validated slots, never what the model submitted.
-    if reading:
-        payload["reading"] = reading
-    # AND WHAT HE OFFERED TO DO ABOUT A ROW (P2.d, 2026-09-15). Stored for the
-    # same reason the reading is: a reopened thread draws what was on screen,
-    # and an action is a validated offer with its cost already derived — never
-    # re-derived on read, because the act's cost could have changed since.
-    if actions:
-        payload["actions"] = actions
+    # EVERY FIELD THROUGH THE SANITISER, not just the charts (2026-09-19).
+    #
+    # THIS TOOK A CONVERSATION. Only `charted` arrived here already safe — it
+    # is sanitised where it is collected — and the other five went straight
+    # into json.dumps. A Decimal or a datetime in a composition block, a
+    # reading, an action or a page read raised TypeError, and the raise was
+    # OUTSIDE both `_exec`'s swallow and the turn's try/except, so it killed
+    # the generator between the question post and the answer post. The turn of
+    # 2026-09-19 01:15 is the one that proved it: conversation row written with
+    # its whole answer, question post written, answer post never, no `post`
+    # frame, so the browser never learned the thread's address and the owner
+    # lost the conversation on his next refresh.
+    #
+    # `_json_safe` is idempotent, so passing `charted` through it again costs
+    # a walk and removes the asymmetry that caused this.
+    for name, value in (("charted", charted), ("calls", calls),
+                        ("page_context", page_context), ("reading", reading),
+                        ("actions", actions)):
+        if value:
+            payload[name] = _json_safe(value)
     # The composition that stood (2026-09-10): the validated blocks, so a
     # reopened thread draws the screen Bob composed, from the charted rows
     # beside it, and never a layout the client derived.
     if composition or default_composition:
-        payload["composition"] = {"blocks": composition or []}
+        payload["composition"] = {"blocks": _json_safe(composition or [])}
         # AND WHAT STOOD BEFORE HE SPOKE (P1.b, 2026-09-13). Stored beside his
         # blocks rather than merged into them, because a reopened thread has to
         # compose exactly as it composed live — and live, a default is
@@ -2318,8 +2325,42 @@ def _answer_payload(charted: Optional[list], calls: Optional[list],
         # able from his on reload, which is the one thing the frame's `default`
         # flag exists to prevent.
         if default_composition:
-            payload["composition"]["default_blocks"] = default_composition
-    return json.dumps(payload) if payload else None
+            payload["composition"]["default_blocks"] = _json_safe(default_composition)
+    if not payload:
+        return None
+
+    try:
+        return json.dumps(payload)
+    except (TypeError, ValueError):
+        pass
+
+    # AND IF SOMETHING STILL WILL NOT SERIALISE, THE POST IS STILL WRITTEN.
+    #
+    # A type the sanitiser does not know is a bug to fix, not a reason to lose
+    # the thread: without the answer post there is no address to return to, and
+    # the whole conversation goes on the next refresh. So each part is tried on
+    # its own, whatever survives is kept, and what was dropped is NAMED in the
+    # payload — a reopened thread then draws the prose and whatever it still
+    # has, which is what the docstring above already promises for a post that
+    # carried nothing.
+    kept: dict = {}
+    dropped: list[str] = []
+    for key, value in payload.items():
+        try:
+            json.dumps({key: value})
+        except (TypeError, ValueError):
+            dropped.append(key)
+            continue
+        kept[key] = value
+    kept[REDUCED_KEY] = {
+        "dropped": sorted(dropped),
+        "why": (
+            "these parts of the answer could not be stored as JSON. The post "
+            "was written without them rather than not written at all, because "
+            "an unwritten answer post takes the whole thread with it."
+        ),
+    }
+    return json.dumps(kept)
 
 
 def merge_page_evidence(previous: Optional[dict], latest: dict) -> dict:
@@ -2465,6 +2506,29 @@ class ConversationLog:
 
     def posts(self, **kw) -> None:
         """
+        The turn as two posts in the river, and NOTHING HERE MAY RAISE.
+
+        `_exec` has always swallowed a failed statement, on the rule that
+        logging must never break an answer. Building the statement was not
+        covered, and on 2026-09-19 that cost the owner a conversation: a
+        Decimal in a composition block raised TypeError inside
+        `_answer_payload`, the raise escaped this method and the turn's own
+        try/except, and the generator died between the question post and the
+        answer post. No answer post meant no `post` frame, no `post` frame
+        meant the browser never learned the thread's address, and the next
+        refresh had nowhere to go back to. The answer itself was safe in
+        george.conversations the whole time, and unreachable.
+
+        So the guard is here, at the method, not at the statement.
+        """
+        try:
+            self._posts(**kw)
+        except Exception as exc:  # noqa: BLE001 - logging must never break the answer
+            self.errors.append(f"{type(exc).__name__}: {exc}")
+            self._conn = None
+
+    def _posts(self, **kw) -> None:
+        """
         The turn as two posts in the river: the question, and the answer
         replying to it.
 
@@ -2514,6 +2578,12 @@ class ConversationLog:
         if not answer:
             return
 
+        payload = _answer_payload(
+            kw.get("charted"), kw.get("calls"), kw.get("page_context"),
+            kw.get("reading"), kw.get("composition"),
+            kw.get("default_composition"), kw.get("actions"),
+        )
+
         # author_user is NULL because BOB wrote it; owner_user is the person
         # who asked, because it is theirs to see and theirs to share. Those two
         # facts were one column until 2026-09-05, and every answer post was
@@ -2543,16 +2613,16 @@ class ConversationLog:
                 # `calls` beside it (2026-09-07): the read calls that ran, so
                 # the post can be PINNED after a reload. The chart is a
                 # snapshot; the pin re-runs. Both are true of one answer.
-                _answer_payload(kw.get("charted"), kw.get("calls"),
-                                kw.get("page_context"), kw.get("reading"),
-                                kw.get("composition"),
-                                kw.get("default_composition"),
-                                kw.get("actions")),
+                payload,
                 json.dumps(_json_safe(kw["receipts"])) if kw.get("receipts") else None,
                 json.dumps(_json_safe(kw.get("notices") or [])),
                 self.conversation_id, datetime.now(timezone.utc),
             ),
         )
+        # Written, but not whole. Said in the gap log rather than left for
+        # somebody to notice a chart missing from a reopened thread.
+        if payload and REDUCED_KEY in payload:
+            self.gap("answer_payload_reduced", payload[:2000])
 
     def tool_call(self, seq: int, name: str, args: dict, result: dict,
                   ms: int, error: Optional[str]) -> None:
