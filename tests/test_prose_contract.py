@@ -364,7 +364,17 @@ def test_the_citation_is_one_tap_down():
 def test_the_receipts_line_leads_with_scope_and_not_a_table_name():
     # The line a reader sees is the scope, off meta; the table is the detail
     # behind a tap, and a last resort only for a read whose meta says nothing.
-    assert "const line = receiptsLine(meta)" in _receipts_component()
+    #
+    # SINCE 2026-09-19 (P3.k) ONE THING MAY COME BEFORE THE SCOPE, and only
+    # one: the read's own `read n · why read 2 · ruled out`, which used to be
+    # an uppercase banner above every title and is now folded into this line.
+    # The rule the test is here for is unchanged — what a reader sees under a
+    # figure is the SCOPE and never a database table.
+    component = _receipts_component()
+    assert "const said = receiptsLine(meta)" in component
+    assert "const line = [chrome, said]" in component, (
+        "only the read's own chrome may lead the receipts line"
+    )
     assert "source_table" not in _receipts_line(), (
         "the always-visible receipts line named a database table under every "
         "figure in the app"
