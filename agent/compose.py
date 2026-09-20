@@ -1013,6 +1013,26 @@ def validate(
                 call = _read(calls, item.get("seq"))
                 block["seq"] = item["seq"]
                 block["tool"] = call.get("tool")
+                # A POINTED ANNOTATION (composition.span, P6.a): the first and
+                # last row of a stretch, by the rows' own labels. Presentation
+                # only, so a bad one is DROPPED and said, never refused — it
+                # cannot change a value. Needs a `thought` to point with.
+                if "span" in item:
+                    said = item["span"]
+                    ends = list(said) if isinstance(said, (list, tuple)) else []
+                    labels = set()
+                    for r in call.get("rows") or []:
+                        for k in ("day", "week", "month", "store", "product", "category", "subject"):
+                            if r.get(k) is not None:
+                                labels.add(str(r[k]))
+                    if (len(ends) == 2 and all(isinstance(e, str) for e in ends)
+                            and all(e in labels for e in ends) and item.get("thought")):
+                        block["span"] = [ends[0], ends[1]]
+                    else:
+                        coerced.append(
+                            f"{key!r}: `span` names the first and last row of a stretch by "
+                            f"the rows' own labels and needs a `thought` to point with; "
+                            f"this one was left off")
             else:
                 call = None
 

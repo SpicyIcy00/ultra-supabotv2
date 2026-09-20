@@ -370,7 +370,7 @@ export interface CompositionBlock {
      * may compose nothing else. `memory` is the fifth (P2.f): every view he
      * holds, with a Forget on each row.
      */
-    | 'figure' | 'dumbbell' | 'ranked' | 'contributors' | 'line' | 'table'
+    | 'figure' | 'dumbbell' | 'ranked' | 'contributors' | 'line' | 'table' | 'list'
     /** P2S.3 reopened the catalogue: the design's shapes, each with its rule. */
     | 'bar' | 'multiples' | 'area' | 'stacked' | 'pie' | 'scatter' | 'heatmap'
     | 'calendar' | 'waterfall' | 'treemap' | 'gauge'
@@ -442,6 +442,12 @@ export interface CompositionBlock {
    * (metrics.yaml composition.question).
    */
   question?: string;
+  /**
+   * A POINTED ANNOTATION on a series (P6.a): the first and last row of a
+   * stretch, by the rows' own labels, drawn as a band with the `thought`
+   * pointing at it. Validated server-side against the read's rows.
+   */
+  span?: [string, string];
   /**
    * WHAT HE THINKS THIS BLOCK SHOWS (2026-09-17): a sentence or two, drawn
    * beside the mark. Held server-side to the reading's rule — a figure only

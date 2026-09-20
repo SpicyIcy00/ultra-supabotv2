@@ -267,6 +267,7 @@ def test_the_named_widgets_survive_and_are_the_catalogue():
     widgets = req(DEFS, "composition.widgets")
     assert set(widgets) == {"figure", "dumbbell", "ranked", "contributors",
                             "line", "table",
+                            "list",   # P6.a, 2026-09-20: the rows as a list
                             "bar", "multiples", "area", "stacked", "pie", "scatter",
                             "heatmap", "calendar", "waterfall", "treemap", "gauge",
                             "draft", "state", "control", "system",

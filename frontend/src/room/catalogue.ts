@@ -56,7 +56,7 @@ import { ORDER_KEYS, changeOf, unitOf, valueOf, windowLabel, type Change } from 
  * only when asked. Map and funnel are declined there, with what would change it.
  */
 export const MARKS = [
-  'figure', 'dumbbell', 'ranked', 'contributors', 'line', 'table',
+  'figure', 'dumbbell', 'ranked', 'contributors', 'line', 'table', 'list',
   'bar', 'multiples', 'area', 'stacked', 'pie', 'scatter', 'heatmap', 'calendar',
   'waterfall', 'treemap', 'gauge',
 ] as const;
@@ -69,7 +69,7 @@ export type Mark = (typeof MARKS)[number];
  */
 export const SHAPE_ROWS: Record<Mark, string> = {
   figure: 'one_value', dumbbell: 'baseline', ranked: 'named', contributors: 'change',
-  line: 'series', table: 'any', bar: 'named', multiples: 'series_per_name', area: 'series',
+  line: 'series', table: 'any', list: 'any', bar: 'named', multiples: 'series_per_name', area: 'series',
   stacked: 'two_key_parts', pie: 'parts', scatter: 'two_measures', heatmap: 'two_keys',
   calendar: 'days', waterfall: 'change', treemap: 'parts', gauge: 'baseline',
 };
@@ -282,6 +282,10 @@ export function markFor(o: Pick<BoardObject, 'kind' | 'form' | 'subject' | 'subj
       return drawable('line', rows) ? 'line' : defaultMark(rows);
     case 'table':
       return 'table';
+    // THE ROWS AS A LIST (P6.a): things a person goes and does something
+    // about. Any rows; nothing to check.
+    case 'list':
+      return 'list';
 
     // ---- retired names a stored board still carries ----------------------
     case 'hero': case 'subject': case 'recommendation':

@@ -1871,10 +1871,14 @@ investigation:
         # P2S.10: the second round is get_change, which reads the moving
         # driver at a shop by time and by what sold, and CHECKs the shelf and
         # the baseline's days, in one call — the rounds this took before.
+        # PAGE FIRST (P6.c, 2026-09-20). The owner: "if he knows he has an
+        # unlimited canvas he could get different data, put different text and
+        # everything else." The reads follow the page a person needs, not the
+        # other way round; the composition recipe is on `compose`.
         reads: >
-          {headline} by store over a closed window, compared, and
-          get_attention, in ONE round; then in ONE more, get_change at the
-          shop or two that moved most
+          design the page first, then read for it in ONE round: {headline}
+          for the estate, the estate by day, every shop by week, the movers
+          both ways, get_attention
         grouped_not_fanned_out: true
         # 5 → 7 (P2S.6): three headline reads, get_attention, and one call per
         # localizing dimension across both shops (group_by [store, day] with
@@ -1884,7 +1888,8 @@ investigation:
         # COUNTED IN CALLS SINCE P2S.10: what Bob asks for, a call asked as
         # one (one_call_reads, metric_sets) counting once, exactly as the
         # loop's convergence cap counts. Broad is about four now.
-        max_reads: 9
+        # 9 → 10 (P6.c): the page needs the estate total as well.
+        max_reads: 10
         # NO COST CEILING. One was set here on 2026-09-18 ($0.50 a broad eval
         # turn) and withdrawn the same day by the owner: "cost should not hold
         # us back in functionality". The eval records each broad turn's cost
@@ -6831,6 +6836,11 @@ composition:
       when: "exact pesos someone will act on, or nothing in the shape to see"
       rows: any
       needs: [seq]
+    list:
+      about: "the rows as a plain list — each one's name, where it is, and its one figure if it has one; for the things a person has to go and do something about"
+      when: "rows that are items to act on, not a shape to read — lines that hit zero, orders waiting, shops to visit"
+      rows: any
+      needs: [seq]
     bar:
       about: "upright bars in the read's own order, the period before as a tick on each where the tool returned one"
       when: "a few things compared side by side, eight or fewer, when their order is not the point"
@@ -6988,6 +6998,20 @@ composition:
   # the composition, a second level, a cycle, or a `relation` with no `under`
   # all fall away and the block stands on its own — which is the page as it is
   # drawn today. The arrangement degrades to the old flow; it never breaks.
+  # A POINTED ANNOTATION (P6.a, 2026-09-20). The page the owner approved as
+  # the target (ops/ideal/how-are-we-doing-v2.html) points at the two weeks
+  # that matter on a series and says, on the chart, "two weeks under last
+  # month, at every shop". A caption above a chart is not that. `span` names
+  # the first and last row of the stretch by the rows' own labels; the block's
+  # `thought` is drawn on the chart pointing at it. It names no figure — the
+  # same bound an annotation has always had (CLAUDE.md, UI) — and a span
+  # naming a row the read does not hold is dropped, not refused: it is
+  # presentation, and cannot change a value.
+  span:
+    about: "the first and last row of a stretch of a series, by the rows' own labels (two dates, or two names) — drawn as a band on the chart with your `thought` pointing at it. Only on a series."
+    needs: thought
+    dropped_when: a label is not a row of the read
+
   under:
     about: "the key of another block in this composition that this one belongs to — it is drawn gathered under that block instead of beside it. One level only; an empty string detaches it"
     detach: ""
@@ -7458,6 +7482,19 @@ composition:
   # always has (`beside.placeFigures`) and draws his paragraphs as beats
   # (`page.ts`) — every board composed before this, every default, every kept
   # page, unchanged.
+  # THE PAGE FOR A BROAD QUESTION, as a recipe on `compose` (P6.c). Read at
+  # the moment he composes, which is where it is needed, and not in the prompt.
+  page_first:
+    about: >
+      For a broad question, the page: the estate total as a `figure` weighted
+      lead, its claim the verdict; the estate by day as a `line` with a `span`
+      over the stretch that matters and your thought pointing at it; every
+      shop by week as `multiples`; the movers as two `contributors`, gains and
+      drops, side by side in the arrangement; a visit as two `figure`s in a
+      row, transactions and basket, each claim a verdict; what needs a person
+      as a `list` with its action; and a source that cannot be compared as a
+      quiet `figure` with its notice. Then lay it out.
+
   arrangement:
     about: >
       how the right-hand side is laid out for this answer, as one arrangement:
@@ -7566,7 +7603,7 @@ composition:
   # which `claim` now does under its own name.
   allowed_fields: [op, kind, key, weight, seq, subject, label,
                    argument, spec, emphasise, claim, question, thought,
-                   field, against, ruled_out, under, relation]
+                   field, against, ruled_out, under, relation, span]
   # AN UNKNOWN FIELD IS DROPPED, NOT REFUSED — except these (the speed fix,
   # 2026-09-19). `claim_note` and `key_note` cost the P2S.✓ follow-up turn a
   # whole round, and the renderer never reads a field it does not know, so

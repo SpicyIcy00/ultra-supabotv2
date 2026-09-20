@@ -9,6 +9,48 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-20 · P6.a/b/d — the canvas, built locally against the target page
+
+The owner, after the target page: *"implement your new page style and test
+scenarios locally, i dont want to waste cost."* So: no model turn, the vetted
+reads of the day recorded whole, three questions composed in the vocabulary and
+rendered through the REAL room (`ops/frames.py --scenes canvas-doing
+canvas-stores canvas-products`), beside `ops/ideal/how-are-we-doing-v2.html`.
+
+**THE VOCABULARY WAS MOSTLY THERE, LOCKED INSIDE ONE CHART.** `line` already
+drew the period before dotted; `multiples` existed; the arrangement (P3.p) laid
+blocks out; steps (P3.r) were the right side. What the target needed and the
+room could not draw was four things: a **pointed annotation** (`span` — the
+first and last row of a stretch by the rows' own labels, the block's `thought`
+drawn on the chart pointing at it; validated against the read, DROPPED and said
+when it names a row the read does not hold, because presentation cannot change
+a value); the **rows as a list** (`list`, for what a person goes and does
+something about); a lead `figure` **at the size of the answer** (44 → 72); and
+`multiples` **drawing the change** about a zero line — as values, seven shops'
+weeks were seven of the same weekly rhythm and the two weeks every shop lost
+were invisible.
+
+**THE FIRST FRAME FOUND WHAT FIVE DOM TESTS COULD NOT, AGAIN.** `r-mk-band` is
+the dumbbell's noise-floor band, and Chrome applies its CSS height to an SVG
+rect, so the stretch drew as a ten-pixel bar at the head line. Renamed. And the
+list named every row after its shop — the open defect of 2026-09-17 — because
+`nameKeyOf` prefers the shop; a list names a row by what it IS first.
+
+**HOW HE THINKS IS WRITTEN AND UNPROVEN.** The broad policy is page-first in
+one round; the recipe is on `compose`; the prompt is at 1,799 of 1,800. Four
+guards that pinned the two-round policy and the six-and-eleven were rewritten
+to the decided rule, each naming which instruction superseded the one it held.
+Whether HE composes the page is the next live turn's to answer, and by the
+owner's rule that turn is his to spend.
+
+**Found on the way:** a day matched by position over thirty days is not the
+same weekday (`weekday_misaligned`, raised and drawn).
+
+**Suites:** pure 2,142, vitest 1,119, `tsc -b --force` clean. Frames
+`verification/frames/canvas2`.
+
+---
+
 ## 2026-09-20 · P3.r — the right side is steps, the prose is the conclusion, and it is short
 
 The owner, after his first live turn on the arranged room: *"it still kinda

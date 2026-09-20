@@ -189,12 +189,12 @@ def test_a_focused_message_that_asks_to_be_taken_apart_is_not_one_read(defs):
     lookup = req(defs, "investigation.opens_when.a_lookup_is_not_one")
     assert f"taken apart gets {apart['min_reads']}, not one" in scope
     assert lookup["answered_with"] in scope
-    # BROAD's second round is still named, and FOCUSED's floor is under BROAD's
-    # ceiling — a focused message taken apart is not a broad one.
+    # BROAD IS ONE ROUND SINCE P6.c (2026-09-20): the page is designed first
+    # and every read it needs goes in one batch — there is no second round to
+    # name. FOCUSED's floor is still under BROAD's ceiling: a focused message
+    # taken apart is not a broad one.
     broad_reads = req(defs, "investigation.scope.kinds.broad.reads")
-    # Since P2S.10 the second round is get_change, which reads by time and by
-    # what sold (one_call_reads.tools.get_change).
-    assert "in ONE more" in broad_reads and "get_change" in broad_reads
+    assert "ONE round" in broad_reads and "design the page first" in broad_reads
     assert int(apart["min_reads"]) < int(req(defs, "investigation.scope.kinds.broad.max_reads"))
 
 

@@ -66,7 +66,10 @@ def test_every_shape_names_a_row_rule_that_exists():
 
 
 def test_the_catalogue_is_the_six_and_the_eleven():
-    assert set(MARKS) == {"figure", "dumbbell", "ranked", "contributors", "line", "table",
+    # `list` ADDED 2026-09-20 (P6.a), at the owner's word: the rows as a plain
+    # list, for the things a person goes and does something about. Seven and
+    # eleven, and this guard is still the place a nineteenth is decided.
+    assert set(MARKS) == {"figure", "dumbbell", "ranked", "contributors", "line", "table", "list",
                           "bar", "multiples", "area", "stacked", "pie", "scatter", "heatmap",
                           "calendar", "waterfall", "treemap", "gauge"}
 

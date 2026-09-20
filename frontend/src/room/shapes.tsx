@@ -167,14 +167,23 @@ function Bar({ rows, meta, o, onPick, picked }: ShapeProps) {
 function Multiples({ rows, meta, o, onPick, picked }: ShapeProps) {
   const nameKey = nameKeyOf(rows) as string;
   const orderKey = orderKeyOf(rows) as string;
-  const key = figureKey(rows);
+  // THE CHANGE, WHERE THE ROWS CARRY ONE (P6.a). "Which one moved
+  // differently" is a question about change; drawn as values, seven shops'
+  // weeks were seven of the same weekly rhythm and the two weeks every shop
+  // lost were invisible. About a zero line they are the two dips on every
+  // card, and the one card that stays under the line is the finding.
+  const byChange = rows.every((r) => typeof r.change === 'number');
+  const key = byChange ? 'change' : figureKey(rows);
   const unit = unitFor(rows, meta);
   const order = ordered(rows.map((r) => r[orderKey]));
-  const values = rows.map(num);
+  const read = (r: Row) => (byChange ? Number(r.change) : num(r));
+  const values = rows.map(read);
   const low = Math.min(0, ...values);
-  const high = Math.max(1, ...values);
+  const high = Math.max(byChange ? 0 : 1, ...values);
+  // 46 → 72 (P6.a): at 46 a shop's five weeks were a hairline; the target
+  // page draws them at a size where the one that did not come back is seen.
   const W = 160;
-  const H = 46;
+  const H = 72;
   const x = (i: number) => 3 + (i / Math.max(1, order.length - 1)) * (W - 6);
   const y = (v: number) => H - 3 - ((v - low) / (high - low || 1)) * (H - 6);
   const names = inReadOrder(rows, nameKey);
@@ -184,7 +193,7 @@ function Multiples({ rows, meta, o, onPick, picked }: ShapeProps) {
         {names.map((name, n) => {
           const mine = rows.filter((r) => String(r[nameKey]) === name);
           const points = order.map((at) => mine.find((r) => JSON.stringify(r[orderKey]) === JSON.stringify(at)))
-            .map((r, i) => (r ? { i, v: num(r), at: r[orderKey] } : null))
+            .map((r, i) => (r ? { i, v: read(r), at: r[orderKey] } : null))
             .filter((p): p is { i: number; v: number; at: unknown } => p !== null);
           const lit = mine.some((r) => isLit(o, r));
           const c = paint(colourOf(changeIfAny(mine[mine.length - 1] ?? {}), lit));
@@ -196,6 +205,7 @@ function Multiples({ rows, meta, o, onPick, picked }: ShapeProps) {
                        pickable onPick={onPick} picked={picked?.includes(name)} />
               <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} role="img"
                    aria-label={`${name}: ${points.length} points`} style={{ overflow: 'visible' }}>
+                {byChange && <line className="r-mk-zero" x1={3} x2={W - 3} y1={y(0)} y2={y(0)} />}
                 <polyline className="r-mk-series-line" fill="none" stroke={c} strokeWidth={1.5}
                           pathLength={1} points={points.map((p) => `${x(p.i)},${y(p.v)}`).join(' ')} />
                 {last && <circle cx={x(last.i)} cy={y(last.v)} r={2.6} fill={c} />}
@@ -696,10 +706,50 @@ function Gauge({ rows, meta, o }: ShapeProps) {
 export const SHAPES: Mark[] = ['bar', 'multiples', 'area', 'stacked', 'pie', 'scatter', 'heatmap',
                                'calendar', 'waterfall', 'treemap', 'gauge'];
 
+/**
+ * THE ROWS AS A LIST (P6.a): things a person goes and does something about —
+ * lines that hit zero, orders waiting. Each row's name, where it is, and its
+ * one figure if it carries one. No shape, because there is nothing to read
+ * in the shape; the offers the block carries are drawn under it as always.
+ */
+function List({ rows, meta, o, onPick, picked }: ShapeProps) {
+  // WHAT A ROW IS, before WHERE IT IS: a line that hit zero is the line, at a
+  // shop. `nameKeyOf` prefers the shop, which is the open defect of 2026-09-17
+  // (a product chart naming every row after its shop); a list of things to do
+  // must not inherit it.
+  const nameKey = (['subject', 'product', 'sku'] as const)
+    .find((k) => rows.some((r) => typeof r[k] === 'string'))
+    ?? (nameKeyOf(rows) as string | null) ?? 'subject';
+  const key = figureKey(rows);
+  const unit = unitFor(rows, meta);
+  return (
+    <ul className="r-mk r-mk-list" data-emphasis={emphasised(o) ? 'yes' : undefined}>
+      {rows.slice(0, 40).map((r, n) => {
+        const name = String(r[nameKey] ?? subjectOf(r) ?? '');
+        const where = typeof r.store === 'string' && nameKey !== 'store' ? r.store
+          : typeof r.category === 'string' && nameKey !== 'category' ? r.category : null;
+        const lit = isLit(o, r);
+        const v = key ? num(r) : null;
+        return (
+          <li key={n} className="r-mk-list-row" data-lit={lit ? 'yes' : 'no'} style={beat(n)}>
+            <RowName name={name} className="r-mk-name" dimension={dimensionOf(rows, name)}
+                     pickable onPick={onPick} picked={picked?.includes(name)} />
+            {where && <span className="r-mk-list-where">{where}</span>}
+            {v !== null && Number.isFinite(v) && (
+              <span className="r-mk-list-fig">{fmt(key as string, v, unit)}</span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function Shape(p: ShapeProps & { mark: Mark; subject: string | null }) {
   switch (p.mark) {
     case 'bar': return <Bar {...p} />;
     case 'multiples': return <Multiples {...p} />;
+    case 'list': return <List {...p} />;
     case 'area': return <Area {...p} />;
     case 'stacked': return <Stacked {...p} />;
     case 'pie': return <Pie {...p} />;

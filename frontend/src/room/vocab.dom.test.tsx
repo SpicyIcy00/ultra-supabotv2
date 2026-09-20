@@ -142,7 +142,9 @@ describe('every shape, drawn from the read recorded for it', () => {
 });
 
 describe('a read too small, too big or empty for its shape', () => {
-  const eleven = MARKS.filter((m) => !['figure', 'dumbbell', 'ranked', 'contributors', 'line', 'table']
+  // `list` (P6.a, 2026-09-20) is a plain drawing like `table` — any rows,
+  // one row still a list — so it sits with the six here, not the eleven.
+  const eleven = MARKS.filter((m) => !['figure', 'dumbbell', 'ranked', 'contributors', 'line', 'table', 'list']
     .includes(m));
 
   it.each(eleven)('%s over no rows says nothing came back', (shape) => {

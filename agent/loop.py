@@ -775,6 +775,12 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                             "you were on, never the finding again. NO DIGITS, as a claim."
                         ),
                     },
+                    # A POINTED ANNOTATION on a series (composition.span, P6.a).
+                    "span": {
+                        "type": "array", "items": {"type": "string"},
+                        "minItems": 2, "maxItems": 2,
+                        "description": " ".join(str((voc.get("span") or {}).get("about") or "").split()),
+                    },
                     "argument": {"type": "string",
                                  "enum": list(voc["control_arguments"]),
                                  "description": "for a control: which scope argument it changes"},
@@ -1456,6 +1462,9 @@ def _board_addendum(defs: dict) -> str:
         + "SAY IT ONCE, PLAINLY: "
         + " ".join(str(req(defs, "voice.plain.about")).split()) + " "
         + "Those words are: " + ", ".join(str(w) for w in req(defs, "voice.plain.instrument_words")) + ". "
+        # THE PAGE FOR A BROAD QUESTION (composition.page_first, P6.c).
+        + "FOR A BROAD QUESTION, THE PAGE: "
+        + " ".join(str(req(defs, "composition.page_first.about")).split()) + " "
         + "AND LAY THE SPACE OUT YOURSELF, on `arrangement`: "
         + " ".join(str(req(defs, "composition.arrangement.about")).split()) + " "
         # THE PATH (voice.reading.path, 2026-09-19). The one thing about the

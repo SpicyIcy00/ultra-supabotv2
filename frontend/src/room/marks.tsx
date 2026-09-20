@@ -84,7 +84,9 @@ function Figure(p: TileProps & { rows: Row[]; meta: Meta }) {
     : <Missing what="a row" />;
   const v = figureOf(row, meta);
   const change = changeOf(row);
-  const size = p.o.weight === 'lead' ? 44 : p.o.weight === 'quiet' ? 26 : 34;
+  // THE ANSWER IS A NUMBER, SO IT IS DRAWN AS ONE (P6.a): a lead figure at
+  // the size of the answer, not of a tile. 44 → 72.
+  const size = p.o.weight === 'lead' ? 72 : p.o.weight === 'quiet' ? 26 : 34;
   return (
     <>
       <div className="r-mk-figure">
@@ -289,10 +291,12 @@ function Contributors({ rows, meta, o, offers, seq, onTake, onPick, picked }:
  * A SERIES OVER AN ORDERED FIELD, and its baseline dotted where the tool
  * returned one. Ends and extremes are labelled on the mark itself.
  */
-function Line({ rows, meta, o, subject }: {
+function Line({ rows, meta, o, subject, p }: {
   rows: Row[]; meta: Meta; o: TileProps['o'];
   /** The one thing this series is OF, where the read says so — for its key. */
   subject: string | null;
+  /** The tile, for the thought a span points with and the calls it cites. */
+  p: TileProps;
 }) {
   const by = timeKeyOf(rows);
   const points = rows.slice(0, 60);
@@ -318,12 +322,29 @@ function Line({ rows, meta, o, subject }: {
   // here works out a trend of its own.
   const c = colourOf(changeIfAny(points[last] ?? {}), isLit(o, points[last] ?? {}));
   const label = (n: number) => String(by ? points[n][by] ?? '' : subjectOf(points[n]) ?? '');
+  // A POINTED ANNOTATION (P6.a): the stretch his `span` names, as a band, with
+  // his thought over it. The band's ends are rows; the sentence is his; no
+  // figure is drawn that the rows do not already carry.
+  const span_ = (p.o as { span?: [string, string] }).span;
+  const iFrom = span_ ? points.findIndex((_, n) => label(n) === span_[0]) : -1;
+  const iTo = span_ ? points.findIndex((_, n) => label(n) === span_[1]) : -1;
+  const banded = iFrom >= 0 && iTo >= 0 ? [Math.min(iFrom, iTo), Math.max(iFrom, iTo)] : null;
 
   return (
     <div className="r-mk r-mk-line">
+      {banded && p.o.thought?.trim() && (
+        <p className="r-mk-annotation"
+           style={{ marginLeft: `${(x(banded[0]) / W) * 100}%` }}>
+          <Figures text={p.o.thought.trim()} calls={p.turn.toolCalls} />
+        </p>
+      )}
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} role="img"
            aria-label={`${measureOf(meta, key)} over ${points.length} points`}
            style={{ display: 'block', overflow: 'visible' }}>
+        {banded && (
+          <rect className="r-mk-span-band" x={x(banded[0])} y={0}
+                width={Math.max(2, x(banded[1]) - x(banded[0]))} height={H} />
+        )}
         {drawnBase && (
           <polyline className="r-mk-baseline" fill="none" stroke="rgb(var(--flat))"
                     strokeWidth={1.2} strokeDasharray="3 4" points={path(bases)} />
@@ -511,6 +532,14 @@ export function MarkBlock(p: TileProps) {
   const mark: Mark = markFor(p.o, rows);
   const named = p.focus?.length
     ? rows.filter((r) => p.focus?.includes(String(subjectOf(r) ?? ''))) : [];
+  // A SPAN THAT NAMES ROWS THE READ HOLDS is drawn on the chart with the
+  // thought pointing at it; one that does not resolve draws nothing, and the
+  // thought goes where a thought always goes. Decided here, once, so the head
+  // and the chart cannot disagree about where the sentence went.
+  const spanOf = (p.o as { span?: [string, string] }).span;
+  const spanKey = timeKeyOf(rows);
+  const spanResolves = Boolean(spanOf && spanKey
+    && spanOf.every((label) => rows.some((r) => String(r[spanKey] ?? '') === label)));
   // ONLY A MARK THAT DRAWS ROWS CAN FOLD THEM. A single figure over a seventeen-
   // row read is already one row of it; "15 more · show" under a number opened
   // nothing (the first frame of this, 2026-09-19).
@@ -603,7 +632,7 @@ export function MarkBlock(p: TileProps) {
           <span className="r-mk-title">
             {titleFor(p.o, meta)}{p.earlier ? ' · from earlier' : ''}
           </span>
-          {!p.told && p.o.thought?.trim() && (
+          {!p.told && p.o.thought?.trim() && !spanResolves && (
             <>
               {/[.!?:…]["'”’)\]]?$/.test(`${titleFor(p.o, meta)}`.trim()) ? ' ' : '. '}
               <span className="r-mk-thought">
@@ -617,7 +646,7 @@ export function MarkBlock(p: TileProps) {
           {mark === 'dumbbell' && <Dumbbell rows={drawn} meta={meta} o={p.o} order={p.order} {...offering} />}
           {mark === 'ranked' && <Ranked rows={drawn} meta={meta} o={p.o} {...offering} />}
           {mark === 'contributors' && <Contributors rows={drawn} meta={meta} o={p.o} {...offering} />}
-          {mark === 'line' && <Line rows={rows} meta={meta} o={p.o} subject={seriesOf} />}
+          {mark === 'line' && <Line rows={rows} meta={meta} o={p.o} subject={seriesOf} p={p} />}
           {mark === 'table' && <Rows rows={drawn} meta={meta} o={p.o} p={p} />}
           {/* THE ELEVEN P2S.3 ADDED (shapes.tsx), framed exactly as the six. */}
           <Shape mark={mark} rows={rows} meta={meta} o={p.o} subject={seriesOf} {...offering} />

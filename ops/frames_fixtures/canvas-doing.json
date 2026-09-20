@@ -1,0 +1,1983 @@
+{
+ "why": "THE CANVAS, LOCALLY (P6.d). Every figure is a value the vetted read tools returned on 2026-09-20; the blocks, arrangement, prose and questions are the session's. NO MODEL TURN WAS SPENT. This is what the room draws from the vocabulary; whether Bob composes it is the next live turn's to answer.",
+ "question": "how are we doing?",
+ "answer": "Down on the month - but **the fall was two weeks in August, at every shop, and it is over - except at Rockwell.**\n\nSame number of people, smaller baskets. The range is splitting: a few lines stopped dead while a few others took off. And eight lines hit zero yesterday, most of them at OPUS and Magnolia.\n\nShall I draft the eight transfers, and pull Rockwell day by day across those two weeks?",
+ "at": "2026-09-20T09:50:00+00:00",
+ "blocks": [
+  {
+   "op": "put",
+   "key": "total",
+   "seq": 0,
+   "kind": "figure",
+   "weight": "lead",
+   "question": "Are we down?",
+   "claim": "A real fall - and most of it is already over"
+  },
+  {
+   "op": "put",
+   "key": "days",
+   "seq": 1,
+   "kind": "line",
+   "weight": "supporting",
+   "question": "Where is the fall?",
+   "claim": "The rhythm is the weekends; the hole is late August, and it closes",
+   "thought": "Two weeks under last month, at every shop.",
+   "span": [
+    "2026-08-21",
+    "2026-09-03"
+   ]
+  },
+  {
+   "op": "put",
+   "key": "shops",
+   "seq": 2,
+   "kind": "multiples",
+   "weight": "supporting",
+   "question": "Was it one shop?",
+   "claim": "No - every shop fell in the same two weeks, and one has not come back",
+   "emphasise": [
+    "Rockwell"
+   ]
+  },
+  {
+   "op": "put",
+   "key": "stopped",
+   "seq": 3,
+   "kind": "contributors",
+   "weight": "supporting",
+   "question": "What stopped?",
+   "claim": "Three lines gave back nearly everything they earned"
+  },
+  {
+   "op": "put",
+   "key": "tookoff",
+   "seq": 4,
+   "kind": "contributors",
+   "weight": "supporting",
+   "claim": "And a different handful took off",
+   "under": "stopped",
+   "relation": "counter"
+  },
+  {
+   "op": "put",
+   "key": "visits",
+   "seq": 5,
+   "kind": "figure",
+   "weight": "supporting",
+   "question": "Fewer people?",
+   "claim": "No - the same people came in"
+  },
+  {
+   "op": "put",
+   "key": "basket",
+   "seq": 6,
+   "kind": "figure",
+   "weight": "supporting",
+   "question": "...or less from each?",
+   "claim": "Yes - each spent less, at all seven shops",
+   "under": "visits",
+   "relation": "evidence"
+  },
+  {
+   "op": "put",
+   "key": "crossed",
+   "seq": 7,
+   "kind": "list",
+   "weight": "supporting",
+   "question": "What needs me?",
+   "claim": "Eight lines hit zero yesterday, at four shops",
+   "thought": "No low-stock level is set anywhere, so this is the first I see of any of them."
+  },
+  {
+   "op": "put",
+   "key": "vending",
+   "seq": 8,
+   "kind": "figure",
+   "weight": "quiet",
+   "claim": "Vending, with nothing to compare against"
+  }
+ ],
+ "default_blocks": [
+  {
+   "op": "put",
+   "key": "read-0",
+   "seq": 0,
+   "kind": "table",
+   "weight": "quiet",
+   "default": true
+  },
+  {
+   "op": "put",
+   "key": "read-1",
+   "seq": 1,
+   "kind": "table",
+   "weight": "quiet",
+   "default": true
+  },
+  {
+   "op": "put",
+   "key": "read-2",
+   "seq": 2,
+   "kind": "table",
+   "weight": "quiet",
+   "default": true
+  },
+  {
+   "op": "put",
+   "key": "read-3",
+   "seq": 3,
+   "kind": "table",
+   "weight": "quiet",
+   "default": true
+  },
+  {
+   "op": "put",
+   "key": "read-4",
+   "seq": 4,
+   "kind": "table",
+   "weight": "quiet",
+   "default": true
+  },
+  {
+   "op": "put",
+   "key": "read-5",
+   "seq": 5,
+   "kind": "table",
+   "weight": "quiet",
+   "default": true
+  },
+  {
+   "op": "put",
+   "key": "read-6",
+   "seq": 6,
+   "kind": "table",
+   "weight": "quiet",
+   "default": true
+  },
+  {
+   "op": "put",
+   "key": "read-7",
+   "seq": 7,
+   "kind": "table",
+   "weight": "quiet",
+   "default": true
+  },
+  {
+   "op": "put",
+   "key": "read-8",
+   "seq": 8,
+   "kind": "table",
+   "weight": "quiet",
+   "default": true
+  }
+ ],
+ "arrangement": {
+  "layout": "stack",
+  "children": [
+   {
+    "block": "total"
+   },
+   {
+    "block": "days"
+   },
+   {
+    "block": "shops"
+   },
+   {
+    "layout": "row",
+    "children": [
+     {
+      "block": "stopped"
+     },
+     {
+      "block": "tookoff"
+     }
+    ]
+   },
+   {
+    "layout": "row",
+    "children": [
+     {
+      "block": "visits"
+     },
+     {
+      "block": "basket"
+     }
+    ]
+   },
+   {
+    "block": "crossed"
+   },
+   {
+    "block": "vending"
+   }
+  ]
+ },
+ "reading": {
+  "claim": "the fall was two weeks in August, at every shop, and it is over - except at Rockwell",
+  "caveat": "The newest week is part of a week on both sides, so ignore how good it looks. Vending has nothing to compare against.",
+  "next": "Shall I draft the eight transfers, and pull Rockwell day by day across those two weeks?",
+  "asks": [
+   "What happened at Rockwell in August?",
+   "Which shops still have kiamoy?",
+   "Why has vending stopped reporting?"
+  ]
+ },
+ "calls": [
+  {
+   "seq": 0,
+   "tool": "get_sales",
+   "arguments": {
+    "group_by": [],
+    "date_range": "last_30_days",
+    "metric": "net_sales",
+    "compare_to": "previous_period"
+   },
+   "result": {
+    "rows": [
+     {
+      "value": 7281692.03,
+      "baseline": 8060342.07,
+      "change": -778650.04,
+      "change_pct": -9.7,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     }
+    ],
+    "meta": {
+     "source_table": "new_transactions",
+     "metric": "net_sales",
+     "metric_sql": "SUM(t.total)",
+     "metric_unit": "PHP",
+     "metric_grain": "transaction",
+     "metric_kind": "base",
+     "metric_label": "Net sales",
+     "metric_domain": "retail_sales",
+     "valid_group_by": [
+      "store",
+      "hour",
+      "day",
+      "week",
+      "month"
+     ],
+     "drivers": [
+      "transaction_count",
+      "average_transaction_value"
+     ],
+     "top_n": null,
+     "group_by": [],
+     "window": {
+      "kind": "preset",
+      "name": "last_30_days",
+      "includes_partial_day": false,
+      "start": "2026-08-21",
+      "end": "2026-09-20",
+      "convention": "half-open [start, end)",
+      "resolved_against": "2026-09-20"
+     },
+     "filters_applied": [
+      "t.is_cancelled = false   # metrics.yaml: filters.cancelled",
+      "t.transaction_type = 'Sale'   # metrics.yaml: filters.returns",
+      "t.store_id IN (7: Rockwell, Fairview, Greenhills, North Edsa, Magnolia, OPUS, Shangri-La)   # metrics.yaml: stores.active_retail",
+      "excluded: AJI BARN, AJI PINA, AJI MACOPA   # metrics.yaml: filters.excluded_from_sales.excluded_store_ids",
+      "transaction_time within preset 'last_30_days' (Asia/Manila, half-open; includes_partial_day=False)   # metrics.yaml: sales_day.presets.last_30_days",
+      "baseline: transaction_time >= 2026-07-22 AND < 2026-08-21 (Asia/Manila, half-open; previous_period, same metric, grouping, stores and guards)   # metrics.yaml: comparisons.previous_period"
+     ],
+     "snapshot_timestamp": "2026-09-20T09:15:58.362219+00:00",
+     "definitions_version": 1,
+     "definitions_path": "C:\\ultra-supabotv2-main\\definitions\\metrics.yaml",
+     "row_count": 1,
+     "full_row_count": 1,
+     "full_row_count_note": "Size of the complete result set before top_n or the row cap. When it exceeds row_count, the rows shown are the top slice by the ordering in meta.ordering — never a sample, and never something to total.",
+     "ordering": "single row",
+     "truncated": false,
+     "row_limit": 1000,
+     "reconciliation": {
+      "applicable": true,
+      "method": "compute both measures over the same window and filters; compare directly",
+      "net_sales": 7281692.03,
+      "product_revenue": 7281692.03,
+      "gap": 0.0,
+      "gap_pct": 0.0,
+      "discount_total": 0.0,
+      "holds": true,
+      "explained_by_discount": null
+     },
+     "gap_filled": false,
+     "gap_filled_note": "Buckets with no transactions are absent, not zero. No row is synthesised for an empty day — that would fabricate data.",
+     "comparison": {
+      "kind": "previous_period",
+      "display_name": "vs previous period",
+      "method": "shift_back_by_relative_length",
+      "current": {
+       "start": "2026-08-21",
+       "end": "2026-09-20"
+      },
+      "baseline": {
+       "kind": "preset",
+       "name": "last_30_days",
+       "periods_back": 1,
+       "start": "2026-07-22",
+       "end": "2026-08-21",
+       "convention": "half-open [start, end)"
+      },
+      "same_population": true,
+      "change_pct_formula": "change / abs(baseline) * 100",
+      "baseline_statuses": {
+       "ok": 1
+      },
+      "row_count_baseline": 1,
+      "rank_by": "value",
+      "ranked_by_current": false,
+      "ranking_note": null,
+      "source": "definitions/metrics.yaml: comparisons.previous_period"
+     },
+     "baseline_reconciliation": {
+      "applicable": true,
+      "method": "compute both measures over the same window and filters; compare directly",
+      "net_sales": 8060342.07,
+      "product_revenue": 8060342.07,
+      "gap": 0.0,
+      "gap_pct": 0.0,
+      "discount_total": 0.0,
+      "holds": true,
+      "explained_by_discount": null
+     }
+    }
+   }
+  },
+  {
+   "seq": 1,
+   "tool": "get_sales",
+   "arguments": {
+    "group_by": "day",
+    "date_range": "last_30_days",
+    "metric": "net_sales",
+    "compare_to": "previous_period"
+   },
+   "result": {
+    "rows": [
+     {
+      "day": "2026-08-21",
+      "value": 334643.05,
+      "baseline": 239124.26,
+      "change": 95518.79,
+      "change_pct": 39.9,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-07-22"
+     },
+     {
+      "day": "2026-08-22",
+      "value": 368310.87,
+      "baseline": 232997.19,
+      "change": 135313.68,
+      "change_pct": 58.1,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-07-23"
+     },
+     {
+      "day": "2026-08-23",
+      "value": 409376.36,
+      "baseline": 256733.33,
+      "change": 152643.03,
+      "change_pct": 59.5,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-07-24"
+     },
+     {
+      "day": "2026-08-24",
+      "value": 124079.66,
+      "baseline": 458879.51,
+      "change": -334799.85,
+      "change_pct": -73.0,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-07-25"
+     },
+     {
+      "day": "2026-08-25",
+      "value": 150254.0,
+      "baseline": 567721.57,
+      "change": -417467.57,
+      "change_pct": -73.5,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-07-26"
+     },
+     {
+      "day": "2026-08-26",
+      "value": 164863.23,
+      "baseline": 196561.73,
+      "change": -31698.5,
+      "change_pct": -16.1,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-07-27"
+     },
+     {
+      "day": "2026-08-27",
+      "value": 148788.14,
+      "baseline": 211554.46,
+      "change": -62766.32,
+      "change_pct": -29.7,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-07-28"
+     },
+     {
+      "day": "2026-08-28",
+      "value": 215520.68,
+      "baseline": 195788.3,
+      "change": 19732.38,
+      "change_pct": 10.1,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-07-29"
+     },
+     {
+      "day": "2026-08-29",
+      "value": 191874.23,
+      "baseline": 239398.17,
+      "change": -47523.94,
+      "change_pct": -19.9,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-07-30"
+     },
+     {
+      "day": "2026-08-30",
+      "value": 493814.86,
+      "baseline": 278499.06,
+      "change": 215315.8,
+      "change_pct": 77.3,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-07-31"
+     },
+     {
+      "day": "2026-08-31",
+      "value": 284784.59,
+      "baseline": 501478.71,
+      "change": -216694.12,
+      "change_pct": -43.2,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-01"
+     },
+     {
+      "day": "2026-09-01",
+      "value": 146841.4,
+      "baseline": 606221.71,
+      "change": -459380.31,
+      "change_pct": -75.8,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-02"
+     },
+     {
+      "day": "2026-09-02",
+      "value": 132891.46,
+      "baseline": 146257.34,
+      "change": -13365.88,
+      "change_pct": -9.1,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-03"
+     },
+     {
+      "day": "2026-09-03",
+      "value": 179048.17,
+      "baseline": 187633.1,
+      "change": -8584.93,
+      "change_pct": -4.6,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-04"
+     },
+     {
+      "day": "2026-09-04",
+      "value": 200784.95,
+      "baseline": 164543.44,
+      "change": 36241.51,
+      "change_pct": 22.0,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-05"
+     },
+     {
+      "day": "2026-09-05",
+      "value": 392501.64,
+      "baseline": 233822.28,
+      "change": 158679.36,
+      "change_pct": 67.9,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-06"
+     },
+     {
+      "day": "2026-09-06",
+      "value": 440769.38,
+      "baseline": 203008.47,
+      "change": 237760.91,
+      "change_pct": 117.1,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-07"
+     },
+     {
+      "day": "2026-09-07",
+      "value": 148663.24,
+      "baseline": 344152.76,
+      "change": -195489.52,
+      "change_pct": -56.8,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-08"
+     },
+     {
+      "day": "2026-09-08",
+      "value": 181260.21,
+      "baseline": 396715.46,
+      "change": -215455.25,
+      "change_pct": -54.3,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-09"
+     },
+     {
+      "day": "2026-09-09",
+      "value": 155969.47,
+      "baseline": 96078.04,
+      "change": 59891.43,
+      "change_pct": 62.3,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-10"
+     },
+     {
+      "day": "2026-09-10",
+      "value": 192329.99,
+      "baseline": 152952.46,
+      "change": 39377.53,
+      "change_pct": 25.7,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-11"
+     },
+     {
+      "day": "2026-09-11",
+      "value": 206386.11,
+      "baseline": 154068.33,
+      "change": 52317.78,
+      "change_pct": 34.0,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-12"
+     },
+     {
+      "day": "2026-09-12",
+      "value": 392406.28,
+      "baseline": 177821.37,
+      "change": 214584.91,
+      "change_pct": 120.7,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-13"
+     },
+     {
+      "day": "2026-09-13",
+      "value": 421044.35,
+      "baseline": 232939.83,
+      "change": 188104.52,
+      "change_pct": 80.8,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-14"
+     },
+     {
+      "day": "2026-09-14",
+      "value": 151942.72,
+      "baseline": 445640.04,
+      "change": -293697.32,
+      "change_pct": -65.9,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-15"
+     },
+     {
+      "day": "2026-09-15",
+      "value": 164595.19,
+      "baseline": 482891.33,
+      "change": -318296.14,
+      "change_pct": -65.9,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-16"
+     },
+     {
+      "day": "2026-09-16",
+      "value": 161048.78,
+      "baseline": 82413.32,
+      "change": 78635.46,
+      "change_pct": 95.4,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-17"
+     },
+     {
+      "day": "2026-09-17",
+      "value": 191294.78,
+      "baseline": 191754.07,
+      "change": -459.29,
+      "change_pct": -0.2,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-18"
+     },
+     {
+      "day": "2026-09-18",
+      "value": 196311.56,
+      "baseline": 169070.68,
+      "change": 27240.88,
+      "change_pct": 16.1,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-19"
+     },
+     {
+      "day": "2026-09-19",
+      "value": 339292.68,
+      "baseline": 213621.75,
+      "change": 125670.93,
+      "change_pct": 58.8,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_day": "2026-08-20"
+     }
+    ],
+    "meta": {
+     "source_table": "new_transactions",
+     "metric_label": "Net sales",
+     "metric_unit": "PHP",
+     "snapshot_timestamp": "2026-09-20T09:50:00+00:00",
+     "filters_applied": [],
+     "window": {
+      "name": "last_30_days"
+     },
+     "notice": {
+      "kind": "weekday_misaligned",
+      "message": "Each day here is set against the day in the same position of the period before, and 30 days is not whole weeks - so the weekday shifts. A weekend against a weekday is not a fall."
+     }
+    }
+   }
+  },
+  {
+   "seq": 2,
+   "tool": "get_sales",
+   "arguments": {
+    "group_by": [
+     "store",
+     "week"
+    ],
+    "date_range": "last_30_days",
+    "metric": "net_sales",
+    "compare_to": "previous_period"
+   },
+   "result": {
+    "rows": [
+     {
+      "store_id": "6639efd54694700008d7ccc6",
+      "week": "2026-08-17",
+      "store": "Rockwell",
+      "value": 109347.0,
+      "baseline": 442978.89,
+      "change": -333631.89,
+      "change_pct": -75.3,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-07-20"
+     },
+     {
+      "store_id": "668023c94721460006092609",
+      "week": "2026-08-17",
+      "store": "Fairview",
+      "value": 77454.5,
+      "baseline": 98339.5,
+      "change": -20885.0,
+      "change_pct": -21.2,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-07-20"
+     },
+     {
+      "store_id": "668a43f60fa9990007cfa158",
+      "week": "2026-08-17",
+      "store": "Greenhills",
+      "value": 176879.5,
+      "baseline": 230236.0,
+      "change": -53356.5,
+      "change_pct": -23.2,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-07-20"
+     },
+     {
+      "store_id": "66cfff31aa7adf0007c9de41",
+      "week": "2026-08-17",
+      "store": "North Edsa",
+      "value": 105967.23,
+      "baseline": 155018.4,
+      "change": -49051.17,
+      "change_pct": -31.6,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-07-20"
+     },
+     {
+      "store_id": "67612230a740d90007464e26",
+      "week": "2026-08-17",
+      "store": "Magnolia",
+      "value": 95693.61,
+      "baseline": 187981.97,
+      "change": -92288.36,
+      "change_pct": -49.1,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-07-20"
+     },
+     {
+      "store_id": "68c5bb269da1d500073690c2",
+      "week": "2026-08-17",
+      "store": "OPUS",
+      "value": 398854.84,
+      "baseline": 450872.1,
+      "change": -52017.26,
+      "change_pct": -11.5,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-07-20"
+     },
+     {
+      "store_id": "69c73fcb277aa600076dfaaa",
+      "week": "2026-08-17",
+      "store": "Shangri-La",
+      "value": 148133.6,
+      "baseline": 190029.0,
+      "change": -41895.4,
+      "change_pct": -22.0,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-07-20"
+     },
+     {
+      "store_id": "6639efd54694700008d7ccc6",
+      "week": "2026-08-24",
+      "store": "Rockwell",
+      "value": 179058.5,
+      "baseline": 608458.12,
+      "change": -429399.62,
+      "change_pct": -70.6,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-07-27"
+     },
+     {
+      "store_id": "668023c94721460006092609",
+      "week": "2026-08-24",
+      "store": "Fairview",
+      "value": 126031.51,
+      "baseline": 135688.0,
+      "change": -9656.49,
+      "change_pct": -7.1,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-07-27"
+     },
+     {
+      "store_id": "668a43f60fa9990007cfa158",
+      "week": "2026-08-24",
+      "store": "Greenhills",
+      "value": 238283.0,
+      "baseline": 274724.5,
+      "change": -36441.5,
+      "change_pct": -13.3,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-07-27"
+     },
+     {
+      "store_id": "66cfff31aa7adf0007c9de41",
+      "week": "2026-08-24",
+      "store": "North Edsa",
+      "value": 154430.2,
+      "baseline": 176596.9,
+      "change": -22166.7,
+      "change_pct": -12.6,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-07-27"
+     },
+     {
+      "store_id": "67612230a740d90007464e26",
+      "week": "2026-08-24",
+      "store": "Magnolia",
+      "value": 180961.98,
+      "baseline": 207641.12,
+      "change": -26679.14,
+      "change_pct": -12.8,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-07-27"
+     },
+     {
+      "store_id": "68c5bb269da1d500073690c2",
+      "week": "2026-08-24",
+      "store": "OPUS",
+      "value": 425131.65,
+      "baseline": 601465.5,
+      "change": -176333.85,
+      "change_pct": -29.3,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-07-27"
+     },
+     {
+      "store_id": "69c73fcb277aa600076dfaaa",
+      "week": "2026-08-24",
+      "store": "Shangri-La",
+      "value": 185297.96,
+      "baseline": 224928.0,
+      "change": -39630.04,
+      "change_pct": -17.6,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-07-27"
+     },
+     {
+      "store_id": "6639efd54694700008d7ccc6",
+      "week": "2026-08-31",
+      "store": "Rockwell",
+      "value": 203717.0,
+      "baseline": 175628.5,
+      "change": 28088.5,
+      "change_pct": 16.0,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-03"
+     },
+     {
+      "store_id": "668023c94721460006092609",
+      "week": "2026-08-31",
+      "store": "Fairview",
+      "value": 142722.5,
+      "baseline": 149337.5,
+      "change": -6615.0,
+      "change_pct": -4.4,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-03"
+     },
+     {
+      "store_id": "668a43f60fa9990007cfa158",
+      "week": "2026-08-31",
+      "store": "Greenhills",
+      "value": 294291.6,
+      "baseline": 272568.3,
+      "change": 21723.3,
+      "change_pct": 8.0,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-03"
+     },
+     {
+      "store_id": "66cfff31aa7adf0007c9de41",
+      "week": "2026-08-31",
+      "store": "North Edsa",
+      "value": 172970.67,
+      "baseline": 150279.05,
+      "change": 22691.62,
+      "change_pct": 15.1,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-03"
+     },
+     {
+      "store_id": "67612230a740d90007464e26",
+      "week": "2026-08-31",
+      "store": "Magnolia",
+      "value": 196148.31,
+      "baseline": 166298.84,
+      "change": 29849.47,
+      "change_pct": 17.9,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-03"
+     },
+     {
+      "store_id": "68c5bb269da1d500073690c2",
+      "week": "2026-08-31",
+      "store": "OPUS",
+      "value": 555147.31,
+      "baseline": 508166.66,
+      "change": 46980.65,
+      "change_pct": 9.2,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-03"
+     },
+     {
+      "store_id": "69c73fcb277aa600076dfaaa",
+      "week": "2026-08-31",
+      "store": "Shangri-La",
+      "value": 212624.2,
+      "baseline": 253854.0,
+      "change": -41229.8,
+      "change_pct": -16.2,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-03"
+     },
+     {
+      "store_id": "6639efd54694700008d7ccc6",
+      "week": "2026-09-07",
+      "store": "Rockwell",
+      "value": 206799.5,
+      "baseline": 199949.0,
+      "change": 6850.5,
+      "change_pct": 3.4,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-10"
+     },
+     {
+      "store_id": "668023c94721460006092609",
+      "week": "2026-09-07",
+      "store": "Fairview",
+      "value": 146145.5,
+      "baseline": 152025.5,
+      "change": -5880.0,
+      "change_pct": -3.9,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-10"
+     },
+     {
+      "store_id": "668a43f60fa9990007cfa158",
+      "week": "2026-09-07",
+      "store": "Greenhills",
+      "value": 278266.0,
+      "baseline": 258827.6,
+      "change": 19438.4,
+      "change_pct": 7.5,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-10"
+     },
+     {
+      "store_id": "66cfff31aa7adf0007c9de41",
+      "week": "2026-09-07",
+      "store": "North Edsa",
+      "value": 168069.83,
+      "baseline": 165709.28,
+      "change": 2360.55,
+      "change_pct": 1.4,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-10"
+     },
+     {
+      "store_id": "67612230a740d90007464e26",
+      "week": "2026-09-07",
+      "store": "Magnolia",
+      "value": 208997.6,
+      "baseline": 214786.4,
+      "change": -5788.8,
+      "change_pct": -2.7,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-10"
+     },
+     {
+      "store_id": "68c5bb269da1d500073690c2",
+      "week": "2026-09-07",
+      "store": "OPUS",
+      "value": 467102.44,
+      "baseline": 501579.62,
+      "change": -34477.18,
+      "change_pct": -6.9,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-10"
+     },
+     {
+      "store_id": "69c73fcb277aa600076dfaaa",
+      "week": "2026-09-07",
+      "store": "Shangri-La",
+      "value": 222678.78,
+      "baseline": 249514.0,
+      "change": -26835.22,
+      "change_pct": -10.8,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-10"
+     },
+     {
+      "store_id": "6639efd54694700008d7ccc6",
+      "week": "2026-09-14",
+      "store": "Rockwell",
+      "value": 180113.5,
+      "baseline": 106220.0,
+      "change": 73893.5,
+      "change_pct": 69.6,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-17"
+     },
+     {
+      "store_id": "668023c94721460006092609",
+      "week": "2026-09-14",
+      "store": "Fairview",
+      "value": 106175.5,
+      "baseline": 76353.5,
+      "change": 29822.0,
+      "change_pct": 39.1,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-17"
+     },
+     {
+      "store_id": "668a43f60fa9990007cfa158",
+      "week": "2026-09-14",
+      "store": "Greenhills",
+      "value": 184344.0,
+      "baseline": 122920.0,
+      "change": 61424.0,
+      "change_pct": 50.0,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-17"
+     },
+     {
+      "store_id": "66cfff31aa7adf0007c9de41",
+      "week": "2026-09-14",
+      "store": "North Edsa",
+      "value": 127492.14,
+      "baseline": 66175.15,
+      "change": 61316.99,
+      "change_pct": 92.7,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-17"
+     },
+     {
+      "store_id": "67612230a740d90007464e26",
+      "week": "2026-09-14",
+      "store": "Magnolia",
+      "value": 159792.31,
+      "baseline": 85500.64,
+      "change": 74291.67,
+      "change_pct": 86.9,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-17"
+     },
+     {
+      "store_id": "68c5bb269da1d500073690c2",
+      "week": "2026-09-14",
+      "store": "OPUS",
+      "value": 294288.37,
+      "baseline": 123616.53,
+      "change": 170671.84,
+      "change_pct": 138.1,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-17"
+     },
+     {
+      "store_id": "69c73fcb277aa600076dfaaa",
+      "week": "2026-09-14",
+      "store": "Shangri-La",
+      "value": 152279.89,
+      "baseline": 76074.0,
+      "change": 76205.89,
+      "change_pct": 100.2,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok",
+      "baseline_week": "2026-08-17"
+     }
+    ],
+    "meta": {
+     "source_table": "new_transactions",
+     "metric": "net_sales",
+     "metric_sql": "SUM(t.total)",
+     "metric_unit": "PHP",
+     "metric_grain": "transaction",
+     "metric_kind": "base",
+     "metric_label": "Net sales",
+     "metric_domain": "retail_sales",
+     "valid_group_by": [
+      "store",
+      "hour",
+      "day",
+      "week",
+      "month"
+     ],
+     "drivers": [
+      "transaction_count",
+      "average_transaction_value"
+     ],
+     "top_n": null,
+     "group_by": [
+      "store",
+      "week"
+     ],
+     "window": {
+      "kind": "preset",
+      "name": "last_30_days",
+      "includes_partial_day": false,
+      "start": "2026-08-21",
+      "end": "2026-09-20",
+      "convention": "half-open [start, end)",
+      "resolved_against": "2026-09-20"
+     },
+     "filters_applied": [
+      "t.is_cancelled = false   # metrics.yaml: filters.cancelled",
+      "t.transaction_type = 'Sale'   # metrics.yaml: filters.returns",
+      "t.store_id IN (7: Rockwell, Fairview, Greenhills, North Edsa, Magnolia, OPUS, Shangri-La)   # metrics.yaml: stores.active_retail",
+      "excluded: AJI BARN, AJI PINA, AJI MACOPA   # metrics.yaml: filters.excluded_from_sales.excluded_store_ids",
+      "transaction_time within preset 'last_30_days' (Asia/Manila, half-open; includes_partial_day=False)   # metrics.yaml: sales_day.presets.last_30_days",
+      "baseline: transaction_time >= 2026-07-22 AND < 2026-08-21 (Asia/Manila, half-open; previous_period, same metric, grouping, stores and guards)   # metrics.yaml: comparisons.previous_period"
+     ],
+     "snapshot_timestamp": "2026-09-20T10:50:55.915165+00:00",
+     "definitions_version": 1,
+     "definitions_path": "C:\\ultra-supabotv2-main\\definitions\\metrics.yaml",
+     "row_count": 35,
+     "full_row_count": 35,
+     "full_row_count_note": "Size of the complete result set before top_n or the row cap. When it exceeds row_count, the rows shown are the top slice by the ordering in meta.ordering — never a sample, and never something to total.",
+     "ordering": "bucket ASC",
+     "truncated": false,
+     "row_limit": 1000,
+     "reconciliation": {
+      "applicable": true,
+      "method": "compute both measures over the same window and filters; compare directly",
+      "net_sales": 7281692.03,
+      "product_revenue": 7281692.03,
+      "gap": 0.0,
+      "gap_pct": 0.0,
+      "discount_total": 0.0,
+      "holds": true,
+      "explained_by_discount": null
+     },
+     "gap_filled": false,
+     "gap_filled_note": "Buckets with no transactions are absent, not zero. No row is synthesised for an empty day — that would fabricate data.",
+     "comparison": {
+      "kind": "previous_period",
+      "display_name": "vs previous period",
+      "method": "shift_back_by_relative_length",
+      "current": {
+       "start": "2026-08-21",
+       "end": "2026-09-20"
+      },
+      "baseline": {
+       "kind": "preset",
+       "name": "last_30_days",
+       "periods_back": 1,
+       "start": "2026-07-22",
+       "end": "2026-08-21",
+       "convention": "half-open [start, end)"
+      },
+      "same_population": true,
+      "change_pct_formula": "change / abs(baseline) * 100",
+      "baseline_statuses": {
+       "ok": 35
+      },
+      "row_count_baseline": 35,
+      "rank_by": "value",
+      "ranked_by_current": false,
+      "ranking_note": null,
+      "source": "definitions/metrics.yaml: comparisons.previous_period"
+     },
+     "baseline_reconciliation": {
+      "applicable": true,
+      "method": "compute both measures over the same window and filters; compare directly",
+      "net_sales": 8060342.07,
+      "product_revenue": 8060342.07,
+      "gap": 0.0,
+      "gap_pct": 0.0,
+      "discount_total": 0.0,
+      "holds": true,
+      "explained_by_discount": null
+     }
+    }
+   }
+  },
+  {
+   "seq": 3,
+   "tool": "get_sales",
+   "arguments": {
+    "group_by": "product",
+    "date_range": "last_30_days",
+    "metric": "product_revenue",
+    "compare_to": "previous_period",
+    "rank_by": "biggest_drop",
+    "top_n": 5
+   },
+   "result": {
+    "rows": [
+     {
+      "product_id": "663c7869391c7c00079595a8",
+      "sku": "SH1",
+      "product": "Aji Mix",
+      "value": 1821612.0,
+      "baseline": 1921872.0,
+      "change": -100260.0,
+      "change_pct": -5.2,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "6a4619f7ae9ce00007d677ab",
+      "sku": "TRS02",
+      "product": "Aji Thai sweet and spicy squid",
+      "value": 3493.0,
+      "baseline": 102794.0,
+      "change": -99301.0,
+      "change_pct": -96.6,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "69329c18fc45a500079fd0af",
+      "sku": "TH26",
+      "product": "Rice cracker with sugarcane syrup",
+      "value": 6965.0,
+      "baseline": 90545.0,
+      "change": -83580.0,
+      "change_pct": -92.3,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "6666c82fc7a0920007c45a5b",
+      "sku": "AJI1014",
+      "product": "aji champoy honey bayberry",
+      "value": 131141.0,
+      "baseline": 205766.0,
+      "change": -74625.0,
+      "change_pct": -36.3,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "663c78bb391c7c000795d696",
+      "sku": "SH1188",
+      "product": "Aji Squid Hokkaido Slices",
+      "value": 17371.0,
+      "baseline": 66489.0,
+      "change": -49118.0,
+      "change_pct": -73.9,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     }
+    ],
+    "meta": {
+     "source_table": "new_transactions",
+     "metric_label": "Product revenue",
+     "metric_unit": "PHP",
+     "snapshot_timestamp": "2026-09-20T09:50:00+00:00",
+     "filters_applied": [],
+     "window": {
+      "name": "last_30_days"
+     }
+    }
+   }
+  },
+  {
+   "seq": 4,
+   "tool": "get_sales",
+   "arguments": {
+    "group_by": "product",
+    "date_range": "last_30_days",
+    "metric": "product_revenue",
+    "compare_to": "previous_period",
+    "rank_by": "biggest_gain",
+    "top_n": 5
+   },
+   "result": {
+    "rows": [
+     {
+      "product_id": "663c78b8391c7c000795d43c",
+      "sku": "SH1145",
+      "product": "Aji Kiamoy Strips",
+      "value": 330340.0,
+      "baseline": 255715.0,
+      "change": 74625.0,
+      "change_pct": 29.2,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "663c78b8391c7c000795d4ac",
+      "sku": "SH1153",
+      "product": "Aji Mango",
+      "value": 54924.0,
+      "baseline": 20298.0,
+      "change": 34626.0,
+      "change_pct": 170.6,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "672d6df707e6ee0007143001",
+      "sku": "judyA7",
+      "product": "aji plum winter singapore",
+      "value": 86167.0,
+      "baseline": 58705.0,
+      "change": 27462.0,
+      "change_pct": 46.8,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "663c78af391c7c000795cd04",
+      "sku": "SH1013",
+      "product": "Fish Snack Crab Flavor",
+      "value": 28059.0,
+      "baseline": 7164.0,
+      "change": 20895.0,
+      "change_pct": 291.7,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "663c7888391c7c000795ae80",
+      "sku": "SH455",
+      "product": "Tong Garden Salted Broad Beans 500G",
+      "value": 38423.0,
+      "baseline": 17964.0,
+      "change": 20459.0,
+      "change_pct": 113.9,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     }
+    ],
+    "meta": {
+     "source_table": "new_transactions",
+     "metric_label": "Product revenue",
+     "metric_unit": "PHP",
+     "snapshot_timestamp": "2026-09-20T09:50:00+00:00",
+     "filters_applied": [],
+     "window": {
+      "name": "last_30_days"
+     }
+    }
+   }
+  },
+  {
+   "seq": 5,
+   "tool": "get_sales",
+   "arguments": {
+    "group_by": [],
+    "date_range": "last_30_days",
+    "metric": "transaction_count",
+    "compare_to": "previous_period"
+   },
+   "result": {
+    "rows": [
+     {
+      "value": 17110,
+      "baseline": 17539,
+      "change": -429,
+      "change_pct": -2.4,
+      "direction": "down",
+      "unit": "transactions",
+      "baseline_status": "ok"
+     }
+    ],
+    "meta": {
+     "source_table": "new_transactions",
+     "metric": "transaction_count",
+     "metric_sql": "COUNT(DISTINCT t.ref_id)",
+     "metric_unit": "transactions",
+     "metric_grain": "transaction",
+     "metric_kind": "base",
+     "metric_label": "Transactions",
+     "metric_domain": "retail_sales",
+     "valid_group_by": [
+      "store",
+      "hour",
+      "day",
+      "week",
+      "month",
+      "product",
+      "category"
+     ],
+     "drivers": [],
+     "top_n": null,
+     "group_by": [],
+     "window": {
+      "kind": "preset",
+      "name": "last_30_days",
+      "includes_partial_day": false,
+      "start": "2026-08-21",
+      "end": "2026-09-20",
+      "convention": "half-open [start, end)",
+      "resolved_against": "2026-09-20"
+     },
+     "filters_applied": [
+      "t.is_cancelled = false   # metrics.yaml: filters.cancelled",
+      "t.transaction_type = 'Sale'   # metrics.yaml: filters.returns",
+      "t.store_id IN (7: Rockwell, Fairview, Greenhills, North Edsa, Magnolia, OPUS, Shangri-La)   # metrics.yaml: stores.active_retail",
+      "excluded: AJI BARN, AJI PINA, AJI MACOPA   # metrics.yaml: filters.excluded_from_sales.excluded_store_ids",
+      "transaction_time within preset 'last_30_days' (Asia/Manila, half-open; includes_partial_day=False)   # metrics.yaml: sales_day.presets.last_30_days",
+      "baseline: transaction_time >= 2026-07-22 AND < 2026-08-21 (Asia/Manila, half-open; previous_period, same metric, grouping, stores and guards)   # metrics.yaml: comparisons.previous_period"
+     ],
+     "snapshot_timestamp": "2026-09-20T09:16:00.966659+00:00",
+     "definitions_version": 1,
+     "definitions_path": "C:\\ultra-supabotv2-main\\definitions\\metrics.yaml",
+     "row_count": 1,
+     "full_row_count": 1,
+     "full_row_count_note": "Size of the complete result set before top_n or the row cap. When it exceeds row_count, the rows shown are the top slice by the ordering in meta.ordering — never a sample, and never something to total.",
+     "ordering": "single row",
+     "truncated": false,
+     "row_limit": 1000,
+     "reconciliation": {
+      "applicable": false,
+      "reason": "metric 'transaction_count' is not one of the two money measures the reconciliation governs (net_sales, product_revenue)."
+     },
+     "gap_filled": false,
+     "gap_filled_note": "Buckets with no transactions are absent, not zero. No row is synthesised for an empty day — that would fabricate data.",
+     "comparison": {
+      "kind": "previous_period",
+      "display_name": "vs previous period",
+      "method": "shift_back_by_relative_length",
+      "current": {
+       "start": "2026-08-21",
+       "end": "2026-09-20"
+      },
+      "baseline": {
+       "kind": "preset",
+       "name": "last_30_days",
+       "periods_back": 1,
+       "start": "2026-07-22",
+       "end": "2026-08-21",
+       "convention": "half-open [start, end)"
+      },
+      "same_population": true,
+      "change_pct_formula": "change / abs(baseline) * 100",
+      "baseline_statuses": {
+       "ok": 1
+      },
+      "row_count_baseline": 1,
+      "rank_by": "value",
+      "ranked_by_current": false,
+      "ranking_note": null,
+      "source": "definitions/metrics.yaml: comparisons.previous_period"
+     },
+     "baseline_reconciliation": {
+      "applicable": false,
+      "reason": "metric 'transaction_count' is not one of the two money measures the reconciliation governs (net_sales, product_revenue)."
+     }
+    }
+   }
+  },
+  {
+   "seq": 6,
+   "tool": "get_sales",
+   "arguments": {
+    "group_by": [],
+    "date_range": "last_30_days",
+    "metric": "average_transaction_value",
+    "compare_to": "previous_period"
+   },
+   "result": {
+    "rows": [
+     {
+      "value": 425.58,
+      "baseline": 459.57,
+      "change": -33.99,
+      "change_pct": -7.4,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     }
+    ],
+    "meta": {
+     "source_table": "new_transactions",
+     "metric": "average_transaction_value",
+     "metric_sql": "ROUND(SUM(t.total) / NULLIF(COUNT(DISTINCT t.ref_id), 0), 2)",
+     "metric_unit": "PHP",
+     "metric_grain": "transaction",
+     "metric_kind": "derived",
+     "metric_label": "Average transaction value",
+     "metric_domain": "retail_sales",
+     "valid_group_by": [
+      "store",
+      "hour",
+      "day",
+      "week",
+      "month"
+     ],
+     "drivers": [],
+     "top_n": null,
+     "group_by": [],
+     "window": {
+      "kind": "preset",
+      "name": "last_30_days",
+      "includes_partial_day": false,
+      "start": "2026-08-21",
+      "end": "2026-09-20",
+      "convention": "half-open [start, end)",
+      "resolved_against": "2026-09-20"
+     },
+     "filters_applied": [
+      "t.is_cancelled = false   # metrics.yaml: filters.cancelled",
+      "t.transaction_type = 'Sale'   # metrics.yaml: filters.returns",
+      "t.store_id IN (7: Rockwell, Fairview, Greenhills, North Edsa, Magnolia, OPUS, Shangri-La)   # metrics.yaml: stores.active_retail",
+      "excluded: AJI BARN, AJI PINA, AJI MACOPA   # metrics.yaml: filters.excluded_from_sales.excluded_store_ids",
+      "transaction_time within preset 'last_30_days' (Asia/Manila, half-open; includes_partial_day=False)   # metrics.yaml: sales_day.presets.last_30_days",
+      "baseline: transaction_time >= 2026-07-22 AND < 2026-08-21 (Asia/Manila, half-open; previous_period, same metric, grouping, stores and guards)   # metrics.yaml: comparisons.previous_period"
+     ],
+     "snapshot_timestamp": "2026-09-20T09:16:01.445039+00:00",
+     "definitions_version": 1,
+     "definitions_path": "C:\\ultra-supabotv2-main\\definitions\\metrics.yaml",
+     "row_count": 1,
+     "full_row_count": 1,
+     "full_row_count_note": "Size of the complete result set before top_n or the row cap. When it exceeds row_count, the rows shown are the top slice by the ordering in meta.ordering — never a sample, and never something to total.",
+     "ordering": "single row",
+     "truncated": false,
+     "row_limit": 1000,
+     "reconciliation": {
+      "applicable": false,
+      "reason": "metric 'average_transaction_value' is not one of the two money measures the reconciliation governs (net_sales, product_revenue)."
+     },
+     "gap_filled": false,
+     "gap_filled_note": "Buckets with no transactions are absent, not zero. No row is synthesised for an empty day — that would fabricate data.",
+     "metric_formula": {
+      "operation": "ratio",
+      "numerator": "net_sales",
+      "denominator": "transaction_count",
+      "decimal_places_ref": "currency.decimal_places"
+     },
+     "zero_total_transactions": 124,
+     "baseline_zero_total_transactions": 106,
+     "comparison": {
+      "kind": "previous_period",
+      "display_name": "vs previous period",
+      "method": "shift_back_by_relative_length",
+      "current": {
+       "start": "2026-08-21",
+       "end": "2026-09-20"
+      },
+      "baseline": {
+       "kind": "preset",
+       "name": "last_30_days",
+       "periods_back": 1,
+       "start": "2026-07-22",
+       "end": "2026-08-21",
+       "convention": "half-open [start, end)"
+      },
+      "same_population": true,
+      "change_pct_formula": "change / abs(baseline) * 100",
+      "baseline_statuses": {
+       "ok": 1
+      },
+      "row_count_baseline": 1,
+      "rank_by": "value",
+      "ranked_by_current": false,
+      "ranking_note": null,
+      "source": "definitions/metrics.yaml: comparisons.previous_period"
+     },
+     "baseline_reconciliation": {
+      "applicable": false,
+      "reason": "metric 'average_transaction_value' is not one of the two money measures the reconciliation governs (net_sales, product_revenue)."
+     }
+    }
+   }
+  },
+  {
+   "seq": 7,
+   "tool": "get_attention",
+   "arguments": {},
+   "result": {
+    "rows": [
+     {
+      "source": "stock_crossed_out",
+      "identity": "stock_crossed_out|Aji Kiamoy White|OPUS",
+      "measure": "was",
+      "size": 7.0,
+      "floor": "brief.stock_crossed_out",
+      "section": "stock_crossed_out",
+      "subject": "Aji Kiamoy White",
+      "sku": "SH1147",
+      "store": "OPUS",
+      "was": 7.0,
+      "now": 0.0,
+      "receipts": {
+       "source_table": "inventory_snapshots",
+       "filters_applied": [
+        "was quantity_on_hand > 0, now <= 0   # metrics.yaml: brief.stock_crossed_out",
+        "store_id IN (8)   # metrics.yaml: inventory.scope_store_ids"
+       ],
+       "as_of": {
+        "compared": [
+         "2026-09-18",
+         "2026-09-19"
+        ]
+       },
+       "snapshot_timestamp": "2026-09-20T11:05:34.589766+00:00"
+      },
+      "rank": 2
+     },
+     {
+      "source": "stock_crossed_out",
+      "identity": "stock_crossed_out|Aji Dikiam Sweet Taiwan|Magnolia",
+      "measure": "was",
+      "size": 6.0,
+      "floor": "brief.stock_crossed_out",
+      "section": "stock_crossed_out",
+      "subject": "Aji Dikiam Sweet Taiwan",
+      "sku": "SH1101",
+      "store": "Magnolia",
+      "was": 6.0,
+      "now": -1.0,
+      "receipts": {
+       "source_table": "inventory_snapshots",
+       "filters_applied": [
+        "was quantity_on_hand > 0, now <= 0   # metrics.yaml: brief.stock_crossed_out",
+        "store_id IN (8)   # metrics.yaml: inventory.scope_store_ids"
+       ],
+       "as_of": {
+        "compared": [
+         "2026-09-18",
+         "2026-09-19"
+        ]
+       },
+       "snapshot_timestamp": "2026-09-20T11:05:34.589766+00:00"
+      },
+      "rank": 3
+     },
+     {
+      "source": "stock_crossed_out",
+      "identity": "stock_crossed_out|Aji Ezo Squid|OPUS",
+      "measure": "was",
+      "size": 6.0,
+      "floor": "brief.stock_crossed_out",
+      "section": "stock_crossed_out",
+      "subject": "Aji Ezo Squid",
+      "sku": "ZF1005",
+      "store": "OPUS",
+      "was": 6.0,
+      "now": -2.0,
+      "receipts": {
+       "source_table": "inventory_snapshots",
+       "filters_applied": [
+        "was quantity_on_hand > 0, now <= 0   # metrics.yaml: brief.stock_crossed_out",
+        "store_id IN (8)   # metrics.yaml: inventory.scope_store_ids"
+       ],
+       "as_of": {
+        "compared": [
+         "2026-09-18",
+         "2026-09-19"
+        ]
+       },
+       "snapshot_timestamp": "2026-09-20T11:05:34.589766+00:00"
+      },
+      "rank": 4
+     },
+     {
+      "source": "stock_crossed_out",
+      "identity": "stock_crossed_out|Aji Kiamoy King Seedless|Shangri-La",
+      "measure": "was",
+      "size": 6.0,
+      "floor": "brief.stock_crossed_out",
+      "section": "stock_crossed_out",
+      "subject": "Aji Kiamoy King Seedless",
+      "sku": "SH1139",
+      "store": "Shangri-La",
+      "was": 6.0,
+      "now": 0.0,
+      "receipts": {
+       "source_table": "inventory_snapshots",
+       "filters_applied": [
+        "was quantity_on_hand > 0, now <= 0   # metrics.yaml: brief.stock_crossed_out",
+        "store_id IN (8)   # metrics.yaml: inventory.scope_store_ids"
+       ],
+       "as_of": {
+        "compared": [
+         "2026-09-18",
+         "2026-09-19"
+        ]
+       },
+       "snapshot_timestamp": "2026-09-20T11:05:34.589766+00:00"
+      },
+      "rank": 5
+     },
+     {
+      "source": "stock_crossed_out",
+      "identity": "stock_crossed_out|aji plum - k plum|Magnolia",
+      "measure": "was",
+      "size": 4.0,
+      "floor": "brief.stock_crossed_out",
+      "section": "stock_crossed_out",
+      "subject": "aji plum - k plum",
+      "sku": "AJI10007",
+      "store": "Magnolia",
+      "was": 4.0,
+      "now": 0.0,
+      "receipts": {
+       "source_table": "inventory_snapshots",
+       "filters_applied": [
+        "was quantity_on_hand > 0, now <= 0   # metrics.yaml: brief.stock_crossed_out",
+        "store_id IN (8)   # metrics.yaml: inventory.scope_store_ids"
+       ],
+       "as_of": {
+        "compared": [
+         "2026-09-18",
+         "2026-09-19"
+        ]
+       },
+       "snapshot_timestamp": "2026-09-20T11:05:34.589766+00:00"
+      },
+      "rank": 6
+     },
+     {
+      "source": "stock_crossed_out",
+      "identity": "stock_crossed_out|Aji Kiamoy king seedless M|Rockwell",
+      "measure": "was",
+      "size": 3.0,
+      "floor": "brief.stock_crossed_out",
+      "section": "stock_crossed_out",
+      "subject": "Aji Kiamoy king seedless M",
+      "sku": "aji702",
+      "store": "Rockwell",
+      "was": 3.0,
+      "now": -9.0,
+      "receipts": {
+       "source_table": "inventory_snapshots",
+       "filters_applied": [
+        "was quantity_on_hand > 0, now <= 0   # metrics.yaml: brief.stock_crossed_out",
+        "store_id IN (8)   # metrics.yaml: inventory.scope_store_ids"
+       ],
+       "as_of": {
+        "compared": [
+         "2026-09-18",
+         "2026-09-19"
+        ]
+       },
+       "snapshot_timestamp": "2026-09-20T11:05:34.589766+00:00"
+      },
+      "rank": 7
+     },
+     {
+      "source": "stock_crossed_out",
+      "identity": "stock_crossed_out|Aji ezo spicy squid|OPUS",
+      "measure": "was",
+      "size": 3.0,
+      "floor": "brief.stock_crossed_out",
+      "section": "stock_crossed_out",
+      "subject": "Aji ezo spicy squid",
+      "sku": "SD45",
+      "store": "OPUS",
+      "was": 3.0,
+      "now": -3.0,
+      "receipts": {
+       "source_table": "inventory_snapshots",
+       "filters_applied": [
+        "was quantity_on_hand > 0, now <= 0   # metrics.yaml: brief.stock_crossed_out",
+        "store_id IN (8)   # metrics.yaml: inventory.scope_store_ids"
+       ],
+       "as_of": {
+        "compared": [
+         "2026-09-18",
+         "2026-09-19"
+        ]
+       },
+       "snapshot_timestamp": "2026-09-20T11:05:34.589766+00:00"
+      },
+      "rank": 8
+     },
+     {
+      "source": "stock_crossed_out",
+      "identity": "stock_crossed_out|Aji ezo spicy squid|Magnolia",
+      "measure": "was",
+      "size": 2.0,
+      "floor": "brief.stock_crossed_out",
+      "section": "stock_crossed_out",
+      "subject": "Aji ezo spicy squid",
+      "sku": "SD45",
+      "store": "Magnolia",
+      "was": 2.0,
+      "now": 0.0,
+      "receipts": {
+       "source_table": "inventory_snapshots",
+       "filters_applied": [
+        "was quantity_on_hand > 0, now <= 0   # metrics.yaml: brief.stock_crossed_out",
+        "store_id IN (8)   # metrics.yaml: inventory.scope_store_ids"
+       ],
+       "as_of": {
+        "compared": [
+         "2026-09-18",
+         "2026-09-19"
+        ]
+       },
+       "snapshot_timestamp": "2026-09-20T11:05:34.589766+00:00"
+      },
+      "rank": 9
+     }
+    ],
+    "meta": {
+     "source_table": "multiple",
+     "snapshot_timestamp": "2026-09-20T09:50:00+00:00",
+     "filters_applied": [
+      "yesterday = 2026-09-19"
+     ]
+    }
+   }
+  },
+  {
+   "seq": 8,
+   "tool": "get_vending",
+   "arguments": {
+    "date_range": "last_30_days"
+   },
+   "result": {
+    "rows": [
+     {
+      "value": 116895.0
+     }
+    ],
+    "meta": {
+     "source_table": "v_vending_order_lines_php",
+     "domain": "vending (Weimi / AJI CMG) — NOT the StoreHub store domain",
+     "metric": "revenue",
+     "metric_sql": "SUM(l.real_price_php)",
+     "metric_unit": "PHP",
+     "group_by": [],
+     "window": {
+      "kind": "preset",
+      "name": "last_30_days",
+      "includes_partial_day": false,
+      "start": "2026-08-21",
+      "end": "2026-09-20",
+      "convention": "half-open [start, end)"
+     },
+     "filters_applied": [
+      "l.shipment_status = 1   # metrics.yaml: vending (successful vends only)",
+      "shipment_time within preset 'last_30_days' (Asia/Manila, half-open)   # metrics.yaml: sales_day.presets"
+     ],
+     "snapshot_timestamp": "2026-09-20T09:16:02.014872+00:00",
+     "definitions_version": 1,
+     "definitions_path": "C:\\ultra-supabotv2-main\\definitions\\metrics.yaml",
+     "row_count": 1,
+     "truncated": false,
+     "row_limit": 1000,
+     "currency": "PHP",
+     "currency_note": "PHP. The raw vending_orders.currency column says 'CNY' on all 9,219 rows — a Weimi hardcoding bug. It is never passed through.",
+     "money_source": "v_vending_order_lines_php — already pesos, never divided again. Raw Weimi money columns are integer cents.",
+     "status_semantics": {
+      "success_status": 1,
+      "documented_failure_status_exists": false,
+      "observed_distribution": {
+       "1": 11900,
+       "2": 5,
+       "64": 2
+      },
+      "note": "business_rules.yaml documents 3 = FAILED, but no row has status 3. Non-success is defined as <> 1. The 5 status-2 lines have NULL shipment_time and are dropped by any time-bounded query."
+     },
+     "gap_filled": false,
+     "cost_coverage": {
+      "lines": 1447,
+      "lines_missing_cost": 908,
+      "missing_cost_pct": 62.8,
+      "revenue_with_no_cost": 63276.0,
+      "note": "goods_purchase_cost = 0 means the cost was never entered in Weimi, NOT that the item is free — profit equals revenue on those lines and is overstated. Database-wide this affects 8,659 of 11,907 lines (72.7%)."
+     },
+     "notice": {
+      "kind": "stale_sources",
+      "message": "The vending shelf feed has not moved since 5 August, so nothing here can be compared."
+     }
+    }
+   }
+  }
+ ]
+}

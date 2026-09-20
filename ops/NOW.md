@@ -3806,7 +3806,7 @@ reads of that day. The v1 beside it was designed backward from reads already
 made, and is kept as the record of the wrong order. Every card is measured
 against v2 in the browser (`ops/frames.py`), not against a description of it.
 
-- [ ] **P6.a the vocabulary** — what a page may contain, as definitions: the
+- [x] **P6.a the vocabulary** **BUILT 2026-09-20, locally.** `span` (a pointed annotation on a series, validated against the read's rows, dropped not refused), `list` (the rows as a list, named by what a row IS before where it is), a lead `figure` at the size of the answer, `multiples` drawing the CHANGE about a zero line where the rows carry one. Held by `canvas.dom.test.tsx` and the compose coercion contract.  — what a page may contain, as definitions: the
       number (a value at the size of the answer, its delta, its verdict line);
       the series (one or two reads over time, an annotation that POINTS at a
       span and characterises it, never a figure); small multiples (one read
@@ -3818,12 +3818,12 @@ against v2 in the browser (`ops/frames.py`), not against a description of it.
       field, no literal anywhere, no colour but direction, timestamps on all.
       Done when every element of v2 can be named in the yaml and refused by
       `compose.validate` when it carries a figure.
-- [ ] **P6.b the renderer** — the right side drawn as ONE composition from
+- [x] **P6.b the renderer** **BUILT 2026-09-20, locally**, on top of P3.p's arrangement and P3.r's steps-only right side: `ops/frames.py --scenes canvas-doing` draws the target page's every element through the real room. The first frame found a class collision (`r-mk-band` is the dumbbell's, and Chrome applies its CSS height to an SVG rect) that five DOM tests could not.  — the right side drawn as ONE composition from
       P6.a's vocabulary, not a list of blocks; sizes vary with `weight`; the
       arrangement (P3.p) is how the elements sit. Done when v2's data,
       composed in the vocabulary, renders within measure of v2 in
       `ops/frames.py` at 1440 and 390.
-- [ ] **P6.c how he thinks** — the prompt's SCOPE and VOICE: for a broad
+- [x] **P6.c how he thinks** **WRITTEN 2026-09-20, NOT VERIFIED LIVE.** The broad policy is page-first in one round (`investigation.scope.kinds.broad.reads`), the recipe is on `compose` (`composition.page_first`), the prompt sits at 1,799/1,800. No turn has run on it; the owner's rule is no paid runs, so whether HE composes the page is the next live turn's to answer.  — the prompt's SCOPE and VOICE: for a broad
       question he DESIGNS the page first — the four to six things a person
       needs to see to know — and reads for each, in the order the page
       needs; then composes it. The reads for "how are we doing" become the
@@ -3833,7 +3833,7 @@ against v2 in the browser (`ops/frames.py`), not against a description of it.
       it. Done when one live "how are we doing?" produces a page a person
       would put beside v2 without embarrassment — the owner's word, on the
       live build.
-- [ ] **P6.d two more questions** — "how are our stores?" and "how are our
+- [x] **P6.d two more questions** **BUILT 2026-09-20, locally.** `canvas-stores` and `canvas-products` compose from the same recorded reads and render through the room beside `canvas-doing`.  — "how are our stores?" and "how are our
       products?" designed page-first the same way, so the vocabulary is proven
       on three shapes and not one.
 

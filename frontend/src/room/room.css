@@ -2205,3 +2205,29 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
   font: 500 10px/1.6 var(--mono); letter-spacing: 0.11em; text-transform: uppercase;
   color: var(--ink-3); margin: 0 0 8px;
 }
+
+/* THE CANVAS (P6.a). A pointed annotation on a series: a band over the
+   stretch his `span` names and his sentence above it, set in his own type at
+   full ink. The band is the noise-floor grey the dumbbell already uses for a
+   range; no colour, because it points and does not judge. */
+/* `r-mk-span-band`, not `r-mk-band`: that name belongs to the dumbbell's
+   noise-floor band, whose CSS height Chrome applies to an SVG rect too — so
+   the first pass drew the stretch as a 10px bar at the head line. */
+.r-mk-span-band { fill: var(--ink); opacity: 0.12; }
+.r-mk-annotation {
+  font: 400 14px/1.4 var(--serif); color: var(--ink); margin: 0 0 6px;
+  padding-left: 10px; border-left: 1px solid var(--ink-3); max-width: 46ch;
+}
+/* The rows as a list: name, where, figure. */
+.r-mk-list { list-style: none; margin: 4px 0 0; padding: 0;
+  columns: 2; column-gap: 28px; }
+.r-mk-list-row { break-inside: avoid; display: flex; align-items: baseline; gap: 10px;
+  padding: 5px 0; border-top: 1px solid var(--edge); font: 400 13px/1.5 var(--sans); }
+.r-mk-list-where { font: 400 11px/1.5 var(--mono); color: var(--ink-3); }
+.r-mk-list-fig { margin-left: auto; font: 500 12px/1.5 var(--mono); }
+/* Seven shops across on a desk; a phone folds them to two. */
+.r-mk-multiples { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
+@media (max-width: 720px) { .r-mk-list { columns: 1; } }
+
+/* The zero line under a small multiple of change (P6.a). */
+.r-mk-zero { stroke: var(--edge-strong); stroke-width: 1; }

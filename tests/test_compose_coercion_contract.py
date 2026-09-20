@@ -641,3 +641,45 @@ def test_no_arrangement_is_the_packing(defs):
     assert tree is None
     assert not [c for c in coerced if "arrangement" in c]
     assert len(rows) == 2
+
+
+# ---------------------------------------------------------------------------
+# A pointed annotation (composition.span, P6.a, 2026-09-20)
+# ---------------------------------------------------------------------------
+
+def _series(defs, span, thought="two weeks under last month"):
+    calls = {0: {"seq": 0, "tool": "get_sales", "is_read": True,
+                 "result": {"rows": [{"day": "2026-09-01", "value": 1, "baseline": 2},
+                                     {"day": "2026-09-02", "value": 2, "baseline": 2},
+                                     {"day": "2026-09-03", "value": 3, "baseline": 2}],
+                            "meta": {}},
+                 "rows": [{"day": "2026-09-01", "value": 1, "baseline": 2},
+                          {"day": "2026-09-02", "value": 2, "baseline": 2},
+                          {"day": "2026-09-03", "value": 3, "baseline": 2}]}}
+    block = {"kind": "line", "key": "d", "seq": 0, "weight": "lead", "claim": "the hole"}
+    if span is not None:
+        block["span"] = span
+    if thought:
+        block["thought"] = thought
+    out = compose.compose([block], None, None, calls=calls, defs=defs)
+    return out["rows"], out["meta"]["coerced"]
+
+
+def test_a_span_names_two_rows_of_the_read_and_stands(defs):
+    rows, coerced = _series(defs, ["2026-09-01", "2026-09-02"])
+    assert rows[0]["span"] == ["2026-09-01", "2026-09-02"]
+    assert not [c for c in coerced if "span" in c]
+
+
+def test_a_span_naming_a_row_the_read_does_not_hold_is_dropped_not_refused(defs):
+    # Presentation cannot change a value, so it never costs a round trip.
+    rows, coerced = _series(defs, ["2026-09-01", "2026-10-09"])
+    assert "span" not in rows[0]
+    assert any("span" in c and "left off" in c for c in coerced)
+    assert rows[0]["claim"] == "the hole"
+
+
+def test_a_span_with_nothing_to_point_with_is_dropped(defs):
+    rows, coerced = _series(defs, ["2026-09-01", "2026-09-02"], thought=None)
+    assert "span" not in rows[0]
+    assert any("span" in c for c in coerced)

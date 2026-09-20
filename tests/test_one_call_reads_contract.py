@@ -296,5 +296,9 @@ def test_every_shop_at_a_glance_is_already_one_call():
 
 
 def test_the_prompt_names_it_where_the_rounds_are_decided():
-    assert "get_change at the shop or two that moved most" in bob_loop.SCOPE_SECTION
+    # THE SECOND ROUND WENT WITH P6.c (2026-09-20): a broad question is
+    # designed as a page first and every read it needs goes in ONE round, so
+    # there is no "then in one more" to name. The one-call headline read is
+    # still named where the rounds are decided, which is what this holds.
+    assert "ONE round" in bob_loop.SCOPE_SECTION
     assert "get_change reads VERIFY to CHECK in one call." in bob_loop.SYSTEM_PROMPT

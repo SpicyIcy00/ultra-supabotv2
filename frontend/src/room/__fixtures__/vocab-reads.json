@@ -1,5 +1,5 @@
 {
- "_why": "One real read per shape, recorded by ops/record_vocab_reads.py with the vetted tools and no model. Rows and meta as the tool returned them.",
+ "_why": "One real read per shape, recorded by ops/record_vocab_reads.py with the vetted tools and no model. Rows and meta as the tool returned them. `list` ADDED 2026-09-20 (P6.a): the rows as a list, drawable for every read, after `table`.",
  "_recorded": "2026-09-17",
  "figure": {
   "tool": "get_sales",
@@ -4419,6 +4419,7 @@
    "dumbbell",
    "contributors",
    "table",
+   "list",
    "gauge"
   ],
   "gauge": [
@@ -4426,6 +4427,7 @@
    "dumbbell",
    "contributors",
    "table",
+   "list",
    "gauge"
   ],
   "dumbbell": [
@@ -4434,6 +4436,7 @@
    "ranked",
    "contributors",
    "table",
+   "list",
    "bar",
    "pie",
    "waterfall",
@@ -4446,6 +4449,7 @@
    "ranked",
    "contributors",
    "table",
+   "list",
    "bar",
    "pie",
    "waterfall",
@@ -4456,6 +4460,7 @@
    "figure",
    "ranked",
    "table",
+   "list",
    "bar",
    "pie",
    "treemap"
@@ -4464,6 +4469,7 @@
    "figure",
    "ranked",
    "table",
+   "list",
    "bar",
    "pie",
    "treemap"
@@ -4472,6 +4478,7 @@
    "figure",
    "ranked",
    "table",
+   "list",
    "bar",
    "pie",
    "treemap"
@@ -4482,6 +4489,7 @@
    "ranked",
    "contributors",
    "table",
+   "list",
    "bar",
    "pie",
    "waterfall",
@@ -4494,6 +4502,7 @@
    "ranked",
    "contributors",
    "table",
+   "list",
    "bar",
    "pie",
    "waterfall",
@@ -4504,6 +4513,7 @@
    "figure",
    "line",
    "table",
+   "list",
    "area",
    "calendar"
   ],
@@ -4511,6 +4521,7 @@
    "figure",
    "line",
    "table",
+   "list",
    "area",
    "calendar"
   ],
@@ -4518,12 +4529,14 @@
    "figure",
    "line",
    "table",
+   "list",
    "area",
    "calendar"
   ],
   "multiples": [
    "figure",
    "table",
+   "list",
    "multiples",
    "stacked",
    "heatmap"
@@ -4531,12 +4544,14 @@
   "stacked": [
    "figure",
    "table",
+   "list",
    "stacked",
    "heatmap"
   ],
   "heatmap": [
    "figure",
    "table",
+   "list",
    "multiples",
    "stacked",
    "heatmap"
@@ -4547,6 +4562,7 @@
    "ranked",
    "contributors",
    "table",
+   "list",
    "bar",
    "pie",
    "scatter",
@@ -4560,6 +4576,7 @@
    "ranked",
    "contributors",
    "table",
+   "list",
    "bar",
    "pie",
    "waterfall",
