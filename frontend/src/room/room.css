@@ -2379,3 +2379,6 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 .r-laid-next--packed { grid-column: 1 / -1; margin-top: 34px; }
 /* His thought under the one row he named. */
 .r-mk-callout--row { grid-column: 1 / -1; margin: 2px 0 6px; }
+/* On the page the period label is the quietest ink: correct, not loud. */
+.r-board--laid .r-fig-when { color: var(--ink-4); margin-bottom: 4px; }
+.r-board--laid .r-earlier { margin-bottom: 48px; }

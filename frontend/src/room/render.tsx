@@ -742,8 +742,6 @@ export function Board(p: BoardProps) {
                   ? <Fragment key={it.o.key}>{drawFigure(it, at, true)}</Fragment> : null))}
               </div>
             )}
-            {/* THE PLAN, LAST, when his arrangement did not place it. */}
-            {!placedNext && p.foot && <div className="r-laid-next">{p.foot}</div>}
           </>
         )
         : (
@@ -751,8 +749,6 @@ export function Board(p: BoardProps) {
             {items.map((it, at) => (it.kind === 'para'
               ? drawPara(it, at, false)
               : drawFigure(it, at, false)))}
-            {/* Packed, the plan is still the last thing under the figures. */}
-            {p.foot && <div className="r-laid-next r-laid-next--packed">{p.foot}</div>}
           </>
         )}
       {/* AT THE FOOT, and it opens. Not gone: the board still holds them,
@@ -767,6 +763,11 @@ export function Board(p: BoardProps) {
             {' '}write up · {unfolded ? 'fold' : 'show'}
           </button>
         </p>
+      )}
+      {/* THE PLAN, LAST OF ALL, when his arrangement did not place it — after
+          the reads he did not write up, so nothing follows what to do. */}
+      {(!laidOut || !placedNext) && p.foot && (
+        <div className={`r-laid-next${laidOut ? '' : ' r-laid-next--packed'}`}>{p.foot}</div>
       )}
     </div>
   );
