@@ -572,7 +572,19 @@ export function MarkBlock(p: TileProps) {
             ai thoughts are with the charts it feels likes your going thorugh
             it together"); any figure in it is one this turn read, with the
             superscript of the read it came out of. */}
-        <p className="r-mk-say">
+        {/* A STEP OPENS WITH WHAT IT ASKED (P3.o). The design he approved
+            calls a block a `step` and heads it with a question in bold and its
+            answer running on — `Fewer visits, or smaller baskets? Smaller
+            baskets.` — so the questions read down the page as the path. The
+            board opened with the answer alone, so four steps of one
+            investigation drew as four findings, which is what he meant by
+            "still some widgets not page". Where he asked no question the head
+            is exactly what it was, and every board composed before this draws
+            unchanged. */}
+        <p className="r-mk-say" data-step={p.o.question?.trim() ? 'yes' : undefined}>
+          {p.o.question?.trim() && (
+            <span className="r-mk-ask">{p.o.question.trim()}</span>
+          )}
           <span className="r-mk-title">
             {titleFor(p.o, meta)}{p.earlier ? ' · from earlier' : ''}
           </span>

@@ -435,6 +435,14 @@ export interface CompositionBlock {
   claim?: string;
   note?: string;
   /**
+   * THE QUESTION THIS READ ANSWERS (P3.o), in Bob's own words — drawn in bold
+   * at the head of the block with the `claim` running on as its answer, so the
+   * questions read down the page as the path he took. Held server-side to the
+   * claim's rule: no digits, because it sits above a figure
+   * (metrics.yaml composition.question).
+   */
+  question?: string;
+  /**
    * WHAT HE THINKS THIS BLOCK SHOWS (2026-09-17): a sentence or two, drawn
    * beside the mark. Held server-side to the reading's rule — a figure only
    * when a read this turn returned it (metrics.yaml composition.thought).

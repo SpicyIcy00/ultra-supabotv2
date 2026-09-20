@@ -161,7 +161,55 @@ describe('two figures under one paragraph', () => {
     const { container } = draw([block('shops', 1, { claim: 'a', weight: 'lead' }),
                                 block('attn', 0, { claim: 'b', under: 'shops', relation: 'counter' })]);
     expect(flow(container).slice(0, 3)).toEqual(['para:Shops', 'shops', 'attn']);
-    expect(container.querySelector('[data-figure="attn"] .r-fig-rel')?.textContent).toBe('against that');
+    const rel = container.querySelector('[data-figure="attn"] .r-fig-rel');
+    expect(rel?.textContent).toBe('against that');
+    // Beside its stem, the word needs no more than itself.
+    expect(rel?.getAttribute('data-points')).toBeNull();
+  });
+});
+
+/**
+ * THE RELATION WHEN ITS POINT IS A BEAT AWAY (P3.o).
+ *
+ * The word was drawn off `under` and the PLACEMENT off the beat, so the two
+ * disagreed exactly when it mattered: `whatsdown.json`, the live board of
+ * 2026-09-19, hung the basket read under the shops read, his prose talked
+ * about them in two different paragraphs, and the page drew "WHY" over a chart
+ * whose stem was a screen above. At the one place the page tried to say what
+ * led to what, it pointed off the edge.
+ */
+describe('a point whose stem is in another beat', () => {
+  // `products` is cited by the products paragraph; `shops` by the shops one.
+  const apart = (extra: Partial<BoardObject> = {}) => draw([
+    block('shops', 1, { claim: 'OPUS is most of it', weight: 'lead' }),
+    block('products', 2, { claim: 'Bayberry leads the fall', under: 'shops',
+                           relation: 'evidence', ...extra }),
+  ]);
+
+  it('names the point it answers, in that point\'s own words', () => {
+    const { container } = apart();
+    const rel = container.querySelector('[data-figure="products"] .r-fig-rel');
+    expect(rel?.getAttribute('data-points')).toBe('yes');
+    expect(rel?.querySelector('.r-fig-rel-word')?.textContent).toBe('why');
+    expect(rel?.querySelector('.r-fig-rel-pt')?.textContent).toBe('OPUS is most of it');
+  });
+
+  it('still draws them in his order, a beat apart', () => {
+    const { container } = apart();
+    expect(flow(container)).toEqual([
+      'para:Shops', 'shops', 'para:Products', 'products', 'para:Caveats']);
+  });
+
+  it('says nothing at all when the stem has no claim to name', () => {
+    // A default block carries no claim, so there is no honest way to finish
+    // the sentence — and a bare "why" pointing nowhere is the defect itself.
+    const { container } = draw([
+      block('shops', 1, { weight: 'lead', default: true, thought: 'The rest barely moved.' }),
+      block('products', 2, { claim: 'Bayberry leads the fall', under: 'shops',
+                             relation: 'evidence' }),
+    ]);
+    expect(container.querySelector('[data-figure="products"]')).not.toBeNull();
+    expect(container.querySelector('[data-figure="products"] .r-fig-rel')).toBeNull();
   });
 });
 

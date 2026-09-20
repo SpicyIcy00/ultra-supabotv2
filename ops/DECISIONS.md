@@ -9,6 +9,62 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-19 · P3.o — the page says what led to what, and he is told it is a page
+
+The owner, of the right-hand side: *"a group of text and visualizations that
+explain its answer and point in the best way possible in a well thought order so
+you [see] what leads to what, what means what."* Two things, and neither was
+styling.
+
+**THE WORD AND THE PLACEMENT DISAGREED, AND ONLY WHERE IT MATTERED.** A block
+naming another as `under` had its relation word drawn off `under`
+(`render.tsx`) and its position off the BEAT (P3.j). Same beat, the word sat
+over the chart it referred to. Different beats — the common case, because a
+point and its explanation are usually two thoughts — the word was drawn anyway,
+over a chart whose stem was a screen above. `whatsdown.json`, the live board of
+this morning, is exactly that: "WHY" pointing off the edge. It now names the
+point in that point's own claim (`relationSaid`), and where the stem has no
+claim it says nothing at all — a bare "why" pointing nowhere is the defect, not
+a lesser version of the fix.
+
+**HE WAS NEVER TOLD HIS PARAGRAPHS ARE THE PAGE.** Since P3.j the room draws
+his prose in the order he wrote it, each paragraph with the reads it cites. He
+did not know that: he was writing findings and the room was drawing a path he
+did not know he was laying, which is why his answers open on figures the chart
+under them already draws. `voice.reading.path` says it, and rides on the
+`compose` tool rather than in the prompt — the prompt is at 1,799 of 1,800 and
+the budget's own rule is that what it would teach past it belongs on the tool.
+Cost: nothing. **Whether it changes what he writes is unmeasured** — it is
+behaviour, so only a live run can say, and none was made.
+
+**AND THE FIRST HALF WAS NOT ENOUGH, WHICH HE SAID BEFORE THE SESSION CLOSED:**
+*"It looks like ours just a little changed, still some widgets not page."* He
+was right, and the design he approved already held the answer in its own
+markup: `ops/ideal/bob-ahead-of-me.html` calls a block a **step**, and heads it
+with the QUESTION it answers in bold, the answer running on. Read the questions
+down the page and you have the investigation. The board had only the answer —
+a claim — which is a caption, so four steps of one investigation drew as four
+findings. `composition.question` is that field, held exactly as a claim (no
+digits: it sits over the same figure), optional, absent everywhere it was never
+composed. The bold moves to the question; the claim keeps full ink and full
+size, because emphasis adds and never dims.
+
+**A REVAMP WAS OFFERED AND DECLINED, on evidence.** The owner said he was
+willing to rebuild the right-hand side outright. Rendered beside it, the
+approved design is two columns with the figures on the right — the container
+we already have. What differed was one field. The 2026-09-16 review saying the
+answer should be one 760px document was written against the SUPERSEDED artifact
+and stopped being the target on 09-17; this session cited it before checking,
+which is the second time a stale artifact has been quoted as the standard.
+
+**Suites:** pure 2,123 -> 2,127 (+4 cases), vitest 1,099 -> 1,104 (+5),
+`tsc -b --force` and `build` clean. Frames `verification/frames/p3o-before`,
+`p3o-after` and `p3o-steps` — the last off `ops/frames_fixtures/steps.json`,
+the live board with questions **written by the session**, which its own `why`
+states, because no model has ever composed one.
+
+---
+
 ## 2026-09-19 · P3.j — the unit of the page stopped being the read
 
 The owner, of the live right side: *"it's just kinda like widgets … the page

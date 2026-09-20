@@ -404,6 +404,36 @@ def _claim(text: Any, voc: Mapping[str, Any], coerced: Optional[list[str]] = Non
         raise Rejected(str(why)) from None
 
 
+def _question(text: Any, voc: Mapping[str, Any], coerced: Optional[list[str]] = None,
+              key: Optional[str] = None) -> str:
+    """
+    THE QUESTION THE READ ANSWERS — what makes a block a step (P3.o).
+
+    The design he approved opens every block with a question in bold and its
+    answer running on (`ops/ideal/bob-ahead-of-me.html`, `.step`); the board
+    opened with the answer alone, so four steps of an investigation drew as
+    four findings and the page read as tiles with captions.
+
+    Held exactly as `_claim` is — it sits in the same line, above the same
+    figure, so a digit in it would be a number with no receipt of its own.
+    Length is not truth and is cut at a word.
+    """
+    spec = voc.get("question") or {}
+    if not isinstance(text, str) or not text.strip():
+        raise Rejected("a question is the one this read answers, in your own words")
+    said = " ".join(text.split())
+    if spec.get("no_digits", True) and any(ch.isdigit() for ch in said):
+        raise Rejected(
+            "a question carries no digits — the figure is drawn under it, with "
+            "its own receipts (metrics.yaml composition.question)"
+        )
+    try:
+        return _reading.over_length(f"{key!r} question" if key else "question", said, spec, 90,
+                                    coerced, "metrics.yaml composition.question")
+    except _reading.Rejected as why:
+        raise Rejected(str(why)) from None
+
+
 def _mark_kinds(voc: Mapping[str, Any]) -> set[str]:
     """The widgets that are ways of drawing a read — the ones with a `rows` rule."""
     return {k for k, v in (voc.get("widgets") or {}).items()
@@ -635,6 +665,8 @@ def validate(
                 # figure, so it changes on its own exactly as a weight does.
                 if "claim" in item:
                     edit["claim"] = _claim(item["claim"], voc, coerced, key)
+                if "question" in item:
+                    edit["question"] = _question(item["question"], voc, coerced, key)
                 if "thought" in item:
                     edit["thought"] = thought_of(item["thought"])
                 if "ruled_out" in item:
@@ -711,6 +743,8 @@ def validate(
                         edit[field] = item[field]
                 if "claim" in item:
                     edit["claim"] = _claim(item["claim"], voc, coerced, key)
+                if "question" in item:
+                    edit["question"] = _question(item["question"], voc, coerced, key)
                 if "thought" in item:
                     edit["thought"] = thought_of(item["thought"])
                 if "ruled_out" in item:
@@ -801,6 +835,8 @@ def validate(
             # whole of what makes a few words over a figure safe.
             if "claim" in item:
                 block["claim"] = _claim(item["claim"], voc, coerced, key)
+            if "question" in item:
+                block["question"] = _question(item["question"], voc, coerced, key)
             if "thought" in item:
                 block["thought"] = thought_of(item["thought"])
             if "emphasise" in item:

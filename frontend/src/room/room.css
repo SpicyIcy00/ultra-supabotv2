@@ -796,6 +796,23 @@
   color: var(--ink-3); margin: 0 0 8px;
 }
 
+/* WHICH POINT IT IS THE WHY OF, when that point is not directly above it
+   (P3.o, render.relationSaid). The word stays chrome; the claim it names is
+   Bob's own sentence, so it is set in his type and not shouted in 10px caps —
+   uppercasing a whole clause is how the relation read as a label rather than a
+   link. No accent: a link between two points takes its prominence from
+   position, and the one colour means "needs you" (CLAUDE.md UI rule 5). */
+.r-fig-rel[data-points] {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  text-transform: none; letter-spacing: 0;
+}
+.r-fig-rel[data-points] .r-fig-rel-word {
+  text-transform: uppercase; letter-spacing: 0.11em; flex: none;
+}
+.r-fig-rel-pt {
+  font: 400 13px/1.5 var(--serif); letter-spacing: 0; color: var(--ink-2);
+}
+
 /* WEIGHT IS JUDGMENT MADE VISIBLE (metrics.yaml composition.weights) — and
    until P2S.8 nothing drew it: Bob set it on every block, the loop enforced one
    lead, the room wrote data-lead into the DOM, and no rule read it.
@@ -1668,6 +1685,16 @@ tr[data-lit="yes"] td { font-weight: 600; }
 }
 .r-mk-title { font-weight: 600; color: var(--ink); }
 .r-mk-thought { font-weight: 400; color: var(--ink); }
+
+/* A STEP: the question in bold, the claim running on as its answer (P3.o,
+   ops/ideal/bob-ahead-of-me.html `.step .say`). The BOLD MOVES to the
+   question — it is the only thing on the head that is not the finding, and
+   bolding both would be two titles stacked. The claim keeps full --ink and
+   full size: emphasis adds, it never dims (DECISIONS, 2026-09-18), so the
+   answer is not made quieter to let the question lead. */
+.r-mk-ask { font-weight: 600; color: var(--ink); }
+.r-mk-ask::after { content: ' '; }
+.r-mk-say[data-step] .r-mk-title { font-weight: 400; }
 .r-mk-sub {
   font: 400 10px/1.5 var(--mono);
   color: var(--ink-3);

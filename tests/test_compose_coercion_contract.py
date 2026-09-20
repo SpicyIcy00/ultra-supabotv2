@@ -332,6 +332,51 @@ def test_a_claim_titles_the_block_and_comes_back_flattened(defs):
     assert accepted[0]["claim"] == "Rockwell is the one to look at"
 
 
+# ---------------------------------------------------------------------------
+# The question a block answers (P3.o, 2026-09-19): what makes it a STEP
+# ---------------------------------------------------------------------------
+
+def test_a_block_carries_the_question_it_answers(defs):
+    """
+    The design he approved (ops/ideal/bob-ahead-of-me.html) opens every block
+    with a question in bold and its answer running on. The board had only the
+    answer, so an investigation's four steps drew as four findings — the owner,
+    2026-09-19: *"still some widgets not page"*.
+    """
+    accepted, rejected, _ = run(
+        [{"kind": "figure", "key": "k", "seq": 0, "weight": "lead",
+          "subject": "Rockwell",
+          "question": "Fewer  visits,\n or smaller baskets?",
+          "claim": "Smaller baskets"}], defs)
+    assert rejected == []
+    assert accepted[0]["question"] == "Fewer visits, or smaller baskets?"
+    assert accepted[0]["claim"] == "Smaller baskets"
+
+
+def test_a_question_with_a_digit_in_it_is_refused(defs):
+    """
+    It sits in the same line, over the same figure, as the claim — so a digit
+    here is the same defect: a number with no receipt, stated above one that
+    has. Held by the same rule and refused for the same reason.
+    """
+    _, rejected, _ = run(
+        [{"kind": "figure", "key": "k", "seq": 0, "weight": "lead",
+          "question": "Is Rockwell down 9 percent?"}], defs)
+    assert "carries no digits" in rejected[0]["reason"]
+
+
+def test_a_board_that_asks_nothing_is_unchanged(defs):
+    """
+    The field is optional and its absence is the page as it was drawn before
+    it existed — every board composed until today, and every default.
+    """
+    accepted, rejected, _ = run(
+        [{"kind": "figure", "key": "k", "seq": 0, "weight": "lead",
+          "subject": "Rockwell", "claim": "Rockwell is the one to look at"}], defs)
+    assert rejected == []
+    assert "question" not in accepted[0]
+
+
 def test_every_coercion_is_named_on_the_result(defs):
     """
     Silent divergence is the thing that is not allowed. Bob has to be able

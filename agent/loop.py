@@ -717,6 +717,21 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                             "the figure is drawn below with its own receipts."
                         ),
                     },
+                    # WHAT MAKES IT A STEP (composition.question, P3.o). Sits
+                    # beside `claim` because together they are one line: the
+                    # question in bold, its answer running on, the way the
+                    # approved design heads every block.
+                    "question": {
+                        "type": "string",
+                        "maxLength": int((voc.get("question") or {}).get("max_length") or 90),
+                        "description": (
+                            "the question this read answers, in your own words, as you put "
+                            "it to yourself: 'Fewer visits, or smaller baskets?'. Drawn in "
+                            "bold at the head with your `claim` running on as the answer, so "
+                            "the questions read down the page as the path you took. The step "
+                            "you were on, never the finding again. NO DIGITS, as a claim."
+                        ),
+                    },
                     "argument": {"type": "string",
                                  "enum": list(voc["control_arguments"]),
                                  "description": "for a control: which scope argument it changes"},
@@ -1376,12 +1391,25 @@ def _board_addendum(defs: dict) -> str:
         f"a thing is contributors, a series over time is a line, and a table is "
         f"for when there is nothing to see in the shape. Every block takes a "
         f"`claim`: the few words saying what it says, with no digits in them, "
-        f"because the figure is drawn under it with its own receipts. A shape "
+        f"because the figure is drawn under it with its own receipts. "
+        # A BLOCK IS A STEP, NOT A TILE (composition.question, P3.o). The
+        # claim is the answer; this is what was asked. Read down the page the
+        # questions ARE the path, which is the whole of what the owner kept
+        # asking for and what a claim alone could never say.
+        + f"And a `question`: {req(defs, 'composition.question.about')} ".replace("\n", " ")
+        + f"A shape "
         f"carries no figure of yours: you choose the row, the value is the row's, "
         f"and an edit carrying a figure, a colour or a size is refused. YOUR "
         f"WORDS ARE NOT AN OBJECT: the reading is drawn above the board from what "
         f"you say this turn, always — so compose the evidence, name its three "
         f"slots here, and never a block to hold your prose. "
+        # THE PATH (voice.reading.path, 2026-09-19). The one thing about the
+        # surface he was never told: his paragraphs ARE the page, and their
+        # order is the page's order. It rides here rather than in the prompt
+        # because the prompt is at its budget and this is mechanics — and
+        # because here is where he decides the board and the slots, one step
+        # before he writes the words the page is made of.
+        + " ".join(str(req(defs, "voice.reading.path.about")).split()) + " "
         + " ".join(str(req(defs, "rounds.settle.tool_sentence")).split())
     )
 

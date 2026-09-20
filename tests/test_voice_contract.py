@@ -269,6 +269,34 @@ def test_the_prompt_is_within_the_budget_the_definitions_set() -> None:
 
 
 # ---------------------------------------------------------------------------
+# The path (2026-09-19): the order of his paragraphs IS the order of the page
+# ---------------------------------------------------------------------------
+
+def test_the_path_is_taught_on_compose_and_not_in_the_prompt() -> None:
+    """
+    P3.o. Since P3.j the room draws his paragraphs in the order he wrote them
+    (frontend/src/room/page.ts), and nothing told him so — he was writing
+    findings and the room was drawing a path he did not know he was laying.
+
+    The sentence that closes that rides on the `compose` tool, where he reads
+    it at the moment he names the three slots, and NOT in the prompt, which is
+    at its budget. This holds both halves, because either one alone is a
+    regression: in the prompt it costs words the budget has not got, and
+    missing from `compose` it is not said at all.
+    """
+    from agent.loop import _board_addendum                              # noqa: PLC0415
+
+    path = req(load_defs(), "voice.reading.path")
+    said = " ".join(str(path["about"]).split())
+    addendum = _board_addendum(load_defs())
+    assert said in addendum, "the path is not on the compose tool"
+    assert said not in SYSTEM_PROMPT, "the path is in the prompt, where it costs budget"
+    # The fact it exists to convey, in whatever words it is later rewritten.
+    assert "paragraph" in said.lower()
+    assert req(path, "steps"), "the path names no steps"
+
+
+# ---------------------------------------------------------------------------
 # The restatement gate (2026-09-12): a figure the board draws is not said again
 # ---------------------------------------------------------------------------
 

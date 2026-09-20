@@ -119,6 +119,35 @@ describe('every block is framed the same way round', () => {
     expect(bare.container.querySelector('p.r-mk-say')?.textContent).toBe('OPUS gave back the most');
   });
 
+  /**
+   * A BLOCK IS A STEP (P3.o, 2026-09-19).
+   *
+   * The owner, of the board after the relation line landed: *"It looks like
+   * ours just a little changed, still some widgets not page."* The design he
+   * approved calls a block a `step` and heads it with the question it answers,
+   * in bold, the claim running on — so the questions read down the page as the
+   * path he took. What was drawn was the answer alone, which is a caption.
+   */
+  it('opens a step with the question, and the claim answers it', () => {
+    const { container } = draw({ kind: 'comparison', question: 'Fewer visits, or smaller baskets?',
+                                 claim: 'Smaller baskets', thought: 'Both fell, one far harder.' },
+                               COMPARED);
+    const say = container.querySelector('p.r-mk-say') as HTMLElement;
+    expect(say.getAttribute('data-step')).toBe('yes');
+    expect(say.querySelector('.r-mk-ask')?.textContent).toBe('Fewer visits, or smaller baskets?');
+    expect(say.querySelector('.r-mk-title')?.textContent).toBe('Smaller baskets');
+    // Still ONE paragraph: question, answer, what he thinks of it.
+    expect(say.textContent).toBe('Fewer visits, or smaller baskets?Smaller baskets. Both fell, one far harder.');
+  });
+
+  it('is the head it always was where he asked nothing', () => {
+    const { container } = draw({ kind: 'comparison', claim: 'OPUS gave back the most' }, COMPARED);
+    const say = container.querySelector('p.r-mk-say') as HTMLElement;
+    expect(say.getAttribute('data-step')).toBeNull();
+    expect(say.querySelector('.r-mk-ask')).toBeNull();
+    expect(say.textContent).toBe('OPUS gave back the most');
+  });
+
   it('still names its source when the read carried almost no meta', () => {
     const { container } = draw({ kind: 'table' }, [{ store: 'OPUS', value: 1 }],
                                { source_table: 'new_transactions', filters_applied: [] });

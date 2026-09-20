@@ -134,6 +134,37 @@ const RELATION_SAID: Record<Relation, string> = {
 };
 
 /**
+ * THE RELATION WHEN ITS POINT IS NOT BESIDE IT (P3.o).
+ *
+ * A block naming another as `under` gets one word — `why`, `against that`,
+ * `for scale` — and that word works because the thing it refers to is directly
+ * above it. The PLACEMENT is beat-scoped (a stem in another beat is not a stem
+ * you can sit under), but the WORD was drawn whenever an `under` existed at
+ * all. So a point whose stem was a beat earlier said "WHY" over nothing: the
+ * chart it was the why OF was a screen above, and the owner read the page as
+ * charts put together because at the one place it tried to say what led to
+ * what, it pointed off the edge.
+ *
+ * SO IT SAYS WHICH POINT, in that point's own claim — `why · Three shops were
+ * down last week`. The words are Bob's, already on the stem, already drawn as
+ * its title; a claim carries no digits (metrics.yaml composition.claim), so
+ * this names no figure. Nothing is inferred and nothing is computed.
+ *
+ * AND WHERE THERE IS NO CLAIM TO NAME, IT SAYS NOTHING. A default block has no
+ * claim, so there is no honest way to finish the sentence — and a bare "why"
+ * pointing at a chart the reader cannot find is worse than the quiet the page
+ * had before the word existed.
+ */
+export function relationSaid(relation: Relation | undefined, adjacent: boolean,
+                             stemClaim: string | null | undefined):
+                             { word: string; point: string | null } | null {
+  const word = RELATION_SAID[relation ?? 'evidence'];
+  if (adjacent) return { word, point: null };
+  const claim = (stemClaim ?? '').trim();
+  return claim ? { word, point: claim } : null;
+}
+
+/**
  * THE WHOLE OF A FIGURE'S OWN CHROME, in one string: `read 4`, or
  * `read 3 · ruled out`.
  *
@@ -472,9 +503,22 @@ export function Board(p: BoardProps) {
                      gridRowEnd: `span ${Math.max(1, h + (it.under ? CHILD_GAP : FIGURE_GAP))}` }}
           >
             <div className="r-fig-body">
-              {plan.parentOf[o.key] && (
-                <p className="r-fig-rel">{RELATION_SAID[plan.relationOf[o.key] ?? 'evidence']}</p>
-              )}
+              {(() => {
+                const up = plan.parentOf[o.key];
+                if (!up) return null;
+                // ADJACENT IS `it.under` — the same decision that placed it
+                // tight under its stem, so the word and the placement can no
+                // longer disagree, which is the whole of the defect.
+                const said = relationSaid(plan.relationOf[o.key], Boolean(it.under),
+                                          plan.order.find((x) => x.key === up)?.claim);
+                if (!said) return null;
+                return (
+                  <p className="r-fig-rel" data-points={said.point ? 'yes' : undefined}>
+                    <span className="r-fig-rel-word">{said.word}</span>
+                    {said.point && <span className="r-fig-rel-pt">{said.point}</span>}
+                  </p>
+                );
+              })()}
               <Piece
                 told={it.told}
                 focus={it.focus}

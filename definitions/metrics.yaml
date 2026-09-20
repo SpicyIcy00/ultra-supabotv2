@@ -5773,6 +5773,58 @@ voice:
     # asserted.
     unsaid_claim_is: claim_not_said
     warning_reason: reading_rejected
+
+    # ========================================================================
+    # THE PATH — the ORDER an answer walks, and the fact about the surface
+    # that makes the order matter.
+    #
+    # The owner, 2026-09-19, of the right-hand side: *"i want it to be more of
+    # a well plan page, a group of text and visualizations that explain its
+    # answer and point in the best way possible in a well thought order so you
+    # [see] what leads to what, what means what."*
+    #
+    # WHY THIS IS A DEFINITION AND NOT A PARAGRAPH OF THE PROMPT. Since P3.j
+    # the page IS his prose: `frontend/src/room/page.ts` walks his paragraphs
+    # in the order he wrote them and draws the reads each one cites underneath
+    # it. So the order of his sentences is the order of the page — and nothing
+    # anywhere told him that. He was writing findings and the room was drawing
+    # a path he never knew he was laying. One sentence closes that, and it is a
+    # fact about the surface, so it belongs beside the slots the surface draws.
+    #
+    # DELIVERED ON `compose`, NOT IN THE PROMPT (voice.budget). The prompt is
+    # at its 1,800-word bound and this is mechanics — it is rendered into the
+    # `compose` addendum (agent/loop._board_addendum), which he reads at the
+    # moment he names the three slots and decides the board, immediately before
+    # he writes the answer the page is made of. It therefore costs nothing
+    # against the budget, which is the rule the budget itself states: what the
+    # prompt would teach past it belongs on the tool it describes.
+    #
+    # THE STEPS ARE THE LADDER'S, NOT A NEW VOCABULARY (CLAUDE.md rule 10:
+    # verify, decompose, localize, explain, stop). They are named here in the
+    # order a reader needs them rather than the order an investigation climbs
+    # them, which is the same order with the stop at the end. Nothing here
+    # invents a step, a cause or a threshold.
+    #
+    # NOT A TEMPLATE, AND SAID SO IN THE TEXT. A quiet week is one paragraph
+    # and the path is one step long. The steps are what an answer walks THROUGH
+    # when it has that far to go, never headings to fill.
+    path:
+      introduced: "2026-09-19"
+      about: >
+        YOUR PARAGRAPHS ARE THE PAGE. Each one is drawn with the reads it
+        cites underneath it, in the order you wrote them — so the order of
+        your sentences is the order the person reads the evidence in, and a
+        paragraph break is where the page breaks. Write the path you took, not
+        the findings you ended with: the thing you checked first and what it
+        settled, then what it broke into, then where it narrowed to, then what
+        it means, then what you would do. Where two things are genuinely
+        separate stories, give each its own paragraph and say they are
+        separate — the page will draw them apart. Never open on figures the
+        chart under you already draws; open on what you found.
+      steps: [verified, decomposed, localized, means, would_do]
+      # A paragraph per step is the SHAPE, not a quota: fewer steps is a
+      # shorter path, and an answer with one thing to say is one paragraph.
+      min_paragraphs: 1
   # THE BUDGET. Added 2026-09-12, from the voice plan and the research it
   # rests on: AgentIF's 707 real agent prompts average 1,723 words and 11.9
   # constraints, and models "generally perform poorly" at that length; the
@@ -6801,6 +6853,60 @@ composition:
     # claim over 80 characters. The digit rule above is truth and stays.
     over_length: cut_at_word_boundary
 
+  # ===========================================================================
+  # THE QUESTION THE READ ANSWERS — what makes a block a STEP and not a tile.
+  #
+  # The owner, 2026-09-19, of the right-hand side after P3.o's first half:
+  # *"It looks like ours just a little changed, still some widgets not page …
+  # i want it to be more of a well plan page … in a well thought order so you
+  # [see] what leads to what, what means what."*
+  #
+  # AND THE DESIGN HE APPROVED ALREADY HAD THE ANSWER, in its own markup:
+  # `ops/ideal/bob-ahead-of-me.html` calls each block a `step`, numbers it, and
+  # opens it with a QUESTION in bold answered in the same breath —
+  #
+  #     1  Is Rockwell actually down, and on what?  Yes — on a closed month,
+  #        against the month before.
+  #     2  Fewer visits, or smaller baskets?  Smaller baskets. Both fell, one
+  #        three times more than the other.
+  #     3  RULED OUT · One bad week, or the whole month?  The whole month.
+  #     4  Where in the range?  Two lines carry it. Aji Mix is the lead.
+  #
+  # Read the four questions down the page and you have the investigation. That
+  # is "what leads to what" — not a label between two charts, which is what the
+  # first half of this card drew, and which is why he said it was ours a little
+  # changed.
+  #
+  # THE CLAIM IS THE ANSWER; THIS IS WHAT WAS ASKED. Together they are the
+  # design's one bold-then-running line. Neither replaces the other and neither
+  # is new prose: he already forms the question — it is the rung of the ladder
+  # he was on when he made the read (CLAUDE.md rule 10: verify, decompose,
+  # localize, explain, stop) — and until now there was nowhere to put it, so
+  # the page showed four findings where he had walked four steps.
+  #
+  # HELD EXACTLY AS THE CLAIM IS, and for the identical reason: it sits above a
+  # figure, so a digit in it would be a number with no receipt. Optional, and
+  # its absence is the page as it is drawn today — every board composed before
+  # this draws unchanged.
+  #
+  # NOT DERIVED FROM THE RUNG, which was the alternative and was declined by
+  # the owner the same day. "Localize" is a label; "Where in the range?" is a
+  # question a person asked. A generated one would read as chrome, which is the
+  # failure being fixed.
+  question:
+    about: >
+      the question this read answers, in your own words, as you put it to
+      yourself — "Is Rockwell actually down, and on what?", "Fewer visits, or
+      smaller baskets?". Drawn in bold at the head of the block with your
+      `claim` running on as the answer, so the questions read down the page as
+      the path you took. The step you were on, never a restatement of the
+      finding; no digits, for the same reason a claim carries none.
+    no_digits: true
+    max_length: 90
+    # Cut at a word past it, exactly as the claim is: a length is not truth,
+    # and a step lost for being 94 characters would take its whole head off.
+    over_length: cut_at_word_boundary
+
   # WHAT HE THINKS THIS BLOCK SHOWS (the owner, 2026-09-17: "add more ai
   # thoughts to the charts cause if the ai thoughts are with the charts it
   # feels likes your going thorugh it together").
@@ -7178,7 +7284,7 @@ composition:
   # `form` (a chart), `action` (a recommendation), and the block-level `note`,
   # which `claim` now does under its own name.
   allowed_fields: [op, kind, key, weight, seq, subject, label,
-                   argument, spec, emphasise, claim, thought,
+                   argument, spec, emphasise, claim, question, thought,
                    field, against, ruled_out, under, relation]
   # AN UNKNOWN FIELD IS DROPPED, NOT REFUSED — except these (the speed fix,
   # 2026-09-19). `claim_note` and `key_note` cost the P2S.✓ follow-up turn a

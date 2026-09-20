@@ -298,6 +298,32 @@ sentence (compose titles every read it shows) or is drawn as a quiet appendix,
 never a peer tile. Not a rebuild: marks, slots, receipts, tokens, actions stay;
 the container and the width change. Take it with P2.k. One full run.
 
+**PARTLY ADDRESSED 2026-09-19 (P3.o), and the halves are named so neither is
+claimed.** The arrangement — his fourth point, the one upstream of the others —
+is what P3.j and this card went at. Fixed here: the page's one device for
+saying what led to what was broken exactly where it was needed. A block hung
+`under` another had its word drawn whenever the link existed and its POSITION
+only when both landed in the same beat, so a point explained a beat later said
+"WHY" over nothing. It now names the point it answers, in that point's own
+claim. NOT fixed, and not measurable from here: that he opens on a slab of
+figures the chart beneath already draws. He was never told his paragraphs ARE
+the page — `voice.reading.path` now tells him, on `compose` — but whether it
+changes what he writes is behaviour, and **no live run has been made**. The
+frames in `verification/frames/p3o-after` show the link, not the prose.
+
+**AND THE SAME DAY, AFTER SEEING IT:** *"It looks like ours just a little
+changed, still some widgets not page … Im willing to fully revamp it."* The
+revamp was declined with the reason shown to him: rendered beside the room, the
+approved design is two columns with the figures on the right — the container
+already matches, and what differed was one field. A block now carries the
+QUESTION it answers (`composition.question`), drawn in bold with the claim
+running on as the answer, which is what `ops/ideal/bob-ahead-of-me.html` calls a
+`step`. **STILL OPEN after it:** he has never composed a question, so the form is
+proven only against a fixture whose questions the session wrote
+(`ops/frames_fixtures/steps.json`, said in its own `why`); a read he never wrote
+up still sits among the steps as a bare title with nothing asked of it; and the
+answer still opens on a slab of figures the chart under it redraws.
+
 **And a standing change to how sessions close:** every surface close-out names
 the Ideal UI scenario it matches and where it does not. Nine cards shipped
 without that line, and this entry is the bill.

@@ -122,7 +122,16 @@ FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
               # composition off the stored post, its five reads run again through
               # the read-only role, because a post keeps arguments and not rows.
               # Real business rows, so it lives in verification/ like the others.
-              "whatsdown": ROOT / "verification" / "frames_fixtures" / "whatsdown.json"}
+              "whatsdown": ROOT / "verification" / "frames_fixtures" / "whatsdown.json",
+              # P3.o's own check, and the same arrangement `gathered` uses for
+              # the same reason: no recorded turn carries a `question`, because
+              # the field is a day old, so the browser would only ever draw the
+              # head as it was. This is `whatsdown` — a REAL recorded turn, its
+              # answer, reads and every figure untouched — with the four
+              # questions written by the session, which its own `why` states
+              # in as many words. It is committed: a frame check nobody else
+              # can run is not one.
+              "steps": ROOT / "ops" / "frames_fixtures" / "steps.json"}
 SIZES = {1440: 900, 1920: 1080, 1857: 963}
 VOCAB_READS = ROOT / "frontend" / "src" / "room" / "__fixtures__" / "vocab-reads.json"
 MAX_ROWS = 200
