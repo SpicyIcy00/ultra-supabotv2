@@ -356,9 +356,16 @@ export function Board(p: BoardProps) {
       items.push({ kind: 'fig', o, told: false, under, point: !under });
     }
   } else {
+    // THE DESIGN'S OWN SHAPE (2026-09-20): the figure the answer rests on
+    // across the top, and the rest beside each other beneath it. Every point
+    // spanning was P3.l's answer to a grid of widgets; with his prose gone
+    // from this side it made a single column of charts, which is the thread
+    // the owner refused by another route. A point still spans when it is
+    // gathered-under (`under`) or when what it draws needs the width.
     for (const o of plan.order) {
       const under = plan.parentOf[o.key];
-      items.push({ kind: 'fig', o, told: false, under, point: !under });
+      items.push({ kind: 'fig', o, told: false, under,
+                   point: !under && (o.key === leadKey || plan.families.some((f) => f.stem === o.key)) });
     }
   }
   const objects = items.flatMap((it) => (it.kind === 'fig' ? [it.o] : []));

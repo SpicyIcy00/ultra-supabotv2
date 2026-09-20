@@ -1,7 +1,7 @@
 {
  "why": "MY OWN READ, NOT BOB'S. Every figure comes from the vetted read tools run on 2026-09-20 as the read-only role (george_ro) — the rows and `meta` are recorded whole and every mark binds to a field of them. The prose, the claims, the questions and the arrangement are the SESSION'S, written to show what the new page does with a real conclusion. WHERE THE READS DO NOT SETTLE SOMETHING THE ANSWER SAYS SO: the day-against-the-same-weekday comparison the OPUS story would need is one the tools refuse, so it is named as unmeasured rather than asserted. NO MODEL TURN WAS SPENT AND BOB DID NOT WRITE THIS. UPDATED 2026-09-20 after the session fixed the tool that had refused a time bucket beside a comparison: the OPUS read is now each day against the SAME WEEKDAY of the baseline week, which is the comparison the earlier version of this page had to name as unmeasured.",
  "question": "whats been down?",
- "answer": "Down is **one shop, and its whole fall is a single Monday.**\n\nThe estate took less than the week before, and OPUS gave back more than the\nestate lost in total - so the fall is not general; four shops went the other way.\n\nRead OPUS a day against the same weekday, and the week has one hole in it: the\nother weekdays are down by a fraction of it and both weekend days are ahead. The exception is Monday\nthe 7th, against a Monday the 31st that took more than three times what the\nMondays around it take. That one day is most of the shop's week-on-week gap.\n**Why the 31st was extraordinary is not something any read here settles.**\n\nThe one I would act on is Greenhills. More people came in than the week before\nand each of them spent less, and the lines that fell are not spread thinly -\nmango, bayberry, dilis and kiamoy curl each gave back most of what they earned.\nA handful of named lines collapsing while footfall rises is what an empty shelf\nlooks like from the till.\n\nI cannot confirm that from stock. No low-stock level has ever been set anywhere,\nso a line is only visible the day it reaches zero, and yesterday's crossings are\nat OPUS, Magnolia, Shangri-La and Rockwell - none at Greenhills.\n\nI would walk the Greenhills shelf for those four lines before treating any of it\nas lost demand - shall I pull what each of them did day by day?",
+ "answer": "Down is **one shop, and its whole fall is a single Monday.**\n\nOPUS gave back more than the estate lost in total; four shops went the other way. Day against the same weekday, OPUS is level or ahead everywhere but that Monday. The one to act on is Greenhills: more people in, less spent each, four named lines gave back most of what they earned - an empty shelf, seen from the till. Stock cannot confirm it.\n\nShall I pull those four lines day by day?",
  "at": "2026-09-20T08:25:00+00:00",
  "blocks": [
   {
@@ -39,7 +39,7 @@
    "weight": "supporting",
    "question": "Is OPUS in decline, or is the week it is measured against unusual?",
    "claim": "Its whole fall is one Monday, against a Monday unlike any other",
-   "thought": "Each day against the same weekday before it. The other weekdays give back a fraction of what that Monday does, and both weekend days are ahead.",
+   "thought": "Each day against the same weekday before it.",
    "emphasise": [
     "2026-09-07"
    ]

@@ -261,12 +261,27 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
    * three stacked blocks. This is the design's own shape: the finding across
    * the top, what supports it and what cuts against it side by side beneath.
    */
-  it.each([[1], [2], [3], [4], [5]])('gives each of %i points the whole width', (n) => {
+  /**
+   * REWRITTEN 2026-09-20. Every point spanning was P3.l's answer to a grid of
+   * widgets, and it held while his prose ran between the figures. With his
+   * prose gone from this side (Room.tsx, voice.body) it made a single column
+   * of charts — *"now its more of a thread"* — the same thing by another
+   * route. The design's own shape is the one that holds: the figure the
+   * answer rests on across the top, and the rest beside each other beneath.
+   */
+  it.each([[2], [3], [4], [5]])('pairs %i points when none of them leads', (n) => {
     const { container } = draw(many(n as number));
     expect(container.querySelector('.r-flow')?.getAttribute('data-columns')).toBe('2');
     const figs = Array.from(container.querySelectorAll<HTMLElement>('[data-figure]'));
     expect(figs).toHaveLength(n as number);
-    for (const el of figs) expect(el.style.gridColumn).toBe('1 / -1');
+    for (const el of figs) expect(['1', '2']).toContain(el.style.gridColumn);
+  });
+
+  it('gives the lead the whole width and pairs the rest beneath it', () => {
+    const { container } = draw([object('ranked', { key: 'top', weight: 'lead' }), ...many(3)]);
+    const at = (k: string) => (container.querySelector(`[data-figure="${k}"]`) as HTMLElement).style.gridColumn;
+    expect(at('top')).toBe('1 / -1');
+    for (const k of ['f0', 'f1', 'f2']) expect(['1', '2']).toContain(at(k));
   });
 
   it('lays what is gathered under a point side by side beneath it', () => {

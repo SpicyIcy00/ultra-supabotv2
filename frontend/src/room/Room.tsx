@@ -26,7 +26,7 @@ import { Board, turnNotices } from './render';
 import { FiguresArea, Wires, scrollToFigure, scrollWords, useMoreBelow } from './FiguresArea';
 import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
-import { caveatUnshown, claimAndStanding, thoughtsOf, unmark } from './beside';
+import { bodyOf, caveatUnshown, claimAndStanding, thoughtsOf, unmark } from './beside';
 import { pageOf } from './page';
 import { placeFigures as figuresInText } from './figures';
 import { identitiesFrom } from './identity';
@@ -854,10 +854,16 @@ export default function Room() {
                 <Reading part="claim" text={latest?.text} notices={drawnOnly(notices, explainsOnly)}
                          reading={latest?.reading} calls={latest?.toolCalls} onFigure={showFigure}
                          speaking={reader.speaking} />
+                {/* HIS PROSE IS THE CONCLUSION, AND IT IS HERE (2026-09-20).
+                    For one day it was drawn down the right side, a paragraph
+                    over each chart — the thread the owner refused. The right
+                    is steps now and nothing else; everything he said that is
+                    not the headline or the next is under the headline, whole,
+                    and `voice.body` keeps it short. */}
                 {!busy && (
                   <Reading part="rest" text={latest?.text} reading={latest?.reading}
                            calls={latest?.toolCalls} onFigure={showFigure}
-                           standing={thoughts?.page?.length ? '' : thoughts?.unbound}
+                           standing={bodyOf(latest?.text, latest?.reading?.claim, latest?.reading?.next)}
                            caveat={thoughts?.caveat} />
                 )}
                 <ReadingAsks reading={latest?.reading} busy={busy} onAsk={(q) => ask(q)} />
@@ -910,8 +916,13 @@ export default function Room() {
                     seenUpTo={firstUnseen(answers, sinceAt)}
                     onLanding={onLanding}
                     lead={lead}
-                    thoughts={thoughts?.bySeq}
-                    page={thoughts?.page}
+                    // NO PROSE OF HIS REACHES THE BOARD (2026-09-20): not his
+                    // paragraphs as beats, not his sentences under the charts
+                    // they cite. A step carries its question, its claim and
+                    // its one-line thought, all composed; the reasoning is the
+                    // figures. `page` and `thoughts` are still honoured by the
+                    // Board for a kept page and the tests that hold them; the
+                    // room simply stops sending them.
                     /* HOW HE LAID IT OUT (P3.p) — the newest turn's, and only
                        while it is settled: mid-turn the blocks are still
                        arriving, and an arrangement half its blocks have not

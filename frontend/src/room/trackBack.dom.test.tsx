@@ -54,7 +54,13 @@ describe('"whats more from bob? why is it hiding?"', () => {
     // The owner, later the same day: "with the charts thats it related to. and
     // if its not related then it can go under the blob".
     expect(ROOM).toMatch(/\{!busy && \(\s*<Reading part="rest"/);
-    expect(ROOM).toMatch(/thoughts=\{thoughts\?\.bySeq\}/);
+    // UNTIL 2026-09-20 this held that his sentences went under the charts
+    // they cite (`thoughts={thoughts?.bySeq}`). The owner's later word wins:
+    // his prose leaves the right side entirely — *"now its more of a thread.
+    // not a page"* — and the whole of it that is not the headline or the next
+    // is under him, whole (`bodyOf`). Nothing is hidden and nothing is split.
+    expect(ROOM).toMatch(/standing=\{bodyOf\(/);
+    expect(ROOM).not.toMatch(/thoughts=\{thoughts\?\.bySeq\}/);
     expect(ROOM).not.toMatch(/wordsOnCharts/);
   });
 

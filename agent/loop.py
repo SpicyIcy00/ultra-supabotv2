@@ -1483,7 +1483,7 @@ def _tool_addenda(defs: dict) -> dict[str, str]:
     }
 
 
-SYSTEM_PROMPT = _scope_sentence(_load_defs()) + """
+SYSTEM_PROMPT = (_scope_sentence(_load_defs()) + """
 
 WHO YOU ARE
 
@@ -1499,9 +1499,9 @@ You read without asking and act on nothing alone: you draft, you propose, you as
 
 VOICE — THE SHAPE OF AN ANSWER
 
-As much as the situation needs and no more: a quiet week is a line; a situation you investigated is the few findings that make it understood. The screen holds THREE SLOTS you name on `compose`: the CLAIM, your view, with the few words that ARE the point repeated in `claim`; the CAVEAT, what qualifies the figures — data quality included, never in the body — drawn above them; the NEXT, drawn last: what you would do, never a read you could have made. The slots are places, not a length.
+The right of the screen is your reasoning: each block you compose is a STEP — the question it answered, your claim answering it, the figure. Your prose, left under your headline, is the conclusion: __BODY_WORDS__ words at most — what it means, what you would do, never the steps retold. A quiet week is a line. The screen holds THREE SLOTS you name on `compose`: the CLAIM, the few words that ARE the point, repeated in `claim`; the CAVEAT, what qualifies the figures — data quality included, never in the body — drawn above them; the NEXT, drawn last: what you would do, never a read you could have made.
 
-GIVE EACH FINDING THE FIGURE IT RESTS ON, with its date or window from the result. The board drawing it is no reason to leave it out; reciting the rows it draws is. No preamble, no restating the question, no summary.
+One figure in prose at most, the claim's own, exactly as the result gives it. No preamble, no summary.
 
 THE RULES — held by the system as well as by you
 
@@ -1515,6 +1515,7 @@ THE RULES — held by the system as well as by you
 8. Volunteer at most ONE fact from outside what was asked, from a result already read, with its window — or nothing; what the reads establish, and do not, is NOT a volunteered fact but part of answering (INVESTIGATING).
 9. The reader does not know your tools exist: business words, not a tool (`get_sales`), an argument (`group_by`, `rank_by`, `top_n`, `compare_to`), a field (`change_pct`, `baseline_status`) or a file (`metrics.yaml`) — THE EXCEPTION is being asked how a figure was made. NOT A LICENCE TO BE VAGUE: a caveat that sounded technical is rewritten in plain words, not dropped.
 """ + SCOPE_SECTION + JUDGMENT_SECTION + INVESTIGATING_SECTION + SURFACE_SECTION + DESK_SECTION + COMPOSING_SECTION
+                 ).replace("__BODY_WORDS__", str(req(_load_defs(), "voice.body.max_words")))
 
 
 # --------------------------------------------------------------------------
@@ -3245,6 +3246,11 @@ async def run(
     restate_corrections = 0
     max_restated = req(defs, "voice.restatement.max_restated_sentences")
     max_restate_edits = req(defs, "voice.restatement.max_corrective_turns")
+    # THE BODY IS THE CONCLUSION, AND IT IS SHORT (voice.body, 2026-09-20).
+    body_edits = 0
+    max_body_edits = int(req(defs, "voice.body.max_corrective_turns"))
+    max_body_words = int(req(defs, "voice.body.max_words"))
+    body_reason = str(req(defs, "voice.body.warning_reason"))
     restate_reason = str(req(defs, "voice.restatement.warning_reason"))
     # The same gate's other half: a drawn figure said WRONG. No max_sentences —
     # one is the defect — and it shares the correction above rather than
@@ -3823,6 +3829,53 @@ async def run(
                 # Sentences that restate a figure the board already draws.
                 # Checked only when something IS drawn (charted): an answer
                 # over no result has nothing on screen to say again.
+                # THE BODY IS THE CONCLUSION, AND IT IS SHORT (voice.body,
+                # 2026-09-20). His prose left the right of the screen that
+                # day — the room drew a paragraph over every chart and the
+                # owner called it a thread — and what the left now holds is
+                # bounded HERE, because a length the prompt merely asked for
+                # is the length that failed. Over the bound: one corrective
+                # turn. Still over: cut at the sentence that crosses it, and
+                # the run record says so. The slots are measured and drawn
+                # separately, so a cut here can never take a caveat with it.
+                body_words = len((answer or "").split())
+                if answer and body_words > max_body_words:
+                    if body_edits < max_body_edits:
+                        body_edits += 1
+                        log.gap(body_reason,
+                                f"{body_words} words; the left column holds {max_body_words}")
+                        yield _sse("warning", {"reason": body_reason, "found": body_words,
+                                               "limit": max_body_words, "corrected": "rewrite"})
+                        yield _reset_answer(body_reason)
+                        kept_prose = ""
+                        answer = ""
+                        messages.append({"role": "user", "content": (
+                            f"Your answer is {body_words} words and the left of the screen "
+                            f"holds {max_body_words}. The steps you composed are drawn on the "
+                            "right and carry the evidence; the reader walks them. Write only "
+                            "the conclusion — what it means and what you would do, in the "
+                            "words the business uses — and keep the claim, the caveat and "
+                            "the next exactly as they are.")})
+                        continue
+                    kept_sents: list[str] = []
+                    used = 0
+                    for sent in _prose.sentences(answer):
+                        n = len(sent.split())
+                        if kept_sents and used + n > max_body_words:
+                            break
+                        kept_sents.append(sent)
+                        used += n
+                    log.gap(body_reason,
+                            f"{body_words} words after the rewrite; cut to {used} at a sentence")
+                    yield _sse("warning", {"reason": body_reason, "found": body_words,
+                                           "limit": max_body_words, "corrected": "deterministic",
+                                           "removed": body_words - used})
+                    answer = " ".join(kept_sents)
+                    deterministic_edits += 1
+                    yield _reset_answer(body_reason)
+                    kept_prose = ""
+                    yield _sse("text", {"delta": answer})
+
                 restated = (_prose.restated_sentences(answer, charted)
                             if answer and charted else [])
                 # A drawn figure said WRONG - 800 over a row drawn as 801.
@@ -4859,7 +4912,7 @@ async def run(
     # gate keeps its own below because that round trip is the reason
     # `notice_forced` has been 0. What was done WITHOUT a round trip is
     # `deterministic_edits`, reported beside this.
-    corrections_total = (corrective_turns + pin_corrections + save_corrections
+    corrections_total = (corrective_turns + body_edits + pin_corrections + save_corrections
                          + page_corrections + volunteer_corrections
                          + restate_corrections + ground_corrections)
 

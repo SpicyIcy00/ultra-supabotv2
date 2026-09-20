@@ -144,6 +144,28 @@ function leadsIn(said: string): boolean {
  * `next` or of a chart's thought scores 0.6 to 1.0, a sentence carrying
  * something new 0.5 or under.
  */
+/**
+ * HIS PROSE, FOR THE LEFT COLUMN (2026-09-20) — the whole of it but the
+ * headline's own sentence and a paragraph that is only what he would do next,
+ * both of which are drawn on their own.
+ *
+ * The owner, of the room that drew his paragraphs down the right with a chart
+ * under each: *"now its more of a thread. not a page … we dont want to read
+ * that much."* His prose leaves the right side; this is what the left holds
+ * instead, and `voice.body` is what keeps it short enough to be a conclusion.
+ */
+export function bodyOf(text: string | null | undefined, claimSpan: string | null | undefined,
+                       next: string | null | undefined): string {
+  const { plain } = unmark((text ?? '').trim());
+  if (!plain) return '';
+  const parts = claimAndStanding(plain, claimSpan);
+  return [parts.before, parts.after]
+    .flatMap((slice) => slice.split(/\n\s*\n/))
+    .map((para) => para.trim())
+    .filter((para) => para && !(next && restated(para, [next])))
+    .join('\n\n');
+}
+
 export function restated(sentence: string, others: readonly string[]): boolean {
   const mine = wordsOf(sentence);
   if (!mine.size) return false;

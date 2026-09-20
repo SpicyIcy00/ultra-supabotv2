@@ -445,6 +445,24 @@ the accent only in `need`, which means an approval is waiting.
 because reading `george.posts` needs a Bash permission this session was refused.
 The side-by-side blocks may be the older `under` gathering.
 
+### 2026-09-20 — "it still kinda feels the same, but now its more of a thread"
+
+> *"theres alot of text and its hard to understand we dont want to read that
+> much … i am willing to redo the whole right side … maybe its not just the ui
+> but the system prompt the way he thinks check it all and do it all"*
+
+Said of the second live turn on the arranged room. **He was right and the cause
+was structural**: his paragraphs were drawn down the right with a chart under
+each (P3.j), and four cards had been layered on that. Done as P3.r, all at
+once: prose off the right side entirely; the right is steps only; lead across
+the top and the rest in pairs; a thought is one sentence; the body is bounded
+at ninety words and the loop holds it; the prompt's VOICE section rewritten.
+
+**NOT VERIFIED LIVE.** No turn has run on this build. The frame is a fixture
+with prose the session cut to the bound. Whether HE writes short under the new
+prompt, or whether the corrective turn and the cut carry it, is the next live
+turn's to answer.
+
 ## Fixed
 
 ### 2026-09-19 — "what does this chart mean and is it a bug its showed up like this in multiple answers?"

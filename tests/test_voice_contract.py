@@ -292,7 +292,9 @@ def test_the_path_is_taught_on_compose_and_not_in_the_prompt() -> None:
     assert said in addendum, "the path is not on the compose tool"
     assert said not in SYSTEM_PROMPT, "the path is in the prompt, where it costs budget"
     # The fact it exists to convey, in whatever words it is later rewritten.
-    assert "paragraph" in said.lower()
+    # It said "your paragraphs are the page" for one day; the page is the
+    # STEPS since 2026-09-20 and his paragraphs are the conclusion, left.
+    assert "steps are the page" in said.lower()
     assert req(path, "steps"), "the path names no steps"
 
 

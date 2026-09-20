@@ -9,6 +9,49 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-20 · P3.r — the right side is steps, the prose is the conclusion, and it is short
+
+The owner, after his first live turn on the arranged room: *"it still kinda
+feels the same, but now its more of a thread. not a page, and theres alot of
+text … bob has to get his answer in the best way he can and i think that is
+short concise … are you gonna do it or are you just gonna keep throwing reskins
+of our original at me. maybe its not just the ui but the system prompt the way
+he thinks. check it all and do it all."*
+
+**HE WAS RIGHT, AND THE REASON IS STRUCTURAL.** Since P3.j the room drew his
+paragraphs down the right-hand side with a chart under each one. That is a
+thread by construction. Every change after it — step heads, relation lines, the
+arrangement, plainer words, the period line — was layered ON TOP of that spine.
+Four cards of reskins. The design he approved never had his prose on the right.
+
+**SO, ALL OF IT AT ONCE.** His prose leaves the right side entirely: no beats,
+no sentences under the charts they cite (`Room.tsx` sends neither `page` nor
+`thoughts`; `bodyOf` puts the whole of it, less the headline and the next, under
+him on the left). The right is steps only — question, one-line claim, figure —
+and with nothing between them the design's own shape returns: the lead across
+the top, the rest in pairs beneath (`render.tsx`; every point spanning was
+P3.l's answer to widgets and, with the prose gone, made a single column). A
+thought is one sentence (`composition.thought` 260 → 140).
+
+**AND THE BODY HAS A LENGTH THE LOOP HOLDS.** `voice.body`: ninety words, one
+corrective turn, then cut at the sentence that crosses it, on the run record. A
+length the prompt merely asked for is the length that failed — the LENGTH
+section has asked since P0. The slots are drawn separately, so a cut can never
+take a caveat. The VOICE section was rewritten to the shape the screen now has
+and the prompt sits at **1,797 of 1,800**.
+
+**WHAT WAS NOT DONE.** Whether he composes an `arrangement` is still unread
+(george.posts needs a permission). The `say` lines an arrangement places on the
+right are still his to place, bounded at six — that is the playground he asked
+for, not a return of the paragraphs. And no live turn has run on this build;
+the frame is a fixture whose prose the session shortened to the bound.
+
+**Suites:** pure 2,139, vitest 1,114, `tsc -b --force` and `build` clean. Four
+tests rewritten to the new rule rather than deleted, each saying which owner
+instruction superseded the one it held.
+
+---
+
 ## 2026-09-20 · P3.q — a live turn, and the five things it found
 
 The first turn the owner ran on the new build. **The new channels held**: he

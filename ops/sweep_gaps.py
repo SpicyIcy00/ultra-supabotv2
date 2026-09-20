@@ -76,6 +76,7 @@ KINDS: dict[str, str] = {
     "tool_vocabulary_leaked":  "tool names reached the answer",
     "history_marker_echoed":   "the model copied the seeded call list into its own answer, and it was stripped",
     "transaction_wording":     "raw table wording reached the answer",
+    "body_over_length":        "the answer ran past the words the left column holds, and was cut at a sentence (voice.body)",
     "restated_figure":         "prose said again what the board already draws",
     "misstated_figure":        "prose wrote a drawn figure WRONG — 800 over a row of 801",
     "enumerated_remainder":    "prose counted the rest itself — \"and 45 others\" after naming three",

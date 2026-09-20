@@ -1,7 +1,7 @@
 {
  "why": "MY OWN READ, NOT BOB'S. Every figure comes from the vetted read tools run on 2026-09-20 as the read-only role; rows and meta are recorded whole and every mark binds to a field of them. The prose, the claims, the questions and the arrangement are the SESSION'S. NO MODEL TURN WAS SPENT. The lead read - each day against the SAME WEEKDAY of the baseline week - is the one the tool refused until this session fixed it (comparisons.previous_period.valid_time_buckets).",
  "question": "how are our stores?",
- "answer": "The shops are **fine, and the week-on-week headline is one Monday.**\n\nSix of the seven days beat the same day a week earlier - four of them\ncomfortably, and the two heavy weekend days came in level. The one that did not\nis Monday the 7th, against a Monday the 31st that took nearly twice what a\nMonday normally takes here. That single day is larger than the whole week's\nshortfall, so reading the week as a decline gets the direction wrong.\n\n**I do not know what made 31 August extraordinary** and no read here settles it -\nit is one day in the comparison window, not a pattern in this one.\n\nBy shop it is the same picture: four up, and only OPUS materially down. What\nseparates them is what a visit is worth. Fairview, Magnolia and Rockwell each\ngrew basket, and Fairview did it while serving fewer people - fewer, better\nvisits. Greenhills is the one going the other way: more people through the till,\nless in each basket, and it is the only shop where those two move apart.\n\nEvery category is a little softer, toys and seasonal most of all, but none of\nthem is moving enough to be the story on its own.\n\nNothing here needs a decision today. I would watch Greenhills' basket for one\nmore week, and I would not treat the week-on-week number as a fall - shall I set\nthat as a watch so it only speaks if it keeps going?",
+ "answer": "The shops are **fine, and the week-on-week headline is one Monday.**\n\nSix of seven days beat the same day a week earlier. The one that did not is a Monday, against a Monday that took nearly double what a Monday takes here - nothing here says why. What separates the shops is what a visit is worth: Fairview grew basket on fewer people, Greenhills the opposite.\n\nShall I set a watch on Greenhills' basket, so it only speaks if it keeps going?",
  "at": "2026-09-20T09:10:00+00:00",
  "blocks": [
   {
@@ -67,7 +67,7 @@
    "weight": "supporting",
    "question": "And what is a visit worth?",
    "claim": "This is where the shops actually differ",
-   "thought": "Fairview grew basket while serving fewer people - fewer, better visits. Greenhills did the opposite, and it is the only shop where the two move apart.",
+   "thought": "Fairview grew basket while serving fewer people - fewer, better visits.",
    "emphasise": [
     "Fairview",
     "Greenhills"

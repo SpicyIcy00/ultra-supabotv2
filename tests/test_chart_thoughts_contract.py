@@ -86,7 +86,10 @@ def test_the_compose_schema_tells_him_both():
                   if t["name"] == bob_loop.COMPOSE_TOOL)["input_schema"]["properties"]
     thought = schema["blocks"]["items"]["properties"]["thought"]
     assert thought["maxLength"] == DEFS["composition"]["thought"]["max_length"]
-    assert "go through it together" in thought["description"]
+    # "go through it together" until 2026-09-20; a thought is one sentence now
+    # (composition.thought), and the assertion is what it says rather than
+    # a phrase it used to say.
+    assert "one sentence" in thought["description"]
     assert "asks" in schema["reading"]["properties"]
 
 

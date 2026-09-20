@@ -5948,19 +5948,22 @@ voice:
     # NOT A TEMPLATE, AND SAID SO IN THE TEXT. A quiet week is one paragraph
     # and the path is one step long. The steps are what an answer walks THROUGH
     # when it has that far to go, never headings to fill.
+    # REWRITTEN 2026-09-20. For one day this said "your paragraphs are the
+    # page", because for one day they were — drawn down the right with a chart
+    # under each. That was the thread the owner refused. The page is the STEPS.
     path:
       introduced: "2026-09-19"
       about: >
-        YOUR PARAGRAPHS ARE THE PAGE. Each one is drawn with the reads it
-        cites underneath it, in the order you wrote them — so the order of
-        your sentences is the order the person reads the evidence in, and a
-        paragraph break is where the page breaks. Write the path you took, not
-        the findings you ended with: the thing you checked first and what it
-        settled, then what it broke into, then where it narrowed to, then what
-        it means, then what you would do. Where two things are genuinely
-        separate stories, give each its own paragraph and say they are
-        separate — the page will draw them apart. Never open on figures the
-        chart under you already draws; open on what you found.
+        THE STEPS ARE THE PAGE. Every block you compose is drawn as one step —
+        the question it answered, in bold, your claim running on as the answer,
+        and the figure — in the order you compose them, with nothing between
+        them. That is where the investigation is SHOWN: the reader walks the
+        questions and the figures carry the evidence. Your prose is the
+        conclusion, drawn on the left under your headline, and it is short:
+        what it means and what you would do, never the steps retold. Compose
+        the steps in the order you took them — what you checked first and what
+        it settled, what it broke into, where it narrowed to — and give a
+        step a question a person would actually ask.
       steps: [verified, decomposed, localized, means, would_do]
       # A paragraph per step is the SHAPE, not a quota: fewer steps is a
       # shorter path, and an answer with one thing to say is one paragraph.
@@ -6019,6 +6022,38 @@ voice:
     introduced: "2026-09-19"
     max_corrective_turns: 1
     warning_reason: ungrounded_figure
+
+  # ===========================================================================
+  # THE BODY IS THE CONCLUSION, AND IT IS SHORT (2026-09-20). The owner, after
+  # his first live turn on the arranged room: *"it still kinda feels the same,
+  # but now its more of a thread. not a page, and theres alot of text and its
+  # hard to understand we dont want to read that much. bob has to get his
+  # answer in the best way he can and i think that is short concise."*
+  #
+  # WHAT WAS WRONG WAS STRUCTURAL, NOT STYLISTIC. Since P3.j the room drew his
+  # paragraphs down the right-hand side with a chart under each one. That is a
+  # thread by construction, and every later change — step heads, relations,
+  # the arrangement, plainer words — was layered ON TOP of that spine. The
+  # design he approved never had his prose on the right: the left holds the
+  # headline, a short paragraph and what he would do; the right holds STEPS —
+  # one question, one line of answer, one figure — and nothing between them.
+  #
+  # So the prose leaves the right side entirely (Room.tsx), and this is the
+  # bound that keeps what is left short enough to be a conclusion. Ninety
+  # words is five sentences: what it means, what he would do. The steps carry
+  # the reasoning; the reasoning is SHOWN there and not retold here.
+  #
+  # HELD BY THE LOOP, LIKE A FIGURE RULE. A length the prompt merely asks for
+  # is the length that failed (the LENGTH section has asked since P0). Over the
+  # bound: one corrective turn; still over, cut at the sentence that crosses
+  # it, and the run record says so. His slots — claim, caveat, next — are
+  # measured and drawn separately, so a cut here can never drop a caveat.
+  body:
+    introduced: "2026-09-20"
+    max_words: 90
+    max_corrective_turns: 1
+    over_length: cut_at_sentence
+    warning_reason: body_over_length
 
   restatement:
     introduced: "2026-09-12"
@@ -7058,12 +7093,15 @@ composition:
   # it (agent/reading.py, `figures: returned`) — never one worked out.
   thought:
     about: >
-      what you think this block shows, said to the person beside you as you
-      go through it together — one or two sentences: what stands out in it and
-      what that means for their question. Give every block you put one.
-      A figure belongs here only when a read this turn returned it.
+      one sentence under the step's own line, only where the figure needs one
+      — what stands out in it, in the words the business uses. Never what the
+      claim already says. A figure belongs here only when a read this turn
+      returned it.
     figures: returned
-    max_length: 260
+    # 260 → 140 (2026-09-20): two sentences under every block was most of the
+    # text the owner did not want to read. The step's question and claim are
+    # the line; this is the one sentence a figure sometimes needs after it.
+    max_length: 140
     # Past it, the sentences that fit stand and the rest go (P2S.7) — a
     # thought refused took its whole block off the board with it.
     over_length: cut_at_sentence
