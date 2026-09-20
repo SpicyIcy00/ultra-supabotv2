@@ -613,8 +613,11 @@ export function Board(p: BoardProps) {
           // the cap that stops a small figure spending 940px on one number.
           data-span={wideOf.get(o.key) ? 'yes' : undefined}
           data-told={it.told ? 'yes' : undefined}
-          data-under={it.under}
-          data-relation={plan.relationOf[o.key]}
+          // ON THE CANVAS NOTHING IS "UNDER" ANYTHING BUT WHERE HE PUT IT
+          // (P6.e): the gathered-point indent and its rule drew on the
+          // second block of every nested stack (the frame of 2026-09-20).
+          data-under={laid ? undefined : it.under}
+          data-relation={laid ? undefined : plan.relationOf[o.key]}
           data-weight={o.weight}
           className={['r-fig', out ? 'r-fig--out' : '', p.focused === o.key ? 'r-fig--open' : '',
                       o.key === leadKey ? 'r-fig--lead' : '']

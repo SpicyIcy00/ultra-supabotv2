@@ -2311,7 +2311,8 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 .r-mk-legend-line i { display: inline-block; width: 18px; border-top: 1.6px solid var(--ink); vertical-align: middle; margin: 0 6px 0 0; }
 .r-mk-legend-line i.r-mk-legend-was { border-top: 1px dashed var(--ink-3); margin-left: 10px; }
 /* THE STRIP (`.multiples`, `.shop`): seven across on a desk, two on a phone. */
-.r-mk-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 18px; margin-top: 12px; }
+/* Seven across in a 600px column: 7×68 + 6×14. */
+.r-mk-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(68px, 1fr)); gap: 14px; margin-top: 12px; }
 .r-mk-shop { border-top: 1px solid var(--edge); padding-top: 10px; min-width: 0; }
 .r-mk-shop[data-lit="yes"] { border-top-color: var(--ink); }
 .r-mk-shop-nm { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 6px; }
