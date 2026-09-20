@@ -2152,14 +2152,29 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
    grid, every part of his arrangement landed in the same implicit row and drew
    on top of the one before it (caught in the first frame, not by a test). */
 .r-board--laid {
-  display: flex; flex-direction: column; gap: 34px;
+  display: flex; flex-direction: column;
   grid-template-columns: none; grid-auto-rows: auto;
 }
-.r-laid { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
-.r-laid--row { flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 40px; }
+/* THE SPACING IS THE ROOM'S, NOT THIS BLOCK'S. Packed, a figure spans its
+   measured height plus `beside.FIGURE_GAP` (34) and already carries 34 of
+   padding inside `.r-fig-body`; one of his paragraphs gets `PARA_GAP` (18).
+   The first pass used a flat flex gap of its own and every distance on the
+   page came out different from the same page packed. A gap cannot vary by
+   child, so the space is a margin on the child — the same two numbers. */
+.r-laid { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.r-laid > .r-fig, .r-board--laid > .r-fig { margin-bottom: 34px; }
+.r-laid > .r-para, .r-board--laid > .r-para { margin-bottom: 18px; }
+.r-laid > .r-laid, .r-board--laid > .r-laid { margin-bottom: 34px; }
+.r-laid > :last-child, .r-board--laid > :last-child { margin-bottom: 0; }
+/* Side by side, the space between columns is the room's own `--comp-gap`,
+   which is what separates the packed board's two columns. */
+.r-laid--row {
+  flex-direction: row; flex-wrap: wrap; align-items: flex-start;
+  column-gap: var(--comp-gap); row-gap: 0;
+}
 .r-laid--row > * { flex: 1 1 320px; min-width: 0; }
 .r-laid--grid {
-  display: grid; gap: 40px 40px;
+  display: grid; column-gap: var(--comp-gap); row-gap: 0;
   grid-template-columns: repeat(var(--laid-cols, 2), minmax(0, 1fr));
 }
 /* `--edge`, not `--line`: inside the mark stylesheet the border token is the
@@ -2173,10 +2188,6 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
   font: 500 10px/1.6 var(--mono); letter-spacing: 0.11em; text-transform: uppercase;
   color: var(--ink-3); margin: 0;
 }
-/* HIS WORDS, WHEREVER HE PUT THEM. Full --ink and his own type: a line he
-   chose to place beside a figure is prose, not chrome (DECISIONS, 2026-09-18
-   — emphasis adds, it never dims). */
-.r-laid-say { margin: 0; max-width: 62ch; }
 /* A laid-out figure is not packed, so it has no measured row to span and no
    column to sit in; it fills whatever its parent gives it. */
 .r-laid .r-fig { grid-column: auto; grid-row: auto; }

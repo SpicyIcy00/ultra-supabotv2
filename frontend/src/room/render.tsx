@@ -492,8 +492,20 @@ export function Board(p: BoardProps) {
   const drawNode = (node: Arrangement, at: string): ReactNode => {
     if ('say' in node) {
       // HIS WORDS, WHEREVER HE PUT THEM — the "it doesn't have to have text
-      // before a chart" half. Drawn in his own type, at full ink.
-      return <p key={at} className="r-say r-laid-say">{node.say}</p>;
+      // before a chart" half.
+      //
+      // DRAWN BY THE ELEMENT HIS PARAGRAPHS ARE ALREADY DRAWN BY, not one of
+      // this file's own. `.r-page-say` is 17.5px serif at 68ch; the first pass
+      // invented `.r-laid-say` and it came out a different size at a different
+      // measure, spanning the whole area — so a line of his read as a heading,
+      // and the owner saw it immediately: *"are you sure it still feels all the
+      // same?"*. The playground may rearrange what the app draws; it may not
+      // draw it differently.
+      return (
+        <div key={at} className="r-para">
+          <p className="r-say r-page-say">{node.say}</p>
+        </div>
+      );
     }
     if ('block' in node) {
       const it = byKey.get(node.block);

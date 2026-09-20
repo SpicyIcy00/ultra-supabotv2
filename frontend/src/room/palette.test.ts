@@ -86,6 +86,12 @@ const STRUCTURAL = new Set([
   'ink', 'ink-2', 'ink-3', 'ink-4',
   // The design's serif (P2S.1(a)): Bob's voice, and a face is not a colour.
   'sans', 'mono', 'serif', 'ease', 'radius', 'size', 'd',
+  // The space between the board's two columns (P3.p). It reached the mark
+  // stylesheet when HIS ARRANGEMENT started putting figures side by side, and
+  // it is the room's own gap rather than a number that block chose — using it
+  // is the whole of "it should still feel like the rest of the app". A
+  // distance is not a colour, which is what this list is for.
+  'comp-gap',
 ]);
 // `on-colour`, `on-colour-2` and `i` left this list with P2.l: the first two
 // were the ink a FULLY COLOURED tile needed and there is no longer one, and

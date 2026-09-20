@@ -387,7 +387,10 @@ describe('the arrangement he laid out', () => {
         { block: 'products' },
       ] },
     });
-    const flowed = Array.from(container.querySelectorAll('[data-figure], .r-laid-say'))
+    // A line of his is `.r-page-say`, the same element his paragraphs use
+    // everywhere else — the playground rearranges what the app draws, it does
+    // not draw it differently.
+    const flowed = Array.from(container.querySelectorAll('[data-figure], .r-page-say'))
       .map((el) => el.getAttribute('data-figure') ?? el.textContent);
     expect(flowed).toEqual(['shops', 'and the rest of the estate held', 'products']);
   });
@@ -419,5 +422,40 @@ describe('the arrangement he laid out', () => {
     expect(container.querySelector('.r-laid')).toBeNull();
     const fig = container.querySelector('[data-figure="shops"]') as HTMLElement;
     expect(fig.getAttribute('data-col')).not.toBeNull();
+  });
+});
+
+/**
+ * AND IT STILL HAS TO FEEL LIKE THE REST OF THE APP (the owner, 2026-09-20, of
+ * the first arranged frame: *"are you sure it still feels all the same?"*).
+ *
+ * It did not. His line was drawn by a class this file invented, at a size and
+ * a measure the app uses nowhere, spanning the whole area — so a sentence of
+ * his read as a heading. These hold the rule the playground lives under: it
+ * may rearrange what the app draws; it may not draw it differently.
+ */
+describe('an arrangement draws the app, rearranged', () => {
+  const two = [block('shops', 1, { claim: 'a', weight: 'lead' }),
+               block('products', 2, { claim: 'b' })];
+
+  it('draws his line with the element his paragraphs use everywhere', () => {
+    const { container } = draw(two, {
+      arrangement: { layout: 'stack', children: [{ say: 'and the rest held' }, { block: 'shops' }] },
+    });
+    const said = container.querySelector('.r-para .r-page-say');
+    expect(said?.textContent).toBe('and the rest held');
+    // Not a class of the arrangement's own invention.
+    expect(container.querySelector('.r-laid-say')).toBeNull();
+  });
+
+  it('keeps the figure markup identical to the packed board', () => {
+    const laid = draw(two, {
+      arrangement: { layout: 'stack', children: [{ block: 'shops' }] },
+    });
+    const a = laid.container.querySelector('[data-figure="shops"]')!.className;
+    cleanup();
+    const packed = draw(two);
+    const b = packed.container.querySelector('[data-figure="shops"]')!.className;
+    expect(a).toBe(b);
   });
 });
