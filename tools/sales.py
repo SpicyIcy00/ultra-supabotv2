@@ -1627,6 +1627,24 @@ def get_sales(
                 )
             _offset_rows(rows, aligned, c_from)
             _offset_rows(baseline_rows, aligned, b_from)
+            # A DAY MATCHED BY POSITION IS ONLY THE SAME WEEKDAY WHEN THE WINDOW
+            # IS WHOLE WEEKS (2026-09-20, found on `last_30_days` by day: the
+            # first day met a Wednesday against a Friday). Retail lives on its
+            # weekends, so that comparison misleads; it is drawn, because both
+            # dates are on the row, and it is SAID, so nobody reads a Friday
+            # against a Wednesday as a fall.
+            if aligned == "day" and (c_to - c_from).days % 7:
+                notices.append({
+                    "kind": "weekday_misaligned",
+                    "message": (
+                        f"Each day here is set against the day in the same position "
+                        f"of the period before, and {(c_to - c_from).days} days is not "
+                        f"whole weeks — so the weekday shifts. A weekend against a "
+                        f"weekday is not a fall. Use a whole-week period, or read the "
+                        f"two series side by side."
+                    ),
+                    "source": "metrics.yaml comparisons.previous_period.time_bucket_alignment",
+                })
             key_fields = [("_offset" if k == aligned else k) for k in key_fields]
         # Under a VALUE ranking top_n already cut the current period in SQL,
         # so a subject absent from it was cut by the rank (ranked=True). Under

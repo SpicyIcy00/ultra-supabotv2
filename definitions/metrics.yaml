@@ -5020,6 +5020,17 @@ notices:
          left out, leaves out, excluded, excluding, not counted, only counts,
          counts only, only the shops, shops that traded, traded in both]
 
+  # A DAY SET AGAINST THE DAY IN THE SAME POSITION of the period before, over
+  # a period that is not whole weeks (2026-09-20, found on `last_30_days` by
+  # day: the first day met a Wednesday against a Friday). Retail lives on its
+  # weekends, so a weekend against a weekday reads as a fall that is not one.
+  # A figure may be WRONG as read, so it is drawn (surface.desk.notices).
+  weekday_misaligned:
+    must_convey:
+      - [weekday, day of the week, "same day", "same position", "not the same day",
+         shifts, shifted, "whole weeks", "not whole weeks", lines up, line up,
+         side by side, "not a fall"]
+
   # The sales record is silent on some days of a same-store window: no shop
   # recorded a sale (same_store.record). Drawn: if the days are missing
   # rather than shut, the figure is wrong by what they held.
@@ -7841,6 +7852,7 @@ surface:
         - replenishment_days_of_stock_tail
         - same_store_scope
       data_may_be_wrong:
+        - weekday_misaligned
         - reconciliation_failed
         - header_total_mismatch
         - subtotal_mismatch

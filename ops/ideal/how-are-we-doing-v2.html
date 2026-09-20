@@ -1,0 +1,79 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How are we doing</title>
+<!-- PAGE FIRST. Designed from the question, then read for. The owner, 2026-09-20: "if he knows he
+     has an unlimited canvas he could get different data, put different text and everything else."
+     Every figure is a value a tool returned on 2026-09-20; the design, annotations and words are
+     the session's. Bob will be taught to do this. -->
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;1,400&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0c0e;--ink:#e8eaed;--ink-2:#c9ced6;--ink-3:#8a8f98;--ink-4:#5d626b;--edge:rgba(255,255,255,.08);--edge-strong:rgba(255,255,255,.18);--up:#3fb27f;--dn:#e5594f;--need:#e9b44c;
+--serif:'Newsreader',Georgia,serif;--mono:'Geist Mono',ui-monospace,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.room{display:grid;grid-template-columns:400px minmax(0,1fr);gap:64px;max-width:1440px;margin:0 auto;padding:56px 40px 120px}
+.words{text-align:right;padding-top:150px}.mark{width:250px;height:190px;margin:0 0 56px auto;background:#fff;border-radius:48% 52% 45% 55%/55% 45% 55% 45%;box-shadow:0 0 60px rgba(255,255,255,.08)}
+.asked{font:400 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);margin:0 0 18px}.asked b{color:var(--ink);font-weight:500;text-transform:none;letter-spacing:0;font-size:13px;font-family:var(--sans);margin-left:8px}
+h1{font:400 30px/1.25 var(--serif);margin:0 0 18px;text-wrap:pretty}h1 i{font-style:italic}
+.body{font:400 16.5px/1.55 var(--serif);margin:0 0 26px;text-wrap:pretty}
+.next{border-right:2px solid var(--need);padding-right:14px;margin:0}.next .lab{display:block;font:500 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);margin:0 0 8px}.next p{font:400 15px/1.5 var(--serif);margin:0}
+.canvas{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:48px 40px;align-items:start}
+.q{font:600 15px/1.45 var(--serif);margin:0 0 6px}.q span{font-weight:400}.src{font:400 10px/1.6 var(--mono);color:var(--ink-4);margin:10px 0 0}
+.wide{grid-column:1/-1}.half{grid-column:span 6}
+.rhythm svg{width:100%;height:280px;display:block;overflow:visible}
+.l-now{fill:none;stroke:var(--ink);stroke-width:1.6}.l-was{fill:none;stroke:var(--ink-3);stroke-width:1;stroke-dasharray:3 3}
+.axis{stroke:var(--edge-strong)}.lbl{font:500 10.5px var(--mono);fill:var(--ink-3)}.fig{font:500 12px var(--mono);fill:var(--ink)}
+.note{font:400 14.5px var(--serif);fill:var(--ink)}.note-l{stroke:var(--ink-3);fill:none;stroke-width:1}.band{fill:rgba(229,89,79,.10)}
+.legend{font:400 11px var(--mono);color:var(--ink-3);margin:6px 0 0}.legend i{display:inline-block;width:18px;border-top:1.6px solid var(--ink);vertical-align:middle;margin:0 6px 0 0}.legend i.was{border-top:1px dashed var(--ink-3)}
+.totals{display:flex;gap:28px;align-items:baseline;margin:0 0 8px}.totals .n{font:500 34px/1 var(--mono);margin:0;letter-spacing:-.01em}.totals .n s{text-decoration:none;font-size:13px;color:var(--dn);margin-left:8px;vertical-align:top}.totals .w{font:400 12px/1.4 var(--mono);color:var(--ink-3)}
+.multiples{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:18px;margin-top:12px}.shop{border-top:1px solid var(--edge);padding-top:10px;min-width:0}.shop.lit{border-top-color:var(--ink)}
+.shop .nm{display:flex;justify-content:space-between;align-items:baseline;font:500 12.5px var(--sans);margin:0 0 6px}.shop .nm s{text-decoration:none;font:500 11px var(--mono)}.shop .nm s.dn{color:var(--dn)}.shop .nm s.up{color:var(--up)}
+.shop svg{width:100%;height:90px;display:block;overflow:visible}.bar-dn{fill:var(--dn)}.bar-up{fill:var(--up)}.bar-part{fill:url(#hatch)}
+.callout{font:400 13px/1.35 var(--serif);color:var(--ink);margin:8px 0 0;border-left:1px solid var(--ink-3);padding-left:8px}
+.movers{display:grid;grid-template-columns:minmax(0,1fr);gap:14px 0;margin-top:8px;min-width:0}.mv{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(80px,1fr) 82px;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--edge);font:400 12.5px var(--sans)}
+.mv .t{position:relative;height:8px}.mv .t i{position:absolute;top:0;height:8px;border-radius:1px}.mv .t i.dn{right:0;background:var(--dn)}.mv .t i.up{left:0;background:var(--up)}.mv .f{font:500 11.5px var(--mono);text-align:right}.mv .f.dn{color:var(--dn)}.mv .f.up{color:var(--up)}
+.movers h4{font:500 10px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+.pair .n{font:500 40px/1 var(--mono);margin:6px 0 4px;letter-spacing:-.01em}.pair .n s{text-decoration:none;font-size:14px;margin-left:8px;vertical-align:top;color:var(--dn)}.pair .verdict{font:400 17px/1.3 var(--serif);margin:0}
+.need{border-left:2px solid var(--need);padding-left:16px}.need ul{list-style:none;margin:8px 0 0;padding:0;columns:2;column-gap:28px;font:400 13px/1.7 var(--sans)}.need li b{font-weight:500;color:var(--ink-3);margin-left:8px;font-family:var(--mono);font-size:11px}
+.act{display:inline-block;margin-top:12px;font:500 12.5px var(--sans);color:var(--need);border:1px solid var(--need);border-radius:20px;padding:6px 14px}
+.quiet{border-top:1px solid var(--edge);padding-top:14px;display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:baseline}.quiet .n{font:500 22px/1 var(--mono);margin:0}.quiet p{font:400 13.5px/1.5 var(--sans);margin:0;max-width:64ch}.notice{font:500 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+@media (max-width:900px){html,body{overflow-x:hidden}.room,.canvas,.words,.wide,.half,.shop,.movers{min-width:0}.room{grid-template-columns:minmax(0,1fr);gap:40px;padding:24px 16px 100px}.words{text-align:left;padding-top:0}.mark{margin:0 0 28px}.next{border-right:0;border-left:2px solid var(--need);padding:0 0 0 14px}.canvas{grid-template-columns:minmax(0,1fr);gap:36px}.half{grid-column:1/-1}.multiples{grid-template-columns:repeat(2,minmax(0,1fr))}.movers{grid-template-columns:minmax(0,1fr)}.need ul{columns:1}.quiet{grid-template-columns:minmax(0,1fr);gap:10px}.rhythm svg{height:220px}}
+</style></head><body><div class="room">
+<aside class="words"><div class="mark"></div><p class="asked">you asked <b>how are we doing?</b></p>
+<h1>Down on the month — but <i>the fall was two weeks in August, at every shop, and it is over.</i> Except at Rockwell.</h1>
+<p class="body">Same number of people, smaller baskets. The range is splitting: a few lines stopped dead while a few others took off. And eight lines hit zero yesterday, most of them at OPUS and Magnolia.</p>
+<div class="next"><span class="lab">needs you</span><p>Shall I draft the eight transfers, and pull Rockwell day by day across those two weeks?</p></div></aside>
+<main class="canvas">
+<section class="wide rhythm"><p class="q">The month, day by day, over the month before. <span>The rhythm is the weekends. The hole is late August, and it closes.</span></p>
+<div class="totals"><p class="n">&#8369;7,281,692<s>&#9660; 9.7%</s></p><p class="w">this 30 days &middot; was &#8369;8,060,342</p></div>
+<svg id="rhythm" viewBox="0 0 940 280"></svg><p class="legend"><i></i>this month <i class="was"></i>the month before, day for day</p>
+<p class="src">read 1 &middot; net sales &middot; by day &middot; last 30 days and the 30 before &middot; read 17:50</p></section>
+<section class="wide"><p class="q">Every shop, week by week. <span>The same two red weeks on all seven &mdash; and one that has not come back.</span></p><div class="multiples" id="multiples"></div>
+<p class="src">read 6 &middot; net sales &middot; per shop by week, each against the same week before &middot; read 17:16</p></section>
+<section class="half"><p class="q">What moved in the range. <span>Splitting, not softening.</span></p><div class="movers" id="movers"></div>
+<p class="src">reads 2 &amp; 3 &middot; product revenue &middot; biggest gain / biggest drop &middot; last 30 days &middot; read 17:50</p></section>
+<section class="half"><div class="pair"><p class="q">A visit.</p><p class="n">17,110<s>&#9660; 2.4%</s></p><p class="verdict">The same people came in&hellip;</p><p class="src">read 4 &middot; transactions &middot; last 30 days &middot; was 17,539</p>
+<p class="n" style="margin-top:22px">&#8369;425.58<s>&#9660; 7.4%</s></p><p class="verdict">&hellip;and each spent less, at all seven shops.</p><p class="src">read 5 &middot; average transaction value &middot; last 30 days &middot; was &#8369;459.57</p></div></section>
+<section class="wide need"><p class="q">Crossed to zero yesterday. <span>Eight lines, four shops. No low-stock level is set anywhere, so this is the first I see of any of them.</span></p><ul id="crossed"></ul><span class="act">draft the transfers</span>
+<p class="src">read 7 &middot; stock crossed out &middot; yesterday 19 Sep &middot; read 17:50</p></section>
+<section class="wide quiet"><div><p class="notice">vending &middot; no comparison</p><p class="n">&#8369;116,895</p></div><p>Its shelf feed has not moved since 5 August, so its quiet means nothing either way.<br><span class="src">read 8 &middot; vending revenue &middot; last 30 days</span></p></section>
+</main></div>
+<script>
+const D={"now": [["2026-08-21", 334643.05], ["2026-08-22", 368310.87], ["2026-08-23", 409376.36], ["2026-08-24", 124079.66], ["2026-08-25", 150254.0], ["2026-08-26", 164863.23], ["2026-08-27", 148788.14], ["2026-08-28", 215520.68], ["2026-08-29", 191874.23], ["2026-08-30", 493814.86], ["2026-08-31", 284784.59], ["2026-09-01", 146841.4], ["2026-09-02", 132891.46], ["2026-09-03", 179048.17], ["2026-09-04", 200784.95], ["2026-09-05", 392501.64], ["2026-09-06", 440769.38], ["2026-09-07", 148663.24], ["2026-09-08", 181260.21], ["2026-09-09", 155969.47], ["2026-09-10", 192329.99], ["2026-09-11", 206386.11], ["2026-09-12", 392406.28], ["2026-09-13", 421044.35], ["2026-09-14", 151942.72], ["2026-09-15", 164595.19], ["2026-09-16", 161048.78], ["2026-09-17", 191294.78], ["2026-09-18", 196311.56], ["2026-09-19", 339292.68]], "was": [["2026-07-22", 239124.26], ["2026-07-23", 232997.19], ["2026-07-24", 256733.33], ["2026-07-25", 458879.51], ["2026-07-26", 567721.57], ["2026-07-27", 196561.73], ["2026-07-28", 211554.46], ["2026-07-29", 195788.3], ["2026-07-30", 239398.17], ["2026-07-31", 278499.06], ["2026-08-01", 501478.71], ["2026-08-02", 606221.71], ["2026-08-03", 146257.34], ["2026-08-04", 187633.1], ["2026-08-05", 164543.44], ["2026-08-06", 233822.28], ["2026-08-07", 203008.47], ["2026-08-08", 344152.76], ["2026-08-09", 396715.46], ["2026-08-10", 96078.04], ["2026-08-11", 152952.46], ["2026-08-12", 154068.33], ["2026-08-13", 177821.37], ["2026-08-14", 232939.83], ["2026-08-15", 445640.04], ["2026-08-16", 482891.33], ["2026-08-17", 82413.32], ["2026-08-18", 191754.07], ["2026-08-19", 169070.68], ["2026-08-20", 213621.75]], "shops": [{"n": "OPUS", "m": "-2.1%", "weeks": [-52017, -176334, 46981, -34477, 170672]}, {"n": "Greenhills", "m": "+1.1%", "weeks": [-53356, -36442, 21723, 19438, 61424]}, {"n": "Shangri-La", "m": "-7.4%", "weeks": [-41895, -39630, -41230, -26835, 76206]}, {"n": "Rockwell", "m": "-42.7%", "weeks": [-333632, -429400, 28088, 6850, 73894]}, {"n": "Magnolia", "m": "-2.4%", "weeks": [-92288, -26679, 29849, -5789, 74292]}, {"n": "North Edsa", "m": "+2.1%", "weeks": [-49051, -22167, 22692, 2361, 61317]}, {"n": "Fairview", "m": "-2.2%", "weeks": [-20885, -9656, -6615, -5880, 29822]}], "gain": [["Aji Kiamoy Strips", 74625], ["Aji Mango", 34626], ["aji plum winter singapore", 27462], ["Fish Snack Crab Flavor", 20895], ["Tong Garden Salted Broad Beans 500G", 20459]], "drop": [["Aji Mix", -100260], ["Aji Thai sweet and spicy squid", -99301], ["Rice cracker with sugarcane syrup", -83580], ["aji champoy honey bayberry", -74625], ["Aji Squid Hokkaido Slices", -49118]], "crossed": [["Aji Kiamoy White", "OPUS"], ["Aji Dikiam Sweet Taiwan", "Magnolia"], ["Aji Ezo Squid", "OPUS"], ["Aji Kiamoy King Seedless", "Shangri-La"], ["aji plum - k plum", "Magnolia"], ["Aji Kiamoy king seedless M", "Rockwell"], ["Aji ezo spicy squid", "OPUS"], ["Aji ezo spicy squid", "Magnolia"]]};const peso=n=>(n<0?'\u2212':'+')+'\u20B1'+Math.abs(n).toLocaleString('en-US');
+(()=>{const s=document.getElementById('rhythm');const W=940,top=30,base=232;const all=[...D.now,...D.was].map(x=>x[1]);const hi=Math.max(...all);
+const X=i=>i/(D.now.length-1)*W, Y=v=>base-(v/hi)*(base-top);
+const path=arr=>arr.map((x,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(x[1]).toFixed(1)).join(' ');
+let h='<line class="axis" x1="0" x2="'+W+'" y1="'+base+'" y2="'+base+'"/>';
+const a=X(0), b=X(13); h+='<rect class="band" x="'+a+'" y="'+top+'" width="'+(b-a)+'" height="'+(base-top)+'"/>';
+h+='<path class="note-l" d="M'+a+' '+(top-8)+' v-6 h'+(b-a)+' v6"/><text class="note" x="'+((a+b)/2)+'" y="'+(top-22)+'" text-anchor="middle">two weeks under last month, at every shop</text>';
+h+='<path class="l-was" d="'+path(D.was)+'"/><path class="l-now" d="'+path(D.now)+'"/>';
+D.now.forEach((x,i)=>{ if(i%7===0||(i===D.now.length-1&&i%7>2)){const d=new Date(x[0]);h+='<text class="lbl" x="'+X(i)+'" y="'+(base+18)+'" text-anchor="middle">'+d.getDate()+' '+d.toLocaleString('en',{month:'short'})+'</text>';}});
+const pk=D.now.reduce((m,x,i)=>x[1]>D.now[m][1]?i:m,0); h+='<text class="fig" x="'+X(pk)+'" y="'+(Y(D.now[pk][1])-8)+'" text-anchor="middle">\u20B1'+Math.round(D.now[pk][1]).toLocaleString('en-US')+'</text>';
+s.innerHTML=h;})();
+(()=>{const host=document.getElementById('multiples');const span=Math.max(...D.shops.flatMap(s=>s.weeks.map(Math.abs)));
+host.innerHTML=D.shops.map(sh=>{const W=120,H=90,base=58,top=6,n=5,slot=W/n,bw=slot*.55;let s='<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#3fb27f" stroke-width="2"/></pattern></defs><line class="axis" x1="0" x2="'+W+'" y1="'+base+'" y2="'+base+'"/>';
+sh.weeks.forEach((c,i)=>{const h=Math.abs(c)/span*(base-top),cx=slot*i+slot/2,y=c<0?base:base-h;const cls=i===4?'bar-part':(c<0?'bar-dn':'bar-up');s+='<rect class="'+cls+'" x="'+(cx-bw/2)+'" y="'+y+'" width="'+bw+'" height="'+Math.max(h,1)+'" rx="1"/>';});
+const lit=sh.n==='Rockwell';return '<div class="shop'+(lit?' lit':'')+'"><p class="nm"><span>'+sh.n+'</span><s class="'+(sh.m.startsWith('-')?'dn':'up')+'">'+sh.m+'</s></p><svg viewBox="0 0 '+W+' '+H+'">'+s+'</svg>'+(lit?'<p class="callout">the one that did not come back</p>':'')+'</div>';}).join('');})();
+(()=>{const host=document.getElementById('movers');const span=Math.max(...[...D.gain,...D.drop].map(x=>Math.abs(x[1])));
+const row=(x,dir)=>'<div class="mv"><span>'+x[0]+'</span><span class="t"><i class="'+dir+'" style="width:'+(Math.abs(x[1])/span*100)+'%"></i></span><span class="f '+dir+'">'+peso(x[1])+'</span></div>';
+host.innerHTML='<div><h4>stopped</h4>'+D.drop.map(x=>row(x,'dn')).join('')+'</div><div><h4>took off</h4>'+D.gain.map(x=>row(x,'up')).join('')+'</div>';})();
+(()=>{document.getElementById('crossed').innerHTML=D.crossed.map(x=>'<li>'+x[0]+'<b>'+(x[1]||'')+'</b></li>').join('');})();
+</script></body></html>

@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How are we doing</title>
+<!--
+  ONE PAGE, ENGINEERED FOR ONE ANSWER. The owner, 2026-09-20: "one perfectly
+  engineered page for its answer. everything should be thought out — the text,
+  the path, the order, visualizations. the right side is a canvas, fill it."
+
+  This is the TARGET for "how are we doing?", designed by hand with the figures
+  the vetted read tools returned on 2026-09-20 (last_30_days, each week against
+  the same week of the month before, seven shops by week). Every number on it
+  is a value a tool returned; the only arithmetic is bar geometry. The prose,
+  the annotations and the design are the session's. Bob did not make this —
+  it is what he will be taught to make.
+
+  THE PATH the eye is meant to take, top to bottom:
+    1. the number, and the verdict on it            (is it real? yes, and mostly over)
+    2. the month week by week, the bad part pointed at (WHERE the fall is)
+    3. every shop, week by week, seven small pictures  (WHO fell, who came back)
+    4. visits beside basket, each with its verdict     (WHAT kind of fall)
+    5. what cannot be read, quietly                    (vending)
+  Each row earns its place by answering the question the row above raises.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;1,400&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0c0e;--ink:#e8eaed;--ink-2:#c9ced6;--ink-3:#8a8f98;--ink-4:#5d626b;
+--edge:rgba(255,255,255,.08);--edge-strong:rgba(255,255,255,.18);--up:#3fb27f;--dn:#e5594f;
+--serif:'Newsreader',Georgia,serif;--mono:'Geist Mono',ui-monospace,Consolas,monospace;
+--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.room{display:grid;grid-template-columns:400px minmax(0,1fr);gap:64px;max-width:1440px;margin:0 auto;padding:56px 40px 120px}
+/* ------------------------------------------------ left: him, and the conclusion */
+.words{text-align:right;padding-top:180px}
+.mark{width:250px;height:190px;margin:0 0 56px auto;background:#fff;border-radius:48% 52% 45% 55%/55% 45% 55% 45%;box-shadow:0 0 60px rgba(255,255,255,.08)}
+.asked{font:400 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);margin:0 0 18px}
+.asked b{color:var(--ink);font-weight:500;text-transform:none;letter-spacing:0;font-size:13px;font-family:var(--sans);margin-left:8px}
+h1{font:400 30px/1.25 var(--serif);margin:0 0 18px;text-wrap:pretty}
+h1 i{font-style:italic}
+.caveat{font-size:13.5px;line-height:1.55;color:var(--ink);margin:0 0 18px;border-right:2px solid var(--edge-strong);padding-right:14px}
+.body{font:400 16.5px/1.55 var(--serif);margin:0 0 26px;text-wrap:pretty}
+.next{border-right:2px solid var(--ink);padding-right:14px;margin:0}
+.next .lab{display:block;font:500 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);margin:0 0 8px}
+.next p{font:400 15px/1.5 var(--serif);margin:0}
+/* ------------------------------------------------ right: the canvas */
+.canvas{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:44px 40px;align-items:start}
+.q{font:600 15px/1.45 var(--serif);margin:0 0 4px}
+.q span{font-weight:400}
+.src{font:400 10px/1.6 var(--mono);color:var(--ink-4);margin:10px 0 0}
+/* 1 · the number */
+.hero{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:end}
+.big{font:500 84px/1 var(--mono);letter-spacing:-.02em;margin:0}
+.big s{text-decoration:none;font-size:22px;color:var(--dn);vertical-align:top;margin-left:10px;letter-spacing:0}
+.hero .was{font:400 12px/1.6 var(--mono);color:var(--ink-3);margin:0 0 10px}
+.hero .verdict{font:400 22px/1.3 var(--serif);margin:0 0 6px;max-width:34ch;text-wrap:pretty}
+/* 2 · the month, week by week — the proof, wide */
+.weeks{grid-column:1/-1}
+.weeks svg{width:100%;height:300px;display:block;overflow:visible}
+.bar-dn{fill:var(--dn)}.bar-up{fill:var(--up)}.bar-part{fill:url(#hatch)}
+.axis{stroke:var(--edge-strong)}
+.lbl{font:500 11px var(--mono);fill:var(--ink-2)}
+.fig{font:500 12px var(--mono);fill:var(--ink)}
+.note{font:400 14.5px var(--serif);fill:var(--ink)}
+.note-l{stroke:var(--ink-3);fill:none;stroke-width:1}
+.tag{font:400 10px var(--mono);fill:var(--ink-3)}
+/* 3 · seven shops, week by week — small multiples */
+.shops{grid-column:1/-1}
+.multiples{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:18px;margin-top:14px}
+.shop{border-top:1px solid var(--edge);padding-top:10px;position:relative}
+.shop.lit{border-top-color:var(--ink)}
+.shop .nm{display:flex;justify-content:space-between;align-items:baseline;font:500 12.5px var(--sans);margin:0 0 6px}
+.shop .nm s{text-decoration:none;font:500 11px var(--mono);color:var(--ink-3)}
+.shop .nm s.dn{color:var(--dn)}.shop .nm s.up{color:var(--up)}
+.shop svg{width:100%;height:96px;display:block;overflow:visible}
+.shop .say{font:400 12.5px/1.4 var(--serif);color:var(--ink);margin:8px 0 0}
+.callout{font:400 13px/1.35 var(--serif);color:var(--ink);margin:8px 0 0;border-left:1px solid var(--ink-3);padding-left:8px}
+/* 4 · what kind of fall */
+.pair{grid-column:span 6}
+.pair .n{font:500 40px/1 var(--mono);margin:6px 0 4px;letter-spacing:-.01em}
+.pair .n s{text-decoration:none;font-size:14px;margin-left:8px;vertical-align:top}
+.pair .n s.dn{color:var(--dn)}
+.pair .verdict{font:400 17px/1.3 var(--serif);margin:0}
+.pair .track{position:relative;height:10px;margin:14px 0 0}
+.pair .track::after{content:'';position:absolute;inset:auto 0 50% 0;height:1px;background:var(--edge-strong)}
+.pair .dot{position:absolute;top:50%;width:9px;height:9px;border-radius:50%;transform:translate(-50%,-50%)}
+.pair .dot.was{border:1.5px solid var(--ink-3);background:transparent}
+.pair .dot.now{background:var(--dn)}
+.pair .seg{position:absolute;top:50%;height:1.5px;background:var(--dn);transform:translateY(-50%)}
+/* 5 · quiet */
+.quiet{grid-column:span 12;border-top:1px solid var(--edge);padding-top:16px;display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:baseline}
+.quiet .n{font:500 22px/1 var(--mono);margin:0}
+.quiet p{font:400 13.5px/1.5 var(--sans);color:var(--ink);margin:0;max-width:64ch}
+.notice{font:500 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+@media (max-width:900px){html,body{overflow-x:hidden}.room,.canvas,.words,.hero,.pair,.quiet,.shop{min-width:0}.room{grid-template-columns:minmax(0,1fr);gap:40px;padding:24px 16px 100px}.words{text-align:left;padding-top:0}.mark{margin:0 0 28px}.caveat,.next{border-right:0;border-left:2px solid var(--edge-strong);padding:0 0 0 14px}.next{border-left-color:var(--ink)}.canvas{grid-template-columns:minmax(0,1fr);gap:36px}.big{font-size:44px}.big s{font-size:16px}.hero{grid-template-columns:minmax(0,1fr)}.multiples{grid-template-columns:repeat(2,minmax(0,1fr))}.pair,.quiet{grid-column:1/-1}.quiet{grid-template-columns:minmax(0,1fr);gap:10px}.weeks svg{height:240px}}
+</style></head>
+<body><div class="room">
+
+<aside class="words">
+  <div class="mark"></div>
+  <p class="asked">you asked <b>how are we doing?</b></p>
+  <h1>We are <i>down on the month, and the whole of it is two weeks in August.</i></h1>
+  <p class="caveat">The newest week is part of a week on both sides, so ignore how good it looks. Vending has nothing to compare against.</p>
+  <p class="body">Every shop fell in the same two weeks, Rockwell hardest. Since then six of the seven have made it back; Rockwell has not. The same number of people came in and each spent less, everywhere.</p>
+  <div class="next"><span class="lab">what I'd do next</span><p>Shall I pull Rockwell day by day across those two weeks?</p></div>
+</aside>
+
+<main class="canvas">
+
+  <!-- 1 · THE NUMBER. The answer is a number, so it is drawn as one, at the size
+       of the answer. The verdict beside it is the only sentence the row needs. -->
+  <section class="hero">
+    <div>
+      <p class="big">₱7,281,692<s>▼ 9.7%</s></p>
+      <p class="was">net sales · last 30 days · was ₱8,060,342 · read 17:15</p>
+    </div>
+    <div>
+      <p class="verdict">A real fall — and most of it is already over.</p>
+    </div>
+  </section>
+
+  <!-- 2 · THE MONTH, WEEK BY WEEK. Each week against the same week of the month
+       before. The two that matter are POINTED AT, not captioned; the partial
+       week is drawn as partial so it cannot be read as a recovery. -->
+  <section class="weeks">
+    <p class="q">Where is the fall? <span>In the two oldest weeks. The three since are level or better.</span></p>
+    <svg viewBox="0 0 940 300" id="weeks" aria-label="net sales, each week against the same week of the month before"></svg>
+    <p class="src">read 2 · net sales · by week, each against the same week before · last 30 days · read 17:15</p>
+  </section>
+
+  <!-- 3 · EVERY SHOP, WEEK BY WEEK. Seven small pictures instead of one chart:
+       the same two red weeks appear on every one, and only one shop's later
+       weeks stay flat. That is the finding, and it needs no sentence. -->
+  <section class="shops">
+    <p class="q">Was it one shop? <span>No — every shop fell in the same two weeks. Only one has not come back.</span></p>
+    <div class="multiples" id="multiples"></div>
+    <p class="src">read 6 · net sales · per shop, by week, each against the same week before · last 30 days · read 17:16</p>
+  </section>
+
+  <!-- 4 · WHAT KIND OF FALL. Two numbers side by side, each with its verdict in
+       words — the pairing IS the point, so they share a row and nothing else
+       does. -->
+  <section class="pair">
+    <p class="q">Fewer people?</p>
+    <p class="n">17,110<s class="dn">▼ 2.4%</s></p>
+    <p class="verdict">No — the same people came in.</p>
+    <div class="track"><i class="seg" style="left:96%;right:2%"></i><i class="dot was" style="left:98%"></i><i class="dot now" style="left:96%"></i></div>
+    <p class="src">read 4 · transactions · last 30 days · was 17,539 · read 17:16</p>
+  </section>
+  <section class="pair">
+    <p class="q">…or less from each?</p>
+    <p class="n">₱425.58<s class="dn">▼ 7.4%</s></p>
+    <p class="verdict">Yes — each spent less, at all seven shops.</p>
+    <div class="track"><i class="seg" style="left:91%;right:2%"></i><i class="dot was" style="left:98%"></i><i class="dot now" style="left:91%"></i></div>
+    <p class="src">read 5 · average transaction value · last 30 days · was ₱459.57 · read 17:16</p>
+  </section>
+
+  <!-- 5 · WHAT CANNOT BE READ. Quiet, last, and honest about why. -->
+  <section class="quiet">
+    <div><p class="notice">vending · no comparison</p><p class="n">₱116,895</p></div>
+    <p>Vending took this over the same month and I have nothing to set it against: its shelf feed has not moved since 5 August, so its quiet means nothing either way.<br><span class="src">read 5 · vending revenue · last 30 days · read 17:16</span></p>
+  </section>
+
+</main></div>
+
+<script>
+// GEOMETRY ONLY. Every figure below is a value a tool returned on 2026-09-20;
+// the script scales bars and places labels, and prints the value as given.
+const WEEKS = [
+  {w:'17 Aug', change:-643126, part:false},
+  {w:'24 Aug', change:-740307, part:false},
+  {w:'31 Aug', change: 101489, part:false},
+  {w:'7 Sep',  change: -44332, part:false},
+  {w:'14 Sep', change: 547626, part:true},
+];
+const SHOPS = [
+  {n:'OPUS',       m:'-2.1%',  d:true,  weeks:[-52017,-176334,46981,-34477,170672]},
+  {n:'Greenhills', m:'+1.1%',  d:false, weeks:[-53356,-36442,21723,19438,61424]},
+  {n:'Shangri-La', m:'-7.4%',  d:true,  weeks:[-41895,-39630,-41230,-26835,76206]},
+  {n:'Rockwell',   m:'-42.7%', d:true,  weeks:[-333632,-429400,28088,6850,73894], lit:true},
+  {n:'Magnolia',   m:'-2.4%',  d:true,  weeks:[-92288,-26679,29849,-5789,74292]},
+  {n:'North Edsa', m:'+2.1%',  d:false, weeks:[-49051,-22167,22692,2361,61317]},
+  {n:'Fairview',   m:'-2.2%',  d:true,  weeks:[-20885,-9656,-6615,-5880,29822]},
+];
+const peso = n => (n<0?'−':'+') + '₱' + Math.abs(n).toLocaleString('en-US');
+
+// 2 · the month
+(() => {
+  const svg = document.getElementById('weeks');
+  const W=940, H=300, top=44, base=150, span=Math.max(...WEEKS.map(x=>Math.abs(x.change)));
+  const n=WEEKS.length, slot=W/n, bw=slot*0.42;
+  let s = `<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="none"/><line x1="0" y1="0" x2="0" y2="6" stroke="#3fb27f" stroke-width="2"/></pattern></defs>`;
+  s += `<line class="axis" x1="0" x2="${W}" y1="${base}" y2="${base}"/>`;
+  WEEKS.forEach((x,i)=>{
+    const cx = slot*i + slot/2, h = Math.abs(x.change)/span*(base-top);
+    const y = x.change<0 ? base : base-h;
+    const cls = x.part ? 'bar-part' : (x.change<0?'bar-dn':'bar-up');
+    s += `<rect class="${cls}" x="${cx-bw/2}" y="${y}" width="${bw}" height="${h}" rx="1"/>`;
+    s += `<text class="fig" x="${cx}" y="${x.change<0? y+h+16 : y-8}" text-anchor="middle">${peso(x.change)}</text>`;
+    s += `<text class="lbl" x="${cx}" y="${base+ (x.change<0? h+34 : 18)}" text-anchor="middle">${x.w}</text>`;
+    if (x.part) s += `<text class="tag" x="${cx}" y="${y-22}" text-anchor="middle">part week, both sides</text>`;
+  });
+  // THE ANNOTATION: a bracket over the two bars, and a sentence. It points at
+  // rows and characterises them; it names no number (CLAUDE.md).
+  const x0 = slot*0 + slot/2 - bw/2, x1 = slot*1 + slot/2 + bw/2;
+  s += `<path class="note-l" d="M${x0} ${top-6} v-8 h${x1-x0} v8"/>`;
+  s += `<text class="note" x="${(x0+x1)/2}" y="${top-24}" text-anchor="middle">the whole shortfall is here — and it is three weeks old</text>`;
+  svg.innerHTML = s;
+})();
+
+// 3 · seven shops
+(() => {
+  const host = document.getElementById('multiples');
+  const span = Math.max(...SHOPS.flatMap(s=>s.weeks.map(Math.abs)));
+  host.innerHTML = SHOPS.map(sh => {
+    const W=120,H=96,base=62,top=6,n=5,slot=W/n,bw=slot*0.55;
+    let s = `<line class="axis" x1="0" x2="${W}" y1="${base}" y2="${base}"/>`;
+    sh.weeks.forEach((c,i)=>{
+      const h=Math.abs(c)/span*(base-top), cx=slot*i+slot/2, y=c<0?base:base-h;
+      const cls = i===4 ? 'bar-part' : (c<0?'bar-dn':'bar-up');
+      s += `<rect class="${cls}" x="${cx-bw/2}" y="${y}" width="${bw}" height="${Math.max(h,1)}" rx="1"/>`;
+    });
+    return `<div class="shop${sh.lit?' lit':''}">
+      <p class="nm"><span>${sh.n}</span><s class="${sh.d?'dn':'up'}">${sh.m}</s></p>
+      <svg viewBox="0 0 ${W} ${H}">${s}</svg>
+      ${sh.lit?'<p class="callout">the one that did not come back</p>':''}
+    </div>`;
+  }).join('');
+})();
+</script>
+</body></html>
