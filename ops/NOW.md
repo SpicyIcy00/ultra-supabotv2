@@ -3823,7 +3823,7 @@ against v2 in the browser (`ops/frames.py`), not against a description of it.
       arrangement (P3.p) is how the elements sit. Done when v2's data,
       composed in the vocabulary, renders within measure of v2 in
       `ops/frames.py` at 1440 and 390.
-- [x] **P6.c how he thinks** **WRITTEN 2026-09-20, NOT VERIFIED LIVE.** The broad policy is page-first in one round (`investigation.scope.kinds.broad.reads`), the recipe is on `compose` (`composition.page_first`), the prompt sits at 1,799/1,800. No turn has run on it; the owner's rule is no paid runs, so whether HE composes the page is the next live turn's to answer.  — the prompt's SCOPE and VOICE: for a broad
+- [ ] **P6.c how he thinks** **WRITTEN 2026-09-20, NOT VERIFIED LIVE.** The broad policy is page-first in one round (`investigation.scope.kinds.broad.reads`), the recipe is on `compose` (`composition.page_first`), the prompt sits at 1,799/1,800. No turn has run on it; the owner's rule is no paid runs, so whether HE composes the page is the next live turn's to answer.  — the prompt's SCOPE and VOICE: for a broad
       question he DESIGNS the page first — the four to six things a person
       needs to see to know — and reads for each, in the order the page
       needs; then composes it. The reads for "how are we doing" become the
