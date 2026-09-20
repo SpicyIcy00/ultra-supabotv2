@@ -171,7 +171,8 @@ FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
               # the real room and put beside the target page. No model, no cost.
               "canvas-doing": ROOT / "ops" / "frames_fixtures" / "canvas-doing.json",
               "canvas-stores": ROOT / "ops" / "frames_fixtures" / "canvas-stores.json",
-              "canvas-products": ROOT / "ops" / "frames_fixtures" / "canvas-products.json"}
+              "canvas-products": ROOT / "ops" / "frames_fixtures" / "canvas-products.json",
+              "canvas-whatsdown": ROOT / "ops" / "frames_fixtures" / "canvas-whatsdown.json"}
 SIZES = {1440: 900, 1920: 1080, 1857: 963}
 VOCAB_READS = ROOT / "frontend" / "src" / "room" / "__fixtures__" / "vocab-reads.json"
 MAX_ROWS = 200
