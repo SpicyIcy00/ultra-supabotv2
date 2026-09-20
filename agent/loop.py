@@ -602,6 +602,49 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
             },
         }
 
+    if pname == "arrangement":
+        # HOW THE RIGHT-HAND SIDE IS LAID OUT FOR THIS ANSWER (P3.p).
+        #
+        # The four layouts are the grammar's own, one level up, so there is no
+        # second vocabulary. A leaf is one of HIS block keys — which keeps the
+        # block's receipts, notice, read time and tap-to-inspect — or a line of
+        # his own words, which may sit anywhere in the arrangement. There is no
+        # value, colour, width or size in the tree, which is what makes the
+        # freedom safe.
+        #
+        # RECURSIVE BY $ref, because a layout holds layouts. `strict` is
+        # already off on this tool (two parameters need oneOf), so a $ref is
+        # legal here; a flattened three-level schema would be unreadable and
+        # would still be the same tree.
+        voc = req(_load_defs(), "composition")
+        page = voc.get("arrangement") or {}
+        layouts = list((voc.get("grammar") or {}).get("layouts") or {})
+        return {
+            "type": "object",
+            "description": " ".join(str(page.get("about") or "").split()),
+            "properties": {
+                "layout": {"type": "string", "enum": layouts,
+                           "description": "how these parts sit: "
+                           + "; ".join(f"{k}: {v['about']}" for k, v in
+                                       ((voc.get("grammar") or {}).get("layouts") or {}).items())},
+                "cols": {"type": "integer", "minimum": 2,
+                         "maximum": int((voc.get("grammar") or {}).get("max_cols") or 6),
+                         "description": "a grid's columns"},
+                "heading": {"type": "string",
+                            "description": "a panel's heading, in your words. No digits."},
+                "children": {
+                    "type": "array",
+                    "description": "the parts of this arrangement, in the order they are read. "
+                                   "Each is another arrangement, {\"block\": \"<a key you put "
+                                   "this turn>\"}, or {\"say\": \"<a line of yours>\"} — which "
+                                   "may go before a figure, beside it, after it, or nowhere. "
+                                   "A block you do not place is drawn after the page, never lost.",
+                    "items": {"$ref": "#"},
+                },
+            },
+            "required": ["layout", "children"],
+        }
+
     if pname == "blocks":
         # The whole of what the model may say about the SCREEN: a widget from
         # a closed list, a key, a weight, a read it made and a subject a row
@@ -1403,6 +1446,12 @@ def _board_addendum(defs: dict) -> str:
         f"WORDS ARE NOT AN OBJECT: the reading is drawn above the board from what "
         f"you say this turn, always — so compose the evidence, name its three "
         f"slots here, and never a block to hold your prose. "
+        # THE ARRANGEMENT (composition.arrangement, P3.p). The owner,
+        # 2026-09-20: the right-hand side is his to lay out for the answer,
+        # not a form to fill in. Said here because it arranges the blocks he
+        # is composing at this exact moment.
+        + "AND LAY THE SPACE OUT YOURSELF, on `arrangement`: "
+        + " ".join(str(req(defs, "composition.arrangement.about")).split()) + " "
         # THE PATH (voice.reading.path, 2026-09-19). The one thing about the
         # surface he was never told: his paragraphs ARE the page, and their
         # order is the page's order. It rides here rather than in the prompt
@@ -2323,7 +2372,8 @@ def _answer_payload(charted: Optional[list], calls: Optional[list],
                     reading: Optional[dict] = None,
                     composition: Optional[list] = None,
                     default_composition: Optional[list] = None,
-                    actions: Optional[list] = None) -> Optional[str]:
+                    actions: Optional[list] = None,
+                    arrangement: Optional[dict] = None) -> Optional[str]:
     """
     The answer post's payload: the charted snapshot, the calls behind it, and
     the page Bob read to produce it.
@@ -2367,6 +2417,12 @@ def _answer_payload(charted: Optional[list], calls: Optional[list],
     # beside it, and never a layout the client derived.
     if composition or default_composition:
         payload["composition"] = {"blocks": _json_safe(composition or [])}
+        # STORED WITH THE BLOCKS IT ARRANGES (P3.p), so a reopened thread draws
+        # the page he laid out and not the packing. Absent on every post
+        # written before this, which is the packing — the same fallback the
+        # renderer takes.
+        if arrangement:
+            payload["composition"]["arrangement"] = _json_safe(arrangement)
         # AND WHAT STOOD BEFORE HE SPOKE (P1.b, 2026-09-13). Stored beside his
         # blocks rather than merged into them, because a reopened thread has to
         # compose exactly as it composed live — and live, a default is
@@ -3266,6 +3322,10 @@ async def run(
     # moves. It holds the WHOLE board of the turn once he has composed —
     # defaults flagged `default` — so a reload draws what the person saw.
     composition_recorded: list[dict] = []
+    # HIS ARRANGEMENT OF THEM (P3.p), or None for the packing the room
+    # has always done. Held across the turn's composes for the same
+    # reason the board is: what he does not mention does not move.
+    arrangement_recorded: Optional[dict] = None
     # The board of this turn as it stands, in the order it arrived: the loop's
     # defaults first, then his edits folded over them (compose.fold).
     turn_board: list[dict] = []
@@ -4389,6 +4449,8 @@ async def run(
                         board=[*((desk or {}).get("board") or []),
                                *compose.as_board_objects(turn_board, calls_by_seq)],
                         question=question,
+                        # HOW HE LAID THE RIGHT-HAND SIDE OUT (P3.p).
+                        arrangement=(b.input or {}).get("arrangement"),
                     )
                     err = None
                 except (ValueError, KeyError, TypeError) as exc:
@@ -4416,9 +4478,16 @@ async def run(
                         ever_drawn |= compose.drawn_seqs(turn_board)
                         his_composed = True
                         composition_recorded = list(turn_board)
+                        # HOW HE LAID THEM OUT (P3.p), kept for the rest of the
+                        # turn: a later compose that says nothing about the
+                        # arrangement leaves the one he already gave standing,
+                        # exactly as a block he does not mention stays.
+                        if result["meta"].get("arrangement"):
+                            arrangement_recorded = result["meta"]["arrangement"]
                         yield _sse("compose", {
                             "seq": gseq,
                             "blocks": composition_recorded,
+                            "arrangement": arrangement_recorded,
                             "rejected": result["meta"].get("rejected") or [],
                             # What was ADJUSTED rather than refused (P2S.7),
                             # so a run can count the rounds coercion saved.
@@ -4697,6 +4766,7 @@ async def run(
                     # composed, so what a reload draws is what was seen.
                     composition_recorded = list(turn_board)
                     yield _sse("compose", {"seq": -1, "blocks": composition_recorded,
+                                           "arrangement": arrangement_recorded,
                                            "rejected": []})
                 else:
                     default_composition_recorded = list(turn_board)
@@ -4809,7 +4879,7 @@ async def run(
         charted=charted, calls=calls_made, parent_id=parent_id,
         page_context=page_evidence, reading=reading_recorded,
         actions=actions_recorded,
-        composition=composition_recorded,
+        composition=composition_recorded, arrangement=arrangement_recorded,
         default_composition=default_composition_recorded, desk=desk,
     )
 

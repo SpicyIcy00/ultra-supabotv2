@@ -9,6 +9,61 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-20 · P3.p — the right-hand side is his to lay out
+
+The owner, after P3.o shipped and after four template variants were drawn for
+him from a saved answer: *"i dont [want] it to just be text chart here this and
+heres that, i want it to use that space like its designing its own page or
+artifact for its answer. it doesnt have to have text before a chart … it needs
+to find the best way to display its answer thats all. in that space its its
+playground, but of course it should still feel like the rest of the app."*
+
+**ALL FOUR VARIANTS WERE TEMPLATES, WHICH IS WHY HE REFUSED ALL FOUR.** A
+document, steps, steps folded, and what ships — every one a form Bob fills in.
+The thing none of them changed is the one he kept naming: **nothing Bob said
+had ever reached the ARRANGEMENT.** `beside.placeFigures` dropped each figure
+into whichever column was shortest, so "here's this and here's that" was the
+literal algorithm, and P3.j's prose order and P3.o's question heads were both
+changes to the CONTENT of a slot in a layout he did not control.
+
+**AND THE VOCABULARY FOR IT ALREADY EXISTED, one level down.** `composition.
+grammar` has let him build a shape nobody listed — `stack`, `row`, `grid`,
+`panel` over marks bound to a read's field — since 2026-09-11, locked inside a
+single chart. `composition.arrangement` is the same four layouts applied to the
+page: no new word, no second vocabulary, and the grammar's own bounds.
+
+**A LEAF IS ONE OF HIS BLOCK KEYS, WHICH IS THE WHOLE TRICK.** A page of raw
+marks would have quietly dropped the receipts, the notice, the read time, the
+emphasis and the tap-to-inspect that UI rules 3, 4 and 6 hang off a block. A
+leaf names a block, so a figure keeps all of it wherever he puts it —
+`drawFigure` is the same function the packing calls, told only that it is not
+being packed. His words are a leaf too (`say`), which is the "it doesn't have
+to have text before a chart" half, held to the claim's no-digit rule.
+
+**NOT CALLED `page`.** That is one of the eight words and it means a collection
+of pins; a second `page` on `compose` would collide with `page_id`,
+`view_page` and `george.pages`. The word is the one the complaint used.
+
+**A BLOCK IS NEVER LOST.** One he composed and did not place is named on
+`coerced` and drawn after the tree. An arrangement that cannot be understood is
+dropped whole and the board packs as before — it is the only one of `compose`'s
+four statements that cannot touch a figure, so it never costs a round trip.
+
+**THE FOURTH CHANNEL WAS DECIDED, NOT SLIPPED IN.**
+`test_the_tool_is_offered_and_takes_the_board_and_the_reading` exists to catch
+a channel arriving without anybody deciding it should. It caught this one, and
+was updated with the owner's words as the reason.
+
+**Suites:** pure 2,127 -> 2,133 (+6), vitest 1,104 -> 1,109 (+5), `tsc -b
+--force` and `build` clean. Frame `verification/frames/p3p`, off
+`ops/frames_fixtures/arranged.json` — the live board of 2026-09-19 with an
+arrangement **the session wrote**, said in its own `why`, because no model has
+ever composed one. **The first frame found what jsdom could not:** `.r-flow` is
+a grid of 1px auto-rows, and his tree inherited it, so every part of the
+arrangement landed in the same implicit row and drew on top of the one before.
+
+---
+
 ## 2026-09-19 · P3.o — the page says what led to what, and he is told it is a page
 
 The owner, of the right-hand side: *"a group of text and visualizations that

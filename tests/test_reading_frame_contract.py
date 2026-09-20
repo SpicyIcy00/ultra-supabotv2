@@ -286,11 +286,22 @@ def test_the_tool_is_offered_and_takes_the_board_and_the_reading():
     assert bob_loop.FINDING_TOOL not in bob_loop.FINDING_TOOL_FUNCTIONS
     schema = next(t for t in bob_loop.build_tool_schemas()
                   if t["name"] == bob_loop.COMPOSE_TOOL)
-    # THREE STATEMENTS SINCE P2.d, not two: the board, the reading, and what to
-    # do about a row. The set is still CLOSED — this is the assertion that
-    # catches a fourth channel arriving without anybody deciding it should —
-    # and the two that were here are still exactly what they were.
-    assert set(schema["input_schema"]["properties"]) == {"blocks", "reading", "actions"}
+    # FOUR STATEMENTS SINCE P3.p: the board, the reading, what to do about a
+    # row, and how the board is ARRANGED. The set is still CLOSED — this is the
+    # assertion that catches a channel arriving without anybody deciding it
+    # should — and the fourth was decided, by the owner, on 2026-09-20: *"i
+    # want it to use that space like its designing its own page or artifact for
+    # its answer … in that space its its playground."* Nothing he said had ever
+    # reached the arrangement; the room packed his blocks into whichever column
+    # was shortest, and four template variants were refused before the channel
+    # was the answer rather than another template.
+    #
+    # IT IS THE ONLY ONE OF THE FOUR THAT CANNOT TOUCH A FIGURE. A leaf is a
+    # block key he already composed or a line of his own words held to the
+    # claim's no-digit rule, so the freedom costs nothing in trust
+    # (metrics.yaml composition.arrangement).
+    assert set(schema["input_schema"]["properties"]) == {
+        "blocks", "reading", "actions", "arrangement"}
     # Only the board is required. The reading is optional because a
     # confirmation has nothing to say in three parts, and the actions are
     # optional because most answers suggest nothing — an offer forced onto

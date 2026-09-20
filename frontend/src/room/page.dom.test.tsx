@@ -346,3 +346,78 @@ Shops: OPUS gave back 88,045, Greenhills 16,026 and Rockwell 4,901. The rest wer
     expect(container.querySelector('[data-figure="tills"]')?.querySelectorAll('.r-mk-row')).toHaveLength(5);
   });
 });
+
+/**
+ * HIS ARRANGEMENT OF THE RIGHT-HAND SIDE (P3.p, 2026-09-20).
+ *
+ * The owner, of the shipped board and of four template variants drawn for him
+ * the same day: *"i dont [want] it to just be text chart here this and heres
+ * that, i want it to use that space like its designing its own page or artifact
+ * for its answer … it doesnt have to have text before a chart … in that space
+ * its its playground."*
+ *
+ * Until this, nothing he said reached the arrangement: `beside.placeFigures`
+ * dropped each figure into whichever column was shortest. These hold that when
+ * he sends one the packing steps aside, that the figures inside it are the
+ * ordinary ones, and that nothing he composed can be lost by it.
+ */
+describe('the arrangement he laid out', () => {
+  const two = [block('shops', 1, { claim: 'a', weight: 'lead' }),
+               block('products', 2, { claim: 'b' })];
+
+  it('draws his tree instead of the packing', () => {
+    const { container } = draw(two, {
+      arrangement: { layout: 'row', children: [{ block: 'shops' }, { block: 'products' }] },
+    });
+    const row = container.querySelector('.r-laid--row');
+    expect(row).not.toBeNull();
+    expect(row?.querySelectorAll('[data-figure]')).toHaveLength(2);
+    // Packed, a figure carries a column and a measured row span. Laid out by
+    // him it carries neither — it fills what his tree gives it.
+    const fig = container.querySelector('[data-figure="shops"]') as HTMLElement;
+    expect(fig.getAttribute('data-col')).toBeNull();
+    expect(fig.style.gridColumn).toBe('');
+  });
+
+  it('puts his words wherever he placed them, including after a figure', () => {
+    const { container } = draw(two, {
+      arrangement: { layout: 'stack', children: [
+        { block: 'shops' },
+        { say: 'and the rest of the estate held' },
+        { block: 'products' },
+      ] },
+    });
+    const flowed = Array.from(container.querySelectorAll('[data-figure], .r-laid-say'))
+      .map((el) => el.getAttribute('data-figure') ?? el.textContent);
+    expect(flowed).toEqual(['shops', 'and the rest of the estate held', 'products']);
+  });
+
+  it('draws the figures with everything a figure carries', () => {
+    const { container } = draw(two, {
+      arrangement: { layout: 'panel', heading: 'Last week',
+                     children: [{ block: 'shops' }] },
+    });
+    expect(container.querySelector('.r-laid-head')?.textContent).toBe('Last week');
+    // The claim, the source line and the read's own chrome are the ordinary
+    // ones: `drawFigure` is the same function the packing calls.
+    expect(container.querySelector('[data-figure="shops"] .r-mk-title')?.textContent)
+      .toBe('a');
+    expect(container.querySelector('[data-figure="shops"] .r-src')).not.toBeNull();
+  });
+
+  it('draws a block he did not place, rather than losing it', () => {
+    const { container } = draw(two, {
+      arrangement: { layout: 'stack', children: [{ block: 'shops' }] },
+    });
+    // `products` is not in his tree. The server says so on `coerced`; this is
+    // the half that keeps it on screen.
+    expect(container.querySelector('[data-figure="products"]')).not.toBeNull();
+  });
+
+  it('packs exactly as before when he sends none', () => {
+    const { container } = draw(two);
+    expect(container.querySelector('.r-laid')).toBeNull();
+    const fig = container.querySelector('[data-figure="shops"]') as HTMLElement;
+    expect(fig.getAttribute('data-col')).not.toBeNull();
+  });
+});

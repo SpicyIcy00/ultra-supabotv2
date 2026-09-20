@@ -2138,3 +2138,49 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
   .r-mk-name { font-size: 11px; }
   .r-mk-fig { font-size: 10.5px; }
 }
+
+/* HIS ARRANGEMENT OF THE RIGHT-HAND SIDE (P3.p, render.drawNode).
+   The owner, 2026-09-20: "i want it to use that space like its designing its
+   own page or artifact for its answer ... in that space its its playground."
+   Four layouts, the grammar's own, one level up from a chart. The figures
+   inside are the ordinary ones — this file adds no mark, no colour and no
+   type scale of its own, because the playground still has to feel like the
+   rest of the app. */
+/* WHEN HE LAID IT OUT, THE PACKING'S CONTAINER STEPS ASIDE TOO. `.r-flow` is
+   a grid of 1px auto-rows that figures span by their measured height — the
+   mechanism the packer needs and the one his tree must not inherit. Left as a
+   grid, every part of his arrangement landed in the same implicit row and drew
+   on top of the one before it (caught in the first frame, not by a test). */
+.r-board--laid {
+  display: flex; flex-direction: column; gap: 34px;
+  grid-template-columns: none; grid-auto-rows: auto;
+}
+.r-laid { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
+.r-laid--row { flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 40px; }
+.r-laid--row > * { flex: 1 1 320px; min-width: 0; }
+.r-laid--grid {
+  display: grid; gap: 40px 40px;
+  grid-template-columns: repeat(var(--laid-cols, 2), minmax(0, 1fr));
+}
+/* `--edge`, not `--line`: inside the mark stylesheet the border token is the
+   structural one, and palette.test.ts fails a stylesheet that spends any
+   other. It caught this on the first run. */
+.r-laid--panel {
+  border: 1px solid var(--edge); border-radius: 3px; padding: 22px 24px 24px;
+  gap: 22px;
+}
+.r-laid-head {
+  font: 500 10px/1.6 var(--mono); letter-spacing: 0.11em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0;
+}
+/* HIS WORDS, WHEREVER HE PUT THEM. Full --ink and his own type: a line he
+   chose to place beside a figure is prose, not chrome (DECISIONS, 2026-09-18
+   — emphasis adds, it never dims). */
+.r-laid-say { margin: 0; max-width: 62ch; }
+/* A laid-out figure is not packed, so it has no measured row to span and no
+   column to sit in; it fills whatever its parent gives it. */
+.r-laid .r-fig { grid-column: auto; grid-row: auto; }
+@media (max-width: 720px) {
+  .r-laid--row { flex-direction: column; gap: 26px; }
+  .r-laid--grid { grid-template-columns: 1fr; gap: 26px; }
+}

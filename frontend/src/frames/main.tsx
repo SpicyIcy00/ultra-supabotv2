@@ -37,6 +37,8 @@ interface Scene {
   answer: string;
   at: string;
   blocks: Record<string, unknown>[];
+  /** How he laid the right-hand side out, when the fixture has one (P3.p). */
+  arrangement?: unknown;
   calls: Record<string, unknown>[];
 }
 
@@ -81,7 +83,10 @@ const turns = [
     role: 'bob', text: scene.answer, thinking: '', at: scene.at,
     toolCalls: scene.calls, defaultComposition: { blocks }, notices: scene.notices ?? [],
     ...(scene.reading ? { reading: scene.reading } : {}),
-    ...(scene.composed?.length ? { composition: { blocks: scene.composed } } : {}),
+    ...(scene.composed?.length
+      ? { composition: { blocks: scene.composed,
+                         ...(scene.arrangement ? { arrangement: scene.arrangement } : {}) } }
+      : {}),
   },
 ];
 

@@ -912,6 +912,11 @@ export default function Room() {
                     lead={lead}
                     thoughts={thoughts?.bySeq}
                     page={thoughts?.page}
+                    /* HOW HE LAID IT OUT (P3.p) — the newest turn's, and only
+                       while it is settled: mid-turn the blocks are still
+                       arriving, and an arrangement half its blocks have not
+                       reached would draw holes. Absent is the packing. */
+                    arrangement={busy ? null : latest?.composition?.arrangement ?? null}
                     sameOrder
                   />
                   {/* AT THE FOOT (P3.o). This sat ABOVE the board, so the first

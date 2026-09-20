@@ -7209,6 +7209,98 @@ composition:
   retired_kinds: [hero, subject, comparison, chart, distribution, timeline,
                   recommendation, text]
 
+  # ===========================================================================
+  # THE ARRANGEMENT — Bob lays out the right-hand side for THIS answer.
+  #
+  # NOT CALLED `page`, THOUGH IT IS THE PAGE HE MEANS. `Page` is one of the
+  # eight words and it means a persistent collection of pins (CLAUDE.md), so a
+  # second `page` on `compose` would collide with `page_id`, `view_page` and
+  # `george.pages` in the one place a collision is expensive. The word for
+  # what this does is the one the complaint used: nothing Bob said had ever
+  # reached the ARRANGEMENT.
+  #
+  # The owner, 2026-09-20: *"were designing the right side which should display
+  # its actual answer … i dont [want] it to just be text chart here this and
+  # heres that, i want it to use that space like its designing its own page or
+  # artifact for its answer. it doesnt have to have text before a chart … it
+  # needs to find the best way to display its answer thats all. in that space
+  # its its playground, but of course it should still feel like the rest of the
+  # app."* The headline, his prose and the mark stay on the LEFT and are not
+  # part of this.
+  #
+  # WHY EVERY EARLIER ATTEMPT MISSED. P3.j made the page his PROSE's order, and
+  # P3.o headed each block with the question it answered; four template
+  # variants were drawn for him on 2026-09-20 and he refused all four in the
+  # same words — they are templates. Nothing Bob said had ever reached the
+  # ARRANGEMENT: the room packed his blocks into whichever column was shortest,
+  # so "here's this and here's that" was the literal algorithm.
+  #
+  # AND THE VOCABULARY FOR IT ALREADY EXISTED, one level down. `grammar` lets
+  # him build a shape nobody listed — `stack`, `row`, `grid`, `panel` over
+  # marks bound to a read's field — and it has been locked inside ONE chart
+  # since 2026-09-11. This is the same four layouts applied to the page, so
+  # there is no second vocabulary to learn, no new word, and `grammar`'s own
+  # bounds and refusals are the ones that apply.
+  #
+  # WHAT A LEAF IS, and why it is not a mark. A leaf names one of HIS OWN
+  # BLOCK KEYS. A block keeps its receipts, its notice, its read time, its
+  # tap-to-inspect, its emphasis and its pin — everything UI rules 3, 4 and 6
+  # guarantee hangs off the block, and a page made of raw marks would have
+  # quietly dropped all of it. A block may itself carry a `spec`, so a leaf can
+  # already be an arbitrary composed instrument: the freedom is in the block,
+  # the arrangement is here, and neither had to be invented.
+  #
+  # HIS WORDS ARE A LEAF TOO (`say`), which is the "it doesn't have to have
+  # text before a chart" half. A `say` sits wherever he puts it — above a
+  # figure, beside it, after it, between two of them, or nowhere. Held to the
+  # claim's rule: no digits, because it sits in the same space as the figures.
+  #
+  # NOTHING CAN BE TYPED ONTO THE SCREEN. A leaf is a key or his words; there
+  # is no value, colour, width or size anywhere in the tree. This is the same
+  # guarantee `grammar.no_literals_because` states, and it is why an unbounded
+  # playground costs nothing in trust.
+  #
+  # A BLOCK IS NEVER LOST. A key he composed and did not place is drawn after
+  # the tree, in his order — a figure that vanishes because an arrangement
+  # forgot it is the one failure mode this must not have. A key that names no
+  # block of this composition is dropped from the tree and said on `coerced`.
+  #
+  # AND NO PAGE IS THE PAGE AS IT IS DRAWN TODAY. Absent, the room packs as it
+  # always has (`beside.placeFigures`) and draws his paragraphs as beats
+  # (`page.ts`) — every board composed before this, every default, every kept
+  # page, unchanged.
+  arrangement:
+    about: >
+      how the right-hand side is laid out for this answer, as one arrangement:
+      `stack` (one under another), `row` (side by side), `grid` (even columns,
+      `cols`) or `panel` (a headed area), nested. A leaf is `{"block": "<key>"}`
+      — one of the blocks you put this turn, with its figure, its receipts and
+      its read time — or `{"say": "<your words>"}`, which may sit anywhere in
+      the arrangement and carries no digits. Use the space: one figure across
+      the top with two beside each other under it, a panel per shop, a row of
+      small numbers, a chart with your sentence next to it rather than above
+      it. Leave it out and the page is packed for you.
+    leaves: [block, say]
+    # The same four the grammar already has; a fifth would be a second
+    # vocabulary for the same job.
+    layouts_from: composition.grammar.layouts
+    # A page is not a document either. Deliberately tighter than the grammar's
+    # own 40 nodes: this arranges a handful of blocks, and a forty-node page is
+    # a thing nobody can take in.
+    max_nodes: 24
+    max_depth: 3
+    max_says: 6
+    say:
+      no_digits: true
+      max_length: 200
+      over_length: cut_at_word_boundary
+    # A KEY PLACED TWICE IS PLACED ONCE. The board draws a read once
+    # (board.readIdentity); a tree naming it twice would draw the same figure
+    # under two headings, which is the widget disease with extra steps.
+    key_placed_twice: first_wins
+    unplaced_blocks: after_the_tree
+    unknown_key: dropped
+
   ops:
     put:
       about: "put an object on the board, or replace the one under this key"

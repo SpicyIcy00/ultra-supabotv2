@@ -12,7 +12,8 @@
  * `turnNotices` is which ones still have to be said; the drawing is there.
  */
 import {
-  useEffect, useLayoutEffect, useRef, useState, type CSSProperties,
+  Fragment, useEffect, useLayoutEffect, useRef, useState,
+  type CSSProperties, type ReactNode,
 } from 'react';
 import type { BoardObject, Local } from './board';
 import { inOrder } from './board';
@@ -30,7 +31,7 @@ import {
 } from './tiles';
 import { MarkBlock } from './marks';
 import { Marked } from './Reading';
-import type { ActionOffer, BobNotice } from '../types/bob';
+import type { ActionOffer, Arrangement, BobNotice } from '../types/bob';
 
 export interface BoardProps {
   /** Every answer turn, oldest first. An object names its own by index. */
@@ -90,6 +91,12 @@ export interface BoardProps {
    * always did — while he is still reading, on a kept page, in an old thread.
    */
   page?: Section[];
+  /**
+   * HOW HE LAID THE RIGHT-HAND SIDE OUT (P3.p), for the newest turn. Present
+   * only when he said so and the turn has settled; absent is the packing,
+   * which is every answer composed before the channel existed.
+   */
+  arrangement?: Arrangement | null;
   /** List stores in one order across the answer's comparisons. */
   sameOrder?: boolean;
   /** Which figure the pointer is over, so the room can draw only its line. */
@@ -442,8 +449,199 @@ export function Board(p: BoardProps) {
   // where any of it goes yet.
   const settling = p.live && !p.answers[newest]?.composition;
 
+  // ONE FIGURE, DRAWN THE SAME WAY WHEREVER IT SITS (P3.p). Extracted so
+  // the packing and HIS ARRANGEMENT draw identical markup — two copies of
+  // this would drift, and the difference between them would be a figure
+  // that behaves differently depending on where he put it.
+  //
+  // `laid` is the only difference: packed, a figure is placed into the
+  // measured 1px-row grid by column and span; laid out, it sits where his
+  // tree puts it and carries no grid style at all.
+  // ------------------------------------------------------------------
+  // HIS ARRANGEMENT (P3.p) — the right-hand side laid out for this answer.
+  //
+  // The owner, 2026-09-20: *"i want it to use that space like its designing
+  // its own page or artifact for its answer … it doesnt have to have text
+  // before a chart … in that space its its playground."*
+  //
+  // The packing below is what he was describing when he said "here's this and
+  // here's that": `placeFigures` drops each figure into whichever column is
+  // shortest, so nothing he said ever reached the arrangement. When he sends
+  // one, that whole mechanism steps aside — no measured rows, no columns, no
+  // shortest-first — and the tree is drawn as he wrote it.
+  //
+  // IT DRAWS THE SAME FIGURES. A leaf names one of his own block keys, so a
+  // figure laid out keeps its receipts, its notice, its read time, its
+  // emphasis, its offers and its tap-to-inspect — `drawFigure` is the same
+  // function either way, told only that it is not being packed.
+  //
+  // A BLOCK HE DID NOT PLACE IS STILL DRAWN, after the tree, in his order. The
+  // server says so on `coerced` as well; this is the half that makes it true
+  // on screen, because a figure that vanishes because an arrangement forgot it
+  // is the one failure this may not have.
+  const laidOut = p.arrangement ?? null;
+  const byKey = new Map(items.flatMap((it) => (it.kind === 'fig' ? [[it.o.key, it] as const] : [])));
+  // WHICH KEYS HIS TREE ACTUALLY PLACES, so the rest can be drawn after it.
+  const placedKeys = new Set<string>();
+  (function walk(node: Arrangement | null) {
+    if (!node) return;
+    if ('block' in node) { placedKeys.add(node.block); return; }
+    if ('say' in node) return;
+    (node.children ?? []).forEach(walk);
+  })(laidOut);
+  const drawNode = (node: Arrangement, at: string): ReactNode => {
+    if ('say' in node) {
+      // HIS WORDS, WHEREVER HE PUT THEM — the "it doesn't have to have text
+      // before a chart" half. Drawn in his own type, at full ink.
+      return <p key={at} className="r-say r-laid-say">{node.say}</p>;
+    }
+    if ('block' in node) {
+      const it = byKey.get(node.block);
+      // A key whose block is not on the board draws nothing rather than a
+      // hole: the server already dropped unknown keys, and a block can still
+      // be missing here if an earlier turn dropped it.
+      return it ? <Fragment key={at}>{drawFigure(it, 0, true)}</Fragment> : null;
+    }
+    const kids = (node.children ?? []).map((c, n) => drawNode(c, `${at}.${n}`));
+    if (node.layout === 'row') {
+      return <div key={at} className="r-laid r-laid--row">{kids}</div>;
+    }
+    if (node.layout === 'grid') {
+      return (
+        <div key={at} className="r-laid r-laid--grid"
+             style={{ '--laid-cols': node.cols ?? 2 } as CSSProperties}>{kids}</div>
+      );
+    }
+    if (node.layout === 'panel') {
+      return (
+        <div key={at} className="r-laid r-laid--panel">
+          {node.heading && <p className="r-laid-head">{node.heading}</p>}
+          {kids}
+        </div>
+      );
+    }
+    return <div key={at} className="r-laid r-laid--stack">{kids}</div>;
+  };
+
+  const drawPara = (it: Extract<Item, { kind: 'para' }>, at: number, laid: boolean) => {
+    const style = laid ? undefined
+      : { gridColumn: '1 / -1',
+          gridRowEnd: `span ${Math.max(1, (heights[it.key] ?? 0) + PARA_GAP)}` };
+        // HIS PARAGRAPH, whole and in his order — the spine of the page. Not a
+        // figure: no wire runs to it and nothing counts it as one.
+        return (
+          <div key={it.key} className="r-para" data-para={it.key}
+               data-opens={it.opens && at > 0 ? 'yes' : undefined}
+               ref={(el) => { if (el) nodes.current.set(it.key, el); else nodes.current.delete(it.key); }}
+               style={style as CSSProperties}>
+            <p className="r-say r-page-say">
+              <Marked text={it.text} calls={p.answers[newest]?.toolCalls ?? []} />
+            </p>
+          </div>
+        );
+  };
+
+  const drawFigure = (it: Extract<Item, { kind: 'fig' }>, at: number, laid: boolean) => {
+      const { o } = it;
+      const n = objects.indexOf(o);
+      const turn = p.answers[o.turn];
+      const index = readNumber(turn, o);
+      const out = (o as BoardObject & { ruled_out?: boolean }).ruled_out === true;
+      const h = heights[o.key] ?? 0;
+      return (
+        <div
+          key={o.key}
+          ref={(el) => { if (el) nodes.current.set(o.key, el); else nodes.current.delete(o.key); }}
+          data-figure={o.key}
+          data-turn={o.turn}
+          data-seq={o.seq ?? o.seqs?.[0]}
+          data-col={laid ? undefined : placed[at]}
+          data-arrived={arrived.has(o.key) ? 'yes' : 'no'}
+          data-lead={o.key === leadKey ? 'yes' : undefined}
+          // WHETHER IT NEEDS THE WIDTH, not whether it has it. Every point
+          // spans now, so `spans` would say yes to all of them and switch off
+          // the cap that stops a small figure spending 940px on one number.
+          data-span={wideOf.get(o.key) ? 'yes' : undefined}
+          data-told={it.told ? 'yes' : undefined}
+          data-under={it.under}
+          data-relation={plan.relationOf[o.key]}
+          data-weight={o.weight}
+          className={['r-fig', out ? 'r-fig--out' : '', p.focused === o.key ? 'r-fig--open' : '',
+                      o.key === leadKey ? 'r-fig--lead' : '']
+            .filter(Boolean).join(' ')}
+          // A gathered point sits tight under the one it belongs to, so it
+          // closes the flow's gap. The same constant the family's height was
+          // summed with, or the columns drift and it jumps on the next pass.
+          // LAID OUT BY HIM, IT CARRIES NO PLACEMENT AT ALL. The measured
+          // 1px-row grid is the packing's mechanism; inside his tree a figure
+          // fills what its parent gives it, and a leftover span would fight
+          // the flex or grid it now sits in.
+          style={laid ? undefined
+            : { gridColumn: spans[at] && columns > 1 ? '1 / -1' : placed[at] + 1,
+                gridRowEnd: `span ${Math.max(1, h + (it.under ? CHILD_GAP : FIGURE_GAP))}` }}
+        >
+          <div className="r-fig-body">
+            {(() => {
+              const up = plan.parentOf[o.key];
+              if (!up) return null;
+              // ADJACENT IS `it.under` — the same decision that placed it
+              // tight under its stem, so the word and the placement can no
+              // longer disagree, which is the whole of the defect.
+              const said = relationSaid(plan.relationOf[o.key], Boolean(it.under),
+                                        plan.order.find((x) => x.key === up)?.claim);
+              if (!said) return null;
+              return (
+                <p className="r-fig-rel" data-points={said.point ? 'yes' : undefined}>
+                  <span className="r-fig-rel-word">{said.word}</span>
+                  {said.point && <span className="r-fig-rel-pt">{said.point}</span>}
+                </p>
+              );
+            })()}
+            <Piece
+              told={it.told}
+              focus={it.focus}
+              chrome={chromeFor(index, out)}
+              order={order}
+              o={o}
+              turn={turn}
+              local={p.local[o.key] ?? {}}
+              landing={(settling && o.turn === newest) || (p.live && o.touched === newest)
+                || (p.seenUpTo !== undefined && o.touched >= p.seenUpTo)}
+              delay={n * 110}
+              focused={p.focused === o.key}
+              selected={Boolean(o.subject && p.selection.includes(o.subject))}
+              selection={p.selection}
+              earlier={o.touched < newest}
+              retuned={o.seq === undefined ? null : p.retuned[retunedKey(o.turn, o.seq)] ?? null}
+              on={p.on}
+              offers={p.offers?.get(o.key)}
+            />
+            {(() => {
+              const seq = o.seq ?? o.seqs?.[0];
+              const said = o.turn === newest && seq !== undefined ? p.thoughts?.get(seq) : undefined;
+              const first = objects.findIndex((x) => x.turn === newest && (x.seq ?? x.seqs?.[0]) === seq) === n;
+              // ON THE PAGE his words are the paragraph above, whole; drawing
+              // the cited sentence again under the chart would say it twice.
+              if (!said?.length || !first || page.length) return null;
+              // HIS WORDS ABOUT THIS CHART, UNDER IT (the owner, 2026-09-18: "not
+              // on top and before of the charts with the charts thats it related
+              // to"). The chart first, then what he says about it.
+              return (
+                <div className="r-fig-thought" data-thought-for={seq}>
+                  {said.map((s, i) => (
+                    <p key={i} className="r-say"><Marked text={s} calls={turn?.toolCalls ?? []} /></p>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      );
+  };
+
   return (
-    <div className="r-board r-flow" data-board={objects.length} data-columns={columns}
+    <div className={`r-board r-flow${laidOut ? ' r-board--laid' : ''}`}
+         data-board={objects.length} data-columns={columns}
          style={{ '--cols': columns } as CSSProperties}
          onMouseOver={(e) => {
            touch.over(e);
@@ -453,113 +651,26 @@ export function Board(p: BoardProps) {
          onMouseLeave={() => { touch.leave(); p.onHover?.(null); }}
          onClickCapture={touch.tap}>
       {touch.tip}
-      {items.map((it, at) => {
-        if (it.kind === 'para') {
-          // HIS PARAGRAPH, whole and in his order — the spine of the page. Not a
-          // figure: no wire runs to it and nothing counts it as one.
-          return (
-            <div key={it.key} className="r-para" data-para={it.key}
-                 data-opens={it.opens && at > 0 ? 'yes' : undefined}
-                 ref={(el) => { if (el) nodes.current.set(it.key, el); else nodes.current.delete(it.key); }}
-                 style={{ gridColumn: '1 / -1',
-                          gridRowEnd: `span ${Math.max(1, (heights[it.key] ?? 0) + PARA_GAP)}` }}>
-              <p className="r-say r-page-say">
-                <Marked text={it.text} calls={p.answers[newest]?.toolCalls ?? []} />
-              </p>
-            </div>
-          );
-        }
-        const { o } = it;
-        const n = objects.indexOf(o);
-        const turn = p.answers[o.turn];
-        const index = readNumber(turn, o);
-        const out = (o as BoardObject & { ruled_out?: boolean }).ruled_out === true;
-        const h = heights[o.key] ?? 0;
-        return (
-          <div
-            key={o.key}
-            ref={(el) => { if (el) nodes.current.set(o.key, el); else nodes.current.delete(o.key); }}
-            data-figure={o.key}
-            data-turn={o.turn}
-            data-seq={o.seq ?? o.seqs?.[0]}
-            data-col={placed[at]}
-            data-arrived={arrived.has(o.key) ? 'yes' : 'no'}
-            data-lead={o.key === leadKey ? 'yes' : undefined}
-            // WHETHER IT NEEDS THE WIDTH, not whether it has it. Every point
-            // spans now, so `spans` would say yes to all of them and switch off
-            // the cap that stops a small figure spending 940px on one number.
-            data-span={wideOf.get(o.key) ? 'yes' : undefined}
-            data-told={it.told ? 'yes' : undefined}
-            data-under={it.under}
-            data-relation={plan.relationOf[o.key]}
-            data-weight={o.weight}
-            className={['r-fig', out ? 'r-fig--out' : '', p.focused === o.key ? 'r-fig--open' : '',
-                        o.key === leadKey ? 'r-fig--lead' : '']
-              .filter(Boolean).join(' ')}
-            // A gathered point sits tight under the one it belongs to, so it
-            // closes the flow's gap. The same constant the family's height was
-            // summed with, or the columns drift and it jumps on the next pass.
-            style={{ gridColumn: spans[at] && columns > 1 ? '1 / -1' : placed[at] + 1,
-                     gridRowEnd: `span ${Math.max(1, h + (it.under ? CHILD_GAP : FIGURE_GAP))}` }}
-          >
-            <div className="r-fig-body">
-              {(() => {
-                const up = plan.parentOf[o.key];
-                if (!up) return null;
-                // ADJACENT IS `it.under` — the same decision that placed it
-                // tight under its stem, so the word and the placement can no
-                // longer disagree, which is the whole of the defect.
-                const said = relationSaid(plan.relationOf[o.key], Boolean(it.under),
-                                          plan.order.find((x) => x.key === up)?.claim);
-                if (!said) return null;
-                return (
-                  <p className="r-fig-rel" data-points={said.point ? 'yes' : undefined}>
-                    <span className="r-fig-rel-word">{said.word}</span>
-                    {said.point && <span className="r-fig-rel-pt">{said.point}</span>}
-                  </p>
-                );
-              })()}
-              <Piece
-                told={it.told}
-                focus={it.focus}
-                chrome={chromeFor(index, out)}
-                order={order}
-                o={o}
-                turn={turn}
-                local={p.local[o.key] ?? {}}
-                landing={(settling && o.turn === newest) || (p.live && o.touched === newest)
-                  || (p.seenUpTo !== undefined && o.touched >= p.seenUpTo)}
-                delay={n * 110}
-                focused={p.focused === o.key}
-                selected={Boolean(o.subject && p.selection.includes(o.subject))}
-                selection={p.selection}
-                earlier={o.touched < newest}
-                retuned={o.seq === undefined ? null : p.retuned[retunedKey(o.turn, o.seq)] ?? null}
-                on={p.on}
-                offers={p.offers?.get(o.key)}
-              />
-              {(() => {
-                const seq = o.seq ?? o.seqs?.[0];
-                const said = o.turn === newest && seq !== undefined ? p.thoughts?.get(seq) : undefined;
-                const first = objects.findIndex((x) => x.turn === newest && (x.seq ?? x.seqs?.[0]) === seq) === n;
-                // ON THE PAGE his words are the paragraph above, whole; drawing
-                // the cited sentence again under the chart would say it twice.
-                if (!said?.length || !first || page.length) return null;
-                // HIS WORDS ABOUT THIS CHART, UNDER IT (the owner, 2026-09-18: "not
-                // on top and before of the charts with the charts thats it related
-                // to"). The chart first, then what he says about it.
-                return (
-                  <div className="r-fig-thought" data-thought-for={seq}>
-                    {said.map((s, i) => (
-                      <p key={i} className="r-say"><Marked text={s} calls={turn?.toolCalls ?? []} /></p>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-        );
-      })}
+      {laidOut
+        ? (
+          <>
+            {drawNode(laidOut, 'root')}
+            {/* A BLOCK HE DID NOT PLACE IS STILL DRAWN, after his arrangement
+                and in his order. The server names it on `coerced`; this is the
+                half that keeps it on screen, because a figure that vanishes
+                because an arrangement forgot it is the one failure this may
+                not have. */}
+            {items.some((it) => it.kind === 'fig' && !placedKeys.has(it.o.key)) && (
+              <div className="r-laid r-laid--stack r-laid--rest">
+                {items.map((it, at) => (it.kind === 'fig' && !placedKeys.has(it.o.key)
+                  ? <Fragment key={it.o.key}>{drawFigure(it, at, true)}</Fragment> : null))}
+              </div>
+            )}
+          </>
+        )
+        : items.map((it, at) => (it.kind === 'para'
+          ? drawPara(it, at, false)
+          : drawFigure(it, at, false)))}
       {/* AT THE FOOT, and it opens. Not gone: the board still holds them,
           they still travel with the next question, and the count is the
           length of a list this already has rather than a number anybody

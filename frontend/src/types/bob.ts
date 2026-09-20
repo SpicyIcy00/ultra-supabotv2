@@ -506,11 +506,40 @@ export interface SpecNode {
   weight?: 'lead' | 'supporting' | 'quiet';
 }
 
+/**
+ * HOW BOB LAID THE RIGHT-HAND SIDE OUT FOR THIS ANSWER (P3.p, 2026-09-20).
+ *
+ * The owner: *"i want it to use that space like its designing its own page or
+ * artifact for its answer … it doesnt have to have text before a chart … in
+ * that space its its playground."* Until this, nothing he said reached the
+ * ARRANGEMENT — the room packed his blocks into whichever column was shortest,
+ * which is "here's this and here's that" as an algorithm.
+ *
+ * The four layouts are the grammar's own (`composition.grammar.layouts`), one
+ * level up, so there is no second vocabulary. A leaf is one of HIS block keys
+ * — which keeps the block's receipts, its notice, its read time and its
+ * tap-to-inspect, all of which a page of raw marks would have dropped — or a
+ * line of his words, which may sit anywhere in the tree.
+ *
+ * THERE IS NO VALUE, COLOUR, WIDTH OR SIZE IN IT. That is what makes an
+ * unbounded playground cost nothing in trust, and it is enforced server-side
+ * (agent/compose._arrangement), never here.
+ *
+ * ABSENT IS THE PACKING, which is every answer composed before this.
+ */
+export type Arrangement =
+  | { layout: 'stack' | 'row' | 'grid' | 'panel'; children: Arrangement[];
+      cols?: number; heading?: string }
+  | { block: string }
+  | { say: string };
+
 export interface CompositionFrame {
   /** The seq of the compose call itself; -1 when restored from a stored post. */
   seq: number;
   /** The blocks that stood. Replaces, never accumulates. */
   blocks: CompositionBlock[];
+  /** How he arranged them, or absent for the packing (P3.p). */
+  arrangement?: Arrangement | null;
   /** What the model asked for and the loop refused, with the reason. */
   rejected: { block: unknown; reason: string }[];
   /**

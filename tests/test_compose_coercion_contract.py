@@ -562,3 +562,82 @@ def test_a_composition_that_says_nothing_carries_nothing(defs):
     accepted, rejected, _ = run(_two(), defs)
     assert rejected == []
     assert all("under" not in b and "relation" not in b for b in accepted)
+
+
+# ---------------------------------------------------------------------------
+# The arrangement (P3.p, 2026-09-20): he lays the right-hand side out himself
+# ---------------------------------------------------------------------------
+#
+# The owner, of the shipped board and of four template variants drawn for him
+# the same day: *"i dont [want] it to just be text chart here this and heres
+# that, i want it to use that space like its designing its own page or artifact
+# for its answer … in that space its its playground."*
+#
+# It is the only one of `compose`'s four statements that cannot touch a figure,
+# so it is coerced to the last and NEVER refuses the composition: a layout that
+# cannot be understood is dropped and the blocks stand, packed as before.
+
+def _arranged(arrangement, defs, blocks=None):
+    calls = {0: {"seq": 0, "tool": "get_sales", "is_read": True,
+                 "result": {"rows": [{"store": "OPUS", "value": 1}], "meta": {}}},
+             1: {"seq": 1, "tool": "get_sales", "is_read": True,
+                 "result": {"rows": [{"store": "Greenhills", "value": 2}], "meta": {}}}}
+    out = compose.compose(blocks or [
+        {"kind": "figure", "key": "a", "seq": 0, "weight": "lead", "claim": "one"},
+        {"kind": "figure", "key": "b", "seq": 1, "weight": "supporting", "claim": "two"},
+    ], None, None, arrangement, calls=calls, defs=defs)
+    return out["meta"]["arrangement"], out["meta"]["coerced"], out["rows"]
+
+
+def test_he_lays_the_space_out_and_it_comes_back_as_a_tree(defs):
+    tree, _, rows = _arranged(
+        {"layout": "stack", "children": [
+            {"block": "a"},
+            {"say": "and the two below take it apart"},
+            {"layout": "row", "children": [{"block": "b"}]},
+        ]}, defs)
+    assert tree["layout"] == "stack"
+    assert [c.get("block") or c.get("say") or c["layout"] for c in tree["children"]] == [
+        "a", "and the two below take it apart", "row"]
+    # The blocks themselves are untouched by it: an arrangement is presentation.
+    assert [r["key"] for r in rows] == ["a", "b"]
+
+
+def test_a_line_on_the_page_carries_no_digits(defs):
+    # It sits in the same space as the figures, so it is held to the claim's
+    # rule — and the LINE is dropped, never the arrangement and never the board.
+    tree, coerced, rows = _arranged(
+        {"layout": "stack", "children": [{"say": "down 15 percent"}, {"block": "a"}]}, defs)
+    assert tree["children"] == [{"block": "a"}]
+    assert any("carries no digits" in c for c in coerced)
+    assert len(rows) == 2
+
+
+def test_a_block_he_did_not_place_is_named_rather_than_lost(defs):
+    tree, coerced, rows = _arranged({"layout": "stack", "children": [{"block": "a"}]}, defs)
+    assert tree["children"] == [{"block": "a"}]
+    assert any("'b'" in c and "not placed" in c for c in coerced)
+    # It is still a block of the composition; the room draws it after the tree.
+    assert [r["key"] for r in rows] == ["a", "b"]
+
+
+def test_a_key_placed_twice_is_placed_once(defs):
+    # One read is one object (board.readIdentity); twice would be the same
+    # figure under two headings, which is the widget disease with extra steps.
+    tree, coerced, _ = _arranged(
+        {"layout": "row", "children": [{"block": "a"}, {"block": "a"}]}, defs)
+    assert tree["children"] == [{"block": "a"}]
+    assert any("already placed" in c for c in coerced)
+
+
+def test_an_unusable_arrangement_drops_and_the_board_stands(defs):
+    tree, _, rows = _arranged({"layout": "spiral", "children": [{"block": "a"}]}, defs)
+    assert tree is None
+    assert [r["key"] for r in rows] == ["a", "b"]
+
+
+def test_no_arrangement_is_the_packing(defs):
+    tree, coerced, rows = _arranged(None, defs)
+    assert tree is None
+    assert not [c for c in coerced if "arrangement" in c]
+    assert len(rows) == 2

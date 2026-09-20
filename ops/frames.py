@@ -131,7 +131,13 @@ FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
               # questions written by the session, which its own `why` states
               # in as many words. It is committed: a frame check nobody else
               # can run is not one.
-              "steps": ROOT / "ops" / "frames_fixtures" / "steps.json"}
+              "steps": ROOT / "ops" / "frames_fixtures" / "steps.json",
+              # P3.p's own check, same arrangement as `gathered` and `steps`
+              # and for the same reason: the channel is hours old, so no
+              # recorded turn carries one and the browser would only ever draw
+              # the packing. `steps` with an `arrangement` the session wrote,
+              # which its own `why` states.
+              "arranged": ROOT / "ops" / "frames_fixtures" / "arranged.json"}
 SIZES = {1440: 900, 1920: 1080, 1857: 963}
 VOCAB_READS = ROOT / "frontend" / "src" / "room" / "__fixtures__" / "vocab-reads.json"
 MAX_ROWS = 200
@@ -160,6 +166,10 @@ def build_scenes(report_path: Path, scenes: list[str]) -> dict[str, Any]:
                 item["reading"] = fx["reading"]
             if fx.get("notices"):
                 item["notices"] = fx["notices"]
+            # HIS ARRANGEMENT OF THE RIGHT-HAND SIDE (P3.p), when the fixture
+            # carries one. Absent is the packing, which is every other scene.
+            if fx.get("arrangement"):
+                item["arrangement"] = fx["arrangement"]
             if "default_blocks" in fx:
                 # A recorded post: Bob's own blocks that name a read of THIS
                 # turn are the composition; the loop's defaults stand beside.

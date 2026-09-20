@@ -434,6 +434,145 @@ def _question(text: Any, voc: Mapping[str, Any], coerced: Optional[list[str]] = 
         raise Rejected(str(why)) from None
 
 
+# ---------------------------------------------------------------------------
+# THE ARRANGEMENT — how he lays the right-hand side out for this answer (P3.p)
+# ---------------------------------------------------------------------------
+
+def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
+                 coerced: list[str]) -> Optional[dict]:
+    """
+    HIS ARRANGEMENT OF HIS OWN BLOCKS, validated into a tree the room draws.
+
+    The owner, 2026-09-20: *"i want it to use that space like its designing its
+    own page or artifact for its answer … in that space its its playground."*
+    So this refuses as little as it can and NEVER refuses the composition: a
+    page that cannot be understood is dropped, the blocks stand, and the room
+    packs them as it always did. A layout is presentation; nothing here can
+    change a figure, so nothing here is worth a round trip.
+
+    THE FOUR LAYOUTS ARE THE GRAMMAR'S OWN (composition.grammar.layouts), not a
+    second vocabulary — same words, same meanings, one level up. A leaf is one
+    of HIS block keys or his words; there is no value, colour or size anywhere
+    in the tree, which is what makes an unbounded playground safe.
+
+    Every departure is named on `coerced`, because a page he cannot see is one
+    he will describe wrongly.
+    """
+    if tree is None:
+        return None
+    spec = voc.get("arrangement") or {}
+    layouts = set((voc.get("grammar") or {}).get("layouts") or {})
+    max_nodes = int(spec.get("max_nodes") or 24)
+    max_depth = int(spec.get("max_depth") or 3)
+    budget = [max_nodes, int(spec.get("max_says") or 6)]
+    placed: set[str] = set()
+    known = set(keys)
+
+    def node(item: Any, depth: int, path: str) -> Optional[dict]:
+        if budget[0] <= 0:
+            coerced.append(f"arrangement: more than {max_nodes} parts, so {path} was left out "
+                           f"(metrics.yaml composition.arrangement.max_nodes)")
+            return None
+        if depth > max_depth:
+            coerced.append(f"{path}: nested deeper than {max_depth}, so it was left out "
+                           f"(metrics.yaml composition.arrangement.max_depth)")
+            return None
+        if not isinstance(item, Mapping):
+            # A BARE KEY IS A LEAF. He writes `["a", "b"]` about as often as
+            # the long form, and refusing it would cost a round trip to learn
+            # a punctuation rule.
+            if isinstance(item, str) and item in known:
+                return node({"block": item}, depth, path)
+            coerced.append(f"{path}: not a part of a page, so it was left out")
+            return None
+
+        if "say" in item:
+            said = " ".join(str(item.get("say") or "").split())
+            if not said:
+                return None
+            if budget[1] <= 0:
+                coerced.append(f"{path}: more than {spec.get('max_says')} of your own lines "
+                               f"in the arrangement, so this one was left out")
+                return None
+            say_spec = spec.get("say") or {}
+            if say_spec.get("no_digits", True) and any(ch.isdigit() for ch in said):
+                # NOT A REFUSAL OF THE COMPOSITION, and not silent either: it
+                # sits in the same space as the figures, so it is held to the
+                # claim's rule, and the line is dropped rather than the page.
+                coerced.append(f"{path}: a line on the page carries no digits — the figure is "
+                               f"drawn beside it with its own receipts "
+                               f"(metrics.yaml composition.arrangement.say) — so it was left out")
+                return None
+            try:
+                said = _reading.over_length(path, said, say_spec, 200, coerced,
+                                            "metrics.yaml composition.arrangement.say")
+            except _reading.Rejected:
+                return None
+            budget[0] -= 1
+            budget[1] -= 1
+            return {"say": said}
+
+        if "block" in item:
+            key = item.get("block")
+            if not isinstance(key, str) or key not in known:
+                coerced.append(f"{path}: {key!r} is not a block of this composition, "
+                               f"so it was left out of the arrangement")
+                return None
+            if key in placed:
+                # ONE READ IS ONE OBJECT (board.readIdentity). Drawn twice it
+                # would be the same figure under two headings.
+                coerced.append(f"{path}: {key!r} is already placed, so it was left out "
+                               f"of the arrangement a second time")
+                return None
+            placed.add(key)
+            budget[0] -= 1
+            return {"block": key}
+
+        # ---- a layout arranges other parts ---------------------------------
+        word = item.get("layout")
+        if word not in layouts:
+            # The discriminator under another name, exactly as the grammar
+            # already forgives it (agent/grammar._normalise).
+            found = next((k for k in item if k in layouts), None)
+            if found is None:
+                coerced.append(f"{path}: names no layout of "
+                               f"{', '.join(sorted(layouts))}, so it was left out")
+                return None
+            inner = item.get(found)
+            item = dict(inner) if isinstance(inner, Mapping) else {"children": inner}
+            word = found
+            coerced.append(f"{path}: read as a {word}")
+        budget[0] -= 1
+        kids = item.get("children")
+        kids = kids if isinstance(kids, (list, tuple)) else []
+        drawn = [c for c in (node(k, depth + 1, f"{path}.{word}[{n}]")
+                             for n, k in enumerate(kids)) if c]
+        if not drawn:
+            return None
+        out: dict[str, Any] = {"layout": word, "children": drawn}
+        if word == "grid":
+            cols = item.get("cols")
+            out["cols"] = cols if isinstance(cols, int) and 1 < cols <= 6 else 2
+        if word == "panel" and isinstance(item.get("heading"), str):
+            head = " ".join(item["heading"].split())
+            if head and not any(ch.isdigit() for ch in head):
+                out["heading"] = head
+        return out
+
+    built = node(tree, 1, "arrangement")
+    if built is None:
+        return None
+    # A BLOCK IS NEVER LOST. One he composed and did not place is drawn after
+    # the tree, in his order — a figure that vanishes because an arrangement
+    # forgot it is the one failure this may not have.
+    left = [k for k in keys if k not in placed]
+    if left:
+        coerced.append(f"arrangement: {', '.join(repr(k) for k in left)} "
+                       f"{'was' if len(left) == 1 else 'were'} not placed, so "
+                       f"{'it is' if len(left) == 1 else 'they are'} drawn after it")
+    return built
+
+
 def _mark_kinds(voc: Mapping[str, Any]) -> set[str]:
     """The widgets that are ways of drawing a read — the ones with a `rows` rule."""
     return {k for k, v in (voc.get("widgets") or {}).items()
@@ -969,7 +1108,7 @@ def validate(
     return accepted, rejected
 
 
-def compose(blocks: Any, reading: Any = None, actions: Any = None, *,
+def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: Any = None, *,
             calls: Mapping[int, Mapping[str, Any]],
             defs: Mapping[str, Any], board: Any = None,
             question: Optional[str] = None) -> dict:
@@ -980,6 +1119,7 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, *,
         blocks: the blocks on screen, in order. Each names a kind, a short key, a weight, the read (seq) it draws, a claim — the few words saying what it says — and a thought: one or two sentences of what you think it shows, drawn beside it as you go through it together.
         reading: what you are about to say, in three slots — {"claim": the few words that ARE the point, said again word for word in your answer; "caveat": what qualifies these figures, drawn whole above them; "next": one sentence, drawn last — what you would do, or what no read can settle, never a read you could have made} — and "asks": two or three short questions they might ask you next, drawn under your headline to tap — to steer, challenge, decide or act, never one this answer already settles. Optional; a confirmation needs none.
         actions: what to do about ONE ROW, offered where that row is drawn — [{"act": what the surface does, "seq": the read, "target": the row's own value, "reason": why this one, in your words}]. Optional. You never say what it costs: that is derived from the act.
+        arrangement: how the right-hand side is LAID OUT for this answer — one arrangement of the blocks you just put, so the space is used the way this answer needs rather than packed for you. Optional; leave it out and it is packed.
 
     Returns:
         The tool body. Returns {rows, meta} like every other tool, and names no
@@ -1005,6 +1145,13 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, *,
 
     offered, offered_rejected = _actions.validate(actions, calls, defs)
 
+    # THE FOURTH STATEMENT (P3.p, 2026-09-20): how the right-hand side is laid
+    # out for this answer. It arranges the blocks THIS call just validated, so
+    # it is settled after them and never before. Presentation only — it cannot
+    # reach a figure — so it is coerced to the last and never refuses the
+    # composition.
+    laid_out = _arrangement(arrangement, vocabulary(defs), [e["key"] for e in accepted], coerced)
+
     said, said_rejected = ({}, [])
     if reading is not None:
         # THE FIGURES THIS TURN ACTUALLY READ, so `caveat` and `next` may say
@@ -1022,6 +1169,9 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, *,
             "rejected_slots": said_rejected,
             "actions": offered,
             "rejected_actions": offered_rejected,
+            # HOW IT IS LAID OUT, or absent — and absent is the page packed for
+            # him, which is every board composed before this existed.
+            "arrangement": laid_out,
             # What was ADJUSTED rather than refused: a discriminator renamed, a
             # second lead demoted, a subject taken from the read's own scope.
             # Named because the model has to describe the board it actually
