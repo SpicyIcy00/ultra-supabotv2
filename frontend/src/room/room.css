@@ -2280,10 +2280,12 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 .r-mk-was { font: 400 12px/1.4 var(--mono); color: var(--ink-3); margin-left: 8px; }
 .r-mk-verdict { font: 400 17px/1.3 var(--serif); color: var(--ink); margin: 6px 0 0; max-width: 60ch; }
 /* QUIET (`.quiet`): a small-caps label, the number, the words beside it. */
-.r-board--laid .r-fig[data-weight="quiet"] { border-top: 1px solid var(--edge); padding-top: 14px; }
+.r-board--laid .r-fig[data-weight="quiet"][data-kind="figure"] { border-top: 1px solid var(--edge); padding-top: 14px; }
 /* His words, so the ink they inherit even as a label (ink.test.ts): the
    design's ink-3 here is the one thing of its not taken. */
-.r-board--laid .r-fig[data-weight="quiet"] .r-mk-say {
+/* A quiet NUMBER wears the label; a quiet list keeps its head (the dead-stock
+   frame of 2026-09-21 shouted a sentence in small caps). */
+.r-board--laid .r-fig[data-weight="quiet"][data-kind="figure"] .r-mk-say {
   font: 500 10px/1.6 var(--mono); letter-spacing: 0.1em; text-transform: uppercase;
 }
 .r-board--laid .r-fig[data-weight="quiet"] .r-mk-body[data-mark="figure"] {
@@ -2367,3 +2369,13 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 }
 .r-system dt { font: 500 10px/1.6 var(--mono); letter-spacing: 0.11em; text-transform: uppercase; color: var(--ink-3); margin: 0; }
 .r-system dd { margin: 0; }
+
+/* THE PLAN IS PART OF THE PAGE (P6.h): where his arrangement places it, in
+   the page's own rhythm; packed, still the last thing under the figures. */
+.r-laid-next { min-width: 0; }
+.r-laid > .r-laid-next, .r-board--laid > .r-laid-next { margin-bottom: 48px; }
+.r-laid > .r-laid-next:last-child, .r-board--laid > .r-laid-next:last-child { margin-bottom: 0; }
+.r-laid-next .r-next { margin-top: 0; }
+.r-laid-next--packed { grid-column: 1 / -1; margin-top: 34px; }
+/* His thought under the one row he named. */
+.r-mk-callout--row { grid-column: 1 / -1; margin: 2px 0 6px; }

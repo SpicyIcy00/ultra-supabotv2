@@ -450,6 +450,9 @@ export function DraftTile(p: TileProps) {
   const call = callFor(p);
   const rows = rowsOf(call);
   const [qty, setQty] = useState<Record<number, number>>({});
+  // A FOLD ON THE CANVAS (P6.h): the lines that need him first — the read
+  // ranks them — and the rest one tap away. Thirty rows of "out" was a wall.
+  const [open, setOpen] = useState(false);
   if (!rows.length) return <Missing what="the draft" />;
   const meta = call?.result?.meta as (Record<string, unknown> & { supplier?: string; cover_days?: number }) | undefined;
   const suggested = (row: Record<string, unknown>) =>
@@ -479,7 +482,7 @@ export function DraftTile(p: TileProps) {
             </tr>
           </thead>
           <tbody>
-            {rows.slice(0, 30).map((row, n) => (
+            {rows.slice(0, p.canvas && !open ? 12 : 30).map((row, n) => (
               <tr key={n} data-lit={p.o.emphasise && isLit(p.o, row) ? 'yes' : undefined}>
                 <td>
                   <div style={{ color: 'var(--ink)' }}>{String(row.product ?? row.sku ?? '')}</div>
@@ -522,6 +525,14 @@ export function DraftTile(p: TileProps) {
         <p className="r-label" style={{ textAlign: 'right' }}>
           {rows.length} products{rows.length > 30 ? ' · showing 30' : ''}
         </p>
+      </div>
+      {p.canvas && rows.length > 12 && (
+        <button type="button" className="r-mk-more" aria-expanded={open}
+                onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}>
+          {open ? 'the twelve that need you first' : `${Math.min(rows.length, 30) - 12} more lines · show`}
+        </button>
+      )}
+      <div style={{ display: 'none' }}>
       </div>
       <Receipts meta={call?.result?.meta} />
     </Shell>

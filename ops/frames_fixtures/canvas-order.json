@@ -1,7 +1,7 @@
 {
  "why": "BUILD TALKS ON THE CANVAS (P6.g, 2026-09-20). Read rows are what the vetted read tools returned on 2026-09-20; the watch row is the shape self_reader returns for one; the blocks, arrangement and words are the session's. NO MODEL TURN WAS SPENT.",
  "question": "draft the Seikyo order",
- "answer": "Here is **the Seikyo draft, to thirty days of cover** — every line that sold in the last ninety days, what is left, and how long it lasts.\n\nMost of the range is fine. The lines to look at are the ones already out: they have been out for weeks, and a few show a stock count below zero at some shop, which is a count nobody should trust.\n\nRead it, change any quantity, and it goes when you send it — not before.",
+ "answer": "Here is **the Seikyo draft, to thirty days of cover.**\n\nForty-seven lines; the ones already out are at the top. It goes when you send it.",
  "at": "2026-09-20T15:20:00+00:00",
  "default_blocks": [],
  "calls": [
@@ -823,6 +823,12 @@
   "children": [
    {
     "block": "order"
+   },
+   {
+    "say": "Most of the range is fine. The lines to look at are the ones at the top: already out, some for the whole window, and a few showing a count below zero that nobody should trust."
+   },
+   {
+    "next": true
    }
   ]
  },

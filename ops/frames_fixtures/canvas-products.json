@@ -1,7 +1,7 @@
 {
  "why": "THE CANVAS, LOCALLY (P6.d). Every figure is a value the vetted read tools returned on 2026-09-20; the blocks, arrangement, prose and questions are the session's. NO MODEL TURN WAS SPENT. This is what the room draws from the vocabulary; whether Bob composes it is the next live turn's to answer.",
  "question": "how are our products?",
- "answer": "The range is **splitting, not softening.**\n\nThree lines stopped rather than slowed - that deep on a named line is an empty shelf or a delisting, not taste. Four others grew hard at the same time. Aji Mix alone is bigger than any category but its own and barely moved. Half the catalogue sold nothing, nearly all of it single-gram lines.\n\nShall I pull the stock history on those three?",
+ "answer": "The range is **splitting, not softening.**\n\nA few lines stopped dead, a few took off, and one line carries more than any category.",
  "at": "2026-09-20T09:58:00+00:00",
  "blocks": [
   {
@@ -10,12 +10,16 @@
    "seq": 1,
    "kind": "contributors",
    "weight": "lead",
-   "question": "Did they slow, or stop?",
-   "claim": "Three lines gave back nearly everything they earned",
    "emphasise": [
     "Aji Thai sweet and spicy squid",
     "Rice cracker with sugarcane syrup"
-   ]
+   ],
+   "question": "What moved in the range.",
+   "claim": "Splitting, not softening — three lines stopped rather than slowed",
+   "span": [
+    "Aji Thai sweet and spicy squid"
+   ],
+   "thought": "that deep on a named line is an empty shelf or a delisting, not taste"
   },
   {
    "op": "put",
@@ -23,10 +27,7 @@
    "seq": 2,
    "kind": "contributors",
    "weight": "supporting",
-   "question": "Is anything going the other way?",
-   "claim": "Four grew hard at the same time",
-   "under": "stopped",
-   "relation": "counter"
+   "claim": "…and four grew hard at the same time"
   },
   {
    "op": "put",
@@ -34,11 +35,15 @@
    "seq": 0,
    "kind": "dumbbell",
    "weight": "supporting",
-   "question": "By category?",
-   "claim": "All a bit soft except the long tail",
    "emphasise": [
     "per gram"
-   ]
+   ],
+   "question": "By category.",
+   "claim": "All a bit soft, except the long tail",
+   "span": [
+    "per gram"
+   ],
+   "thought": "the long tail — the one category that grew"
   },
   {
    "op": "put",
@@ -46,11 +51,15 @@
    "seq": 3,
    "kind": "ranked",
    "weight": "supporting",
-   "question": "How much rides on one line?",
-   "claim": "Aji Mix is bigger than every category but its own",
    "emphasise": [
     "Aji Mix"
-   ]
+   ],
+   "question": "How much rides on one line.",
+   "claim": "Aji Mix is bigger than every category but its own, and barely moved",
+   "span": [
+    "Aji Mix"
+   ],
+   "thought": "bigger than every category but its own"
   },
   {
    "op": "put",
@@ -58,8 +67,8 @@
    "seq": 4,
    "kind": "list",
    "weight": "quiet",
-   "question": "What are we holding and not selling?",
-   "claim": "Half the catalogue sold nothing"
+   "question": "What we are holding and not selling.",
+   "claim": "Half the catalogue sold nothing, most of it single-gram lines"
   }
  ],
  "default_blocks": [
@@ -119,25 +128,26 @@
     ]
    },
    {
-    "layout": "row",
-    "children": [
-     {
-      "block": "cats"
-     },
-     {
-      "block": "top"
-     }
-    ]
+    "say": "The range is not softening evenly: a few lines have stopped dead while a few others took off, and the middle barely moved."
+   },
+   {
+    "block": "cats"
+   },
+   {
+    "block": "top"
    },
    {
     "block": "dead"
+   },
+   {
+    "next": true
    }
   ]
  },
  "reading": {
   "claim": "splitting, not softening",
   "caveat": "248 of 713 lines have nothing to compare against, so the list of fallers is shorter than the truth.",
-  "next": "Shall I pull the stock history on those three, so we know whether they ran out or were dropped?",
+  "next": "Pull the stock history on the three that stopped before anyone calls them dead: if the shelf was empty, that is a replenishment problem and the fix is an order; if they were delisted, someone decided it and the list should say so.\n\nThen the per gram lines. Half the catalogue sold nothing in a month, and most of it is single-gram lines that were never going to — I'd have the buyer go through the dead list and mark each line keep, drop or move to the barn, so the next count is of lines we mean to sell.\n\nAji Mix I would leave exactly alone, and watch: one line that size barely moving is the best news on this page, and the day it moves is the day to look.",
   "asks": [
    "Were the squid lines delisted or out of stock?",
    "What is driving kiamoy strips?",

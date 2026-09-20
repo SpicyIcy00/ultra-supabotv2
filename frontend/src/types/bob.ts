@@ -537,7 +537,9 @@ export type Arrangement =
   | { layout: 'stack' | 'row' | 'grid' | 'panel'; children: Arrangement[];
       cols?: number; heading?: string }
   | { block: string }
-  | { say: string };
+  | { say: string }
+  /** The plan — the reading's `next` — placed where he wants it (P6.h). */
+  | { next: true };
 
 export interface CompositionFrame {
   /** The seq of the compose call itself; -1 when restored from a stored post. */

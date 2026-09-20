@@ -2992,3 +2992,12 @@ drew packed; a watch's `by` and its backtest sentence were the same words drawn 
 reader returned no condition or schedule for a watch to draw. All three fixed. `next` now
 sits under the figures with paragraphs (P6.f). Frontend 1130, backend 2142. Live: untested.
 
+### 2026-09-21 — "it should feel great in every scenario" (one page)
+
+Seven scenes re-cut as pages (`canvas7/`). Found on the way: the plan drawn after the board
+was a footer, not a part of the page (now a leaf); a quiet LIST inherited the quiet
+NUMBER's small-caps label and shouted a sentence (scoped to `data-kind="figure"`); the
+body cap at 40 fired before the remainder sweep on a long reciting answer (gate moved
+after the sweep); the watch's flat line on 280px was two hundred pixels of nothing (bars
+of change, and a line now fits its weight). Frontend 1135, backend 2144. Live: untested.
+

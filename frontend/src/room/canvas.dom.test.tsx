@@ -263,3 +263,41 @@ describe('a built thing on the canvas', () => {
     expect(container.textContent).toContain('ready — not switched on');
   });
 });
+
+/**
+ * A CALLOUT UNDER ONE NAMED ROW, AND A FOLD ON THE DRAFT (P6.h). His thought
+ * about one row of a list sits under that row, said once; a long draft shows
+ * the lines that need him first and folds the rest.
+ */
+describe('one page, on every list', () => {
+  it('draws the thought under the one row the span names, and not on the head', () => {
+    const rows = [{ subject: 'Aji Mix', change: -100260, direction: 'down' },
+                  { subject: 'Aji Mango', change: 34626, direction: 'up' }];
+    const { container } = draw({ kind: 'contributors', claim: 'What moved', span: ['Aji Mango'],
+                                 thought: 'the one that took off' }, rows, true);
+    const callouts = container.querySelectorAll('.r-mk-callout--row');
+    expect(callouts).toHaveLength(1);
+    expect(callouts[0].textContent).toBe('the one that took off');
+    expect(callouts[0].parentElement?.textContent).toContain('Aji Mango');
+    expect(container.querySelector('.r-mk-say .r-mk-thought')).toBeNull();
+  });
+
+  it('folds a long draft to the lines that need him first', () => {
+    const rows = Array.from({ length: 20 }, (_, i) => ({
+      product: `Line ${i + 1}`, units_per_day: '1', on_hand: 0, days_of_cover: '0.0', suggested_order_qty: 5,
+    }));
+    const turn = {
+      role: 'bob', text: '', thinking: '', at: '2026-09-21T09:00:00Z',
+      toolCalls: [{ seq: 0, tool: 'get_purchase_plan', arguments: {},
+                    result: { rows, meta: { source_table: 'purchase_orders', snapshot_timestamp: '2026-09-21T09:00:00Z', filters_applied: [] } } }],
+    } as unknown as AnswerTurn;
+    const o = { key: 'k', kind: 'draft', weight: 'lead', seq: 0, tool: 'get_purchase_plan', turn: 0, touched: 0 } as BoardObject;
+    const { container } = render(
+      <DraftTile o={o} turn={turn} local={{}} landing={false} delay={0} focused={false} selected={false}
+                 selection={[]} earlier={false} retuned={null} on={ACTIONS()} order={undefined} chrome="read 1"
+                 told={false} canvas />,
+    );
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(12);
+    expect(container.querySelector('.r-mk-more')?.textContent).toBe('8 more lines · show');
+  });
+});

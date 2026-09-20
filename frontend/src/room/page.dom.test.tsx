@@ -551,3 +551,40 @@ describe('a laid-out board draws no relation line', () => {
     expect(container.querySelector('.r-fig-rel')).toBeNull();
   });
 });
+
+/**
+ * THE PLAN IS A PART OF THE PAGE (P6.h, the owner 2026-09-21: "add what i
+ * would do next to the page ... so it feels like ONE PAGE"). The Board draws
+ * `foot` where his arrangement places `{next: true}`, else last of all.
+ */
+describe('the plan on the page', () => {
+  const two = [block('shops', 1, { claim: 'a', weight: 'lead' }), block('products', 2, { claim: 'b' })];
+  const foot = <p className="r-next">what I'd do next</p>;
+
+  it('is drawn where he placed it', () => {
+    const { container } = draw(two, {
+      foot,
+      arrangement: { layout: 'stack', children: [{ block: 'shops' }, { next: true }, { block: 'products' }] },
+    });
+    const order = Array.from(container.querySelectorAll('[data-figure], .r-laid-next'))
+      .map((el) => el.getAttribute('data-figure') ?? 'next');
+    expect(order).toEqual(['shops', 'next', 'products']);
+  });
+
+  it('is drawn last when he left it out of the arrangement', () => {
+    const { container } = draw(two, {
+      foot, arrangement: { layout: 'stack', children: [{ block: 'shops' }, { block: 'products' }] },
+    });
+    const order = Array.from(container.querySelectorAll('[data-figure], .r-laid-next'))
+      .map((el) => el.getAttribute('data-figure') ?? 'next');
+    expect(order).toEqual(['shops', 'products', 'next']);
+    expect(container.querySelectorAll('.r-laid-next')).toHaveLength(1);
+  });
+
+  it('is still the last thing under the figures when the board is packed', () => {
+    const { container } = draw(two, { foot });
+    const last = container.querySelector('.r-board')?.lastElementChild;
+    expect(container.querySelector('.r-laid-next--packed')).not.toBeNull();
+    expect(last?.className).toContain('r-laid-next');
+  });
+});

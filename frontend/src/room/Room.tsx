@@ -926,6 +926,17 @@ export default function Room() {
                        arriving, and an arrangement half its blocks have not
                        reached would draw holes. Absent is the packing. */
                     arrangement={busy ? null : latest?.composition?.arrangement ?? null}
+                    // THE PLAN IS PART OF THE PAGE (P6.h): the Board draws it
+                    // where his arrangement says, else last. Not while he is
+                    // still working — a plan for figures that have not landed
+                    // is not one.
+                    foot={busy ? null : (
+                      <>
+                        <ReadingNext reading={latest?.reading} calls={latest?.toolCalls}
+                                     onFigure={showFigure} />
+                        <FootOffers offers={offers.foot} answers={answers} on={on} />
+                      </>
+                    )}
                     sameOrder
                   />
                   {/* AT THE FOOT (P3.o). This sat ABOVE the board, so the first
@@ -935,20 +946,6 @@ export default function Room() {
                       this answer starts; and what it opens is drawn below
                       the newest turn's figures anyway, so the line now sits
                       where the things it opens appear. */}
-                  {/* WHAT HE'D DO NEXT, LAST, UNDER THE FIGURES (P6.f — the
-                      owner, 2026-09-20: "move what i'd do next to the right
-                      side, you can be more in depth"). The figures make the
-                      case; this is what to do about it, at the length the
-                      doing needs, and the offers that go with it beside it.
-                      Not while he is still working: a plan for figures that
-                      have not landed is not one. */}
-                  {!busy && (
-                    <>
-                      <ReadingNext reading={latest?.reading} calls={latest?.toolCalls}
-                                   onFigure={showFigure} />
-                      <FootOffers offers={offers.foot} answers={answers} on={on} />
-                    </>
-                  )}
                   <Earlier count={earlier.length} open={unfolded}
                            onToggle={() => setUnfolded((o) => !o)} />
                 </>

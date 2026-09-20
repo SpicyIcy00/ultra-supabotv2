@@ -6076,7 +6076,11 @@ voice:
   # measured and drawn separately, so a cut here can never drop a caveat.
   body:
     introduced: "2026-09-20"
-    max_words: 90
+    # 90 -> 40 (P6.h, 2026-09-21, the owner: "still too much text on the left
+    # side - that's why we're making the page, so it can add text wherever
+    # it wants in its canvas"). The left is the headline and a line or two;
+    # the rest of his prose is `say` leaves placed on the page.
+    max_words: 40
     max_corrective_turns: 1
     over_length: cut_at_sentence
     warning_reason: body_over_length
@@ -7520,8 +7524,12 @@ composition:
       the arrangement and carries no digits. Use the space: one figure across
       the top with two beside each other under it, a panel per shop, a row of
       small numbers, a chart with your sentence next to it rather than above
-      it. Leave it out and the page is packed for you.
-    leaves: [block, say]
+      it. Leave it out and the page is packed for you. THE PAGE IS ONE THING:
+      your headline stays on the left with a line or two; every other
+      paragraph of yours is a `say` placed beside the figure it is about,
+      and `{"next": true}` places the plan - what you would do - where it
+      belongs, usually last. Left out, the plan is drawn last anyway.
+    leaves: [block, say, next]
     # The same four the grammar already has; a fifth would be a second
     # vocabulary for the same job.
     layouts_from: composition.grammar.layouts

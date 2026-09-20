@@ -5255,3 +5255,32 @@ a standing question use the same shapes and have no fixture yet.
 **Held by.** `canvas.dom.test.tsx` "a built thing on the canvas"; the backend suite over
 `self_reader`.
 
+## 2026-09-21 — P6.h: one page — the plan is a leaf, the left is quiet, prose is placed
+
+**Decision.** `{"next": true}` is a leaf of the arrangement: the plan is drawn where Bob
+places it, last if he does not, and on a packed board last too — one element, one place.
+The left of the screen holds the headline and at most 40 words (`voice.body.max_words`,
+was 90); every other paragraph of his is a `say` placed on the page beside the figure it
+is about. The body gate runs after the figure-integrity sweep, so a count with no receipt
+outranks a paragraph that is merely long. A `span` of one label on a dumbbell, ranked or
+contributors draws his thought as a callout under that row, said once.
+
+**Why.** The owner, 2026-09-21: *"how are we doing is really good, but the rest are just
+kinda bad ... it should feel great in every scenario ... add what i would do next to the
+page ... so it feels like ONE PAGE ... still too much text on the left."* A plan bolted on
+after the board was a footer; a left column of ninety words was a second essay beside the
+page; a thought about one row of a list had nowhere to sit but the head.
+
+**What each page needed, and got.** Stores: callouts on the Monday, OPUS and Greenhills; a
+`say` between the shops and the visit. Products: the movers as one section, the categories
+whole with the long tail called out, Aji Mix called out on the ranked list, the dead list
+with its head (a quiet list keeps its head; only a quiet number wears the label). What's
+been down: the estate and the shops side by side, OPUS by day with the Monday called out,
+the `say` that turns the page to Greenhills. Order: the twelve lines that need him, the rest
+folded. Watch: the weeks as bars of change, not a flat line on 280px. Memory: the plan.
+
+**Held by.** `test_compose_coercion_contract` (the plan placed once), `page.dom.test.tsx`
+"the plan on the page" (placed, last, packed), `canvas.dom.test.tsx` "one page, on every
+list" (callout under a row, the fold), `test_enumerated_remainder_contract` (integrity
+outranks length), `test_voice_contract` (budget).
+

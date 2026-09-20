@@ -467,6 +467,11 @@ def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
     budget = [max_nodes, int(spec.get("max_says") or 6)]
     placed: set[str] = set()
     known = set(keys)
+    # THE PLAN IS A PART OF THE PAGE (P6.h, the owner 2026-09-21: "add what i
+    # would do next to the page ... so it feels like ONE PAGE"). `{"next":
+    # true}` places the reading's `next` where he wants it; unplaced, the
+    # room draws it last. Once: a plan drawn twice is two plans.
+    placed_next = [False]
 
     def node(item: Any, depth: int, path: str) -> Optional[dict]:
         if budget[0] <= 0:
@@ -485,6 +490,15 @@ def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
                 return node({"block": item}, depth, path)
             coerced.append(f"{path}: not a part of a page, so it was left out")
             return None
+
+        if item.get("next") is True or ("next" in item and len(item) == 1):
+            if placed_next[0]:
+                coerced.append(f"{path}: the plan is already placed, so it was left out "
+                               f"a second time")
+                return None
+            placed_next[0] = True
+            budget[0] -= 1
+            return {"next": True}
 
         if "say" in item:
             said = " ".join(str(item.get("say") or "").split())

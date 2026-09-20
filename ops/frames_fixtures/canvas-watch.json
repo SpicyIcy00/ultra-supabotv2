@@ -1,7 +1,7 @@
 {
  "why": "BUILD TALKS ON THE CANVAS (P6.g, 2026-09-20). Read rows are what the vetted read tools returned on 2026-09-20; the watch row is the shape self_reader returns for one; the blocks, arrangement and words are the session's. NO MODEL TURN WAS SPENT.",
  "question": "watch Greenhills' basket and tell me if it keeps shrinking",
- "answer": "Done — **a watch on Greenhills' basket, backtested, waiting for you to switch it on.**\n\nIt checks every morning whether the basket is down against the same week before, and posts only when that answer changes. Over the last month it would have spoken three times. Silence is normal.",
+ "answer": "Done — **a watch on Greenhills' basket, backtested, waiting for you to switch it on.**",
  "at": "2026-09-20T15:20:00+00:00",
  "default_blocks": [],
  "calls": [
@@ -213,10 +213,10 @@
    "op": "put",
    "key": "basket",
    "seq": 0,
-   "kind": "line",
+   "kind": "contributors",
    "weight": "lead",
-   "claim": "Greenhills' basket, week by week, against the same week before",
-   "thought": "Two of the five weeks under; the newest is a part-week on both sides."
+   "claim": "Greenhills' basket, each week against the same week before",
+   "thought": "two of five weeks under; the newest is a part-week on both sides"
   },
   {
    "op": "put",
@@ -236,6 +236,12 @@
    },
    {
     "block": "watch"
+   },
+   {
+    "say": "It posts only when the answer changes. Silence from it means nothing moved."
+   },
+   {
+    "next": true
    }
   ]
  },

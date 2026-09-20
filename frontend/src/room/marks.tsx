@@ -145,8 +145,16 @@ function Figure(p: TileProps & { rows: Row[]; meta: Meta }) {
  * be drawn — labelled "usual", never "healthy", because a range is where a
  * thing sits and not whether that is good.
  */
-function Dumbbell({ rows: given, meta, o, offers, seq, onTake, onPick, picked, order }:
-                  { rows: Row[]; meta: Meta; o: TileProps['o']; order?: string[] } & Offering) {
+/** His thought under the one row his `span` names (P6.h). */
+type Callout = { name: string; text: string } | null;
+
+function RowCallout({ callout, name }: { callout: Callout; name: string }) {
+  if (!callout || callout.name !== name) return null;
+  return <p className="r-mk-callout r-mk-callout--row">{callout.text}</p>;
+}
+
+function Dumbbell({ rows: given, meta, o, offers, seq, onTake, onPick, picked, order, callout }:
+                  { rows: Row[]; meta: Meta; o: TileProps['o']; order?: string[]; callout?: Callout } & Offering) {
   // ONE STORE ORDER ACROSS THE ANSWER, where the room asks for it: a row the
   // order names takes its place, the rest keep theirs after it. Nothing is
   // dropped and nothing is ranked by this — it is where the eye finds a store.
@@ -204,6 +212,7 @@ function Dumbbell({ rows: given, meta, o, offers, seq, onTake, onPick, picked, o
             </span>
             <RowOffers offers={offers} seq={seq} subject={subjectOf(r)}
                        onTake={onTake ?? NO_TAKE} />
+            <RowCallout callout={callout ?? null} name={name} />
           </div>
         );
       })}
@@ -222,8 +231,8 @@ function Dumbbell({ rows: given, meta, o, offers, seq, onTake, onPick, picked, o
 /* ------------------------------------------------------------------ ranked */
 
 /** BARS IN CELLS — a row, its length, its figure. No axis, no legend. */
-function Ranked({ rows, meta, o, offers, seq, onTake, onPick, picked }:
-                { rows: Row[]; meta: Meta; o: TileProps['o'] } & Offering) {
+function Ranked({ rows, meta, o, offers, seq, onTake, onPick, picked, callout }:
+                { rows: Row[]; meta: Meta; o: TileProps['o']; callout?: Callout } & Offering) {
   const key = valueOf(rows[0])?.key ?? 'value';
   const unit = unitOf(rows[0]) ?? unitOf(meta);
   const values = rows.map((r) => Math.abs(Number(valueOf(r)?.value ?? 0)));
@@ -255,6 +264,7 @@ function Ranked({ rows, meta, o, offers, seq, onTake, onPick, picked }:
             </span>
             <RowOffers offers={offers} seq={seq} subject={subjectOf(r)}
                        onTake={onTake ?? NO_TAKE} />
+            <RowCallout callout={callout ?? null} name={name} />
           </div>
         );
       })}
@@ -273,8 +283,8 @@ function Ranked({ rows, meta, o, offers, seq, onTake, onPick, picked }:
  * movement, because an attribution share is exactly what CLAUDE.md 10 refuses
  * and no tool computes one.
  */
-function Contributors({ rows, meta, o, offers, seq, onTake, onPick, picked, canvas }:
-                      { rows: Row[]; meta: Meta; o: TileProps['o']; canvas?: boolean } & Offering) {
+function Contributors({ rows, meta, o, offers, seq, onTake, onPick, picked, canvas, callout }:
+                      { rows: Row[]; meta: Meta; o: TileProps['o']; canvas?: boolean; callout?: Callout } & Offering) {
   const signed = (r: Row) => {
     const n = typeof r.change === 'number' ? r.change : Number(r.change_pct);
     return Number.isFinite(n) ? n : 0;
@@ -315,6 +325,7 @@ function Contributors({ rows, meta, o, offers, seq, onTake, onPick, picked, canv
             </span>
             <RowOffers offers={offers} seq={seq} subject={subjectOf(r)}
                        onTake={onTake ?? NO_TAKE} />
+            <RowCallout callout={callout ?? null} name={name} />
           </div>
         );
       })}
@@ -358,7 +369,10 @@ function Line({ rows, meta, o, subject, p }: {
   // THE DESIGN'S GEOMETRY ON THE CANVAS (P6.e, `.rhythm`): 940×280, the
   // note's room above, the axis and its dates below. Packed: as it was.
   const W = canvas ? 940 : 560;
-  const H = canvas ? 280 : 128;
+  // 280 for the chart the page rests on; less for one that supports it — a
+  // five-point series at 280 was two hundred pixels of nothing (the watch
+  // frame, 2026-09-20).
+  const H = canvas ? (p.o.weight === 'lead' ? 280 : p.o.weight === 'quiet' ? 140 : 200) : 128;
   const pad = 10;
   const yTop = canvas ? (banded && p.o.thought?.trim() ? 44 : 14) : pad;
   const yBase = canvas ? H - 48 : H - pad;
@@ -630,9 +644,17 @@ export function MarkBlock(p: TileProps) {
   // under that one — the design's "the one that did not come back".
   const nameKey = (['store', 'product', 'subject', 'category'] as const)
     .find((k) => rows.some((r) => typeof r[k] === 'string')) ?? null;
-  const spanOn = mark === 'multiples' ? nameKey : spanKey;
-  const spanResolves = Boolean(spanOf && spanOn
-    && spanOf.every((label) => rows.some((r) => String(r[spanOn] ?? '') === label)));
+  // ON A ROW MARK ONE LABEL NAMES ONE ROW (P6.h): the thought is drawn as
+  // a callout under that row, the way the strip draws it under a shop.
+  const rowMark = mark === 'dumbbell' || mark === 'ranked' || mark === 'contributors';
+  const spanOn = mark === 'multiples' ? nameKey : rowMark ? null : spanKey;
+  const rowNamed = rowMark && spanOf && spanOf.length >= 1
+    ? rows.find((r) => String(subjectOf(r) ?? '') === spanOf[0]) : undefined;
+  const spanResolves = Boolean(spanOf && (
+    (rowMark && rowNamed)
+    || (spanOn && spanOf.every((label) => rows.some((r) => String(r[spanOn] ?? '') === label)))));
+  const callout = rowMark && rowNamed && !p.told && p.o.thought?.trim()
+    ? { name: String(subjectOf(rowNamed) ?? ''), text: p.o.thought.trim() } : null;
   // ONLY A MARK THAT DRAWS ROWS CAN FOLD THEM. A single figure over a seventeen-
   // row read is already one row of it; "15 more · show" under a number opened
   // nothing (the first frame of this, 2026-09-19).
@@ -738,9 +760,9 @@ export function MarkBlock(p: TileProps) {
         </p>
         <div className="r-mk-body" data-mark={mark} data-read={readAt(meta?.snapshot_timestamp) ?? ''}>
           {mark === 'figure' && <Figure {...p} rows={rows} meta={meta} />}
-          {mark === 'dumbbell' && <Dumbbell rows={drawn} meta={meta} o={p.o} order={p.order} {...offering} />}
-          {mark === 'ranked' && <Ranked rows={drawn} meta={meta} o={p.o} {...offering} />}
-          {mark === 'contributors' && <Contributors rows={drawn} meta={meta} o={p.o} canvas={p.canvas} {...offering} />}
+          {mark === 'dumbbell' && <Dumbbell rows={drawn} meta={meta} o={p.o} order={p.order} callout={callout} {...offering} />}
+          {mark === 'ranked' && <Ranked rows={drawn} meta={meta} o={p.o} callout={callout} {...offering} />}
+          {mark === 'contributors' && <Contributors rows={drawn} meta={meta} o={p.o} canvas={p.canvas} callout={callout} {...offering} />}
           {mark === 'line' && <Line rows={rows} meta={meta} o={p.o} subject={seriesOf} p={p} />}
           {mark === 'table' && <Rows rows={drawn} meta={meta} o={p.o} p={p} />}
           {/* THE ELEVEN P2S.3 ADDED (shapes.tsx), framed exactly as the six. */}

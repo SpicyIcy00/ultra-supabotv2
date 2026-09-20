@@ -36,6 +36,13 @@ import type { ActionOffer, Arrangement, BobNotice } from '../types/bob';
 export interface BoardProps {
   /** Every answer turn, oldest first. An object names its own by index. */
   answers: AnswerTurn[];
+  /**
+   * WHAT HE'D DO NEXT, AND THE OFFERS THAT GO WITH IT (P6.h). Part of the
+   * page: drawn where his arrangement places `{next: true}`, else last,
+   * after everything else — the owner, 2026-09-21: "add what i would do
+   * next to the page ... so it feels like ONE PAGE".
+   */
+  foot?: ReactNode;
   board: BoardObject[];
   local: Record<string, Local>;
   focused: string | null;
@@ -521,13 +528,20 @@ export function Board(p: BoardProps) {
   const byKey = new Map(items.flatMap((it) => (it.kind === 'fig' ? [[it.o.key, it] as const] : [])));
   // WHICH KEYS HIS TREE ACTUALLY PLACES, so the rest can be drawn after it.
   const placedKeys = new Set<string>();
+  let placedNext = false;
   (function walk(node: Arrangement | null) {
     if (!node) return;
     if ('block' in node) { placedKeys.add(node.block); return; }
+    if ('next' in node) { placedNext = true; return; }
     if ('say' in node) return;
     (node.children ?? []).forEach(walk);
   })(laidOut);
   const drawNode = (node: Arrangement, at: string): ReactNode => {
+    // THE PLAN, WHERE HE PUT IT (P6.h). The same element the foot draws
+    // when he leaves it out, so it is one thing in one place.
+    if ('next' in node) {
+      return <div key={at} className="r-laid-next">{p.foot}</div>;
+    }
     if ('say' in node) {
       // HIS WORDS, WHEREVER HE PUT THEM — the "it doesn't have to have text
       // before a chart" half.
@@ -619,6 +633,7 @@ export function Board(p: BoardProps) {
           data-under={laid ? undefined : it.under}
           data-relation={laid ? undefined : plan.relationOf[o.key]}
           data-weight={o.weight}
+          data-kind={o.kind}
           className={['r-fig', out ? 'r-fig--out' : '', p.focused === o.key ? 'r-fig--open' : '',
                       o.key === leadKey ? 'r-fig--lead' : '']
             .filter(Boolean).join(' ')}
@@ -727,11 +742,19 @@ export function Board(p: BoardProps) {
                   ? <Fragment key={it.o.key}>{drawFigure(it, at, true)}</Fragment> : null))}
               </div>
             )}
+            {/* THE PLAN, LAST, when his arrangement did not place it. */}
+            {!placedNext && p.foot && <div className="r-laid-next">{p.foot}</div>}
           </>
         )
-        : items.map((it, at) => (it.kind === 'para'
-          ? drawPara(it, at, false)
-          : drawFigure(it, at, false)))}
+        : (
+          <>
+            {items.map((it, at) => (it.kind === 'para'
+              ? drawPara(it, at, false)
+              : drawFigure(it, at, false)))}
+            {/* Packed, the plan is still the last thing under the figures. */}
+            {p.foot && <div className="r-laid-next r-laid-next--packed">{p.foot}</div>}
+          </>
+        )}
       {/* AT THE FOOT, and it opens. Not gone: the board still holds them,
           they still travel with the next question, and the count is the
           length of a list this already has rather than a number anybody

@@ -683,3 +683,20 @@ def test_a_span_with_nothing_to_point_with_is_dropped(defs):
     rows, coerced = _series(defs, ["2026-09-01", "2026-09-02"], thought=None)
     assert "span" not in rows[0]
     assert any("span" in c for c in coerced)
+
+
+# The plan is a part of the page (P6.h, 2026-09-21)
+
+def test_the_plan_is_placed_once_where_he_puts_it(defs):
+    tree, coerced, _ = _arranged(
+        {"layout": "stack", "children": [{"block": "a"}, {"next": True}, {"block": "b"}]}, defs)
+    assert [c.get("block") or ("next" if c.get("next") else None) for c in tree["children"]] == ["a", "next", "b"]
+    assert not [c for c in coerced if "plan" in c]
+
+
+def test_a_second_plan_is_left_out_and_said(defs):
+    tree, coerced, _ = _arranged(
+        {"layout": "stack", "children": [{"next": True}, {"block": "a"}, {"next": True}]}, defs)
+    assert sum(1 for c in tree["children"] if c.get("next")) == 1
+    assert any("plan is already placed" in c for c in coerced)
+

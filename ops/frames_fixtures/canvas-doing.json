@@ -1,7 +1,7 @@
 {
  "why": "THE CANVAS IS THE DESIGN (P6.e, 2026-09-20). Every figure is a value the vetted read tools returned on 2026-09-20; the blocks, arrangement and words are the session's, cut to ops/ideal/how-are-we-doing-v2.html: a one-line head per block, the figure's thought under its number, the span's on the chart. NO MODEL TURN WAS SPENT.",
  "question": "how are we doing?",
- "answer": "Down on the month - but **the fall was two weeks in August, at every shop, and it is over - except at Rockwell.**\n\nSame number of people, smaller baskets. The range is splitting: a few lines stopped dead while a few others took off. And eight lines hit zero yesterday, most of them at OPUS and Magnolia.\n\nShall I draft the eight transfers, and pull Rockwell day by day across those two weeks?",
+ "answer": "Down on the month - but **the fall was two weeks in August, at every shop, and it is over - except at Rockwell.**\n\nSame people, smaller baskets; the range is splitting; eight lines hit zero yesterday.",
  "at": "2026-09-20T09:50:00+00:00",
  "blocks": [
   {
@@ -193,6 +193,9 @@
     "block": "shops"
    },
    {
+    "say": "Rockwell is the one to open: the other six came back in the same week it did not."
+   },
+   {
     "layout": "row",
     "children": [
      {
@@ -220,17 +223,23 @@
     ]
    },
    {
+    "say": "Nobody was told about the lines at zero: no shop has a low-stock level, so a line is only visible the day it reaches nothing."
+   },
+   {
     "block": "crossed"
    },
    {
     "block": "vending"
+   },
+   {
+    "next": true
    }
   ]
  },
  "reading": {
   "claim": "the fall was two weeks in August, at every shop, and it is over - except at Rockwell",
   "caveat": "The newest week is part of a week on both sides, so ignore how good it looks. Vending has nothing to compare against.",
-  "next": "Shall I draft the eight transfers, and pull Rockwell day by day across those two weeks?",
+  "next": "Draft the eight transfers first — the lines at zero are the only thing on this page that loses a sale today. OPUS and Magnolia hold most of them and the barn has stock for all eight; I'll put the draft up and it goes when you send it.\n\nThen Rockwell, day by day across those two weeks: every other shop's fall closed when the month turned and Rockwell's did not, so something happened there that did not happen elsewhere. A read tells me when; only the shop can tell me what.\n\nLeave the range alone for now. The lines that stopped need the stock history before anyone decides they are dead — that deep on a named line is an empty shelf or a delisting, not taste. Say the word and I'll pull it for the three.",
   "asks": [
    "What happened at Rockwell in August?",
    "Which shops still have kiamoy?",

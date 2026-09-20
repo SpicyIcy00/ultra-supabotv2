@@ -3838,53 +3838,6 @@ async def run(
                 # Sentences that restate a figure the board already draws.
                 # Checked only when something IS drawn (charted): an answer
                 # over no result has nothing on screen to say again.
-                # THE BODY IS THE CONCLUSION, AND IT IS SHORT (voice.body,
-                # 2026-09-20). His prose left the right of the screen that
-                # day — the room drew a paragraph over every chart and the
-                # owner called it a thread — and what the left now holds is
-                # bounded HERE, because a length the prompt merely asked for
-                # is the length that failed. Over the bound: one corrective
-                # turn. Still over: cut at the sentence that crosses it, and
-                # the run record says so. The slots are measured and drawn
-                # separately, so a cut here can never take a caveat with it.
-                body_words = len((answer or "").split())
-                if answer and body_words > max_body_words:
-                    if body_edits < max_body_edits:
-                        body_edits += 1
-                        log.gap(body_reason,
-                                f"{body_words} words; the left column holds {max_body_words}")
-                        yield _sse("warning", {"reason": body_reason, "found": body_words,
-                                               "limit": max_body_words, "corrected": "rewrite"})
-                        yield _reset_answer(body_reason)
-                        kept_prose = ""
-                        answer = ""
-                        messages.append({"role": "user", "content": (
-                            f"Your answer is {body_words} words and the left of the screen "
-                            f"holds {max_body_words}. The steps you composed are drawn on the "
-                            "right and carry the evidence; the reader walks them. Write only "
-                            "the conclusion — what it means and what you would do, in the "
-                            "words the business uses — and keep the claim, the caveat and "
-                            "the next exactly as they are.")})
-                        continue
-                    kept_sents: list[str] = []
-                    used = 0
-                    for sent in _prose.sentences(answer):
-                        n = len(sent.split())
-                        if kept_sents and used + n > max_body_words:
-                            break
-                        kept_sents.append(sent)
-                        used += n
-                    log.gap(body_reason,
-                            f"{body_words} words after the rewrite; cut to {used} at a sentence")
-                    yield _sse("warning", {"reason": body_reason, "found": body_words,
-                                           "limit": max_body_words, "corrected": "deterministic",
-                                           "removed": body_words - used})
-                    answer = " ".join(kept_sents)
-                    deterministic_edits += 1
-                    yield _reset_answer(body_reason)
-                    kept_prose = ""
-                    yield _sse("text", {"delta": answer})
-
                 restated = (_prose.restated_sentences(answer, charted)
                             if answer and charted else [])
                 # A drawn figure said WRONG - 800 over a row drawn as 801.
@@ -4025,6 +3978,58 @@ async def run(
                             f"the gate is on {named}, never on what qualifies them.")
                         messages.append({"role": "user", "content": "\n\n".join(parts)})
                         continue
+                # AFTER THE SWEEP, NOT BEFORE (P6.h, 2026-09-21): a figure with no
+                # receipt outranks a long paragraph, and the sweep's deletions
+                # shorten what this then measures.
+                # THE BODY IS THE CONCLUSION, AND IT IS SHORT (voice.body,
+                # 2026-09-20). His prose left the right of the screen that
+                # day — the room drew a paragraph over every chart and the
+                # owner called it a thread — and what the left now holds is
+                # bounded HERE, because a length the prompt merely asked for
+                # is the length that failed. Over the bound: one corrective
+                # turn. Still over: cut at the sentence that crosses it, and
+                # the run record says so. The slots are measured and drawn
+                # separately, so a cut here can never take a caveat with it.
+                body_words = len((answer or "").split())
+                if answer and body_words > max_body_words:
+                    if body_edits < max_body_edits:
+                        body_edits += 1
+                        log.gap(body_reason,
+                                f"{body_words} words; the left column holds {max_body_words}")
+                        yield _sse("warning", {"reason": body_reason, "found": body_words,
+                                               "limit": max_body_words, "corrected": "rewrite"})
+                        yield _reset_answer(body_reason)
+                        kept_prose = ""
+                        answer = ""
+                        messages.append({"role": "user", "content": (
+                            f"Your answer is {body_words} words and the left of the screen "
+                            f"holds {max_body_words}. The steps you composed are drawn on the "
+                            "right and carry the evidence; the reader walks them. Write only "
+                            "the conclusion — what it means, in a line or two, in the words "
+                            "the business uses. What else you would say belongs on the page "
+                            "as `say` lines of the arrangement, and what you would do in "
+                            "`next`; keep the claim, the caveat and the next exactly as they "
+                            "are.")})
+                        continue
+                    kept_sents: list[str] = []
+                    used = 0
+                    for sent in _prose.sentences(answer):
+                        n = len(sent.split())
+                        if kept_sents and used + n > max_body_words:
+                            break
+                        kept_sents.append(sent)
+                        used += n
+                    log.gap(body_reason,
+                            f"{body_words} words after the rewrite; cut to {used} at a sentence")
+                    yield _sse("warning", {"reason": body_reason, "found": body_words,
+                                           "limit": max_body_words, "corrected": "deterministic",
+                                           "removed": body_words - used})
+                    answer = " ".join(kept_sents)
+                    deterministic_edits += 1
+                    yield _reset_answer(body_reason)
+                    kept_prose = ""
+                    yield _sse("text", {"delta": answer})
+
                 # NO `continue` HERE, AND THAT IS THE POINT. The edit happened;
                 # what falls through to the notice gate below is the answer as
                 # edited, so a caveat this removed - it cannot, but a guard is

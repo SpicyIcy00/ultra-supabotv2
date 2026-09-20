@@ -1,7 +1,7 @@
 {
  "why": "THE CANVAS, LOCALLY (P6.d): 'whats been down?' composed in the canvas vocabulary from the reads recorded on 2026-09-20 (mine.json). Blocks, arrangement and prose are the session's. NO MODEL TURN WAS SPENT.",
  "question": "whats been down?",
- "answer": "Down is **one shop, and its whole fall is a single Monday.**\n\nOPUS gave back more than the estate lost in total; four shops went the other way. Day against the same weekday, OPUS is level or ahead everywhere but that Monday. The one to act on is Greenhills: more people in, less spent each, four named lines gave back most of what they earned - an empty shelf, seen from the till. Stock cannot confirm it.\n\nShall I pull those four lines day by day?",
+ "answer": "Down is **one shop, and its whole fall is a single Monday.**\n\nThe shop actually losing ground is Greenhills: more people in, less spent each.",
  "at": "2026-09-20T08:25:00+00:00",
  "blocks": [
   {
@@ -10,8 +10,8 @@
    "seq": 0,
    "kind": "figure",
    "weight": "supporting",
-   "question": "Is the estate down?",
-   "claim": "Less than the week before, and one shop is more than all of it"
+   "question": "The estate, this week against last.",
+   "claim": "Less than the week before — and one shop is more than all of it"
   },
   {
    "op": "put",
@@ -19,15 +19,17 @@
    "seq": 1,
    "kind": "dumbbell",
    "weight": "supporting",
-   "question": "Which shops?",
-   "claim": "Three down, four up, and OPUS is nearly all of it",
    "emphasise": [
     "OPUS",
     "Greenhills",
     "North Edsa"
    ],
-   "under": "estate",
-   "relation": "evidence"
+   "question": "Which shops.",
+   "claim": "Three down, four up",
+   "span": [
+    "OPUS"
+   ],
+   "thought": "nearly all of the estate's fall, by itself"
   },
   {
    "op": "put",
@@ -35,12 +37,15 @@
    "seq": 7,
    "kind": "contributors",
    "weight": "lead",
-   "question": "Is OPUS in decline, or was one day unusual?",
-   "claim": "Its whole fall is one Monday, against a Monday unlike any other",
-   "thought": "Each day against the same weekday before it; both weekend days are ahead.",
    "emphasise": [
     "2026-09-07"
-   ]
+   ],
+   "question": "OPUS, day by day, against the same weekday before.",
+   "claim": "Its whole fall is one Monday",
+   "span": [
+    "2026-09-07"
+   ],
+   "thought": "against a Monday unlike any other; both weekend days are ahead"
   },
   {
    "op": "put",
@@ -48,11 +53,15 @@
    "seq": 4,
    "kind": "dumbbell",
    "weight": "supporting",
-   "question": "So what is genuinely falling?",
-   "claim": "Greenhills: busier tills, smaller baskets",
    "emphasise": [
     "Greenhills"
-   ]
+   ],
+   "question": "So what is genuinely falling.",
+   "claim": "Greenhills: busier tills, smaller baskets",
+   "span": [
+    "Greenhills"
+   ],
+   "thought": "more people in, less spent each — the one to act on"
   },
   {
    "op": "put",
@@ -60,14 +69,12 @@
    "seq": 5,
    "kind": "contributors",
    "weight": "supporting",
-   "question": "Which lines, at Greenhills?",
-   "claim": "Four named lines gave back most of what they earned",
    "emphasise": [
     "Aji Mango",
     "aji champoy honey bayberry"
    ],
-   "under": "basket",
-   "relation": "evidence"
+   "question": "Which lines, at Greenhills.",
+   "claim": "Four named lines gave back most of what they earned"
   },
   {
    "op": "put",
@@ -75,8 +82,8 @@
    "seq": 6,
    "kind": "list",
    "weight": "quiet",
-   "question": "Does the stock record back that up?",
-   "claim": "It cannot - yesterday's crossings are at other shops",
+   "question": "Does the stock record back that up.",
+   "claim": "It cannot — yesterday's crossings are at other shops",
    "thought": "No low-stock level is set anywhere; none of these is at Greenhills."
   }
  ],
@@ -150,9 +157,6 @@
   "layout": "stack",
   "children": [
    {
-    "block": "opus-days"
-   },
-   {
     "layout": "row",
     "children": [
      {
@@ -162,6 +166,9 @@
       "block": "shops"
      }
     ]
+   },
+   {
+    "block": "opus-days"
    },
    {
     "say": "Which leaves one shop that is genuinely losing ground, and it is not the one with the big number."
@@ -179,17 +186,20 @@
    },
    {
     "block": "crossed"
+   },
+   {
+    "next": true
    }
   ]
  },
  "reading": {
   "claim": "one shop, and its whole fall is a single Monday",
   "caveat": "132 of 523 compared lines have no usable baseline, so the ranked fallers understate how much simply stopped selling. The windows are the closed week 7-13 Sep against 31 Aug-6 Sep; the stock crossings are yesterday. No low-stock level has ever been set, so a line is only visible the day it reaches zero.",
-  "next": "I would walk the Greenhills shelf for mango, bayberry, dilis and kiamoy curl before treating any of it as lost demand - shall I pull what each of them did day by day?",
+  "next": "Nothing to do about OPUS: one Monday against a Monday that was unlike any other is not a decline, and every other day is level or ahead.\n\nGreenhills is the one to walk. Four named lines gave back most of what they earned in a week — seen from the till that is an empty shelf, and the stock record cannot confirm or deny it because no low-stock level has ever been set there. I'd have the shop check those four facings today, and set the level on each so the next empty shelf is said the day it happens.\n\nThen set a watch on Greenhills' basket, born off, backtested over the last month, and switch it on from the inbox if the backtest reads the way you want.",
   "asks": [
    "What came off the Greenhills shelf?",
-   "Was that Monday at OPUS a one-off?",
-   "Which lines stopped selling completely?"
+   "Was OPUS's Monday a holiday?",
+   "Which shops have no low-stock level?"
   ]
  },
  "calls": [

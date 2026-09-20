@@ -1,7 +1,7 @@
 {
  "why": "THE CANVAS, LOCALLY (P6.d). Every figure is a value the vetted read tools returned on 2026-09-20; the blocks, arrangement, prose and questions are the session's. NO MODEL TURN WAS SPENT. This is what the room draws from the vocabulary; whether Bob composes it is the next live turn's to answer.",
  "question": "how are our stores?",
- "answer": "The shops are **fine, and the week-on-week headline is one Monday.**\n\nSix of seven days beat the same day a week earlier; the one that did not is a Monday against a Monday that took nearly double. Over the month every shop had the same two bad weeks and all but Rockwell came back. What separates them now is what a visit is worth: Fairview grew basket on fewer people, Greenhills the opposite.\n\nShall I set a watch on Greenhills' basket?",
+ "answer": "The shops are **fine, and the week-on-week headline is one Monday.**\n\nAll but Rockwell came back from August; what separates them now is the basket.",
  "at": "2026-09-20T09:55:00+00:00",
  "blocks": [
   {
@@ -10,11 +10,15 @@
    "seq": 3,
    "kind": "contributors",
    "weight": "lead",
-   "question": "Is the estate having a worse week?",
-   "claim": "Six of seven days beat the same day a week earlier",
    "emphasise": [
     "2026-09-07"
-   ]
+   ],
+   "question": "The week, day by day, against the same day before.",
+   "claim": "Six of seven days ahead; the one behind is a Monday",
+   "span": [
+    "2026-09-07"
+   ],
+   "thought": "against a Monday, a week earlier, that took nearly double"
   },
   {
    "op": "put",
@@ -22,11 +26,15 @@
    "seq": 5,
    "kind": "multiples",
    "weight": "supporting",
-   "question": "And over the month, shop by shop?",
-   "claim": "Every shop had the same two bad weeks; one has not come back",
    "emphasise": [
     "Rockwell"
-   ]
+   ],
+   "question": "Every shop, week by week, over the month.",
+   "claim": "The same two bad weeks on all seven; one has not come back",
+   "span": [
+    "Rockwell"
+   ],
+   "thought": "the one that did not come back"
   },
   {
    "op": "put",
@@ -34,12 +42,16 @@
    "seq": 0,
    "kind": "dumbbell",
    "weight": "supporting",
-   "question": "Who is up and who is down this week?",
-   "claim": "Four up, one materially down",
    "emphasise": [
     "OPUS",
     "Greenhills"
-   ]
+   ],
+   "question": "Who is up and who is down this week.",
+   "claim": "Four up, one materially down",
+   "span": [
+    "OPUS"
+   ],
+   "thought": "the one materially down — and its whole fall is that Monday"
   },
   {
    "op": "put",
@@ -47,7 +59,7 @@
    "seq": 1,
    "kind": "dumbbell",
    "weight": "supporting",
-   "question": "More people, or fewer?",
+   "question": "More people, or fewer.",
    "claim": "Mixed, and small either way"
   },
   {
@@ -56,14 +68,16 @@
    "seq": 2,
    "kind": "dumbbell",
    "weight": "supporting",
-   "question": "And what is a visit worth?",
-   "claim": "This is where the shops actually differ",
    "emphasise": [
     "Fairview",
     "Greenhills"
    ],
-   "under": "visits",
-   "relation": "evidence"
+   "question": "And what a visit is worth.",
+   "claim": "This is where the shops actually differ",
+   "span": [
+    "Greenhills"
+   ],
+   "thought": "busier tills, smaller baskets — the one to act on"
   }
  ],
  "default_blocks": [
@@ -129,6 +143,9 @@
     "block": "shops"
    },
    {
+    "say": "What separates the shops now is not how many come in but what each visit is worth."
+   },
+   {
     "layout": "row",
     "children": [
      {
@@ -138,13 +155,16 @@
       "block": "basket"
      }
     ]
+   },
+   {
+    "next": true
    }
   ]
  },
  "reading": {
   "claim": "fine, and the week-on-week headline is one Monday",
   "caveat": "The comparison is the closed week against the one before, each day against the same weekday.",
-  "next": "Shall I set a watch on Greenhills' basket, so it only speaks if it keeps going?",
+  "next": "Set a watch on Greenhills' basket, so it only speaks if the shrink continues — I'd backtest it over the last month first and you switch it on from the inbox.\n\nFairview is the opposite case and needs nothing: fewer people, each spending more, which is a shop doing its job with a smaller crowd. I'd ask the manager whether the crowd is the mall or the shop before calling it a trend.\n\nRockwell: open it. Every other shop closed its August gap when the month turned; Rockwell's is still open, and a read cannot tell me why. That is a question for whoever was on the floor in the last week of August.",
   "asks": [
    "What happened on 31 August?",
    "Why is Greenhills' basket shrinking?",
