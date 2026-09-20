@@ -3796,6 +3796,52 @@ for it.`):
   if it still holds them.
 
 
+**Phase 6 — the canvas. The page is designed for the answer, then read for.**
+Cut 2026-09-20 at the owner's word after four cards of reskins: *"one perfectly
+engineered page for its answer … the right side is a canvas, fill it … if he
+knows he has an unlimited canvas he could get different data, put different text
+and everything else."* **The target is `ops/ideal/how-are-we-doing-v2.html`** —
+designed from the question first and then read for, with real figures from the
+reads of that day. The v1 beside it was designed backward from reads already
+made, and is kept as the record of the wrong order. Every card is measured
+against v2 in the browser (`ops/frames.py`), not against a description of it.
+
+- [ ] **P6.a the vocabulary** — what a page may contain, as definitions: the
+      number (a value at the size of the answer, its delta, its verdict line);
+      the series (one or two reads over time, an annotation that POINTS at a
+      span and characterises it, never a figure); small multiples (one read
+      grouped by a subject, drawn once per subject at sparkline size); the
+      movers (two ranked reads either side of zero); the pair (two figures
+      with a verdict each); the needs-you list (rows with the one accent and
+      an action at level five); the quiet row (a read with no comparison and
+      its notice). Same rules as the grammar: every value bound to a read's
+      field, no literal anywhere, no colour but direction, timestamps on all.
+      Done when every element of v2 can be named in the yaml and refused by
+      `compose.validate` when it carries a figure.
+- [ ] **P6.b the renderer** — the right side drawn as ONE composition from
+      P6.a's vocabulary, not a list of blocks; sizes vary with `weight`; the
+      arrangement (P3.p) is how the elements sit. Done when v2's data,
+      composed in the vocabulary, renders within measure of v2 in
+      `ops/frames.py` at 1440 and 390.
+- [ ] **P6.c how he thinks** — the prompt's SCOPE and VOICE: for a broad
+      question he DESIGNS the page first — the four to six things a person
+      needs to see to know — and reads for each, in the order the page
+      needs; then composes it. The reads for "how are we doing" become the
+      day series over two months, every shop by week, the movers, a visit,
+      what crossed to zero, and what cannot be read. Budget: the prompt is at
+      1,797/1,800, so this replaces SCOPE's broad rule rather than adding to
+      it. Done when one live "how are we doing?" produces a page a person
+      would put beside v2 without embarrassment — the owner's word, on the
+      live build.
+- [ ] **P6.d two more questions** — "how are our stores?" and "how are our
+      products?" designed page-first the same way, so the vocabulary is proven
+      on three shapes and not one.
+
+**Known before starting:** `compare_to` by `day` over a period that is not
+whole weeks now says so (`weekday_misaligned`); a page over thirty days draws
+the two day series side by side instead. Whether Bob composes an `arrangement`
+at all is still unread (`george.posts` needs a permission).
+
 **Calendar, honestly.** One card a day, Fridays for the sweep, one session in
 three a dogfood fix: **five open cards at four a week is a week and a bit of
 cards, so three to four weeks** to the Phase 3 gate, and the gate itself is the

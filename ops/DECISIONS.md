@@ -50,6 +50,18 @@ the frame is a fixture whose prose the session shortened to the bound.
 tests rewritten to the new rule rather than deleted, each saying which owner
 instruction superseded the one it held.
 
+**AND THEN HE SAID IT WAS STILL THE SAME, AND HE WAS RIGHT AGAIN.** Prose off the
+right side, steps only, a bound on the body — and the right side was still six
+charts of one size in a column with a question on each. The canvas was being
+filled with widgets. So the session stopped building machinery and designed the
+page by hand: `ops/ideal/how-are-we-doing.html`, then — at his correction that
+the reads should FOLLOW the page, not lead it — `how-are-we-doing-v2.html`,
+designed from the question and then read for. Two reads on it he had never made
+(the estate day by day over two months; what crossed to zero yesterday) and a
+needs-you with an action. That page is the target; NOW.md Phase 6 is the work.
+Found on the way: a day matched by position over thirty days is not the same
+weekday (`weekday_misaligned`, now raised and drawn).
+
 ---
 
 ## 2026-09-20 · P3.q — a live turn, and the five things it found
