@@ -177,8 +177,21 @@ describe('figure', () => {
     expect(container.querySelector('.r-mk-num')?.textContent).toBe('359');
   });
 
-  it('shows the movement as a one-row dumbbell where the read carried a before', () => {
+  /**
+   * SAID ONCE (P6.b, 2026-09-20; the owner: "it's the same"). A figure with
+   * a change draws the pill; the one-row dumbbell under it said the same two
+   * numbers a third time. It is drawn where it adds something — a before with
+   * no change to say it with, or a noise floor, which a pill cannot draw.
+   */
+  it('draws no dumbbell under a number whose pill already says the movement', () => {
     const { container } = draw({ kind: 'figure', subject: 'OPUS' }, COMPARED);
+    expect(container.querySelector('.r-delta')).not.toBeNull();
+    expect(container.querySelectorAll('.r-mk-dot--was')).toHaveLength(0);
+  });
+
+  it('shows the movement as a one-row dumbbell where the read carried a before and no change', () => {
+    const rows = COMPARED.map(({ change: _c, change_pct: _p, direction: _d, ...rest }) => rest);
+    const { container } = draw({ kind: 'figure', subject: 'OPUS' }, rows);
     expect(container.querySelectorAll('.r-mk-dot--was')).toHaveLength(1);
     expect(container.querySelector('.r-mk-fig small')?.textContent).toBe('was ₱425,000');
   });

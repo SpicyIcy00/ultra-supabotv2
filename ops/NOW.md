@@ -3818,7 +3818,7 @@ against v2 in the browser (`ops/frames.py`), not against a description of it.
       field, no literal anywhere, no colour but direction, timestamps on all.
       Done when every element of v2 can be named in the yaml and refused by
       `compose.validate` when it carries a figure.
-- [x] **P6.b the renderer** **BUILT 2026-09-20, locally**, on top of P3.p's arrangement and P3.r's steps-only right side: `ops/frames.py --scenes canvas-doing` draws the target page's every element through the real room. The first frame found a class collision (`r-mk-band` is the dumbbell's, and Chrome applies its CSS height to an SVG rect) that five DOM tests could not.  — the right side drawn as ONE composition from
+- [x] **P6.b the renderer** **BUILT 2026-09-20, locally**, on top of P3.p's arrangement and P3.r's steps-only right side: `ops/frames.py --scenes canvas-doing` draws the target page's every element through the real room. The first frame found a class collision (`r-mk-band` is the dumbbell's, and Chrome applies its CSS height to an SVG rect) that five DOM tests could not. Second pass the same day, the owner of the first frames: "it's the same" — every block still said its figure three times (measure line under the number, delta pill, one-row dumbbell), and 34px gaps made steps into tiles. Now a figure is said ONCE: the measure only where no head names the block, the dumbbell only where the row carries a before with no change, or a noise floor; gaps 34→22 (`verification/frames/canvas3/`).  — the right side drawn as ONE composition from
       P6.a's vocabulary, not a list of blocks; sizes vary with `weight`; the
       arrangement (P3.p) is how the elements sit. Done when v2's data,
       composed in the vocabulary, renders within measure of v2 in

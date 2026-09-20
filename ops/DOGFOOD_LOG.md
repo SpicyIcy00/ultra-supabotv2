@@ -2961,3 +2961,15 @@ screen, because the board's fallback only fires when NOTHING composed.
 Four cases in `tests/test_interim_prose_contract.py` hold it, including the
 exact shape reported. **Committed, not deployed** — it keeps happening on the
 live build until Railway redeploys.
+
+### 2026-09-20 — "are you sure? it's the same" (the canvas, second look)
+
+The owner, of `canvas-whatsdown` at 1440: *"are you sure? its the same."* He was right about
+the blocks, not the page: the arrangement was new, but every figure block still carried a
+tile's chrome — the measure under the number (already on the source line), the delta pill,
+and a one-row dumbbell saying the same two figures a third time — and 34px between steps.
+Fixed in the renderer: a figure says its number once (`marks.tsx`, `room.dom.test.tsx`
+"says a subject's movement once"), gaps 34→22, dumbbells capped at 600px. tsc clean,
+vitest 1121, pytest 2142. Frames: `verification/frames/canvas3/`. Still unverified live
+(P6.c): whether Bob composes an `arrangement` on a real turn.
+

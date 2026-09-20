@@ -416,7 +416,11 @@ const MIN_COLUMN_CHARS = 6;
 const COLUMN_PADDING_CHARS = 2;
 
 /** The artifact's gap between two figures in one column (`.bs-col` gap). */
-export const FIGURE_GAP = 34;
+// 34 → 22 (P6.b, 2026-09-20). With the prose off the right side and every
+// block a step, 34 between steps plus 34 inside each read as a tile's air;
+// the target page's steps sit closer than that. The room's rhythm, in
+// one place — the laid-out margins in room.css carry the same number.
+export const FIGURE_GAP = 22;
 
 /**
  * WHICH COLUMN EACH FIGURE GOES IN, in order.

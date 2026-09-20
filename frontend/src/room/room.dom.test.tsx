@@ -519,12 +519,31 @@ describe('a comparison is drawn as an instrument, not only a pill', () => {
   // encoding that needs a sentence to decode is the third of the owner's five
   // failures. Two dots and a line say it without the sentence. What is
   // asserted is the same: both figures are the tool's, on the same row.
-  it('puts a subject\'s value against its own baseline under the figure', () => {
+  //
+  // SINCE P6.b (2026-09-20) THE INSTRUMENT IS DRAWN ONCE. A row that carries
+  // its change already says the movement in the pill beside the number; the
+  // dumbbell under it said the same two figures again, and the owner: "it's
+  // the same". The dumbbell is drawn where it adds something the pill cannot
+  // draw — a before with no change on the row, or the noise floor below.
+  it('says a subject\'s movement once: the pill where the row carries its change', () => {
     const { container } = drawWith(object('subject', { subject: 'Rockwell' }));
+    expect(container.querySelector('.r-delta')).toBeTruthy();
+    expect(container.querySelector('.r-mk-dot--was')).toBeNull();
+    expect(container.textContent).not.toContain('the mark is the period before');
+  });
+
+  it('puts a subject\'s value against its own baseline under the figure when nothing else says it', () => {
+    const rows = (COMPARED_TURN.toolCalls[0].result as { rows: Record<string, unknown>[] }).rows
+      .map(({ change_pct: _p, direction: _d, ...rest }) => rest);
+    const turn = { ...COMPARED_TURN, toolCalls: [{ ...COMPARED_TURN.toolCalls[0], result: {
+      ...COMPARED_TURN.toolCalls[0].result, rows } }] } as unknown as AnswerTurn;
+    const { container } = render(
+      <Board answers={[turn]} board={[object('subject', { subject: 'Rockwell' })]} local={{}}
+             focused={null} selection={[]} live={false} retuned={{}} on={ACTIONS()} />,
+    );
     expect(container.querySelector('.r-mk-dot--was')).toBeTruthy();
     expect(container.querySelector('.r-mk-band')).toBeNull();
     expect(container.querySelector('.r-mk-fig small')?.textContent).toContain('179,000');
-    expect(container.textContent).not.toContain('the mark is the period before');
   });
 
   it('draws the noise floor when the row carries the definition it was judged by', () => {

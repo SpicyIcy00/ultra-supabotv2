@@ -719,7 +719,8 @@
    between — the owner, 2026-09-17: "some charts are too big that dont need
    to be it should know like how much size it needs not waste it". A figure
    that asked for the width (beside.needsWidth) still gets all of it. */
-.r-fig-body { padding-bottom: 34px; max-width: 760px; }
+/* 34 → 18 (P6.b): a step's air, not a tile's. FIGURE_GAP fell with it. */
+.r-fig-body { padding-bottom: 18px; max-width: 760px; }
 .r-fig[data-span="yes"] .r-fig-body { max-width: none; }
 /* HIS WORDS ON A CHART — including, on the chart the headline rests on, what no
    chart took (the owner, 2026-09-18: "that should be with those charts"). His
@@ -2162,9 +2163,9 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
    page came out different from the same page packed. A gap cannot vary by
    child, so the space is a margin on the child — the same two numbers. */
 .r-laid { display: flex; flex-direction: column; gap: 0; min-width: 0; }
-.r-laid > .r-fig, .r-board--laid > .r-fig { margin-bottom: 34px; }
+.r-laid > .r-fig, .r-board--laid > .r-fig { margin-bottom: 22px; }
 .r-laid > .r-para, .r-board--laid > .r-para { margin-bottom: 18px; }
-.r-laid > .r-laid, .r-board--laid > .r-laid { margin-bottom: 34px; }
+.r-laid > .r-laid, .r-board--laid > .r-laid { margin-bottom: 22px; }
 .r-laid > :last-child, .r-board--laid > :last-child { margin-bottom: 0; }
 /* Side by side, the space between columns is the room's own `--comp-gap`,
    which is what separates the packed board's two columns. */
@@ -2231,3 +2232,9 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 
 /* The zero line under a small multiple of change (P6.a). */
 .r-mk-zero { stroke: var(--edge-strong); stroke-width: 1; }
+
+/* A DUMBBELL TAKES THE WIDTH IT NEEDS (P6.b; the owner, 2026-09-17: "some
+   charts are too big that dont need to be"). Seven shops, two dots and a
+   figure each is a compact drawing; across 940px the dots sat a metre from
+   their names. The target page draws it at about this width. */
+.r-mk-dumbbells { max-width: 600px; }

@@ -97,8 +97,21 @@ function Figure(p: TileProps & { rows: Row[]; meta: Meta }) {
         </span>
         <Delta change={change} />
       </div>
-      {v && measureOf(meta, v.key) && <p className="r-mk-measure">{measureOf(meta, v.key)}</p>}
-      {hasBaseline([row]) && <Dumbbell rows={[row]} meta={meta} o={p.o} />}
+      {/* SAID ONCE (P6.b, the owner: "it's the same"). The measure under the
+          number repeated the source line, and the one-row dumbbell under it
+          repeated the delta pill beside it — three sayings of one figure,
+          which is the tile the page is trying not to be. The measure is drawn
+          only where nothing above names the block; the dumbbell only where
+          the row carries a before but no change to say it with — or a NOISE
+          FLOOR (`threshold_applied`), which is the one thing a pill cannot
+          draw and the reason the instrument exists (room.dom.test.tsx, "a
+          comparison is drawn as an instrument, not only a pill"). */}
+      {v && measureOf(meta, v.key) && !p.o.claim?.trim() && !p.o.question?.trim() && (
+        <p className="r-mk-measure">{measureOf(meta, v.key)}</p>
+      )}
+      {hasBaseline([row]) && (change.pct == null || row.threshold_applied != null) && (
+        <Dumbbell rows={[row]} meta={meta} o={p.o} />
+      )}
     </>
   );
 }
