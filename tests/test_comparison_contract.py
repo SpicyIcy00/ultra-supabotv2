@@ -495,3 +495,108 @@ def test_the_tool_merges_the_parent_under_the_child_and_binds_the_windows():
     assert "cdef = {**supported[parent], **cdef}" in src
     assert "_windows.same_elapsed(" in src and "_windows.shifted_back_by_days(" in src
     assert "manila_now" in src, "the elapsed rule binds timestamps, not dates"
+
+
+# ---------------------------------------------------------------------------
+# A TIME BUCKET BESIDE A COMPARISON (2026-09-20)
+# ---------------------------------------------------------------------------
+#
+# The owner, having watched a session refused mid-investigation: *"find out why
+# that tool didnt work and fix it."*
+#
+# THE REFUSAL WAS RIGHT AND ITS REASON WAS WRONG. It said a time bucket beside a
+# comparison means "each bucket against its own predecessor — a lag series". It
+# does not: `compare_to` runs the same query over two windows and matches rows
+# on the group key, and for a bucket that key was the DATE, which the two
+# windows never share. Every row would have come back `no_baseline`. The
+# refusal was covering a broken join and describing it as a design choice, and
+# it made "is OPUS declining, or is the week it is measured against unusual?"
+# unanswerable except by a subtraction in prose.
+#
+# Matched on the offset from each window's own start, the first day of one
+# window meets the first day of the other — over two calendar weeks, the same
+# weekday.
+
+def test_a_time_bucket_is_matched_on_its_offset_not_its_date():
+    cdef = req(DEFS, "comparisons.previous_period")
+    assert set(cdef["valid_time_buckets"]) == {"day", "week", "month"}
+    align = req(cdef, "time_bucket_alignment")
+    assert align["key"] == "offset_from_window_start"
+    assert align["requires_equal_length"] is True
+    # The row carries the baseline's own date: "7 Sep against 31 Aug" is the
+    # receipt, and an offset is a position nobody can look up.
+    assert align["carries_baseline_bucket"] is True
+
+
+def test_hour_is_still_not_comparable():
+    """
+    Thirty days grouped by hour is one set of twenty-four figures, not a
+    series — the bucket has no position in a window to align on. It is absent
+    from both lists, which is what keeps it refused.
+    """
+    cdef = req(DEFS, "comparisons.previous_period")
+    assert "hour" not in cdef["valid_time_buckets"]
+    assert "hour" not in cdef["valid_group_by"]
+
+
+def test_the_lag_series_is_still_refused_and_now_says_what_it_is_not():
+    """
+    Day N against day N-1 INSIDE one window is still not built. What changed is
+    that the definition no longer describes the aligned comparison as though it
+    were this one — the conflation is what hid a real capability.
+    """
+    lag = req(DEFS, "comparisons.not_supported.per_bucket_lag")
+    assert lag["supported"] is False
+    assert lag["not_the_same_as"] == "previous_period.valid_time_buckets"
+
+
+def test_the_offset_key_is_a_position_and_never_reaches_a_row():
+    """
+    `_offset` keys the match and is dropped: a row carries dates and figures,
+    never the bookkeeping that matched it.
+    """
+    from datetime import datetime
+    from tools import sales
+
+    cdef = req(DEFS, "comparisons.previous_period")
+    current = [{"day": "2026-09-07", "value": 10.0}, {"day": "2026-09-08", "value": 20.0}]
+    baseline = [{"day": "2026-08-31", "value": 40.0}, {"day": "2026-09-01", "value": 5.0}]
+    sales._offset_rows(current, "day", datetime(2026, 9, 7))
+    sales._offset_rows(baseline, "day", datetime(2026, 8, 31))
+    assert [r["_offset"] for r in current] == [0, 1]
+
+    out = sales._compare_rows(current, baseline, ["_offset"], ["day"], "PHP", cdef,
+                              bucket="day")
+    assert all("_offset" not in r for r in out)
+    # Monday met Monday, and each row says which day it was measured against.
+    assert [(r["day"], r["baseline_day"], r["change"]) for r in out] == [
+        ("2026-09-07", "2026-08-31", -30.0), ("2026-09-08", "2026-09-01", 15.0)]
+
+
+def test_the_offset_is_counted_in_buckets_not_in_days():
+    """
+    FOUND THE FIRST TIME THE FIXED TOOL WAS USED IN ANGER (2026-09-20), on
+    `last_30_days` grouped by week: 10 of 10 rows came back uncomparable — the
+    exact failure the fix existed to remove.
+
+    A bucket's date is truncated to its own boundary (a week to its Monday), so
+    the number of DAYS between that truncated date and an arbitrary window
+    start depends on where inside its bucket the window began. Two windows of
+    the same length starting on different weekdays then give different
+    day-offsets for the same position, and nothing matches. Counted in BUCKETS
+    it lines up, which is what the alignment always meant.
+    """
+    from datetime import date as D
+    from tools.sales import _bucket_index
+
+    # A window that starts mid-week, and the week bucket it starts inside.
+    assert _bucket_index("week", D(2026, 8, 17), D(2026, 8, 21)) == 0
+    assert _bucket_index("week", D(2026, 8, 24), D(2026, 8, 21)) == 1
+    # The baseline window starts on a different weekday, and its first bucket
+    # is still bucket zero — which is the whole point.
+    assert _bucket_index("week", D(2026, 7, 20), D(2026, 7, 22)) == 0
+    assert _bucket_index("week", D(2026, 7, 27), D(2026, 7, 22)) == 1
+
+    # Days are their own buckets, and months count in months.
+    assert _bucket_index("day", D(2026, 9, 8), D(2026, 9, 7)) == 1
+    assert _bucket_index("month", D(2026, 1, 1), D(2025, 11, 14)) == 2

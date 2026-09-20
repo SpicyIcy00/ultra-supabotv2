@@ -280,6 +280,53 @@ def _reconcile(cur, defs: dict, metric: str, filters: dict, where_sql: str,
     return recon
 
 
+def _bucket_index(bucket: str, when: date, start: date) -> Optional[int]:
+    """
+    How many BUCKETS `when` sits after the bucket the window starts in.
+
+    IN BUCKETS, NOT DAYS, and that distinction is the whole of it. A bucket's
+    date is truncated to its own boundary — a week to its Monday, a month to
+    its first — so the number of DAYS between a truncated bucket and an
+    arbitrary window start depends on where inside its bucket the window began.
+    Two windows of the same length that start on different weekdays then
+    produce different day-offsets for the same position, and nothing matches.
+
+    Found the first time the fixed tool was used in anger, on `last_30_days`
+    grouped by week: 10 of 10 rows came back uncomparable, which is the exact
+    failure the fix existed to remove.
+    """
+    if bucket == "day":
+        return (when - start).days
+    if bucket == "week":
+        # Both truncated to their own Monday, then counted in weeks.
+        return ((when - timedelta(days=when.weekday()))
+                - (start - timedelta(days=start.weekday()))).days // 7
+    if bucket == "month":
+        return (when.year - start.year) * 12 + (when.month - start.month)
+    return None
+
+
+def _offset_rows(rows: list[dict], bucket: str, window_start) -> None:
+    """
+    Stamp each row with its bucket's offset from its own window's start, as the
+    key the two windows are matched on (comparisons.previous_period.time_bucket_alignment).
+
+    Pure bookkeeping: `_offset` is a POSITION, never a figure — nothing is
+    derived from it and it is dropped before the rows are returned. A row whose
+    bucket did not parse simply gets none and falls through as unmatched, which
+    is what an unmatched bucket is.
+    """
+    start = window_start.date() if hasattr(window_start, "date") else window_start
+    for r in rows:
+        got = r.get(bucket)
+        if isinstance(got, str):
+            try:
+                got = date.fromisoformat(got)
+            except ValueError:
+                got = None
+        r["_offset"] = _bucket_index(bucket, got, start) if isinstance(got, date) else None
+
+
 def _compare_row(current: Optional[dict], baseline: Optional[dict],
                  label_fields: Sequence[str], unit: str, cdef: dict) -> dict:
     """
@@ -334,7 +381,7 @@ def _compare_row(current: Optional[dict], baseline: Optional[dict],
 
 def _compare_rows(current: list[dict], baseline: list[dict], key_fields: Sequence[str],
                   label_fields: Sequence[str], unit: str, cdef: dict,
-                  ranked: bool = False) -> list[dict]:
+                  ranked: bool = False, bucket: Optional[str] = None) -> list[dict]:
     """
     Current rows matched to baseline rows on the group key, in the current
     result's order; subjects that exist only in the baseline follow, so a
@@ -352,15 +399,27 @@ def _compare_rows(current: list[dict], baseline: list[dict], key_fields: Sequenc
     by_key = {key(b): b for b in baseline}
     seen: set[tuple] = set()
     out: list[dict] = []
+
+    def made(c: Optional[dict], b: Optional[dict]) -> dict:
+        row = _compare_row(c, b, label_fields, unit, cdef)
+        # WHICH BUCKET IT WAS MEASURED AGAINST, by its own date. A row saying
+        # "Monday 7 Sep, down against 31 Aug" can be checked; one saying only
+        # "down" cannot, and the offset that matched them is a position, not a
+        # date anybody can look up (comparisons.previous_period.time_bucket_alignment).
+        if bucket is not None:
+            row[f"baseline_{bucket}"] = (b or {}).get(bucket)
+        row.pop("_offset", None)
+        return row
+
     for c in current:
         k = key(c)
         seen.add(k)
-        out.append(_compare_row(c, by_key.get(k), label_fields, unit, cdef))
+        out.append(made(c, by_key.get(k)))
     if not ranked:
         for b in baseline:
             if key(b) not in seen:
                 seen.add(key(b))
-                out.append(_compare_row(None, b, label_fields, unit, cdef))
+                out.append(made(None, b))
     return out
 
 
@@ -874,16 +933,38 @@ def get_sales(
     group_by = list(group_by)
 
     if cdef is not None:
+        # A SUBJECT IS MATCHED ON ITS KEY; A TIME BUCKET ON ITS OFFSET (2026-09-20).
+        #
+        # Until today every time bucket was refused here, with the reason "each
+        # bucket against its own predecessor is a lag series". That is not what
+        # would have happened: `_compare_rows` matches the two windows on the
+        # GROUP KEY, and for a bucket that key is the date — which the two
+        # windows never share, so every row would have come back no_baseline.
+        # The refusal was covering a broken join and calling it a decision.
+        # Matched on the offset from each window's own start, the first day of
+        # one window meets the first day of the other, which over two calendar
+        # weeks is Monday against Monday.
         allowed_with_comparison = set(_req(cdef, "valid_group_by"))
-        lagged = [g for g in group_by if g not in allowed_with_comparison]
-        if lagged:
+        aligned_buckets = set(cdef.get("valid_time_buckets") or [])
+        unmatched = [g for g in group_by
+                     if g not in allowed_with_comparison and g not in aligned_buckets]
+        if unmatched:
             raise ValueError(
                 f"compare_to={compare_to!r} cannot be grouped by "
-                f"{', '.join(lagged)}: each bucket against its own predecessor "
-                f"is a lag series, which is not built (metrics.yaml "
-                f"comparisons.not_supported.per_bucket_lag). Group by "
-                f"{', '.join(sorted(allowed_with_comparison))} or by nothing, "
-                f"or drop compare_to and read the series as a chart."
+                f"{', '.join(unmatched)}: there is nothing to match the two "
+                f"windows on — a subject is matched on its key and a time "
+                f"bucket on its offset from its window's start, and this is "
+                f"neither (metrics.yaml comparisons.previous_period.valid_group_by and "
+                f".valid_time_buckets). Group by "
+                f"{', '.join(sorted(allowed_with_comparison | aligned_buckets))} "
+                f"or by nothing, or drop compare_to and read the series as a chart."
+            )
+        aligned_on = [g for g in group_by if g in aligned_buckets]
+        if len(aligned_on) > 1:
+            raise ValueError(
+                f"compare_to={compare_to!r} takes at most one time bucket; "
+                f"{', '.join(aligned_on)} were given, and two offsets cannot "
+                f"both key the match."
             )
 
     valid = _req(mdef, "valid_group_by")
@@ -1521,13 +1602,39 @@ def get_sales(
     if cdef is not None:
         key_fields = [alias for alias, _ in select_terms]
         label_fields = key_fields + (["store"] if "store_id" in key_fields else [])
+        # A TIME BUCKET IS MATCHED ON ITS OFFSET, NOT ITS DATE (2026-09-20,
+        # comparisons.previous_period.time_bucket_alignment). The two windows hold
+        # different dates by construction, so the date cannot be the key; the
+        # bucket's position in its own window can, and over two calendar weeks
+        # that is the same weekday. Computed here rather than in SQL because it
+        # is a KEY and not a figure — no value is derived from it, and the
+        # window starts are already known.
+        aligned = next((g for g in group_by
+                        if g in set(cdef.get("valid_time_buckets") or [])), None)
+        if aligned is not None:
+            align = _req(cdef, "time_bucket_alignment")
+            c_from, c_to = win_params["win_start"], win_params["win_end"]
+            b_from, b_to = base_win["win_start"], base_win["win_end"]
+            if align.get("requires_equal_length", True) and (c_to - c_from) != (b_to - b_from):
+                # A REAL REFUSAL, with a reason that is true: offsets line up
+                # only when the windows hold the same number of days.
+                raise ValueError(
+                    f"compare_to={compare_to!r} grouped by {aligned} needs two "
+                    f"windows of the same length — the buckets are matched on "
+                    f"their offset from each window's start and these windows "
+                    f"differ, so nothing lines up (metrics.yaml comparisons."
+                    f"retail.time_bucket_alignment)."
+                )
+            _offset_rows(rows, aligned, c_from)
+            _offset_rows(baseline_rows, aligned, b_from)
+            key_fields = [("_offset" if k == aligned else k) for k in key_fields]
         # Under a VALUE ranking top_n already cut the current period in SQL,
         # so a subject absent from it was cut by the rank (ranked=True). Under
         # a CHANGE ranking both windows are whole, every subject is matched,
         # and the cut happens after — in _rank_compared, below.
         compared = _compare_rows(rows, baseline_rows, key_fields, label_fields,
                                  _req(mdef, "unit"), cdef,
-                                 ranked=(sql_top_n is not None))
+                                 ranked=(sql_top_n is not None), bucket=aligned)
         statuses: dict[str, int] = {}
         for r in compared:
             statuses[r["baseline_status"]] = statuses.get(r["baseline_status"], 0) + 1

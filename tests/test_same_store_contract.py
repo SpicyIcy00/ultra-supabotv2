@@ -109,7 +109,20 @@ def test_a_window_still_in_progress_is_refused_before_any_connection():
 
 
 def test_it_is_never_grouped_by_time():
-    with pytest.raises(ValueError, match="lag series"):
+    """
+    STILL REFUSED, AND THE ASSERTION IS THE BEHAVIOUR RATHER THAN THE WORDING
+    (2026-09-20). `previous_period` gained aligned time buckets — a bucket
+    matched to the bucket at the same offset in the baseline window — and this
+    mode deliberately does NOT inherit them: a leap February against a common
+    one is 29 buckets against 28, and this mode also carries the same-store
+    rule, whose interaction with a per-bucket match nobody has worked out.
+
+    The old assertion pinned the phrase "lag series", which was the reason the
+    refusal USED to give and which was wrong (it described day-against-its-own-
+    predecessor, not what would have happened). Pinning it would have failed
+    the moment the reason was corrected, which is what wording assertions do.
+    """
+    with pytest.raises(ValueError, match="cannot be grouped by month"):
         sales.get_sales("month", ("2025-12-01", "2026-01-01"),
                         compare_to="same_period_last_year")
 
