@@ -1450,6 +1450,12 @@ def _board_addendum(defs: dict) -> str:
         # 2026-09-20: the right-hand side is his to lay out for the answer,
         # not a form to fill in. Said here because it arranges the blocks he
         # is composing at this exact moment.
+        # PLAIN WORDS (voice.plain, 2026-09-20). It rides here because the
+        # claim, the question, the thought and the `say` lines are all written
+        # at this moment, and because the prompt is at its budget.
+        + "SAY IT ONCE, PLAINLY: "
+        + " ".join(str(req(defs, "voice.plain.about")).split()) + " "
+        + "Those words are: " + ", ".join(str(w) for w in req(defs, "voice.plain.instrument_words")) + ". "
         + "AND LAY THE SPACE OUT YOURSELF, on `arrangement`: "
         + " ".join(str(req(defs, "composition.arrangement.about")).split()) + " "
         # THE PATH (voice.reading.path, 2026-09-19). The one thing about the

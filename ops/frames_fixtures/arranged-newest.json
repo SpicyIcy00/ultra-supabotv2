@@ -1652,30 +1652,30 @@
   "layout": "stack",
   "children": [
    {
-    "block": "stores-week"
-   },
-   {
-    "say": "Two of those three come apart differently, so they are taken apart separately."
+    "layout": "panel",
+    "heading": "Yesterday, and the sharpest fall on the estate",
+    "children": [
+     {
+      "block": "fairview-thu"
+     },
+     {
+      "say": "One day is still one day — the closed week is underneath."
+     }
+    ]
    },
    {
     "layout": "row",
     "children": [
      {
-      "block": "basket-split"
+      "block": "stores-week"
      },
      {
-      "block": "fallers"
+      "block": "basket-split"
      }
     ]
    },
    {
-    "layout": "panel",
-    "heading": "Newest, and only one day",
-    "children": [
-     {
-      "block": "fairview-thu"
-     }
-    ]
+    "block": "fallers"
    }
   ]
  }

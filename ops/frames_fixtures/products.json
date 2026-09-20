@@ -1,0 +1,1335 @@
+{
+ "why": "MY OWN READ, NOT BOB'S. Every figure comes from the vetted read tools run on 2026-09-20 as the read-only role; rows and meta are recorded whole and every mark binds to a field of them. The prose, the claims, the questions and the arrangement are the SESSION'S. NO MODEL TURN WAS SPENT AND BOB DID NOT WRITE THIS.",
+ "question": "how are our products?",
+ "answer": "The range is **splitting, not softening.**\n\nThree lines did not slow down, they stopped: thai sweet and spicy squid, the\nsugarcane rice cracker, ezo squid. Each gave back nearly everything it earned.\nThat deep on a named line is an empty shelf or a delisting, not taste.\n\nFour others grew hard at the same time - kiamoy strips, mango, winter plum\nsingapore, the crab fish snack. So a category that looks a bit soft is two\nopposite things averaged together.\n\nAji Mix on its own is bigger than every category except the one it sits in, and\nit barely moved. Its health is not the range's health.\n\nHalf the catalogue sold nothing at all. Nearly all of that is the per gram\nlines - which is also the only part of the range that grew. A long tail, not a\ndead one.\n\nShall I pull the stock history on those three, so we know whether they ran out\nor were dropped?",
+ "at": "2026-09-20T09:35:00+00:00",
+ "blocks": [
+  {
+   "op": "put",
+   "key": "fallers",
+   "seq": 1,
+   "kind": "contributors",
+   "weight": "lead",
+   "question": "Did they slow, or stop?",
+   "claim": "Three gave back nearly everything they earned",
+   "thought": "That deep on one line is a shelf or a delisting. I cannot tell which.",
+   "emphasise": [
+    "Aji Thai sweet and spicy squid",
+    "Rice cracker with sugarcane syrup"
+   ]
+  },
+  {
+   "op": "put",
+   "key": "gainers",
+   "seq": 2,
+   "kind": "contributors",
+   "weight": "supporting",
+   "question": "Is anything going the other way?",
+   "claim": "Four grew hard at the same time",
+   "emphasise": [
+    "Aji Kiamoy Strips",
+    "Aji Mango"
+   ]
+  },
+  {
+   "op": "put",
+   "key": "cats",
+   "seq": 0,
+   "kind": "dumbbell",
+   "weight": "supporting",
+   "question": "What about by category?",
+   "claim": "All a bit soft except the long tail",
+   "thought": "Per gram is the only one up, and it is where most of what never sold sits.",
+   "emphasise": [
+    "per gram",
+    "ccp"
+   ]
+  },
+  {
+   "op": "put",
+   "key": "top",
+   "seq": 3,
+   "kind": "ranked",
+   "weight": "supporting",
+   "question": "How much rides on one line?",
+   "claim": "Aji Mix is bigger than every category but its own",
+   "thought": "And it barely moved.",
+   "emphasise": [
+    "Aji Mix"
+   ]
+  },
+  {
+   "op": "put",
+   "key": "dead",
+   "seq": 4,
+   "kind": "table",
+   "weight": "quiet",
+   "question": "What are we holding and not selling?",
+   "claim": "Half the catalogue sold nothing",
+   "thought": "Nearly all of it single-gram lines."
+  }
+ ],
+ "default_blocks": [
+  {
+   "op": "put",
+   "key": "read-0",
+   "seq": 0,
+   "kind": "table",
+   "weight": "quiet",
+   "default": true
+  },
+  {
+   "op": "put",
+   "key": "read-1",
+   "seq": 1,
+   "kind": "table",
+   "weight": "quiet",
+   "default": true
+  },
+  {
+   "op": "put",
+   "key": "read-2",
+   "seq": 2,
+   "kind": "table",
+   "weight": "quiet",
+   "default": true
+  },
+  {
+   "op": "put",
+   "key": "read-3",
+   "seq": 3,
+   "kind": "table",
+   "weight": "quiet",
+   "default": true
+  },
+  {
+   "op": "put",
+   "key": "read-4",
+   "seq": 4,
+   "kind": "table",
+   "weight": "quiet",
+   "default": true
+  }
+ ],
+ "arrangement": {
+  "layout": "stack",
+  "children": [
+   {
+    "layout": "row",
+    "children": [
+     {
+      "block": "fallers"
+     },
+     {
+      "block": "gainers"
+     }
+    ]
+   },
+   {
+    "say": "Averaged together these two disappear. Read side by side they are the whole story."
+   },
+   {
+    "layout": "row",
+    "children": [
+     {
+      "block": "cats"
+     },
+     {
+      "block": "top"
+     }
+    ]
+   },
+   {
+    "layout": "panel",
+    "heading": "And what is sitting on the shelf",
+    "children": [
+     {
+      "block": "dead"
+     }
+    ]
+   }
+  ]
+ },
+ "reading": {
+  "claim": "splitting, not softening",
+  "caveat": "248 of 713 lines have nothing to compare against, so the list of fallers is shorter than the truth. Nothing sold means nothing sold in these 30 days.",
+  "next": "Shall I pull the stock history on those three, so we know whether they ran out or were dropped?",
+  "asks": [
+   "Were the squid lines delisted or out of stock?",
+   "What is driving kiamoy strips?",
+   "Which per gram lines have never sold?"
+  ]
+ },
+ "calls": [
+  {
+   "seq": 0,
+   "tool": "get_sales",
+   "arguments": {
+    "group_by": "category",
+    "date_range": "last_30_days",
+    "metric": "product_revenue",
+    "compare_to": "previous_period"
+   },
+   "result": {
+    "rows": [
+     {
+      "category": "tradsnax",
+      "value": 3042537.8,
+      "baseline": 3281306.4,
+      "change": -238768.6,
+      "change_pct": -7.3,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "category": "aji mix",
+      "value": 1868638.08,
+      "baseline": 1958095.26,
+      "change": -89457.18,
+      "change_pct": -4.6,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "category": "indi",
+      "value": 911494.69,
+      "baseline": 1096077.5,
+      "change": -184582.81,
+      "change_pct": -16.8,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "category": "toys",
+      "value": 527478.47,
+      "baseline": 560569.5,
+      "change": -33091.03,
+      "change_pct": -5.9,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "category": "ccp",
+      "value": 504774.01,
+      "baseline": 740607.5,
+      "change": -235833.49,
+      "change_pct": -31.8,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "category": "per gram",
+      "value": 221168.48,
+      "baseline": 183398.91,
+      "change": 37769.57,
+      "change_pct": 20.6,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "category": "oceana",
+      "value": 128126.0,
+      "baseline": 136988.0,
+      "change": -8862.0,
+      "change_pct": -6.5,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "category": "seasonal",
+      "value": 44118.0,
+      "baseline": 47979.0,
+      "change": -3861.0,
+      "change_pct": -8.0,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "category": "choco",
+      "value": 24658.0,
+      "baseline": 35204.0,
+      "change": -10546.0,
+      "change_pct": -30.0,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "category": "bev",
+      "value": 4887.0,
+      "baseline": 19143.0,
+      "change": -14256.0,
+      "change_pct": -74.5,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "category": "Uncategorized",
+      "value": 3811.5,
+      "baseline": 973.0,
+      "change": 2838.5,
+      "change_pct": 291.7,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "category": "Store supplies",
+      "value": 0.0,
+      "baseline": 0.0,
+      "change": 0.0,
+      "change_pct": null,
+      "direction": "flat",
+      "unit": "PHP",
+      "baseline_status": "zero_baseline"
+     }
+    ],
+    "meta": {
+     "source_table": "new_transaction_items + new_transactions + products",
+     "metric": "product_revenue",
+     "metric_sql": "SUM(ti.item_total)",
+     "metric_unit": "PHP",
+     "metric_grain": "transaction_item",
+     "metric_kind": "base",
+     "metric_label": "Product revenue",
+     "metric_domain": "retail_sales",
+     "valid_group_by": [
+      "store",
+      "hour",
+      "day",
+      "week",
+      "month",
+      "product",
+      "category"
+     ],
+     "drivers": [],
+     "top_n": null,
+     "group_by": [
+      "category"
+     ],
+     "window": {
+      "kind": "preset",
+      "name": "last_30_days",
+      "includes_partial_day": false,
+      "start": "2026-08-21",
+      "end": "2026-09-20",
+      "convention": "half-open [start, end)",
+      "resolved_against": "2026-09-20"
+     },
+     "filters_applied": [
+      "t.is_cancelled = false   # metrics.yaml: filters.cancelled",
+      "t.transaction_type = 'Sale'   # metrics.yaml: filters.returns",
+      "t.store_id IN (7: Rockwell, Fairview, Greenhills, North Edsa, Magnolia, OPUS, Shangri-La)   # metrics.yaml: stores.active_retail",
+      "excluded: AJI BARN, AJI PINA, AJI MACOPA   # metrics.yaml: filters.excluded_from_sales.excluded_store_ids",
+      "transaction_time within preset 'last_30_days' (Asia/Manila, half-open; includes_partial_day=False)   # metrics.yaml: sales_day.presets.last_30_days",
+      "baseline: transaction_time >= 2026-07-22 AND < 2026-08-21 (Asia/Manila, half-open; previous_period, same metric, grouping, stores and guards)   # metrics.yaml: comparisons.previous_period"
+     ],
+     "snapshot_timestamp": "2026-09-20T09:11:49.749960+00:00",
+     "definitions_version": 1,
+     "definitions_path": "C:\\ultra-supabotv2-main\\definitions\\metrics.yaml",
+     "row_count": 12,
+     "full_row_count": 12,
+     "full_row_count_note": "Size of the complete result set before top_n or the row cap. When it exceeds row_count, the rows shown are the top slice by the ordering in meta.ordering — never a sample, and never something to total.",
+     "ordering": "value DESC",
+     "truncated": false,
+     "row_limit": 1000,
+     "reconciliation": {
+      "applicable": true,
+      "method": "compute both measures over the same window and filters; compare directly",
+      "net_sales": 7281692.03,
+      "product_revenue": 7281692.03,
+      "gap": 0.0,
+      "gap_pct": 0.0,
+      "discount_total": 0.0,
+      "holds": true,
+      "explained_by_discount": null
+     },
+     "gap_filled": false,
+     "gap_filled_note": "Buckets with no transactions are absent, not zero. No row is synthesised for an empty day — that would fabricate data.",
+     "comparison": {
+      "kind": "previous_period",
+      "display_name": "vs previous period",
+      "method": "shift_back_by_relative_length",
+      "current": {
+       "start": "2026-08-21",
+       "end": "2026-09-20"
+      },
+      "baseline": {
+       "kind": "preset",
+       "name": "last_30_days",
+       "periods_back": 1,
+       "start": "2026-07-22",
+       "end": "2026-08-21",
+       "convention": "half-open [start, end)"
+      },
+      "same_population": true,
+      "change_pct_formula": "change / abs(baseline) * 100",
+      "baseline_statuses": {
+       "ok": 11,
+       "zero_baseline": 1
+      },
+      "row_count_baseline": 12,
+      "rank_by": "value",
+      "ranked_by_current": false,
+      "ranking_note": null,
+      "source": "definitions/metrics.yaml: comparisons.previous_period"
+     },
+     "baseline_reconciliation": {
+      "applicable": true,
+      "method": "compute both measures over the same window and filters; compare directly",
+      "net_sales": 8060342.07,
+      "product_revenue": 8060342.07,
+      "gap": 0.0,
+      "gap_pct": 0.0,
+      "discount_total": 0.0,
+      "holds": true,
+      "explained_by_discount": null
+     },
+     "data_quality": {
+      "orphan_line_items": 0,
+      "orphan_line_items_note": "Line items whose product_id has no row in `products`. They are RETAINED via LEFT JOIN — an INNER JOIN would drop them and understate every total. Database-wide there are 4 such rows out of 891,714.",
+      "uncategorized_products": 1,
+      "uncategorized_line_items": 71,
+      "uncategorized_note": "Products with a NULL or blank category, grouped under 'Uncategorized' rather than dropped. Database-wide, 83 of 3,678 products have no category."
+     },
+     "notice": {
+      "kind": "comparison_incomplete",
+      "message": "1 of 12 compared row(s) could not be compared against the 2026-07-22 to 2026-08-21 baseline: 1 zero_baseline (the baseline is exactly zero, so a percentage is undefined): Store supplies.",
+      "guidance": "Say which, and why, rather than reporting the comparison as whole; change_pct is null on those rows and must not be filled in.",
+      "source": "definitions/metrics.yaml: comparisons.previous_period.baseline_statuses"
+     }
+    }
+   }
+  },
+  {
+   "seq": 1,
+   "tool": "get_sales",
+   "arguments": {
+    "group_by": "product",
+    "date_range": "last_30_days",
+    "metric": "product_revenue",
+    "compare_to": "previous_period",
+    "rank_by": "biggest_drop",
+    "top_n": 8
+   },
+   "result": {
+    "rows": [
+     {
+      "product_id": "663c7869391c7c00079595a8",
+      "sku": "SH1",
+      "product": "Aji Mix",
+      "value": 1821612.0,
+      "baseline": 1921872.0,
+      "change": -100260.0,
+      "change_pct": -5.2,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "6a4619f7ae9ce00007d677ab",
+      "sku": "TRS02",
+      "product": "Aji Thai sweet and spicy squid",
+      "value": 3493.0,
+      "baseline": 102794.0,
+      "change": -99301.0,
+      "change_pct": -96.6,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "69329c18fc45a500079fd0af",
+      "sku": "TH26",
+      "product": "Rice cracker with sugarcane syrup",
+      "value": 6965.0,
+      "baseline": 90545.0,
+      "change": -83580.0,
+      "change_pct": -92.3,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "6666c82fc7a0920007c45a5b",
+      "sku": "AJI1014",
+      "product": "aji champoy honey bayberry",
+      "value": 131141.0,
+      "baseline": 205766.0,
+      "change": -74625.0,
+      "change_pct": -36.3,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "663c78bb391c7c000795d696",
+      "sku": "SH1188",
+      "product": "Aji Squid Hokkaido Slices",
+      "value": 17371.0,
+      "baseline": 66489.0,
+      "change": -49118.0,
+      "change_pct": -73.9,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "672d6e56d946c90008213fda",
+      "sku": "judyA9",
+      "product": "aji plum winter curl",
+      "value": 14726.0,
+      "baseline": 59899.0,
+      "change": -45173.0,
+      "change_pct": -75.4,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "668f3e7a746f16000763e67a",
+      "sku": "ZF1005",
+      "product": "Aji Ezo Squid",
+      "value": 11063.0,
+      "baseline": 50531.0,
+      "change": -39468.0,
+      "change_pct": -78.1,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "663c78ae391c7c000795ccda",
+      "sku": "SH1010",
+      "product": "Dahfa Fish Fillet 120G",
+      "value": 8778.0,
+      "baseline": 41097.0,
+      "change": -32319.0,
+      "change_pct": -78.6,
+      "direction": "down",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     }
+    ],
+    "meta": {
+     "source_table": "new_transaction_items + new_transactions + products",
+     "metric": "product_revenue",
+     "metric_sql": "SUM(ti.item_total)",
+     "metric_unit": "PHP",
+     "metric_grain": "transaction_item",
+     "metric_kind": "base",
+     "metric_label": "Product revenue",
+     "metric_domain": "retail_sales",
+     "valid_group_by": [
+      "store",
+      "hour",
+      "day",
+      "week",
+      "month",
+      "product",
+      "category"
+     ],
+     "drivers": [],
+     "top_n": 8,
+     "group_by": [
+      "product"
+     ],
+     "window": {
+      "kind": "preset",
+      "name": "last_30_days",
+      "includes_partial_day": false,
+      "start": "2026-08-21",
+      "end": "2026-09-20",
+      "convention": "half-open [start, end)",
+      "resolved_against": "2026-09-20"
+     },
+     "filters_applied": [
+      "t.is_cancelled = false   # metrics.yaml: filters.cancelled",
+      "t.transaction_type = 'Sale'   # metrics.yaml: filters.returns",
+      "t.store_id IN (7: Rockwell, Fairview, Greenhills, North Edsa, Magnolia, OPUS, Shangri-La)   # metrics.yaml: stores.active_retail",
+      "excluded: AJI BARN, AJI PINA, AJI MACOPA   # metrics.yaml: filters.excluded_from_sales.excluded_store_ids",
+      "transaction_time within preset 'last_30_days' (Asia/Manila, half-open; includes_partial_day=False)   # metrics.yaml: sales_day.presets.last_30_days",
+      "baseline: transaction_time >= 2026-07-22 AND < 2026-08-21 (Asia/Manila, half-open; previous_period, same metric, grouping, stores and guards)   # metrics.yaml: comparisons.previous_period"
+     ],
+     "snapshot_timestamp": "2026-09-20T09:11:51.008763+00:00",
+     "definitions_version": 1,
+     "definitions_path": "C:\\ultra-supabotv2-main\\definitions\\metrics.yaml",
+     "row_count": 8,
+     "full_row_count": 713,
+     "full_row_count_note": "Size of the complete result set before top_n or the row cap. When it exceeds row_count, the rows shown are the top slice by the ordering in meta.ordering — never a sample, and never something to total.",
+     "ordering": "change ASC — most negative first; ties by baseline DESC; nulls never ranked",
+     "truncated": false,
+     "row_limit": 8,
+     "reconciliation": {
+      "applicable": true,
+      "method": "compute both measures over the same window and filters; compare directly",
+      "net_sales": 7281692.03,
+      "product_revenue": 7281692.03,
+      "gap": 0.0,
+      "gap_pct": 0.0,
+      "discount_total": 0.0,
+      "holds": true,
+      "explained_by_discount": null
+     },
+     "gap_filled": false,
+     "gap_filled_note": "Buckets with no transactions are absent, not zero. No row is synthesised for an empty day — that would fabricate data.",
+     "comparison": {
+      "kind": "previous_period",
+      "display_name": "vs previous period",
+      "method": "shift_back_by_relative_length",
+      "current": {
+       "start": "2026-08-21",
+       "end": "2026-09-20"
+      },
+      "baseline": {
+       "kind": "preset",
+       "name": "last_30_days",
+       "periods_back": 1,
+       "start": "2026-07-22",
+       "end": "2026-08-21",
+       "convention": "half-open [start, end)"
+      },
+      "same_population": true,
+      "change_pct_formula": "change / abs(baseline) * 100",
+      "baseline_statuses": {
+       "ok": 465,
+       "no_baseline": 112,
+       "zero_baseline": 14,
+       "no_current": 122
+      },
+      "row_count_baseline": 601,
+      "rank_by": "biggest_drop",
+      "ranked_by_current": false,
+      "ranking_note": "rank_by='biggest_drop': every subject in both windows was matched, then rows with a numeric change were ranked by change and cut to top_n=8. Subjects with no numeric change are in not_ranked, never in the ranking.",
+      "source": "definitions/metrics.yaml: comparisons.previous_period",
+      "not_ranked": {
+       "counts": {
+        "no_baseline": 112,
+        "no_current": 122
+       },
+       "note": "Subjects with no numeric change are not ranked by change. no_current traded in the baseline and not in this window (named largest baseline first); no_baseline is new this window (named largest value first). Their change_pct is null and must not be filled in.",
+       "no_current": [
+        {
+         "subject": "Miao freeze dried straberries (MIO01)",
+         "baseline": 36815.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Aji Gummies 199 (SH1125)",
+         "baseline": 15522.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Old street gate roasted peanuts (Nuts10)",
+         "baseline": 14732.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Sanrio chupa chup popups (SANR01)",
+         "baseline": 14053.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Aji JP candy Pokemon 199 (Tky108)",
+         "baseline": 7164.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Want2 Senbei Oblong Family 520G (SH471)",
+         "baseline": 5988.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Denroku mix seafood (TKY517)",
+         "baseline": 4389.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Doraemon Choco Biscuit (SH587)",
+         "baseline": 3874.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Freeze dried durian monthong 210g (TH30)",
+         "baseline": 3596.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "TOp savor lucky cat biscuit (BEE309)",
+         "baseline": 3225.0,
+         "unit": "PHP"
+        }
+       ],
+       "no_baseline": [
+        {
+         "subject": "aji kiamoy cubes (JUD2210)",
+         "value": 59501.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Aji Freeze Dried XL Strawberry (FZ11)",
+         "value": 32591.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Sari Kesari BALI Indonesian peanuts salted garlic (INDO-2)",
+         "value": 26013.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Aji Kiamoy king seedless M (aji702)",
+         "value": 19435.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Sari Kesari BALI Indonesian peanuts spicy (INDO01)",
+         "value": 16445.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Cai Da Bai Hokkaido Raw Milk Biscuits (Pinyao19)",
+         "value": 11622.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "DRM grape jelly balloon (DRM04)",
+         "value": 10465.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Cai Da Bai Hokkaido Raw Chocalate Biscuits (Pinyao20)",
+         "value": 10132.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Aji Bazooka Joe 70g (Gum12)",
+         "value": 8358.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Cai Da Bai Hokkaido Raw Matcha Biscuits (Pinyao18)",
+         "value": 8344.0,
+         "unit": "PHP"
+        }
+       ],
+       "ranked_subjects": 479
+      }
+     },
+     "baseline_reconciliation": {
+      "applicable": true,
+      "method": "compute both measures over the same window and filters; compare directly",
+      "net_sales": 8060342.07,
+      "product_revenue": 8060342.07,
+      "gap": 0.0,
+      "gap_pct": 0.0,
+      "discount_total": 0.0,
+      "holds": true,
+      "explained_by_discount": null
+     },
+     "data_quality": {
+      "orphan_line_items": 0,
+      "orphan_line_items_note": "Line items whose product_id has no row in `products`. They are RETAINED via LEFT JOIN — an INNER JOIN would drop them and understate every total. Database-wide there are 4 such rows out of 891,714.",
+      "uncategorized_products": 1,
+      "uncategorized_line_items": 71,
+      "uncategorized_note": "Products with a NULL or blank category, grouped under 'Uncategorized' rather than dropped. Database-wide, 83 of 3,678 products have no category."
+     },
+     "notice": {
+      "kind": "comparison_incomplete",
+      "message": "248 of 713 compared row(s) could not be compared against the 2026-07-22 to 2026-08-21 baseline: 112 no_baseline (the baseline window returned no figure (NULL) — nothing to compare against): aji kiamoy cubes (JUD2210), Aji Freeze Dried XL Strawberry (FZ11), Sari Kesari BALI Indonesian peanuts salted garlic (INDO-2), Aji Kiamoy king seedless M (aji702), Sari Kesari BALI Indonesian peanuts spicy (INDO01) and 107 more; 14 zero_baseline (the baseline is exactly zero, so a percentage is undefined): Gummy free pack 500 (Free02), Cassava free bag 500 (FREE15), Baby E bag (bag03), Free mallows 500 (FREE345), Free BS Takoyaki 500 (FREEBS01) and 9 more; 122 no_current (the current window returned no figure; the baseline is reported alone): Miao freeze dried straberries (MIO01), Aji Gummies 199 (SH1125), Old street gate roasted peanuts (Nuts10), Sanrio chupa chup popups (SANR01), Aji JP candy Pokemon 199 (Tky108) and 117 more.",
+      "guidance": "Say which, and why, rather than reporting the comparison as whole; change_pct is null on those rows and must not be filled in.",
+      "source": "definitions/metrics.yaml: comparisons.previous_period.baseline_statuses"
+     }
+    }
+   }
+  },
+  {
+   "seq": 2,
+   "tool": "get_sales",
+   "arguments": {
+    "group_by": "product",
+    "date_range": "last_30_days",
+    "metric": "product_revenue",
+    "compare_to": "previous_period",
+    "rank_by": "biggest_gain",
+    "top_n": 6
+   },
+   "result": {
+    "rows": [
+     {
+      "product_id": "663c78b8391c7c000795d43c",
+      "sku": "SH1145",
+      "product": "Aji Kiamoy Strips",
+      "value": 330340.0,
+      "baseline": 255715.0,
+      "change": 74625.0,
+      "change_pct": 29.2,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "663c78b8391c7c000795d4ac",
+      "sku": "SH1153",
+      "product": "Aji Mango",
+      "value": 54924.0,
+      "baseline": 20298.0,
+      "change": 34626.0,
+      "change_pct": 170.6,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "672d6df707e6ee0007143001",
+      "sku": "judyA7",
+      "product": "aji plum winter singapore",
+      "value": 86167.0,
+      "baseline": 58705.0,
+      "change": 27462.0,
+      "change_pct": 46.8,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "663c78af391c7c000795cd04",
+      "sku": "SH1013",
+      "product": "Fish Snack Crab Flavor",
+      "value": 28059.0,
+      "baseline": 7164.0,
+      "change": 20895.0,
+      "change_pct": 291.7,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "663c7888391c7c000795ae80",
+      "sku": "SH455",
+      "product": "Tong Garden Salted Broad Beans 500G",
+      "value": 38423.0,
+      "baseline": 17964.0,
+      "change": 20459.0,
+      "change_pct": 113.9,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     },
+     {
+      "product_id": "66e3f2e5abd6be0007e7610e",
+      "sku": "MJ3",
+      "product": "Cow Label Beef Jerky Per Pc",
+      "value": 59885.0,
+      "baseline": 39759.0,
+      "change": 20126.0,
+      "change_pct": 50.6,
+      "direction": "up",
+      "unit": "PHP",
+      "baseline_status": "ok"
+     }
+    ],
+    "meta": {
+     "source_table": "new_transaction_items + new_transactions + products",
+     "metric": "product_revenue",
+     "metric_sql": "SUM(ti.item_total)",
+     "metric_unit": "PHP",
+     "metric_grain": "transaction_item",
+     "metric_kind": "base",
+     "metric_label": "Product revenue",
+     "metric_domain": "retail_sales",
+     "valid_group_by": [
+      "store",
+      "hour",
+      "day",
+      "week",
+      "month",
+      "product",
+      "category"
+     ],
+     "drivers": [],
+     "top_n": 6,
+     "group_by": [
+      "product"
+     ],
+     "window": {
+      "kind": "preset",
+      "name": "last_30_days",
+      "includes_partial_day": false,
+      "start": "2026-08-21",
+      "end": "2026-09-20",
+      "convention": "half-open [start, end)",
+      "resolved_against": "2026-09-20"
+     },
+     "filters_applied": [
+      "t.is_cancelled = false   # metrics.yaml: filters.cancelled",
+      "t.transaction_type = 'Sale'   # metrics.yaml: filters.returns",
+      "t.store_id IN (7: Rockwell, Fairview, Greenhills, North Edsa, Magnolia, OPUS, Shangri-La)   # metrics.yaml: stores.active_retail",
+      "excluded: AJI BARN, AJI PINA, AJI MACOPA   # metrics.yaml: filters.excluded_from_sales.excluded_store_ids",
+      "transaction_time within preset 'last_30_days' (Asia/Manila, half-open; includes_partial_day=False)   # metrics.yaml: sales_day.presets.last_30_days",
+      "baseline: transaction_time >= 2026-07-22 AND < 2026-08-21 (Asia/Manila, half-open; previous_period, same metric, grouping, stores and guards)   # metrics.yaml: comparisons.previous_period"
+     ],
+     "snapshot_timestamp": "2026-09-20T09:11:52.221302+00:00",
+     "definitions_version": 1,
+     "definitions_path": "C:\\ultra-supabotv2-main\\definitions\\metrics.yaml",
+     "row_count": 6,
+     "full_row_count": 713,
+     "full_row_count_note": "Size of the complete result set before top_n or the row cap. When it exceeds row_count, the rows shown are the top slice by the ordering in meta.ordering — never a sample, and never something to total.",
+     "ordering": "change DESC — most positive first; ties by value DESC; nulls never ranked",
+     "truncated": false,
+     "row_limit": 6,
+     "reconciliation": {
+      "applicable": true,
+      "method": "compute both measures over the same window and filters; compare directly",
+      "net_sales": 7281692.03,
+      "product_revenue": 7281692.03,
+      "gap": 0.0,
+      "gap_pct": 0.0,
+      "discount_total": 0.0,
+      "holds": true,
+      "explained_by_discount": null
+     },
+     "gap_filled": false,
+     "gap_filled_note": "Buckets with no transactions are absent, not zero. No row is synthesised for an empty day — that would fabricate data.",
+     "comparison": {
+      "kind": "previous_period",
+      "display_name": "vs previous period",
+      "method": "shift_back_by_relative_length",
+      "current": {
+       "start": "2026-08-21",
+       "end": "2026-09-20"
+      },
+      "baseline": {
+       "kind": "preset",
+       "name": "last_30_days",
+       "periods_back": 1,
+       "start": "2026-07-22",
+       "end": "2026-08-21",
+       "convention": "half-open [start, end)"
+      },
+      "same_population": true,
+      "change_pct_formula": "change / abs(baseline) * 100",
+      "baseline_statuses": {
+       "ok": 465,
+       "no_baseline": 112,
+       "zero_baseline": 14,
+       "no_current": 122
+      },
+      "row_count_baseline": 601,
+      "rank_by": "biggest_gain",
+      "ranked_by_current": false,
+      "ranking_note": "rank_by='biggest_gain': every subject in both windows was matched, then rows with a numeric change were ranked by change and cut to top_n=6. Subjects with no numeric change are in not_ranked, never in the ranking.",
+      "source": "definitions/metrics.yaml: comparisons.previous_period",
+      "not_ranked": {
+       "counts": {
+        "no_baseline": 112,
+        "no_current": 122
+       },
+       "note": "Subjects with no numeric change are not ranked by change. no_current traded in the baseline and not in this window (named largest baseline first); no_baseline is new this window (named largest value first). Their change_pct is null and must not be filled in.",
+       "no_current": [
+        {
+         "subject": "Miao freeze dried straberries (MIO01)",
+         "baseline": 36815.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Aji Gummies 199 (SH1125)",
+         "baseline": 15522.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Old street gate roasted peanuts (Nuts10)",
+         "baseline": 14732.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Sanrio chupa chup popups (SANR01)",
+         "baseline": 14053.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Aji JP candy Pokemon 199 (Tky108)",
+         "baseline": 7164.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Want2 Senbei Oblong Family 520G (SH471)",
+         "baseline": 5988.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Denroku mix seafood (TKY517)",
+         "baseline": 4389.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Doraemon Choco Biscuit (SH587)",
+         "baseline": 3874.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Freeze dried durian monthong 210g (TH30)",
+         "baseline": 3596.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "TOp savor lucky cat biscuit (BEE309)",
+         "baseline": 3225.0,
+         "unit": "PHP"
+        }
+       ],
+       "no_baseline": [
+        {
+         "subject": "aji kiamoy cubes (JUD2210)",
+         "value": 59501.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Aji Freeze Dried XL Strawberry (FZ11)",
+         "value": 32591.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Sari Kesari BALI Indonesian peanuts salted garlic (INDO-2)",
+         "value": 26013.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Aji Kiamoy king seedless M (aji702)",
+         "value": 19435.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Sari Kesari BALI Indonesian peanuts spicy (INDO01)",
+         "value": 16445.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Cai Da Bai Hokkaido Raw Milk Biscuits (Pinyao19)",
+         "value": 11622.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "DRM grape jelly balloon (DRM04)",
+         "value": 10465.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Cai Da Bai Hokkaido Raw Chocalate Biscuits (Pinyao20)",
+         "value": 10132.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Aji Bazooka Joe 70g (Gum12)",
+         "value": 8358.0,
+         "unit": "PHP"
+        },
+        {
+         "subject": "Cai Da Bai Hokkaido Raw Matcha Biscuits (Pinyao18)",
+         "value": 8344.0,
+         "unit": "PHP"
+        }
+       ],
+       "ranked_subjects": 479
+      }
+     },
+     "baseline_reconciliation": {
+      "applicable": true,
+      "method": "compute both measures over the same window and filters; compare directly",
+      "net_sales": 8060342.07,
+      "product_revenue": 8060342.07,
+      "gap": 0.0,
+      "gap_pct": 0.0,
+      "discount_total": 0.0,
+      "holds": true,
+      "explained_by_discount": null
+     },
+     "data_quality": {
+      "orphan_line_items": 0,
+      "orphan_line_items_note": "Line items whose product_id has no row in `products`. They are RETAINED via LEFT JOIN — an INNER JOIN would drop them and understate every total. Database-wide there are 4 such rows out of 891,714.",
+      "uncategorized_products": 1,
+      "uncategorized_line_items": 71,
+      "uncategorized_note": "Products with a NULL or blank category, grouped under 'Uncategorized' rather than dropped. Database-wide, 83 of 3,678 products have no category."
+     },
+     "notice": {
+      "kind": "comparison_incomplete",
+      "message": "248 of 713 compared row(s) could not be compared against the 2026-07-22 to 2026-08-21 baseline: 112 no_baseline (the baseline window returned no figure (NULL) — nothing to compare against): aji kiamoy cubes (JUD2210), Aji Freeze Dried XL Strawberry (FZ11), Sari Kesari BALI Indonesian peanuts salted garlic (INDO-2), Aji Kiamoy king seedless M (aji702), Sari Kesari BALI Indonesian peanuts spicy (INDO01) and 107 more; 14 zero_baseline (the baseline is exactly zero, so a percentage is undefined): Gummy free pack 500 (Free02), Cassava free bag 500 (FREE15), Baby E bag (bag03), Free mallows 500 (FREE345), Free BS Takoyaki 500 (FREEBS01) and 9 more; 122 no_current (the current window returned no figure; the baseline is reported alone): Miao freeze dried straberries (MIO01), Aji Gummies 199 (SH1125), Old street gate roasted peanuts (Nuts10), Sanrio chupa chup popups (SANR01), Aji JP candy Pokemon 199 (Tky108) and 117 more.",
+      "guidance": "Say which, and why, rather than reporting the comparison as whole; change_pct is null on those rows and must not be filled in.",
+      "source": "definitions/metrics.yaml: comparisons.previous_period.baseline_statuses"
+     }
+    }
+   }
+  },
+  {
+   "seq": 3,
+   "tool": "get_sales",
+   "arguments": {
+    "group_by": "product",
+    "date_range": "last_30_days",
+    "metric": "product_revenue",
+    "top_n": 8
+   },
+   "result": {
+    "rows": [
+     {
+      "product_id": "663c7869391c7c00079595a8",
+      "sku": "SH1",
+      "product": "Aji Mix",
+      "value": 1821612.0
+     },
+     {
+      "product_id": "663c78b8391c7c000795d43c",
+      "sku": "SH1145",
+      "product": "Aji Kiamoy Strips",
+      "value": 330340.0
+     },
+     {
+      "product_id": "663c78b8391c7c000795d458",
+      "sku": "SH1147",
+      "product": "Aji Kiamoy White",
+      "value": 136912.0
+     },
+     {
+      "product_id": "6666c82fc7a0920007c45a5b",
+      "sku": "AJI1014",
+      "product": "aji champoy honey bayberry",
+      "value": 131141.0
+     },
+     {
+      "product_id": "663c78b7391c7c000795d3cc",
+      "sku": "SH1137",
+      "product": "Aji Kiamoy Curl Sour",
+      "value": 120793.0
+     },
+     {
+      "product_id": "663c78b4391c7c000795d1d4",
+      "sku": "SH1101",
+      "product": "Aji Dikiam Sweet Taiwan",
+      "value": 104873.0
+     },
+     {
+      "product_id": "663c78b4391c7c000795d1e2",
+      "sku": "SH1102",
+      "product": "Aji Dilis",
+      "value": 99866.0
+     },
+     {
+      "product_id": "663c78b5391c7c000795d1f0",
+      "sku": "SH1103",
+      "product": "Aji Dilis Spicy",
+      "value": 97773.0
+     }
+    ],
+    "meta": {
+     "source_table": "new_transaction_items + new_transactions + products",
+     "metric": "product_revenue",
+     "metric_sql": "SUM(ti.item_total)",
+     "metric_unit": "PHP",
+     "metric_grain": "transaction_item",
+     "metric_kind": "base",
+     "metric_label": "Product revenue",
+     "metric_domain": "retail_sales",
+     "valid_group_by": [
+      "store",
+      "hour",
+      "day",
+      "week",
+      "month",
+      "product",
+      "category"
+     ],
+     "drivers": [],
+     "top_n": 8,
+     "group_by": [
+      "product"
+     ],
+     "window": {
+      "kind": "preset",
+      "name": "last_30_days",
+      "includes_partial_day": false,
+      "start": "2026-08-21",
+      "end": "2026-09-20",
+      "convention": "half-open [start, end)"
+     },
+     "filters_applied": [
+      "t.is_cancelled = false   # metrics.yaml: filters.cancelled",
+      "t.transaction_type = 'Sale'   # metrics.yaml: filters.returns",
+      "t.store_id IN (7: Rockwell, Fairview, Greenhills, North Edsa, Magnolia, OPUS, Shangri-La)   # metrics.yaml: stores.active_retail",
+      "excluded: AJI BARN, AJI PINA, AJI MACOPA   # metrics.yaml: filters.excluded_from_sales.excluded_store_ids",
+      "transaction_time within preset 'last_30_days' (Asia/Manila, half-open; includes_partial_day=False)   # metrics.yaml: sales_day.presets.last_30_days"
+     ],
+     "snapshot_timestamp": "2026-09-20T09:11:53.333345+00:00",
+     "definitions_version": 1,
+     "definitions_path": "C:\\ultra-supabotv2-main\\definitions\\metrics.yaml",
+     "row_count": 8,
+     "full_row_count": 591,
+     "full_row_count_note": "Size of the complete result set before top_n or the row cap. When it exceeds row_count, the rows shown are the top slice by the ordering in meta.ordering — never a sample, and never something to total.",
+     "ordering": "value DESC",
+     "truncated": false,
+     "row_limit": 8,
+     "reconciliation": {
+      "applicable": true,
+      "method": "compute both measures over the same window and filters; compare directly",
+      "net_sales": 7281692.03,
+      "product_revenue": 7281692.03,
+      "gap": 0.0,
+      "gap_pct": 0.0,
+      "discount_total": 0.0,
+      "holds": true,
+      "explained_by_discount": null
+     },
+     "gap_filled": false,
+     "gap_filled_note": "Buckets with no transactions are absent, not zero. No row is synthesised for an empty day — that would fabricate data.",
+     "data_quality": {
+      "orphan_line_items": 0,
+      "orphan_line_items_note": "Line items whose product_id has no row in `products`. They are RETAINED via LEFT JOIN — an INNER JOIN would drop them and understate every total. Database-wide there are 4 such rows out of 891,714.",
+      "uncategorized_products": 1,
+      "uncategorized_line_items": 71,
+      "uncategorized_note": "Products with a NULL or blank category, grouped under 'Uncategorized' rather than dropped. Database-wide, 83 of 3,678 products have no category."
+     }
+    }
+   }
+  },
+  {
+   "seq": 4,
+   "tool": "get_dead_stock",
+   "arguments": {
+    "window": "last_30_days",
+    "top_n": 8
+   },
+   "result": {
+    "rows": [
+     {
+      "store_id": "68c5bb269da1d500073690c2",
+      "product_id": "69253da6ef7a0e0007690ec8",
+      "sku": "RL01",
+      "product": "Royal lion peanuts",
+      "category": "per gram",
+      "quantity_on_hand": 75000,
+      "unit_price": 0.8929,
+      "store": "OPUS"
+     },
+     {
+      "store_id": "66cfff31aa7adf0007c9de41",
+      "product_id": "6972dfd62acef00007893ab5",
+      "sku": "pack05",
+      "product": "aji mix XL dragon plastic 1pc",
+      "category": "Store supplies",
+      "quantity_on_hand": 51500,
+      "unit_price": 0.0,
+      "store": "North Edsa"
+     },
+     {
+      "store_id": "68c5bb269da1d500073690c2",
+      "product_id": "688f9168b769f80007c6b10b",
+      "sku": "g152",
+      "product": "g152 freeze dried strawberry 1g",
+      "category": "per gram",
+      "quantity_on_hand": 8680,
+      "unit_price": 0.0,
+      "store": "OPUS"
+     },
+     {
+      "store_id": "6639efd54694700008d7ccc6",
+      "product_id": "69253da6ef7a0e0007690ec8",
+      "sku": "RL01",
+      "product": "Royal lion peanuts",
+      "category": "per gram",
+      "quantity_on_hand": 5000,
+      "unit_price": 0.8929,
+      "store": "Rockwell"
+     },
+     {
+      "store_id": "66cfff31aa7adf0007c9de41",
+      "product_id": "68a03c46a556ee000851c6c6",
+      "sku": "G123",
+      "product": "G123 Gummy under the sea1g",
+      "category": "per gram",
+      "quantity_on_hand": 5000,
+      "unit_price": 0.0,
+      "store": "North Edsa"
+     },
+     {
+      "store_id": "66cfff31aa7adf0007c9de41",
+      "product_id": "68a03c11462ad80007c9c2f7",
+      "sku": "G211",
+      "product": "G211 Gummy sour platypus 1g",
+      "category": "per gram",
+      "quantity_on_hand": 5000,
+      "unit_price": 0.0,
+      "store": "North Edsa"
+     },
+     {
+      "store_id": "67612230a740d90007464e26",
+      "product_id": "686bdac91064920007895101",
+      "sku": "F9",
+      "product": "F9 White grapefruit bits 1g",
+      "category": "per gram",
+      "quantity_on_hand": 5000,
+      "unit_price": 1.367,
+      "store": "Magnolia"
+     },
+     {
+      "store_id": "67612230a740d90007464e26",
+      "product_id": "69253da6ef7a0e0007690ec8",
+      "sku": "RL01",
+      "product": "Royal lion peanuts",
+      "category": "per gram",
+      "quantity_on_hand": 5000,
+      "unit_price": 0.8929,
+      "store": "Magnolia"
+     }
+    ],
+    "meta": {
+     "source_table": "inventory ⟕ products ⟂ new_transaction_items",
+     "method": "anti-join: held with quantity > 0, no sale in the window",
+     "filters_applied": [
+      "i.store_id IN (7: Rockwell, Fairview, Greenhills, North Edsa, Magnolia, OPUS, Shangri-La)   # metrics.yaml: dead_stock.scope (AJI BARN excluded)",
+      "i.quantity_on_hand > 0   # metrics.yaml: dead_stock.stock_predicate",
+      "t.is_cancelled = false   # metrics.yaml: filters.cancelled",
+      "t.transaction_type = 'Sale'   # metrics.yaml: filters.returns",
+      "no sale within None .. None (Asia/Manila, half-open)   # metrics.yaml: sales_day"
+     ],
+     "snapshot_timestamp": "2026-09-20T09:11:54.203252+00:00",
+     "definitions_version": 1,
+     "definitions_path": "C:\\ultra-supabotv2-main\\definitions\\metrics.yaml",
+     "window": {
+      "kind": "preset",
+      "name": "last_30_days",
+      "includes_partial_day": false
+     },
+     "row_count": 8,
+     "full_row_count": 1843,
+     "full_row_count_note": "Size of the complete result set before top_n or the row cap. When it exceeds row_count, the rows shown are the top slice by the ordering in meta.ordering — never a sample, and never something to total.",
+     "products_held_in_scope": 3501,
+     "top_n": 8,
+     "truncated": false,
+     "row_limit": 8,
+     "ordering": "quantity_on_hand DESC",
+     "temporal_mismatch": {
+      "stock_side": "live `inventory`, as of now",
+      "sales_side": "window None .. None",
+      "note": "Stock is current; sales are a window. A product restocked yesterday appears dead if it sold nothing in the window, which is usually the intended reading but is not the same as 'never sold'. Widen the window to test that."
+     },
+     "reconciliation": {
+      "applicable": false,
+      "reason": "get_dead_stock aggregates no money measure; unit_price is a per-product attribute, not a sum."
+     },
+     "notice": {
+      "kind": "dead_stock_share",
+      "message": "1843 of 3501 products held in scope (52.6%) recorded no sale in this window. A longer window would shrink this list; a shorter one would grow it.",
+      "source": "definitions/metrics.yaml: dead_stock"
+     }
+    }
+   }
+  }
+ ]
+}

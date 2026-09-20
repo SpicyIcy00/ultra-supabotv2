@@ -137,7 +137,35 @@ FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
               # recorded turn carries one and the browser would only ever draw
               # the packing. `steps` with an `arrangement` the session wrote,
               # which its own `why` states.
-              "arranged": ROOT / "ops" / "frames_fixtures" / "arranged.json"}
+              "arranged": ROOT / "ops" / "frames_fixtures" / "arranged.json",
+              # THE DEMO (2026-09-20, at his word: "can you show me a demo
+              # first?"). The SAME saved turn under four different
+              # arrangements, so the space can be seen as a space rather than
+              # as one more template. Their `why` says the arrangements are the
+              # session's, because no model has composed one.
+              "arranged-panels": ROOT / "ops" / "frames_fixtures" / "arranged-panels.json",
+              "arranged-column": ROOT / "ops" / "frames_fixtures" / "arranged-column.json",
+              "arranged-newest": ROOT / "ops" / "frames_fixtures" / "arranged-newest.json",
+              # The identical board with NO arrangement — the packing, for the
+              # comparison to be a comparison.
+              "packed": ROOT / "ops" / "frames_fixtures" / "steps.json",
+              # THE SESSION'S OWN READ of the owner's own question (2026-09-20,
+              # at his word: "just get the data and make a conclusion of your
+              # own using your new page style"). REAL figures — the vetted read
+              # tools run as george_ro that morning, rows and meta recorded
+              # whole — with the prose, the claims and the arrangement written
+              # by the session. Its `why` says so; Bob did not write it and no
+              # model turn was spent on it.
+              "mine": ROOT / "ops" / "frames_fixtures" / "mine.json",
+              # "how are our stores?", same day, same method — and its lead
+              # read is the one the tool refused until 2026-09-20: each day
+              # against the SAME WEEKDAY of the baseline week.
+              "stores": ROOT / "ops" / "frames_fixtures" / "stores.json",
+              # The same treatment on the two broad questions. "doing" leans on
+              # the bucket comparison over WEEKS, which is the second half of
+              # the 2026-09-20 tool fix — counted in buckets rather than days.
+              "doing": ROOT / "ops" / "frames_fixtures" / "doing.json",
+              "products": ROOT / "ops" / "frames_fixtures" / "products.json"}
 SIZES = {1440: 900, 1920: 1080, 1857: 963}
 VOCAB_READS = ROOT / "frontend" / "src" / "room" / "__fixtures__" / "vocab-reads.json"
 MAX_ROWS = 200

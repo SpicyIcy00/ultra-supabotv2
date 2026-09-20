@@ -1655,27 +1655,19 @@
     "block": "stores-week"
    },
    {
-    "say": "Two of those three come apart differently, so they are taken apart separately."
+    "say": "OPUS is the size of it; Greenhills is the one I cannot explain."
    },
    {
-    "layout": "row",
-    "children": [
-     {
-      "block": "basket-split"
-     },
-     {
-      "block": "fallers"
-     }
-    ]
+    "block": "basket-split"
    },
    {
-    "layout": "panel",
-    "heading": "Newest, and only one day",
-    "children": [
-     {
-      "block": "fairview-thu"
-     }
-    ]
+    "say": "The products are their own story, not a symptom of the shops."
+   },
+   {
+    "block": "fallers"
+   },
+   {
+    "block": "fairview-thu"
    }
   ]
  }

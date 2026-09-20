@@ -1652,25 +1652,38 @@
   "layout": "stack",
   "children": [
    {
-    "block": "stores-week"
+    "say": "Three separate stories, so they are kept apart."
    },
    {
-    "say": "Two of those three come apart differently, so they are taken apart separately."
-   },
-   {
-    "layout": "row",
+    "layout": "grid",
+    "cols": 2,
     "children": [
      {
-      "block": "basket-split"
+      "layout": "panel",
+      "heading": "The shops",
+      "children": [
+       {
+        "block": "stores-week"
+       },
+       {
+        "block": "basket-split"
+       }
+      ]
      },
      {
-      "block": "fallers"
+      "layout": "panel",
+      "heading": "The lines inside them",
+      "children": [
+       {
+        "block": "fallers"
+       }
+      ]
      }
     ]
    },
    {
     "layout": "panel",
-    "heading": "Newest, and only one day",
+    "heading": "And one the closed week hides",
     "children": [
      {
       "block": "fairview-thu"

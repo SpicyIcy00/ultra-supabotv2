@@ -1432,6 +1432,60 @@ comparisons:
     # file exists to keep out of prose.
     valid_group_by: [store, product, category]
 
+    # =========================================================================
+    # A TIME BUCKET BESIDE A COMPARISON (2026-09-20). The owner, having watched
+    # the session refused mid-investigation: *"find out why that tool didnt
+    # work and fix it."*
+    #
+    # THE REFUSAL WAS RIGHT AND ITS REASON WAS WRONG, which is why it hid a
+    # capability for nine days. The comment above said a time bucket beside a
+    # comparison means "each bucket against its own predecessor — a lag
+    # series". It does not. `compare_to` runs the SAME query over two windows
+    # and matches rows on the group key (tools/sales._compare_rows). For
+    # `store` the key is the store id, which both windows share. For `day` the
+    # key is the DATE, and the two windows hold different dates by
+    # construction — so every row would come back `no_baseline` or
+    # `no_current`. The refusal was covering a broken join, and described it as
+    # a design choice.
+    #
+    # SO THE FIX IS A KEY, NOT A NEW COMPARISON. A time bucket is matched on
+    # its OFFSET FROM ITS OWN WINDOW'S START, so the first day of one window
+    # meets the first day of the other. On two calendar weeks that is Monday
+    # against Monday — the same comparison `brief.sales_vs_same_weekday`
+    # already makes for a single day, now available for a whole window.
+    #
+    # WHAT IT UNBLOCKS, in the owner's own investigation: "OPUS is down on the
+    # week — is that a decline, or one unusual day in the week it is measured
+    # against?" Before this the only route was two ungrouped series and a
+    # subtraction in prose, which is the one calculation this file exists to
+    # keep out of prose (see valid_group_by's note on products, the identical
+    # argument made on 2026-09-08).
+    #
+    # EQUAL LENGTHS ONLY, and that refusal is real: offsets align only when
+    # both windows hold the same number of days. `previous_period` and
+    # `same_weekday_last_week` always do; `same_period_last_year` over a leap
+    # February does not, and is refused with a reason that is true.
+    #
+    # HOUR IS STILL NOT COMPARABLE and is deliberately absent. Thirty days
+    # grouped by hour is one set of twenty-four figures, not a series — the
+    # bucket has no position in a window to align on.
+    # ON `previous_period` ONLY, and deliberately. `same_weekday_last_week`
+    # reads a single day, where a bucket is the whole window; and
+    # `same_period_last_year` can put a leap February against a common one,
+    # where the offsets do not line up at all. Neither carries this key, so
+    # both still refuse a bucket — conservatively, and for reasons that hold.
+    valid_time_buckets: [day, week, month]
+    time_bucket_alignment:
+      key: offset_from_window_start
+      requires_equal_length: true
+      about: >
+        a time bucket is matched to the bucket at the same offset in the
+        baseline window, so the first day of each window meets the first. Over
+        two calendar weeks that is the same weekday.
+      # The row carries BOTH dates, because "7 Sep against 31 Aug" is the
+      # receipt and a reader cannot check the comparison without the second.
+      carries_baseline_bucket: true
+
     # RANKING A COMPARED RESULT. Added 2026-09-08. With top_n, `rank_by`
     # says which end of what is returned, and the ranking happens INSIDE the
     # tool AFTER current and baseline subjects have been matched — never by
@@ -1517,6 +1571,14 @@ comparisons:
     introduced: "2026-09-12"
     applies_to: [get_sales]
     inherits: previous_period
+    # NOT INHERITED (2026-09-20). `previous_period` gained aligned time buckets;
+    # `inherits` would have carried them here, where they are not proven and
+    # where each mode has its own reason to refuse. An empty list overrides the
+    # parent rather than relying on it — the kind of silent inheritance that
+    # this file exists to make visible.
+    valid_time_buckets: []
+    # This mode reads ONE DAY. A bucket would be the whole window, so there is
+    # nothing to align and nothing the ungrouped read does not already say.
     # THE EXPECTATION READ for a day. What the brief judges every morning —
     # yesterday against the same weekday a week earlier — promoted to a read
     # Bob can make for any closed day or explicit window: the whole window
@@ -1544,6 +1606,16 @@ comparisons:
     introduced: "2026-09-18"
     applies_to: [get_sales]
     inherits: previous_period
+    # NOT INHERITED (2026-09-20). `previous_period` gained aligned time buckets;
+    # `inherits` would have carried them here, where they are not proven and
+    # where each mode has its own reason to refuse. An empty list overrides the
+    # parent rather than relying on it — the kind of silent inheritance that
+    # this file exists to make visible.
+    valid_time_buckets: []
+    # And here the offsets genuinely may not line up: a leap February against a
+    # common one is 29 buckets against 28, and this mode also carries the
+    # SAME-STORE rule, whose interaction with a per-bucket match nobody has
+    # worked out. Refused until somebody does.
     # THE SAME CALENDAR DATES A YEAR EARLIER. December 2025 against December
     # 2024; a closed preset resolves on today's Manila date first, then both
     # of its bounds move back a year. Calendar dates rather than 52 weeks
@@ -1590,7 +1662,15 @@ comparisons:
         against the same period last year.
     per_bucket_lag:
       supported: false
+      # STILL NOT SUPPORTED, and now for the reason that is actually true. This
+      # is day N against day N-1 INSIDE one window — a lag series, which the
+      # chart of the series already shows. It is NOT "a time bucket beside a
+      # comparison": that is a bucket of one window against the bucket at the
+      # same offset in the other, and it is supported (previous_period.valid_time_buckets,
+      # 2026-09-20). The two were conflated here, and the conflation refused a
+      # real question for nine days.
       reason: "each bucket against its predecessor is a lag series; the chart of the series already shows it"
+      not_the_same_as: previous_period.valid_time_buckets
     custom_baseline:
       supported: false
       reason: "an arbitrary baseline window is a definition supplied by the caller, which this file forbids"
@@ -5610,6 +5690,66 @@ voice:
     - warm
     - precise
     - occasionally dry
+  # ===========================================================================
+  # PLAIN WORDS (2026-09-20). The owner, reading four pages of a real
+  # investigation: *"the way it talks is kinda too complicated and a little too
+  # much ai jargon. alot of wasted text we need to fix that."*
+  #
+  # THREE KINDS OF WASTE, and they are all the same mistake — saying something
+  # the screen is already saying.
+  #
+  #   THE METHOD. "Each week against the same week of the month before",
+  #   "thirty days against the thirty before them". Every figure is drawn with
+  #   a source line carrying its metric, its grouping, its window and the time
+  #   it was read (UI rule 6). Saying it in prose is a second copy of chrome,
+  #   and it was on one screen three times.
+  #
+  #   THE CLAIM, AGAIN. A block's claim says the point; the thought under it
+  #   then said the point again in other words. They are one thought: the
+  #   claim is what it says, the thought is what the claim could not hold.
+  #
+  #   THE INSTRUMENT'S OWN VOCABULARY. `window`, `baseline`, `read` as a noun,
+  #   `bucket`, `metric`, `data`, `comparison`, `partial on both sides`. These
+  #   are the words of the thing doing the measuring, not of the business being
+  #   measured. There is already a rule that a caveat sounding like a column
+  #   name is rewritten (voice.reading.slots.caveat); this is that rule, for
+  #   everything else he writes.
+  #
+  # THIS IS NOT A LENGTH BOUND. The slots already have those and they are not
+  # what failed — every sentence cut here was within them. What failed is that
+  # nothing said a sentence must EARN its place against what is already drawn.
+  #
+  # AND IT IS NOT A BAN ON SAYING WHAT QUALIFIES A FIGURE. A caveat is where a
+  # window belongs when the window is the problem — "these are two different
+  # weeks" is a caveat; "measured over the closed week" is chrome. The test is
+  # whether the screen already carries it, exactly as it is for a figure.
+  plain:
+    introduced: "2026-09-20"
+    about: >
+      Say it once, in the words the business uses. The metric, the grouping,
+      the window and the read time are drawn under every figure, so never
+      write them; a block's thought never says its claim again in other words;
+      and the words below belong to the instrument, not to the answer.
+    instrument_words: [window, baseline, bucket, metric, dataset, data set,
+                       comparison window, per-bucket, timeframe, aggregate,
+                       granularity, cohort, sample size]
+    # `read` and `data` are deliberately NOT in that list: "I read the shop's
+    # day" is ordinary English and "the data does not say" is the honest
+    # sentence rule 10 asks for. A word is only jargon where a plain one exists.
+    says_once:
+      - the method a figure was measured by
+      - a claim its own thought then repeats
+      - a figure the screen already draws   # voice.restatement, since 2026-09-12
+    # NOT ENFORCED, AND THE ABSENCE IS DELIBERATE RATHER THAN PENDING. A
+    # `warning_reason` here was written and taken out the same hour: the gap
+    # sweep's catalogue test caught it, correctly — declaring a gate that
+    # nothing raises would have put a kind in the weekly sweep that can never
+    # appear, which is worse than no gate. There IS a runtime check for a
+    # FIGURE said twice (voice.restatement) and none for a METHOD said twice.
+    # Building one is a card; until then this is taught on `compose` and held
+    # by nothing, and a session quoting it should say so.
+    enforced: false
+
   # What Bob is not. "Sycophantic" is first because it is the failure a
   # chat model reaches for by default.
   never:
