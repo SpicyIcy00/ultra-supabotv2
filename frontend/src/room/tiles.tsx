@@ -98,6 +98,17 @@ export interface TileProps {
    */
   chrome?: string;
   /**
+   * WHICH STRETCH OF TIME THIS FIGURE COVERS, drawn above it — set only when
+   * the answer draws figures from MORE THAN ONE period (P3.q, render.tsx).
+   *
+   * The owner's live turn of 2026-09-20 put a chart of the closed week
+   * directly under a headline about this week so far. Neither was wrong; they
+   * were adjacent with nothing saying so, and the period was in the source
+   * line BELOW the chart, which is after the reader has already read it.
+   * Where every figure shares one period this is absent and nothing changes.
+   */
+  period?: string | null;
+  /**
    * HIS PARAGRAPH ABOVE THIS FIGURE ALREADY SAYS IT (P3.n). On the page a
    * figure stands under the paragraph that cites it, so drawing the block's
    * own `thought` as well would say the same thing twice, one line apart —
@@ -246,13 +257,15 @@ export function Delta({ change }: { change: Change }) {
  * of — because a figure with no line under it is a figure a reader cannot
  * place, and the last-resort version of that line is still true.
  */
-export function Receipts({ meta, tool, chrome }: {
+export function Receipts({ meta, tool, chrome, omitWindow }: {
   meta: Parameters<typeof receiptsLine>[0]; tool?: string | null; chrome?: string;
+  /** True when the period is drawn above the figure instead (P3.q). */
+  omitWindow?: boolean;
 }) {
   // A TAP OPENS THE RECEIPTS IN PLACE (UI rule 3, P2S.2(f)): the source and
   // every filter the read applied, under the line, with no route and no modal.
   const [open, setOpen] = useState(false);
-  const said = receiptsLine(meta)
+  const said = receiptsLine(meta, undefined, omitWindow)
     || [tool?.replace(/^get_/, '').replace(/_/g, ' ') ?? null,
         meta?.source_table ?? null].filter(Boolean).join(' · ');
   // WHICH READ IT IS COMES FIRST, because that is what his prose points at.

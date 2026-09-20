@@ -422,6 +422,29 @@ once changes the next answer. That is the card's own done-when.
 
 ---
 
+### 2026-09-20 — "does this look right?" (the first live turn on the new build)
+
+> *"does this look right?"* and, of the folding, *"what is this new feature and
+> did you add it? it should be like this"*
+
+**WHAT HELD.** He used the step heads on every block, used `under`/`relation`,
+used the day-against-the-same-weekday read the tool fix unlocked, and revised a
+recorded view of his own: *"I have been carrying Rockwell as stepped down and
+flat since early August. That view is wrong as of this week and I'd drop it."*
+
+**FIVE THINGS FOUND, ALL OLDER THAN THE SESSION, ALL FIXED** (`2882c70` and the
+commit after it): a raw diagnostic drawn above his headline (*"449 stock records
+in this window are NEGATIVE"*, UI rule 4 — eleven notices rewritten, a contract
+test holds the class); a seven-shop chart drawn as ONE row under a claim about
+all seven; shops out of order because `sameOrder` took its order from a chart of
+a different week; the period now drawn above a figure where an answer spans more
+than one; and the amber mark, which was CHECKED and is correct — the mark wears
+the accent only in `need`, which means an approval is waiting.
+
+**STILL OPEN AFTER IT:** whether he composed an `arrangement` at all is unknown,
+because reading `george.posts` needs a Bash permission this session was refused.
+The side-by-side blocks may be the older `under` gathering.
+
 ## Fixed
 
 ### 2026-09-19 — "what does this chart mean and is it a bug its showed up like this in multiple answers?"

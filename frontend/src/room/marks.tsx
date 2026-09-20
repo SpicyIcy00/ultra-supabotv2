@@ -632,7 +632,7 @@ export function MarkBlock(p: TileProps) {
                    : `${rows.length - named.length} more · show`}
           </button>
         )}
-        <Receipts meta={meta} tool={p.o.tool} chrome={p.chrome} />
+        <Receipts meta={meta} tool={p.o.tool} chrome={p.chrome} omitWindow={p.period != null} />
       </Shell>
       {/* OPENED — below the tile, never inside it, because a tile clips its
           content and a panel is the one place a hue still says something: ONE

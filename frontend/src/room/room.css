@@ -2195,3 +2195,13 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
   .r-laid--row { flex-direction: column; gap: 26px; }
   .r-laid--grid { grid-template-columns: 1fr; gap: 26px; }
 }
+
+/* WHICH PERIOD A FIGURE COVERS, when an answer spans more than one (P3.q).
+   Same register as the relation line above it — this is the other thing you
+   have to know before you read a number, not decoration. It is drawn INSTEAD
+   of the period in the source line, never as well: an answer over one period
+   still says it once, at the foot, exactly as before. */
+.r-fig-when {
+  font: 500 10px/1.6 var(--mono); letter-spacing: 0.11em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 8px;
+}

@@ -524,10 +524,17 @@ function groupingLabel(meta: ToolMeta | null | undefined): string | null {
  * "new_transactions" at the foot of every tile told the reader where the
  * figures lived and not what they were.
  */
-export function receiptsLine(meta: ToolMeta | null | undefined, now: Date = new Date()): string {
+export function receiptsLine(meta: ToolMeta | null | undefined, now: Date = new Date(),
+                             omitWindow = false): string {
   if (!meta) return '';
   const when = readAt(meta.snapshot_timestamp, now);
-  return [meta.metric_label ?? null, groupingLabel(meta), windowLabel(meta), when]
+  // THE PERIOD LEAVES THIS LINE WHEN IT IS DRAWN ABOVE THE FIGURE INSTEAD
+  // (P3.q). An answer over one period says it once, here. An answer over
+  // several says it at the head of each figure, where it is read BEFORE the
+  // number rather than after it — and then saying it again down here would be
+  // the thing voice.plain exists to stop.
+  return [meta.metric_label ?? null, groupingLabel(meta),
+          omitWindow ? null : windowLabel(meta), when]
     .filter(Boolean).join(' · ');
 }
 

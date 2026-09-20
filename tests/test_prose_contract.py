@@ -371,7 +371,11 @@ def test_the_receipts_line_leads_with_scope_and_not_a_table_name():
     # The rule the test is here for is unchanged — what a reader sees under a
     # figure is the SCOPE and never a database table.
     component = _receipts_component()
-    assert "const said = receiptsLine(meta)" in component
+    # The CALL, not its exact arguments (2026-09-20). It gained `omitWindow`
+    # when the period moved above a figure on answers spanning more than one
+    # period; pinning the argument list would fail on a change that has
+    # nothing to do with what this test is for.
+    assert "const said = receiptsLine(meta" in component
     assert "const line = [chrome, said]" in component, (
         "only the read's own chrome may lead the receipts line"
     )

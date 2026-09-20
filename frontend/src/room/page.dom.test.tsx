@@ -471,3 +471,67 @@ describe('an arrangement draws the app, rearranged', () => {
     expect(a).toBe(b);
   });
 });
+
+/**
+ * WHICH PERIOD A FIGURE COVERS (P3.q, 2026-09-20).
+ *
+ * The owner's first live turn on the new build drew a chart of the closed week
+ * directly under a headline about this week so far. Neither figure was wrong
+ * and neither was mislabelled — the period was in the source line BELOW each
+ * chart, which is after the reader has already taken the number in, and the
+ * two sat adjacent with nothing saying so.
+ */
+describe('an answer that spans more than one period', () => {
+  const twoWindows = {
+    ...TURN,
+    toolCalls: [
+      { ...read(1, 'Net sales', [{ store: 'OPUS', value: 1, change: -1 }]),
+        arguments: { date_range: 'last_week' },
+        result: { rows: [{ store: 'OPUS', value: 1, change: -1 }],
+                  meta: { source_table: 't', metric_label: 'Net sales', filters_applied: [],
+                          snapshot_timestamp: '2026-09-20T10:00:00Z',
+                          window: { name: 'last_week' } } } },
+      { ...read(2, 'Net sales', [{ store: 'OPUS', value: 2, change: 1 }]),
+        arguments: { date_range: 'this_week' },
+        result: { rows: [{ store: 'OPUS', value: 2, change: 1 }],
+                  meta: { source_table: 't', metric_label: 'Net sales', filters_applied: [],
+                          snapshot_timestamp: '2026-09-20T10:00:00Z',
+                          window: { name: 'this_week' } } } },
+    ],
+  } as unknown as AnswerTurn;
+
+  const show = (turn: AnswerTurn) => render(
+    <Board answers={[turn]} board={[block('a', 1, { claim: 'x' }), block('b', 2, { claim: 'y' })]}
+           local={{}} focused={null} selection={[]} live={false} retuned={{}} on={ACTIONS()} />,
+  );
+
+  it('says which period each figure covers, above it', () => {
+    const { container } = show(twoWindows);
+    const said = Array.from(container.querySelectorAll('.r-fig-when')).map((e) => e.textContent);
+    expect(said).toHaveLength(2);
+    expect(said.join(' ')).toContain('last week');
+    expect(said.join(' ')).toContain('this week');
+  });
+
+  it('takes the period off the source line rather than saying it twice', () => {
+    const { container } = show(twoWindows);
+    const src = container.querySelector('[data-figure="a"] .r-src')?.textContent ?? '';
+    expect(src).toContain('Net sales');
+    expect(src).not.toContain('last week');
+  });
+
+  it('says nothing extra when every figure covers the same period', () => {
+    const one = {
+      ...twoWindows,
+      toolCalls: [twoWindows.toolCalls[0],
+                  { ...twoWindows.toolCalls[1]!, seq: 2,
+                    result: { ...twoWindows.toolCalls[1]!.result,
+                              meta: { ...twoWindows.toolCalls[1]!.result!.meta,
+                                      window: { name: 'last_week' } } } }],
+    } as unknown as AnswerTurn;
+    const { container } = show(one);
+    expect(container.querySelector('.r-fig-when')).toBeNull();
+    // And it is still said once, where it always was.
+    expect(container.querySelector('[data-figure="a"] .r-src')?.textContent).toContain('last week');
+  });
+});

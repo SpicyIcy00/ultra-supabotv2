@@ -22,7 +22,7 @@ import { FIGURE_GAP, columnsFor, needsWidth, placeFigures, revealAt } from './be
 import { CHILD_GAP, gather, type Relation } from './gather';
 import { focusFor, sectionFor, type Section } from './page';
 import { readIndexes } from './work';
-import { PROCESS, callOf, rowsOf, tableShape, type AnswerTurn, type Dimension } from './data';
+import { PROCESS, callOf, rowsOf, tableShape, windowLabel, type AnswerTurn, type Dimension } from './data';
 import { markFor } from './catalogue';
 import type { ToolCall } from '../types/bob';
 import {
@@ -401,6 +401,20 @@ export function Board(p: BoardProps) {
     ? rowsOf(callOf(p.answers[setter.turn], setter.seq)).map((r) => r.store)
         .filter((x): x is string => typeof x === 'string')
     : undefined;
+  // WHICH PERIOD EACH FIGURE COVERS, and only where they differ (P3.q).
+  //
+  // His live turn of 2026-09-20 drew the closed week directly under a headline
+  // about this week so far. Neither figure was wrong and neither was
+  // mislabelled — the period sat in the source line UNDER each chart, which is
+  // after the reader has already taken the number in. Where an answer spans
+  // more than one period the period moves to the head of every figure and
+  // leaves the source line, so it is read first and still said only once.
+  const periodOf = (o: BoardObject) =>
+    windowLabel(callOf(p.answers[o.turn], o.seq ?? o.seqs?.[0])?.result?.meta ?? null);
+  const periods = new Set(objects.filter((o) => o.turn === newest)
+    .map(periodOf).filter((x): x is string => Boolean(x)));
+  const manyPeriods = periods.size > 1;
+
   const orderFor = (o: BoardObject) => (
     order && setter && windowOf(o) === windowOf(setter) ? order : undefined);
   // A FIGURE TAKES THE WHOLE WIDTH UNLESS IT IS GATHERED UNDER ANOTHER (P3.l).
@@ -610,6 +624,9 @@ export function Board(p: BoardProps) {
                 gridRowEnd: `span ${Math.max(1, h + (it.under ? CHILD_GAP : FIGURE_GAP))}` }}
         >
           <div className="r-fig-body">
+            {manyPeriods && periodOf(o) && (
+              <p className="r-fig-when">{periodOf(o)}</p>
+            )}
             {(() => {
               const up = plan.parentOf[o.key];
               if (!up) return null;
@@ -630,6 +647,7 @@ export function Board(p: BoardProps) {
               told={it.told}
               focus={it.focus}
               chrome={chromeFor(index, out)}
+              period={manyPeriods ? periodOf(o) : null}
               order={orderFor(o)}
               o={o}
               turn={turn}

@@ -9,6 +9,61 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-20 · P3.q — a live turn, and the five things it found
+
+The first turn the owner ran on the new build. **The new channels held**: he
+used the step heads on every block, used `under`/`relation`, used the day
+comparison the tool fix unlocked, and revised a recorded view of his own
+unprompted. What broke was all older than this session.
+
+**THE TOOL REFUSAL WAS COVERING A BROKEN JOIN.** `compare_to` with a time
+bucket said "a lag series". It is not: the comparison matches the two windows
+on the group key, and for `day` that key was the DATE, which two windows never
+share. Matched on the bucket's offset from its own window's start, Monday meets
+Monday. **And the fix had a bug found by using it** — counted in days,
+`last_30_days` by week came back 10 of 10 uncomparable, because a bucket's date
+is truncated to its own boundary. Counted in buckets it lines up.
+
+**A NOTICE IS WRITTEN IN PYTHON, SO `voice.plain` DID NOT REACH IT.** The rule
+is taught on `compose`, which governs what Bob WRITES; a tool's notice is
+surfaced above the answer by UI rule 4 and read as though he had said it. One
+said *"449 stock records in this window are NEGATIVE"* over his headline. A
+contract test now holds the class and found **eleven**, not one. It reads source
+rather than running the notices, which bounds what it proves.
+
+**FOLDING IS A READING OF HIS PROSE, AND A READING CAN BE WRONG.** A seven-shop
+chart drew ONE row under the claim "every shop rang fewer transactions" — his
+sentence named only the worst of them. Whole is the default now; narrowing is
+one tap. Drawing every row a read returned cannot be wrong.
+
+**TWO CHARTS ARE ONLY WORTH LINING UP WHEN THEY COVER THE SAME PERIOD.**
+`sameOrder` took the order from the first figure listing shops and imposed it on
+a chart of a different week, so Rockwell drew below a smaller figure.
+
+**AND THE PERIOD MOVED ABOVE THE FIGURE, where an answer spans more than one.**
+A chart of the closed week sat directly under a headline about this week so far.
+Neither was wrong or mislabelled — the period was in the source line BELOW the
+chart, after the reader has taken the number in. Where periods differ it is
+drawn at the head and LEAVES the source line, so it is read first and still said
+once. One period, and nothing changes at all.
+
+**THE AMBER MARK WAS NOT A BUG** and was checked rather than assumed: the mark
+wears the accent only in `need`, and a failed turn changes the drawing
+(`alive.markStateOf`, `AliveMark`). That is UI rule 5's stated exemption
+working. It means an approval is waiting.
+
+**WHAT THIS SESSION DID NOT DO.** `voice.plain` has no runtime check — a figure
+said twice is caught, a method said twice is not, and the yaml says
+`enforced: false` rather than implying a gate. Figures inside a `row` of an
+arrangement split the width evenly and ignore `needsWidth`. And whether Bob
+composed an `arrangement` on that turn is STILL UNKNOWN: reading `george.posts`
+needs a permission this session was refused, so the side-by-side blocks may be
+the older `under` gathering rather than the new channel.
+
+**Suites:** pure 2,139, vitest 1,114, `tsc -b --force` and `build` clean.
+
+---
+
 ## 2026-09-20 · P3.p — the right-hand side is his to lay out
 
 The owner, after P3.o shipped and after four template variants were drawn for
