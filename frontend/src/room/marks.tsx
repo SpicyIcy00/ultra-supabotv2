@@ -36,7 +36,7 @@ import type { ToolMeta } from '../types/bob';
 import {
   changeOf, fmt, measureOf, readAt, rowUnderClaim, rowsOf, sorted, subjectOf, tableShape,
   unitFor, unitOf,
-  valueOf,
+  valueOf, windowLabel,
   type Change,
 } from './data';
 import {
@@ -86,16 +86,26 @@ function Figure(p: TileProps & { rows: Row[]; meta: Meta }) {
   const change = changeOf(row);
   // THE ANSWER IS A NUMBER, SO IT IS DRAWN AS ONE (P6.a): a lead figure at
   // the size of the answer, not of a tile. 44 → 72.
-  const size = p.o.weight === 'lead' ? 72 : p.o.weight === 'quiet' ? 26 : 34;
+  // THE DESIGN'S OWN SIZES ON THE CANVAS (P6.e): `.totals .n` 34, `.pair .n`
+  // 40, `.quiet .n` 22 — a number on a page, not a hero on a tile.
+  const size = p.canvas
+    ? (p.o.weight === 'lead' ? 34 : p.o.weight === 'quiet' ? 22 : 40)
+    : (p.o.weight === 'lead' ? 72 : p.o.weight === 'quiet' ? 26 : 34);
+  // "this 30 days · was ₱8,060,342" — the window and the before, beside the
+  // number, in the design's `.w`. Both are the row's; the words are fixed.
+  const was = p.canvas && v && hasBaseline([row]) && row.threshold_applied == null
+    ? `${(windowLabel(meta) ?? 'this period').replace(/^last /, 'this ')} · was ${fmt(v.key, Number(row.baseline), v.unit)}`
+    : null;
   return (
     <>
-      <div className="r-mk-figure">
+      <div className="r-mk-figure" data-canvas={p.canvas ? 'yes' : undefined}>
         <span className="r-num r-mk-num" style={{ '--size': `${size}px` } as CSSProperties}
               data-v={v ? told(p.o.subject ?? subjectOf(row), measureOf(meta, v.key),
                                 fmt(v.key, v.value, v.unit), moved(change)) : undefined}>
           {v ? fmt(v.key, v.value, v.unit) : '—'}
         </span>
         <Delta change={change} />
+        {was && <span className="r-mk-was">{was}</span>}
       </div>
       {/* SAID ONCE (P6.b, the owner: "it's the same"). The measure under the
           number repeated the source line, and the one-row dumbbell under it
@@ -109,8 +119,15 @@ function Figure(p: TileProps & { rows: Row[]; meta: Meta }) {
       {v && measureOf(meta, v.key) && !p.o.claim?.trim() && !p.o.question?.trim() && (
         <p className="r-mk-measure">{measureOf(meta, v.key)}</p>
       )}
-      {hasBaseline([row]) && (change.pct == null || row.threshold_applied != null) && (
+      {hasBaseline([row]) && (p.canvas ? row.threshold_applied != null
+        : change.pct == null || row.threshold_applied != null) && (
         <Dumbbell rows={[row]} meta={meta} o={p.o} />
+      )}
+      {/* THE VERDICT UNDER THE NUMBER (P6.e, the design's `.pair .verdict`):
+          on the canvas a figure's thought is what the number means, set
+          under it, not a third sentence on the head. */}
+      {p.canvas && !p.told && p.o.thought?.trim() && (
+        <p className="r-mk-verdict"><Figures text={p.o.thought.trim()} calls={p.turn.toolCalls} /></p>
       )}
     </>
   );
@@ -256,8 +273,8 @@ function Ranked({ rows, meta, o, offers, seq, onTake, onPick, picked }:
  * movement, because an attribution share is exactly what CLAUDE.md 10 refuses
  * and no tool computes one.
  */
-function Contributors({ rows, meta, o, offers, seq, onTake, onPick, picked }:
-                      { rows: Row[]; meta: Meta; o: TileProps['o'] } & Offering) {
+function Contributors({ rows, meta, o, offers, seq, onTake, onPick, picked, canvas }:
+                      { rows: Row[]; meta: Meta; o: TileProps['o']; canvas?: boolean } & Offering) {
   const signed = (r: Row) => {
     const n = typeof r.change === 'number' ? r.change : Number(r.change_pct);
     return Number.isFinite(n) ? n : 0;
@@ -276,7 +293,7 @@ function Contributors({ rows, meta, o, offers, seq, onTake, onPick, picked }:
         return (
           <div key={n} className="r-mk-row" data-lit={lit ? 'yes' : 'no'}
                style={{ opacity: lit ? 1 : COOL, ...beat(n) }}>
-            <RowName name={name} className="r-mk-name r-mk-name--left"
+            <RowName name={name} className="r-mk-name r-mk-name--left" plain={canvas}
                      dimension={subjectOf(r) ? dimensionOf(rows, name) : null}
                      pickable={Boolean(subjectOf(r))} onPick={onPick}
                      picked={picked?.includes(name)} />
@@ -284,11 +301,18 @@ function Contributors({ rows, meta, o, offers, seq, onTake, onPick, picked }:
                   aria-label={`${name}: ${fmt(key, v, unit)}`}
                   data-v={told(name, fmt(key, v, unit))}
                   data-neg={v < 0 ? 'yes' : undefined}>
-              <i style={{ width: `${(Math.abs(v) / most) * 50}%`,
-                          [v < 0 ? 'right' : 'left']: '50%',
+              {/* ON THE CANVAS THE BARS ARE THE DESIGN'S `.mv .t` (P6.e): a
+                  drop grows in from the right edge, a gain from the left,
+                  each over the whole track — two lists that read as two. */}
+              <i style={{ width: `${(Math.abs(v) / most) * (canvas ? 100 : 50)}%`,
+                          [v < 0 ? 'right' : 'left']: canvas ? 0 : '50%',
                           background: paint(c) } as CSSProperties} />
             </span>
-            <span className="r-mk-fig"><b>{fmt(key, v, unit)}</b></span>
+            <span className="r-mk-fig">
+              {/* On the canvas the figure wears its direction (the design's
+                  `.mv .f.dn`), through `paint` like the bar beside it. */}
+              <b style={canvas ? { color: paint(c) } : undefined}>{fmt(key, v, unit)}</b>
+            </span>
             <RowOffers offers={offers} seq={seq} subject={subjectOf(r)}
                        onTake={onTake ?? NO_TAKE} />
           </div>
@@ -322,52 +346,95 @@ function Line({ rows, meta, o, subject, p }: {
   const span = max - min || 1;
   const key = valueOf(points[0])?.key ?? 'value';
   const unit = unitOf(points[0]) ?? unitOf(meta);
-  const W = 560;
-  const H = 128;
+  const canvas = Boolean(p.canvas);
+  const label = (n: number) => String(by ? points[n][by] ?? '' : subjectOf(points[n]) ?? '');
+  // A POINTED ANNOTATION (P6.a): the stretch his `span` names, as a band, with
+  // his thought over it. The band's ends are rows; the sentence is his; no
+  // figure is drawn that the rows do not already carry.
+  const span_ = (p.o as { span?: string[] }).span;
+  const iFrom = span_ ? points.findIndex((_, n) => label(n) === span_[0]) : -1;
+  const iTo = span_ ? points.findIndex((_, n) => label(n) === span_[1]) : -1;
+  const banded = iFrom >= 0 && iTo >= 0 ? [Math.min(iFrom, iTo), Math.max(iFrom, iTo)] : null;
+  // THE DESIGN'S GEOMETRY ON THE CANVAS (P6.e, `.rhythm`): 940×280, the
+  // note's room above, the axis and its dates below. Packed: as it was.
+  const W = canvas ? 940 : 560;
+  const H = canvas ? 280 : 128;
   const pad = 10;
+  const yTop = canvas ? (banded && p.o.thought?.trim() ? 44 : 14) : pad;
+  const yBase = canvas ? H - 48 : H - pad;
   const x = (n: number) => pad + (n / Math.max(1, points.length - 1)) * (W - pad * 2);
-  const y = (v: number) => H - pad - ((v - min) / span) * (H - pad * 2);
+  const y = (v: number) => yBase - ((v - min) / span) * (yBase - yTop);
   const path = (vs: number[]) => vs.map((v, n) => `${x(n)},${y(v)}`).join(' ');
   const iHi = values.indexOf(Math.max(...values));
   const iLo = values.indexOf(Math.min(...values));
   const last = points.length - 1;
   // The series moved the way the tool said it did on its last row; nothing
-  // here works out a trend of its own.
+  // here works out a trend of its own. ON THE CANVAS THE LINE IS INK: the
+  // design's `.l-now`; a whole month coloured by its last day's direction
+  // drew a fall in green (the frame of 2026-09-20).
+  // (The canvas paints it ink from the stylesheet, `.r-board--laid
+  // .r-mk-series-line`; here the line only ever takes `paint(c)`.)
   const c = colourOf(changeIfAny(points[last] ?? {}), isLit(o, points[last] ?? {}));
-  const label = (n: number) => String(by ? points[n][by] ?? '' : subjectOf(points[n]) ?? '');
-  // A POINTED ANNOTATION (P6.a): the stretch his `span` names, as a band, with
-  // his thought over it. The band's ends are rows; the sentence is his; no
-  // figure is drawn that the rows do not already carry.
-  const span_ = (p.o as { span?: [string, string] }).span;
-  const iFrom = span_ ? points.findIndex((_, n) => label(n) === span_[0]) : -1;
-  const iTo = span_ ? points.findIndex((_, n) => label(n) === span_[1]) : -1;
-  const banded = iFrom >= 0 && iTo >= 0 ? [Math.min(iFrom, iTo), Math.max(iFrom, iTo)] : null;
+  // THE BAND'S COLOUR IS THE DIRECTION OF THE ROWS IN IT, where the tool
+  // declared one and they agree; otherwise ink. Never a judgement of its own.
+  const bandDir = (() => {
+    if (!banded) return undefined;
+    const dirs = new Set(points.slice(banded[0], banded[1] + 1).map((r) => String(r.direction ?? '')));
+    return dirs.size === 1 && (dirs.has('up') || dirs.has('down')) ? [...dirs][0] : undefined;
+  })();
+  // The band's colour reaches the rect as `currentColor`, painted here
+  // through `paint` like every other direction — never named in CSS.
+  const bandColour = bandDir ? paint(colourOf({ pct: bandDir === 'up' ? 1 : -1, direction: bandDir as 'up' | 'down' }, true)) : undefined;
+  // Dates the design's way: "21 Aug", one a week over a month of days.
+  const short = (v: string) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v);
+    if (!m) return v;
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${Number(m[3])} ${MONTHS[Number(m[2]) - 1] ?? m[2]}`;
+  };
+  const every = points.length > 14 ? 7 : 1;
+  const ticks = points.map((_, n) => n).filter((n) => n % every === 0 || (n === last && n % every > 2));
+  const midPct = banded ? ((x(banded[0]) + x(banded[1])) / 2 / W) * 100 : 0;
+  const period = (windowLabel(meta) ?? 'period').replace(/^last /, '');
 
   return (
     <div className="r-mk r-mk-line">
       {banded && p.o.thought?.trim() && (
-        <p className="r-mk-annotation"
-           style={{ marginLeft: `${(x(banded[0]) / W) * 100}%` }}>
+        <p className="r-mk-annotation" data-canvas={canvas ? 'yes' : undefined}
+           style={canvas
+             ? { left: `${midPct}%`, transform: `translateX(-${midPct}%)` }
+             : { marginLeft: `${(x(banded[0]) / W) * 100}%` }}>
           <Figures text={p.o.thought.trim()} calls={p.turn.toolCalls} />
         </p>
       )}
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} role="img"
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={canvas ? undefined : H} role="img"
            aria-label={`${measureOf(meta, key)} over ${points.length} points`}
            style={{ display: 'block', overflow: 'visible' }}>
         {banded && (
-          <rect className="r-mk-span-band" x={x(banded[0])} y={0}
-                width={Math.max(2, x(banded[1]) - x(banded[0]))} height={H} />
+          <rect className="r-mk-span-band" data-dir={bandDir} style={bandColour ? { color: bandColour } : undefined}
+                x={x(banded[0])} y={canvas ? yTop : 0}
+               width={Math.max(2, x(banded[1]) - x(banded[0]))} height={canvas ? yBase - yTop : H} />
         )}
+        {canvas && banded && p.o.thought?.trim() && (
+          <path className="r-mk-note-l"
+                d={`M${x(banded[0])} ${yTop - 8} v-6 h${x(banded[1]) - x(banded[0])} v6`} />
+        )}
+        {canvas && <line className="r-mk-axis" x1={x(0)} x2={x(last)} y1={yBase} y2={yBase} />}
+        {canvas && ticks.map((n) => (
+          <text key={`t-${n}`} className="r-mk-tick" x={x(n)} y={yBase + 18} textAnchor="middle">
+            {short(label(n))}
+          </text>
+        ))}
         {drawnBase && (
           <polyline className="r-mk-baseline" fill="none" stroke="rgb(var(--flat))"
                     strokeWidth={1.2} strokeDasharray="3 4" points={path(bases)} />
         )}
         {/* pathLength 1, so the line can draw itself in without measuring. */}
-        <polyline className="r-mk-series-line" fill="none" stroke={paint(c)} strokeWidth={1.8}
+        <polyline className="r-mk-series-line" fill="none" stroke={paint(c)} strokeWidth={canvas ? 1.6 : 1.8}
                   pathLength={1} points={path(values)} />
-        {points.length > 2 && Array.from(new Set([iHi, iLo, last])).map((i) => (
+        {points.length > 2 && Array.from(new Set(canvas ? [iHi] : [iHi, iLo, last])).map((i) => (
           <g key={i}>
-            <circle cx={x(i)} cy={y(values[i])} r={3.4} fill={paint(c)}
+            <circle className="r-mk-peak" cx={x(i)} cy={y(values[i])} r={3.4} fill={paint(c)}
                     stroke="var(--card)" strokeWidth={1.5} />
             <text x={x(i)} y={i === iLo ? y(values[i]) + 16 : y(values[i]) - 9}
                   textAnchor={x(i) > W * 0.8 ? 'end' : x(i) < W * 0.2 ? 'start' : 'middle'}
@@ -383,7 +450,15 @@ function Line({ rows, meta, o, subject, p }: {
                   fill="none" data-v={told(subject, label(n), fmt(key, values[n], unit))} />
         ))}
       </svg>
-      <div className="r-mk-ends">
+      {/* THE DESIGN'S LEGEND (P6.e): what the two lines are, in words, under
+          the axis — the packed board's ends line says it in its own place. */}
+      {canvas && (
+        <p className="r-mk-legend-line">
+          <i />this {period}
+          {drawnBase && <><i className="r-mk-legend-was" />the {period} before, {by ?? 'point'} for {by ?? 'point'}</>}
+        </p>
+      )}
+      {!canvas && <div className="r-mk-ends">
         <span>{label(0)}</span>
         {/* WHOSE SERIES THIS IS: its swatch and its name, in the key — the
             line itself stays the verdict (P2S.2(e)). */}
@@ -392,7 +467,7 @@ function Line({ rows, meta, o, subject, p }: {
         )}
         {drawnBase && <span className="r-mk-key">dotted · the period before</span>}
         <span>{label(last)}</span>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -549,10 +624,15 @@ export function MarkBlock(p: TileProps) {
   // thought pointing at it; one that does not resolve draws nothing, and the
   // thought goes where a thought always goes. Decided here, once, so the head
   // and the chart cannot disagree about where the sentence went.
-  const spanOf = (p.o as { span?: [string, string] }).span;
+  const spanOf = (p.o as { span?: string[] }).span;
   const spanKey = timeKeyOf(rows);
-  const spanResolves = Boolean(spanOf && spanKey
-    && spanOf.every((label) => rows.some((r) => String(r[spanKey] ?? '') === label)));
+  // ON MULTIPLES A SPAN NAMES ONE OF THEM (P6.e): the thought is the callout
+  // under that one — the design's "the one that did not come back".
+  const nameKey = (['store', 'product', 'subject', 'category'] as const)
+    .find((k) => rows.some((r) => typeof r[k] === 'string')) ?? null;
+  const spanOn = mark === 'multiples' ? nameKey : spanKey;
+  const spanResolves = Boolean(spanOf && spanOn
+    && spanOf.every((label) => rows.some((r) => String(r[spanOn] ?? '') === label)));
   // ONLY A MARK THAT DRAWS ROWS CAN FOLD THEM. A single figure over a seventeen-
   // row read is already one row of it; "15 more · show" under a number opened
   // nothing (the first frame of this, 2026-09-19).
@@ -645,7 +725,9 @@ export function MarkBlock(p: TileProps) {
           <span className="r-mk-title">
             {titleFor(p.o, meta)}{p.earlier ? ' · from earlier' : ''}
           </span>
-          {!p.told && p.o.thought?.trim() && !spanResolves && (
+          {/* ON THE CANVAS A FIGURE'S THOUGHT IS ITS VERDICT, under the number
+              (P6.e), so the head stays one line. */}
+          {!p.told && p.o.thought?.trim() && !spanResolves && !(p.canvas && mark === 'figure') && (
             <>
               {/[.!?:…]["'”’)\]]?$/.test(`${titleFor(p.o, meta)}`.trim()) ? ' ' : '. '}
               <span className="r-mk-thought">
@@ -658,11 +740,11 @@ export function MarkBlock(p: TileProps) {
           {mark === 'figure' && <Figure {...p} rows={rows} meta={meta} />}
           {mark === 'dumbbell' && <Dumbbell rows={drawn} meta={meta} o={p.o} order={p.order} {...offering} />}
           {mark === 'ranked' && <Ranked rows={drawn} meta={meta} o={p.o} {...offering} />}
-          {mark === 'contributors' && <Contributors rows={drawn} meta={meta} o={p.o} {...offering} />}
+          {mark === 'contributors' && <Contributors rows={drawn} meta={meta} o={p.o} canvas={p.canvas} {...offering} />}
           {mark === 'line' && <Line rows={rows} meta={meta} o={p.o} subject={seriesOf} p={p} />}
           {mark === 'table' && <Rows rows={drawn} meta={meta} o={p.o} p={p} />}
           {/* THE ELEVEN P2S.3 ADDED (shapes.tsx), framed exactly as the six. */}
-          <Shape mark={mark} rows={rows} meta={meta} o={p.o} subject={seriesOf} {...offering} />
+          <Shape mark={mark} rows={rows} meta={meta} o={p.o} subject={seriesOf} canvas={p.canvas} {...offering} />
         </div>
         {/* THE ROWS HIS SENTENCE DID NOT NAME — one line, and it opens. The count
             is the length of a list this already holds, never a number anybody

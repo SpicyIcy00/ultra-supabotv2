@@ -98,6 +98,14 @@ export interface TileProps {
    */
   chrome?: string;
   /**
+   * ON THE CANVAS (P6.e, 2026-09-20): he laid the right-hand side out
+   * himself, so the block is drawn to the design's own sizes
+   * (ops/ideal/how-are-we-doing-v2.html) — a one-line head, a number with
+   * its `was` beside it, a line with an axis and a legend, multiples as one
+   * strip. Unset is the packed board, which he asked to keep, unchanged.
+   */
+  canvas?: boolean;
+  /**
    * WHICH STRETCH OF TIME THIS FIGURE COVERS, drawn above it — set only when
    * the answer draws figures from MORE THAN ONE period (P3.q, render.tsx).
    *

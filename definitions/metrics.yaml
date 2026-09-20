@@ -7489,11 +7489,16 @@ composition:
       For a broad question, the page: the estate total as a `figure` weighted
       lead, its claim the verdict; the estate by day as a `line` with a `span`
       over the stretch that matters and your thought pointing at it; every
-      shop by week as `multiples`; the movers as two `contributors`, gains and
-      drops, side by side in the arrangement; a visit as two `figure`s in a
-      row, transactions and basket, each claim a verdict; what needs a person
-      as a `list` with its action; and a source that cannot be compared as a
-      quiet `figure` with its notice. Then lay it out.
+      shop by week as `multiples`, a `span` naming the one shop your thought
+      is about; the movers as two `contributors`, gains and drops, stacked
+      beside a stack of two `figure`s, transactions and basket, each thought
+      a verdict under its number; what needs a person as a `list` with its
+      action; and a source that cannot be compared as a quiet `figure`. Then
+      lay it out. ON THE PAGE A HEAD IS ONE LINE: the bold lead is your
+      `question` if you give one, else the `claim`; the claim runs on after
+      a question in plain weight; a figure's `thought` sits under its number,
+      a span's on the chart. Six words bold, a short sentence after — never
+      three sentences stacked, which reads as a thread.
 
   arrangement:
     about: >

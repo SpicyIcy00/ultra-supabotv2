@@ -636,7 +636,10 @@ export function Board(p: BoardProps) {
             )}
             {(() => {
               const up = plan.parentOf[o.key];
-              if (!up) return null;
+              // ON THE CANVAS HIS ARRANGEMENT IS THE RELATION (P6.e): what
+              // sits beside or under what is already said by where he put
+              // it, and a WHY line over a chart he placed is a caption.
+              if (!up || laid) return null;
               // ADJACENT IS `it.under` — the same decision that placed it
               // tight under its stem, so the word and the placement can no
               // longer disagree, which is the whole of the defect.
@@ -654,6 +657,7 @@ export function Board(p: BoardProps) {
               told={it.told}
               focus={it.focus}
               chrome={chromeFor(index, out)}
+              canvas={laid}
               period={manyPeriods ? periodOf(o) : null}
               order={orderFor(o)}
               o={o}

@@ -40,6 +40,8 @@ interface ShapeProps extends Offering {
   rows: Row[];
   meta: Meta;
   o: O;
+  /** Laid out by him — the design's own drawing (tiles.tsx `canvas`). */
+  canvas?: boolean;
 }
 
 /* ---------------------------------------------------------------- reading */
@@ -164,7 +166,7 @@ function Bar({ rows, meta, o, onPick, picked }: ShapeProps) {
 /* -------------------------------------------------------------- multiples */
 
 /** ONE SMALL LINE PER NAME, ON ONE SHARED SCALE — every store at a glance. */
-function Multiples({ rows, meta, o, onPick, picked }: ShapeProps) {
+function Multiples({ rows, meta, o, onPick, picked, canvas }: ShapeProps) {
   const nameKey = nameKeyOf(rows) as string;
   const orderKey = orderKeyOf(rows) as string;
   // THE CHANGE, WHERE THE ROWS CARRY ONE (P6.a). "Which one moved
@@ -187,6 +189,55 @@ function Multiples({ rows, meta, o, onPick, picked }: ShapeProps) {
   const x = (i: number) => 3 + (i / Math.max(1, order.length - 1)) * (W - 6);
   const y = (v: number) => H - 3 - ((v - low) / (high - low || 1)) * (H - 6);
   const names = inReadOrder(rows, nameKey);
+  // THE STRIP (P6.e, the design's `.multiples`): one column per name, its
+  // name over bars of change about a zero line, the one his `span` names
+  // lit and carrying his thought as a callout under it. No swatch — the
+  // name is the label — and nothing dimmed: emphasis adds, never dims.
+  if (canvas) {
+    const spanOf = (o as { span?: string[] }).span ?? [];
+    const pointed = names.find((name) => spanOf.includes(name)) ?? null;
+    const most = Math.max(1, ...values.map(Math.abs));
+    const SW = 120;
+    const SH = 90;
+    const base = byChange ? 58 : 84;
+    const top = 6;
+    const slot = SW / Math.max(1, order.length);
+    const bw = slot * 0.55;
+    return (
+      <div className="r-mk r-mk-strip" data-emphasis={emphasised(o) ? 'yes' : undefined}>
+        {names.map((name, n) => {
+          const mine = rows.filter((r) => String(r[nameKey]) === name);
+          const lit = pointed ? name === pointed : Boolean(o.emphasise) && mine.some((r) => isLit(o, r));
+          return (
+            <div key={name} className="r-mk-shop r-mk-in" data-lit={lit ? 'yes' : 'no'} style={beat(n)}>
+              <p className="r-mk-shop-nm">
+                <RowName name={name} className="r-mk-name" dimension={null} plain
+                         pickable onPick={onPick} picked={picked?.includes(name)} />
+              </p>
+              <svg viewBox={`0 0 ${SW} ${SH}`} role="img" aria-label={`${name}: ${mine.length} points`}>
+                <line className="r-mk-axis" x1={0} x2={SW} y1={base} y2={base} />
+                {order.map((at, i) => {
+                  const r = mine.find((m) => JSON.stringify(m[orderKey]) === JSON.stringify(at));
+                  if (!r) return null;
+                  const v = read(r);
+                  const h = (Math.abs(v) / most) * (base - top);
+                  const cx = slot * i + slot / 2;
+                  return (
+                    <rect key={i} className="r-mk-shop-bar" fill={paint(colourOf(changeIfAny(r), true))}
+                          x={cx - bw / 2} y={v < 0 ? base : base - h} width={bw} height={Math.max(h, 1)} rx={1}
+                          data-v={told(name, label(at), fmt(key, v, unit))} />
+                  );
+                })}
+              </svg>
+              {pointed === name && o.thought?.trim() && (
+                <p className="r-mk-callout">{o.thought.trim()}</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
   return (
     <div className="r-mk r-mk-multiples-wrap" data-emphasis={emphasised(o) ? 'yes' : undefined}>
       <div className="r-mk-multiples">

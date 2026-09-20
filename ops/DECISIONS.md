@@ -5185,3 +5185,36 @@ So from the moment that deploy went live, **every post Bob authored was rejected
 **AND FIVE LIVE TESTS THAT HAD BEEN RED SINCE A RENAME.** Four in `golden.py` filtered on the literal `"Shang"` and stopped resolving when the display name became "Shangri-La"; they read it from `stores.active_retail` now. One read `selection.comparison`, deleted with the compare shortcut on 2026-09-15; it asserts the absence and keeps the half still true.
 
 **Suites after:** pure 2,107 → 2,112, vitest 1,019 → 1,026, `tsc -b --force` clean.
+
+## 2026-09-20 — P6.e: the canvas is the design, to the pixel, and only the canvas
+
+**Decision.** When Bob lays the right-hand side out himself (an `arrangement`), every
+block is drawn to `ops/ideal/how-are-we-doing-v2.html`'s own sizes and shapes; the packed
+board — no arrangement — draws exactly as before. One flag, `TileProps.canvas`, set by the
+renderer from `laid`; the differences live in CSS scoped to `.r-board--laid` and in four
+marks (figure, line, multiples, contributors).
+
+**Why.** The owner, with the design open on his phone beside P6.b's frame: *"it doesn't
+look like this. It still feels like our old just put in a new order ... still kinda a
+thread. whyyyyyy."* P6.b was closed as "within measure of v2" and was not. The measure had
+been the harness's numbers; the eye saw four things the numbers did not: three-sentence
+heads where the design has one line; every block the same shape (head, chart, `read n`
+line) where the design's sections differ; a 72px hero where the design has 34; and mini
+cards with coloured dots where the design has one strip. "Feels the same" was structural
+and the fix is structural.
+
+**What was not taken from the design.** Its ink-3 on the quiet label (his words are ink,
+`ink.test.ts`); its `--need` left rule on the callout box (accent is approvals only); its
+`-42.7%` per shop (not in the store×week rows, and a figure is never computed — Bob adds a
+per-shop read if he wants it said).
+
+**What changed underneath.** `composition.span` takes one label as well as two: on
+`multiples` it names the one shop the thought is about, drawn as the callout under it. The
+compose addendum (`composition.page_first`) now says a head is ONE line: bold lead is the
+`question` if given else the `claim`, the claim runs on in plain weight, a figure's
+`thought` sits under its number, a span's on the chart — never three sentences stacked.
+
+**Held by.** `canvas.dom.test.tsx` "on the canvas, the design" (five tests); `page.dom.test.tsx`
+"a laid-out board draws no relation line"; `palette.test.ts`, `accentUse.test.ts`,
+`ink.test.ts` unchanged and green — each refused one shortcut on the way here.
+

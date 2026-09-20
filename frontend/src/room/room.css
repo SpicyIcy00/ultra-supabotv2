@@ -2238,3 +2238,108 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
    figure each is a compact drawing; across 940px the dots sat a metre from
    their names. The target page draws it at about this width. */
 .r-mk-dumbbells { max-width: 600px; }
+
+/* ======================= THE CANVAS IS THE DESIGN (P6.e, 2026-09-20) ========
+   ops/ideal/how-are-we-doing-v2.html, drawn by the room when he laid the
+   right-hand side out himself. The owner, of the second pass: "it still
+   feels like our old just put in a new order ... still kinda a thread." What
+   made it one: every block wore the packed board's head (three sentences),
+   its air (34px) and its shape (head, chart, source), so the eye saw one
+   unit repeated down a column. These are the design's own numbers, scoped
+   to a laid-out board; the packed board he asked to keep draws as before. */
+.r-board--laid .r-fig-body, .r-board--laid .r-fig--lead .r-fig-body,
+.r-board--laid .r-fig[data-weight="quiet"] .r-fig-body { padding-bottom: 0; max-width: none; }
+.r-laid > .r-fig, .r-board--laid > .r-fig,
+.r-laid > .r-laid, .r-board--laid > .r-laid { margin-bottom: 48px; }
+.r-board--laid .r-laid--row, .r-board--laid .r-laid--grid { column-gap: 40px; }
+/* A SECTION (`panel`): its children sit tight under an optional small-caps
+   heading; no box — the design draws sections by space, not by borders. */
+.r-board--laid .r-laid--panel { border: 0; border-radius: 0; padding: 0; }
+.r-board--laid .r-laid--panel > .r-fig { margin-bottom: 14px; }
+.r-board--laid .r-laid--panel > .r-fig:last-child { margin-bottom: 0; }
+.r-board--laid .r-laid-head { margin-bottom: 10px; }
+/* THE HEAD IS ONE LINE (`.q`): 600 15px serif, the run-on at 400. The same
+   size at every weight — the number under it is what varies. */
+.r-board--laid .r-mk-say, .r-board--laid .r-fig--lead .r-mk-say,
+.r-board--laid .r-fig[data-under] .r-mk-say, .r-board--laid .r-fig[data-told="yes"] .r-mk-say {
+  font: 600 15px/1.45 var(--serif); letter-spacing: 0; margin: 0 0 6px; max-width: none;
+}
+.r-board--laid .r-mk-say .r-mk-thought, .r-board--laid .r-mk-say[data-step] .r-mk-title { font-weight: 400; }
+/* THE SOURCE LINE (`.src`): 10px, the quietest ink. */
+.r-board--laid .r-src { font-size: 10px; color: var(--ink-4); }
+/* A NUMBER (`.totals`, `.pair`): mono 500, its change as coloured text at
+   the top of the number and its `was` beside, no pill. */
+.r-board--laid .r-mk-figure { gap: 6px 10px; }
+.r-board--laid .r-mk-num { font-weight: 500; letter-spacing: -0.01em; line-height: 1; }
+.r-board--laid .r-mk-figure .r-delta {
+  padding: 0; background: transparent; font: 500 13px/1 var(--mono); align-self: flex-start;
+}
+.r-mk-was { font: 400 12px/1.4 var(--mono); color: var(--ink-3); margin-left: 8px; }
+.r-mk-verdict { font: 400 17px/1.3 var(--serif); color: var(--ink); margin: 6px 0 0; max-width: 60ch; }
+/* QUIET (`.quiet`): a small-caps label, the number, the words beside it. */
+.r-board--laid .r-fig[data-weight="quiet"] { border-top: 1px solid var(--edge); padding-top: 14px; }
+/* His words, so the ink they inherit even as a label (ink.test.ts): the
+   design's ink-3 here is the one thing of its not taken. */
+.r-board--laid .r-fig[data-weight="quiet"] .r-mk-say {
+  font: 500 10px/1.6 var(--mono); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.r-board--laid .r-fig[data-weight="quiet"] .r-mk-body[data-mark="figure"] {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: baseline;
+}
+.r-board--laid .r-fig[data-weight="quiet"] .r-mk-verdict { font: 400 13.5px/1.5 var(--sans); margin: 0; max-width: 64ch; }
+/* THE LINE (`.rhythm`): an axis, its dates, the note bracketed over the band,
+   a legend in words. */
+.r-board--laid .r-mk-line { position: relative; }
+.r-board--laid .r-mk-line svg { margin-top: 8px; }
+.r-mk-axis { stroke: var(--edge-strong); }
+.r-mk-tick { font: 500 10.5px var(--mono); fill: var(--ink-3); }
+.r-board--laid .r-mk-point { font-size: 12px; }
+.r-mk-note-l { stroke: var(--ink-3); fill: none; stroke-width: 1; }
+/* The band is the direction of the rows in it, at a tenth; ink when they
+   disagree or the tool declared none. */
+.r-mk-span-band[data-dir] { fill: currentColor; opacity: 0.10; }
+/* The design's `.l-now` and `.l-was`: the month in ink, the month before
+   dashed in ink-3, the one labelled point in ink. */
+.r-board--laid .r-mk-series-line { stroke: var(--ink); }
+.r-board--laid .r-mk-baseline { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.r-board--laid .r-mk-peak { fill: var(--ink); }
+.r-mk-annotation[data-canvas] {
+  position: absolute; top: 0; margin: 0; padding: 0; border-left: 0;
+  font-size: 14.5px; line-height: 1.3; text-align: center; max-width: 90%;
+}
+.r-mk-legend-line { font: 400 11px/1.4 var(--mono); color: var(--ink-3); margin: 6px 0 0; }
+.r-mk-legend-line i { display: inline-block; width: 18px; border-top: 1.6px solid var(--ink); vertical-align: middle; margin: 0 6px 0 0; }
+.r-mk-legend-line i.r-mk-legend-was { border-top: 1px dashed var(--ink-3); margin-left: 10px; }
+/* THE STRIP (`.multiples`, `.shop`): seven across on a desk, two on a phone. */
+.r-mk-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 18px; margin-top: 12px; }
+.r-mk-shop { border-top: 1px solid var(--edge); padding-top: 10px; min-width: 0; }
+.r-mk-shop[data-lit="yes"] { border-top-color: var(--ink); }
+.r-mk-shop-nm { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 6px; }
+.r-mk-shop-nm .r-mk-name { font: 500 12.5px/1.3 var(--sans); padding: 0; }
+.r-mk-shop svg { width: 100%; height: 90px; display: block; overflow: visible; }
+.r-mk-callout {
+  font: 400 13px/1.35 var(--serif); color: var(--ink); margin: 8px 0 0;
+  border-left: 1px solid var(--ink-3); padding-left: 8px;
+}
+/* THE MOVERS (`.mv`): name, a track the bar grows in from its own edge, the
+   figure in its direction's colour. */
+.r-board--laid .r-mk-contributors { margin-top: 8px; }
+.r-board--laid .r-mk-contributors .r-mk-row {
+  grid-template-columns: minmax(0, 1.4fr) minmax(80px, 1fr) 82px; gap: 10px;
+  padding: 6px 0; border-top: 1px solid var(--edge);
+}
+.r-board--laid .r-mk-contributors .r-mk-name { font: 400 12.5px/1.3 var(--sans); padding: 0; }
+.r-board--laid .r-mk-contributors .r-mk-bar { height: 8px; background: transparent; border-radius: 1px; }
+.r-board--laid .r-mk-contributors .r-mk-bar--split::before { display: none; }
+.r-board--laid .r-mk-contributors .r-mk-fig b { font: 500 11.5px/1.35 var(--mono); }
+/* THE LIST (`.need ul`): two columns of name and where, no rules. */
+.r-board--laid .r-mk-list { margin-top: 8px; }
+.r-board--laid .r-mk-list-row { border-top: 0; padding: 0; font: 400 13px/1.7 var(--sans); gap: 8px; }
+.r-board--laid .r-mk-list-row .r-mk-name { font: 400 13px/1.7 var(--sans); padding: 0; }
+.r-board--laid .r-mk-list-where { font: 500 11px/1.7 var(--mono); }
+.r-board--laid .r-caveats { margin-bottom: 10px; }
+@media (max-width: 720px) {
+  .r-laid > .r-fig, .r-board--laid > .r-fig, .r-laid > .r-laid, .r-board--laid > .r-laid { margin-bottom: 36px; }
+  .r-mk-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .r-board--laid .r-fig[data-weight="quiet"] .r-mk-body[data-mark="figure"] { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+}

@@ -135,7 +135,7 @@ export function emphasised(o: TileProps['o']): boolean {
  * A row with no subject of its own is drawn as it always was: a plain label
  * is honest about there being nothing to pick.
  */
-export function RowName({ name, pickable, onPick, picked, className, dimension }: {
+export function RowName({ name, pickable, onPick, picked, className, dimension, plain }: {
   name: string;
   pickable: boolean;
   onPick?(subject: string): void;
@@ -146,12 +146,18 @@ export function RowName({ name, pickable, onPick, picked, className, dimension }
    * the store; the mark beside it is the verdict.
    */
   dimension?: Dimension | null;
+  /**
+   * NO SWATCH (P6.e): on the canvas the design names a row by its name
+   * alone — the strip's shops, the movers' lines. The one identity channel
+   * of P2S.2(e) stays everywhere else.
+   */
+  plain?: boolean;
 }) {
   // THE SWATCH SITS OUTSIDE THE TEXT THAT CLAMPS (the log, 2026-09-17: "these
   // things keep getting slightly cut we cant accept that"). A two-line clamp
   // needs `overflow: hidden`, and a dot inside that box lost its left edge and
   // its ring. The dot is a sibling now; only the words are clamped.
-  const swatch = <Swatch name={name} dimension={dimension} />;
+  const swatch = plain ? null : <Swatch name={name} dimension={dimension} />;
   const words = <span className="r-mk-name-text">{name}</span>;
   if (!pickable || !onPick) return <span className={className}>{swatch}{words}</span>;
   return (

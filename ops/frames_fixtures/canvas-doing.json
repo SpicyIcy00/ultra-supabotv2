@@ -1,5 +1,5 @@
 {
- "why": "THE CANVAS, LOCALLY (P6.d). Every figure is a value the vetted read tools returned on 2026-09-20; the blocks, arrangement, prose and questions are the session's. NO MODEL TURN WAS SPENT. This is what the room draws from the vocabulary; whether Bob composes it is the next live turn's to answer.",
+ "why": "THE CANVAS IS THE DESIGN (P6.e, 2026-09-20). Every figure is a value the vetted read tools returned on 2026-09-20; the blocks, arrangement and words are the session's, cut to ops/ideal/how-are-we-doing-v2.html: a one-line head per block, the figure's thought under its number, the span's on the chart. NO MODEL TURN WAS SPENT.",
  "question": "how are we doing?",
  "answer": "Down on the month - but **the fall was two weeks in August, at every shop, and it is over - except at Rockwell.**\n\nSame number of people, smaller baskets. The range is splitting: a few lines stopped dead while a few others took off. And eight lines hit zero yesterday, most of them at OPUS and Magnolia.\n\nShall I draft the eight transfers, and pull Rockwell day by day across those two weeks?",
  "at": "2026-09-20T09:50:00+00:00",
@@ -10,8 +10,7 @@
    "seq": 0,
    "kind": "figure",
    "weight": "lead",
-   "question": "Are we down?",
-   "claim": "A real fall - and most of it is already over"
+   "claim": "Down on the month"
   },
   {
    "op": "put",
@@ -19,9 +18,9 @@
    "seq": 1,
    "kind": "line",
    "weight": "supporting",
-   "question": "Where is the fall?",
+   "question": "The month, day by day, over the month before.",
    "claim": "The rhythm is the weekends; the hole is late August, and it closes",
-   "thought": "Two weeks under last month, at every shop.",
+   "thought": "two weeks under last month, at every shop",
    "span": [
     "2026-08-21",
     "2026-09-03"
@@ -33,9 +32,13 @@
    "seq": 2,
    "kind": "multiples",
    "weight": "supporting",
-   "question": "Was it one shop?",
-   "claim": "No - every shop fell in the same two weeks, and one has not come back",
+   "question": "Every shop, week by week.",
+   "claim": "The same two red weeks on all seven — and one that has not come back",
    "emphasise": [
+    "Rockwell"
+   ],
+   "thought": "the one that did not come back",
+   "span": [
     "Rockwell"
    ]
   },
@@ -45,8 +48,8 @@
    "seq": 3,
    "kind": "contributors",
    "weight": "supporting",
-   "question": "What stopped?",
-   "claim": "Three lines gave back nearly everything they earned"
+   "question": "What moved in the range.",
+   "claim": "Splitting, not softening — these stopped"
   },
   {
    "op": "put",
@@ -54,7 +57,7 @@
    "seq": 4,
    "kind": "contributors",
    "weight": "supporting",
-   "claim": "And a different handful took off",
+   "claim": "…and these took off",
    "under": "stopped",
    "relation": "counter"
   },
@@ -64,8 +67,8 @@
    "seq": 5,
    "kind": "figure",
    "weight": "supporting",
-   "question": "Fewer people?",
-   "claim": "No - the same people came in"
+   "claim": "A visit",
+   "thought": "The same people came in…"
   },
   {
    "op": "put",
@@ -73,10 +76,10 @@
    "seq": 6,
    "kind": "figure",
    "weight": "supporting",
-   "question": "...or less from each?",
-   "claim": "Yes - each spent less, at all seven shops",
+   "claim": "Each basket",
    "under": "visits",
-   "relation": "evidence"
+   "relation": "evidence",
+   "thought": "…and each spent less, at all seven shops."
   },
   {
    "op": "put",
@@ -84,8 +87,8 @@
    "seq": 7,
    "kind": "list",
    "weight": "supporting",
-   "question": "What needs me?",
-   "claim": "Eight lines hit zero yesterday, at four shops",
+   "question": "Crossed to zero yesterday.",
+   "claim": "Eight lines, four shops",
    "thought": "No low-stock level is set anywhere, so this is the first I see of any of them."
   },
   {
@@ -94,7 +97,8 @@
    "seq": 8,
    "kind": "figure",
    "weight": "quiet",
-   "claim": "Vending, with nothing to compare against"
+   "claim": "vending · no comparison",
+   "thought": "Its shelf feed has not moved since 5 August, so its quiet means nothing either way."
   }
  ],
  "default_blocks": [
@@ -175,10 +179,15 @@
   "layout": "stack",
   "children": [
    {
-    "block": "total"
-   },
-   {
-    "block": "days"
+    "layout": "panel",
+    "children": [
+     {
+      "block": "total"
+     },
+     {
+      "block": "days"
+     }
+    ]
    },
    {
     "block": "shops"
@@ -187,21 +196,26 @@
     "layout": "row",
     "children": [
      {
-      "block": "stopped"
+      "layout": "stack",
+      "children": [
+       {
+        "block": "stopped"
+       },
+       {
+        "block": "tookoff"
+       }
+      ]
      },
      {
-      "block": "tookoff"
-     }
-    ]
-   },
-   {
-    "layout": "row",
-    "children": [
-     {
-      "block": "visits"
-     },
-     {
-      "block": "basket"
+      "layout": "stack",
+      "children": [
+       {
+        "block": "visits"
+       },
+       {
+        "block": "basket"
+       }
+      ]
      }
     ]
    },

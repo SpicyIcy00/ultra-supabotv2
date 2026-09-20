@@ -32,14 +32,14 @@ function turnWith(rows: Record<string, unknown>[], seq = 0): AnswerTurn {
   } as unknown as AnswerTurn;
 }
 
-function draw(o: Partial<BoardObject>, rows: Record<string, unknown>[]) {
+function draw(o: Partial<BoardObject>, rows: Record<string, unknown>[], canvas = false) {
   const turn = turnWith(rows);
   const block = { key: 'k', weight: 'supporting', seq: 0, tool: 'get_sales', turn: 0, touched: 0,
                   ...o } as BoardObject;
   return render(
     <MarkBlock o={block} turn={turn} local={{}} landing={false} delay={0} focused={false}
                selected={false} selection={[]} earlier={false} retuned={null} on={ACTIONS()}
-               order={undefined} chrome="read 1" told={false} />,
+               order={undefined} chrome="read 1" told={false} canvas={canvas} />,
   );
 }
 
@@ -109,5 +109,91 @@ describe('small multiples of change', () => {
     const { container } = draw({ kind: 'multiples' }, ROWS);
     expect(container.querySelectorAll('.r-mk-multiple')).toHaveLength(2);
     expect(container.querySelectorAll('.r-mk-zero').length).toBe(2);
+  });
+});
+
+/**
+ * THE CANVAS IS THE DESIGN (P6.e, 2026-09-20).
+ *
+ * The owner, of the second pass, over the design on his phone: *"it doesn't
+ * look like this. It still feels like our old just put in a new order ...
+ * still kinda a thread."* He was right: every block on his arrangement wore
+ * the packed board's head (three sentences), its sizes and its shape. Laid out
+ * by him (`canvas`), a block is now drawn to ops/ideal/how-are-we-doing-v2.html:
+ * the head one line, the number at 34 with its `was` beside it and its thought
+ * under it, the line with an axis, its dates and a legend in words, multiples
+ * as one strip with the named one lit, a drop growing in from its own edge.
+ */
+describe('on the canvas, the design', () => {
+  const ONE = [{ value: 7281692, baseline: 8060342, change: -778650, change_pct: -9.7,
+                 direction: 'down', unit: 'PHP', baseline_status: 'ok' }];
+
+  it("sets a figure at the design's size, its was beside it, its thought under it", () => {
+    const { container } = draw({ kind: 'figure', weight: 'lead', claim: 'Down on the month',
+                                 thought: 'Most of it is already over.' }, ONE, true);
+    expect((container.querySelector('.r-mk-num') as HTMLElement).style.getPropertyValue('--size')).toBe('34px');
+    expect(container.querySelector('.r-mk-was')?.textContent).toBe('this 30 days · was ₱8,060,342');
+    expect(container.querySelector('.r-mk-verdict')?.textContent).toBe('Most of it is already over.');
+    // One line above the number: the thought is not on the head as well.
+    expect(container.querySelector('.r-mk-say .r-mk-thought')).toBeNull();
+    // And no dumbbell saying the same two figures a third time.
+    expect(container.querySelector('.r-mk-dot--was')).toBeNull();
+  });
+
+  it('draws the line with an axis, its dates, the note bracketed, and a legend in words', () => {
+    const { container } = draw({ kind: 'line', span: ['2026-09-02', '2026-09-05'],
+                                 thought: 'two weeks under last month' }, DAYS, true);
+    expect(container.querySelector('.r-mk-axis')).not.toBeNull();
+    expect(container.querySelectorAll('.r-mk-tick').length).toBeGreaterThanOrEqual(2);
+    expect(container.querySelector('.r-mk-tick')?.textContent).toMatch(/1 Sep/);
+    expect(container.querySelector('.r-mk-note-l')).not.toBeNull();
+    expect(container.querySelector('.r-mk-legend-line')?.textContent)
+      .toBe('this 30 daysthe 30 days before, day for day');
+    // The packed board's ends line is replaced, not added to.
+    expect(container.querySelector('.r-mk-ends')).toBeNull();
+    // The svg sizes by its own aspect; a fixed height letterboxed it.
+    expect(container.querySelector('svg')?.getAttribute('height')).toBeNull();
+  });
+
+  it('colours the band by the direction of the rows in it, through paint', () => {
+    const down = DAYS.map((r) => ({ ...r, direction: 'down' }));
+    const { container } = draw({ kind: 'line', span: ['2026-09-02', '2026-09-05'],
+                                 thought: 'the fall' }, down, true);
+    const band = container.querySelector('.r-mk-span-band') as SVGElement;
+    expect(band.getAttribute('data-dir')).toBe('down');
+    expect(band.style.color).toBe('rgb(var(--down))');
+  });
+
+  const WEEKS = ['2026-08-17', '2026-08-24', '2026-08-31'];
+  const SHOPS = ['Rockwell', 'OPUS'].flatMap((store) => WEEKS.map((week, i) => ({
+    store, week, value: 1000 + i, change: store === 'Rockwell' ? -300 + i * 10 : 5 + i,
+    direction: store === 'Rockwell' ? 'down' : 'up',
+  })));
+
+  it('draws multiples as one strip, the one his span names lit with his thought under it', () => {
+    const { container } = draw({ kind: 'multiples', span: ['Rockwell'],
+                                 thought: 'the one that did not come back' }, SHOPS, true);
+    expect(container.querySelectorAll('.r-mk-shop')).toHaveLength(2);
+    const lit = container.querySelectorAll('.r-mk-shop[data-lit="yes"]');
+    expect(lit).toHaveLength(1);
+    expect(lit[0].textContent).toContain('Rockwell');
+    expect(lit[0].querySelector('.r-mk-callout')?.textContent).toBe('the one that did not come back');
+    expect(container.querySelectorAll('.r-mk-callout')).toHaveLength(1);
+    // Said under the shop, not on the head as well.
+    expect(container.querySelector('.r-mk-say .r-mk-thought')).toBeNull();
+    // The name is the label: no swatch, and nothing dimmed.
+    expect(container.querySelector('.r-sw')).toBeNull();
+    expect(container.querySelectorAll('.r-mk-shop-bar')).toHaveLength(6);
+  });
+
+  it('grows a drop in from the right edge of its track, a gain from the left', () => {
+    const rows = [{ subject: 'Aji Mix', change: -100260, direction: 'down' },
+                  { subject: 'Aji Mango', change: 34626, direction: 'up' }];
+    const { container } = draw({ kind: 'contributors' }, rows, true);
+    const bars = container.querySelectorAll('.r-mk-bar i') as NodeListOf<HTMLElement>;
+    expect(bars[0].style.right).toBe('0px');
+    expect(bars[0].style.width).toBe('100%');
+    expect(bars[1].style.left).toBe('0px');
+    expect(container.querySelector('.r-sw')).toBeNull();
   });
 });

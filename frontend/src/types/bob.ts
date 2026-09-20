@@ -447,7 +447,7 @@ export interface CompositionBlock {
    * stretch, by the rows' own labels, drawn as a band with the `thought`
    * pointing at it. Validated server-side against the read's rows.
    */
-  span?: [string, string];
+  span?: [string] | [string, string];
   /**
    * WHAT HE THINKS THIS BLOCK SHOWS (2026-09-17): a sentence or two, drawn
    * beside the mark. Held server-side to the reading's rule — a figure only

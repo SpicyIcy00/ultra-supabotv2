@@ -2973,3 +2973,13 @@ Fixed in the renderer: a figure says its number once (`marks.tsx`, `room.dom.tes
 vitest 1121, pytest 2142. Frames: `verification/frames/canvas3/`. Still unverified live
 (P6.c): whether Bob composes an `arrangement` on a real turn.
 
+### 2026-09-20 — "it doesn't look like this" (the canvas, third look)
+
+The owner, with `how-are-we-doing-v2.html` open on his phone against `canvas5`'s
+predecessor: *"It still feels like our old just put in a new order ... still kinda a
+thread."* Right, and P6.b's "within measure" was wrong. Rebuilt the laid-out board to the
+design's own CSS (P6.e, DECISIONS). Three guards pushed back and each was right: palette
+(the band's colour must go through `paint`, so it rides as `currentColor`), accentUse
+(`--up`/`--down` never named in CSS), ink (no `color` on a quiet rule, even ink). Frames
+`verification/frames/canvas5/`. Frontend 1127, backend 2142. Live: still untested.
+

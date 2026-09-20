@@ -1025,14 +1025,17 @@ def validate(
                         for k in ("day", "week", "month", "store", "product", "category", "subject"):
                             if r.get(k) is not None:
                                 labels.add(str(r[k]))
-                    if (len(ends) == 2 and all(isinstance(e, str) for e in ends)
+                    # ONE LABEL IS ONE ROW (P6.e): a callout under the one shop
+                    # of a set of multiples, as the design draws "the one that
+                    # did not come back" under Rockwell. Two bound a stretch.
+                    if (1 <= len(ends) <= 2 and all(isinstance(e, str) for e in ends)
                             and all(e in labels for e in ends) and item.get("thought")):
-                        block["span"] = [ends[0], ends[1]]
+                        block["span"] = [ends[0], ends[-1]]
                     else:
                         coerced.append(
-                            f"{key!r}: `span` names the first and last row of a stretch by "
-                            f"the rows' own labels and needs a `thought` to point with; "
-                            f"this one was left off")
+                            f"{key!r}: `span` names a row, or the first and last row of a "
+                            f"stretch, by the rows' own labels and needs a `thought` to "
+                            f"point with; this one was left off")
             else:
                 call = None
 

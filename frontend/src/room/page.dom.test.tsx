@@ -535,3 +535,19 @@ describe('an answer that spans more than one period', () => {
     expect(container.querySelector('[data-figure="a"] .r-src')?.textContent).toContain('last week');
   });
 });
+
+/**
+ * ON THE CANVAS HIS ARRANGEMENT IS THE RELATION (P6.e). Where he placed a
+ * block says what it is to the one beside or above it; a WHY line drawn over
+ * a chart he placed himself was a caption on a page (the frame of 2026-09-20).
+ */
+describe('a laid-out board draws no relation line', () => {
+  it('keeps `under` for the packing and says nothing over the block on the canvas', () => {
+    const { container } = draw([
+      block('shops', 1, { claim: 'OPUS is most of it', weight: 'lead' }),
+      block('products', 2, { claim: 'Bayberry leads the fall', under: 'shops', relation: 'evidence' }),
+    ], { arrangement: { layout: 'stack', children: [{ block: 'shops' }, { block: 'products' }] } });
+    expect(container.querySelector('[data-figure="products"]')).not.toBeNull();
+    expect(container.querySelector('.r-fig-rel')).toBeNull();
+  });
+});
