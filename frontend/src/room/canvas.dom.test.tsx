@@ -11,6 +11,7 @@
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MarkBlock } from './marks';
+import { DraftTile, SystemTile } from './tiles';
 import type { AnswerTurn } from './data';
 import type { BoardObject } from './board';
 import type { TileActions } from './tiles';
@@ -195,5 +196,70 @@ describe('on the canvas, the design', () => {
     expect(bars[0].style.width).toBe('100%');
     expect(bars[1].style.left).toBe('0px');
     expect(container.querySelector('.r-sw')).toBeNull();
+  });
+});
+
+/**
+ * BUILD TALKS ON THE CANVAS (P6.g, 2026-09-20). The owner: "how about other
+ * types of talks? to test all the other features like building stuff. it must
+ * be ready for everything." A draft, a system and a memory drew a label and a
+ * box, and nothing of what he said about them. Laid out by him they open the
+ * way a step does and sit on the page unboxed.
+ */
+describe('a built thing on the canvas', () => {
+  const PLAN = [{ product: 'Kameda Orange Big Pack', units_per_day: '2.878', on_hand: 0,
+                  days_of_cover: '0.0', suggested_order_qty: 86, days_with_nothing: 90 }];
+  const planTurn = () => ({
+    role: 'bob', text: '', thinking: '', at: '2026-09-20T15:20:00Z',
+    toolCalls: [{ seq: 0, tool: 'get_purchase_plan', arguments: { supplier: 'Seikyo SEK001' },
+                  result: { rows: PLAN, meta: { source_table: 'purchase_orders', supplier: 'Seikyo SEK001',
+                                                 snapshot_timestamp: '2026-09-20T15:20:00Z', filters_applied: [] } } }],
+  } as unknown as AnswerTurn);
+  const tile = (o: Partial<BoardObject>) => ({
+    key: 'k', weight: 'lead', seq: 0, tool: 'get_purchase_plan', turn: 0, touched: 0, ...o,
+  } as BoardObject);
+  const props = (canvas: boolean) => ({
+    local: {}, landing: false, delay: 0, focused: false, selected: false, selection: [],
+    earlier: false, retuned: null, on: ACTIONS(), order: undefined, chrome: 'read 1', told: false, canvas,
+  });
+
+  it('opens a draft with his claim and thought, unboxed, on the canvas', () => {
+    const o = tile({ kind: 'draft', claim: 'Seikyo, for the next month',
+                     thought: 'Change any line before it goes.' });
+    const { container } = render(<DraftTile o={o} turn={planTurn()} {...props(true)} />);
+    expect(container.querySelector('.r-mk-say')?.textContent)
+      .toBe('Seikyo, for the next month. Change any line before it goes.');
+    expect(container.querySelector('.r-tile--boxed')).toBeNull();
+    expect(container.querySelector('.r-rows')).not.toBeNull();
+  });
+
+  it('keeps the draft in its box, without the head, on the packed board', () => {
+    const o = tile({ kind: 'draft', claim: 'Seikyo, for the next month' });
+    const { container } = render(<DraftTile o={o} turn={planTurn()} {...props(false)} />);
+    expect(container.querySelector('.r-mk-say')).toBeNull();
+    expect(container.querySelector('.r-tile--boxed')).not.toBeNull();
+  });
+
+  it("draws what a watch says about itself, each field the row carries, once", () => {
+    const WHAT = 'watching down: average transaction value — Greenhills';
+    const turn = {
+      role: 'bob', text: '', thinking: '', at: '2026-09-20T15:20:00Z',
+      toolCalls: [{ seq: 1, tool: 'view_automations', arguments: {}, result: { rows: [{
+        what: WHAT, state: 'ready — not switched on', when: null, by: 'would have fired 3 of the last 30 days',
+        condition: 'average transaction value against the same week before', where: 'Greenhills',
+        schedule: 'every day at 06:00', would_have_fired: '3 of the last 30 days', id: 'w1',
+      }], meta: { source_table: 'george.watches', snapshot_timestamp: '2026-09-20T15:20:00Z', filters_applied: [] } } }],
+    } as unknown as AnswerTurn;
+    const o = { key: 'w', kind: 'system', weight: 'supporting', seq: 1, tool: 'view_automations',
+                turn: 0, touched: 0, subject: WHAT, claim: 'The watch, as it stands' } as BoardObject;
+    const { container } = render(<SystemTile o={o} turn={turn} {...props(true)} />);
+    expect(container.querySelector('.r-mk-say')?.textContent).toBe('The watch, as it stands');
+    const dl = container.querySelector('.r-system');
+    expect(dl?.textContent).toContain('average transaction value against the same week before');
+    expect(dl?.textContent).toContain('every day at 06:00');
+    expect(dl?.textContent).toContain('would have fired 3 of the last 30 days');
+    // The backtest is said once: the dl says it, so the `by` line does not.
+    expect(container.textContent?.match(/would have fired/g)).toHaveLength(1);
+    expect(container.textContent).toContain('ready — not switched on');
   });
 });

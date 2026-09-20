@@ -5886,17 +5886,26 @@ voice:
         # next … where an investigation stopped, this is where it says what to
         # look at" — the breadcrumb, on the schema Bob reads at the moment
         # he writes, after the prompt had forbidden it.
+        # UNDER THE FIGURES, AT LENGTH (the owner, 2026-09-20: "move what i'd do
+        # next to the right side, you can be more in depth on it, not just a
+        # few lines if needed"). It was one sentence on the left, beside the
+        # headline; it is now the last thing on the page, where the figures
+        # have already made the case, and it may run as long as the doing needs.
         about: >
-          ONE sentence, drawn last: what you would do — or what no read can
-          settle (a person, a count, a document) — never a read you could have
-          made. A figure belongs here only when a read returned it, never one
-          you worked out yourself. Leave it out when there is genuinely nothing
-          to do.
+          What you would do, drawn last, under the figures — as long as it needs
+          and no longer: the steps in the order you would take them, what each
+          one needs from the person (a decision, a count, a document), what it
+          would touch and what you would watch afterwards. A quiet week is one
+          line; a real decision is a plan. Paragraphs are line breaks. Never a
+          read you could have made yourself. A figure belongs here only when a
+          read returned it, never one you worked out yourself. Leave it out
+          when there is genuinely nothing to do.
         figures: returned
         # 160 → 320 (2026-09-18): "I'd have OPUS check the kiamoy and
         # bayberry facings on the floor — the counts say three packs for …"
         # was refused at 160; what to do and why is one sentence, not a tag.
-        max_length: 320
+        # 320 → 1400 (P6.f, 2026-09-20): a plan, under the figures.
+        max_length: 1400
         # Kept whole past it, like the caveat (P2S.7): a next may name what a
         # notice says no read can settle, and a cut would drop that.
         over_length: kept_whole
@@ -5976,7 +5985,8 @@ voice:
         them. That is where the investigation is SHOWN: the reader walks the
         questions and the figures carry the evidence. Your prose is the
         conclusion, drawn on the left under your headline, and it is short:
-        what it means and what you would do, never the steps retold. Compose
+        what it means, never the steps retold; what you would do is the NEXT,
+        drawn last under the figures, at the length the doing needs. Compose
         the steps in the order you took them — what you checked first and what
         it settled, what it broke into, where it narrowed to — and give a
         step a question a person would actually ask.

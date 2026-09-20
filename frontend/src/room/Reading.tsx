@@ -326,15 +326,23 @@ export function ReadingAsks({ reading, busy, onAsk }: {
  * with the reading for the thing it was recommending, and every answer has
  * this line while few answers had that tile.
  */
-export function ReadingNext({ reading }: { reading?: ReadingFrame }) {
+export function ReadingNext({ reading, calls, onFigure }: {
+  reading?: ReadingFrame;
+  /** This turn's reads, so a figure in it carries the read it came from. */
+  calls?: ToolCall[];
+  onFigure?: (seq: number) => void;
+}) {
   const next = reading?.next?.trim();
   if (!next) return null;
-  // THE DESIGN'S `.bs-next`: a mono label, his sentence in serif, and a rule
-  // on the side facing the figures.
+  // UNDER THE FIGURES, AT LENGTH (P6.f, the owner 2026-09-20: "move what i'd
+  // do next to the right side ... more in depth, not just a few lines"). It
+  // was one sentence beside the headline; it is the last thing on the page
+  // now, after the figures have made the case, and it keeps his line breaks.
+  // A mono label, his words in serif, a rule down the side.
   return (
     <div className="r-next">
       <b className="r-next-label">what I&rsquo;d do next</b>
-      {next}
+      <Figures text={next} calls={calls ?? []} onFigure={onFigure} />
     </div>
   );
 }

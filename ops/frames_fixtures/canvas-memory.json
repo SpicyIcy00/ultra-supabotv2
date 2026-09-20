@@ -1,0 +1,85 @@
+{
+ "why": "BUILD TALKS ON THE CANVAS (P6.g, 2026-09-20). Read rows are what the vetted read tools returned on 2026-09-20; the watch row is the shape self_reader returns for one; the blocks, arrangement and words are the session's. NO MODEL TURN WAS SPENT.",
+ "question": "what do you remember?",
+ "answer": "Two views, and what each rests on.",
+ "at": "2026-09-20T15:20:00+00:00",
+ "blocks": [
+  {
+   "op": "put",
+   "key": "memory",
+   "seq": 0,
+   "kind": "memory",
+   "weight": "lead",
+   "claim": "Two views, and what each rests on"
+  }
+ ],
+ "calls": [
+  {
+   "seq": 0,
+   "tool": "view_memory",
+   "arguments": {},
+   "result": {
+    "meta": {
+     "source_table": "george.beliefs",
+     "snapshot_timestamp": "2026-09-15T09:00:00Z",
+     "metric_label": "What I think right now",
+     "filters_applied": [
+      "superseded_by IS NULL",
+      "forgotten_at IS NULL"
+     ],
+     "held": 2
+    },
+    "rows": [
+     {
+      "id": "b1",
+      "subject": "Rockwell",
+      "subject_kind": "store",
+      "stance": "needs_attention",
+      "claim": "Rockwell is losing customers rather than smaller baskets.",
+      "held_since": "2026-09-04T09:00:00Z",
+      "last_checked": "2026-09-12T09:00:00Z",
+      "rests_on": "get_sales, get_stock",
+      "told": null,
+      "carried": true,
+      "applied": 9,
+      "last_applied": "2026-09-15T08:55:00Z",
+      "unconfirmed": true
+     },
+     {
+      "id": "t1",
+      "subject": "we",
+      "subject_kind": "estate",
+      "stance": "means",
+      "claim": "When they say we they mean the retail shops, not the warehouse.",
+      "held_since": "2026-09-12T09:00:00Z",
+      "last_checked": "2026-09-12T09:00:00Z",
+      "rests_on": "no, we means the shops",
+      "told": "no, we means the shops",
+      "carried": true,
+      "applied": 1,
+      "last_applied": "2026-09-15T08:55:00Z",
+      "unconfirmed": false
+     }
+    ]
+   }
+  }
+ ],
+ "default_blocks": [],
+ "arrangement": {
+  "layout": "stack",
+  "children": [
+   {
+    "block": "memory"
+   }
+  ]
+ },
+ "reading": {
+  "claim": "two views, and what each rests on",
+  "next": "The Rockwell view is unconfirmed: data has landed since I last checked it. I'd re-read Rockwell's transactions and basket for the closed week before carrying it into another answer, and drop it if the fall turns out to be baskets after all.\n\nThe other one is yours — what \"we\" means — and stays until you tell me otherwise.",
+  "asks": [
+   "Check the Rockwell view now",
+   "Forget the Rockwell view",
+   "What do you know about OPUS?"
+  ]
+ }
+}

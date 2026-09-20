@@ -5218,3 +5218,40 @@ compose addendum (`composition.page_first`) now says a head is ONE line: bold le
 "a laid-out board draws no relation line"; `palette.test.ts`, `accentUse.test.ts`,
 `ink.test.ts` unchanged and green — each refused one shortcut on the way here.
 
+## 2026-09-20 — P6.f: "what I'd do next" is the last thing on the page, and it may be long
+
+**Decision.** The `next` slot is drawn under the figures, after the board and with the foot
+offers, not beside the headline on the left; it keeps his line breaks; its cap is 1,400
+characters (was 320, one sentence). The prompt says only "drawn last under the figures ...
+at length" (1,800/1,800 words); what depth means — the steps in order, what each needs
+from the person, what it touches, what to watch after — is on the slot's own `about`,
+which rides on `compose`.
+
+**Why.** The owner, 2026-09-20: *"move what i'd do next to the right side, you can be more
+in depth on it, not just a few lines if needed."* The design put it on the left as one
+sentence; his reading of the page is figures first, then what to do about them, and a plan
+for a real decision is not a tag. Reasoning shown every time (CLAUDE.md, levels of
+automation) — the plan is where the owner takes over.
+
+**Held by.** `test_voice_contract` (budget), `test_reading_frame_contract` (the slot, its
+figures rule), `keptChrome.test.ts` (`.r-next` 62ch), the frames.
+
+## 2026-09-20 — P6.g: the canvas past reads — a draft, a watch, a memory
+
+**Decision.** A built thing on a laid-out board opens with his claim and thought like a
+step and sits unboxed; a `system` block draws every field its row carries — condition,
+where, schedule, what the backtest found — and the automations reader returns those
+fields for a watch beside `what/state/by`. Three local scenes stand as the proof:
+`canvas-order`, `canvas-watch`, `canvas-memory`.
+
+**Why.** The owner: *"it must be ready for everything."* The canvas had been proven on
+reads only; a draft order was still a boxed form with no word of his above it, and a watch
+drew "ready — not switched on" and a sentence, with its condition and schedule nowhere.
+
+**What is not claimed.** No writer ran: the watch row is the reader's shape, not a stored
+watch; the draft is the real plan read, not a sent order. A saved workflow, a page edit and
+a standing question use the same shapes and have no fixture yet.
+
+**Held by.** `canvas.dom.test.tsx` "a built thing on the canvas"; the backend suite over
+`self_reader`.
+

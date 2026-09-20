@@ -427,6 +427,25 @@ function Note({ o }: { o: BoardObject }) {
  * the suggested figure stays beside it so an edit is always an edit OF
  * something.
  */
+/**
+ * THE HEAD OF A BUILT THING ON THE CANVAS (P6.g). A draft, a system and a
+ * memory drew a label and nothing of what he said about them; laid out by
+ * him they open the way a step does — his claim in bold, his thought running
+ * on — so a build talk reads as a page, not a form.
+ */
+function BuiltHead({ o, canvas }: { o: TileProps['o']; canvas?: boolean }) {
+  const claim = o.claim?.trim();
+  const thought = o.thought?.trim();
+  if (!canvas || (!claim && !thought)) return null;
+  return (
+    <p className="r-mk-say">
+      {claim && <span className="r-mk-title">{claim}</span>}
+      {claim && thought && (/[.!?:…]$/.test(claim) ? ' ' : '. ')}
+      {thought && <span className="r-mk-thought">{thought}</span>}
+    </p>
+  );
+}
+
 export function DraftTile(p: TileProps) {
   const call = callFor(p);
   const rows = rowsOf(call);
@@ -438,7 +457,8 @@ export function DraftTile(p: TileProps) {
   const total = rows.reduce((s, row, n) => s + (qty[n] ?? suggested(row)), 0);
 
   return (
-    <Shell boxed landing={p.landing} delay={p.delay}>
+    <Shell boxed={!p.canvas} landing={p.landing} delay={p.delay}>
+      <BuiltHead o={p.o} canvas={p.canvas} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
         <div>
           <p className="r-label">draft order{meta?.supplier ? ` · ${meta.supplier}` : ''}</p>
@@ -672,12 +692,25 @@ export function SystemTile(p: TileProps) {
   const state = String(row.state ?? '');
   const when = row.when ? new Date(String(row.when)) : null;
 
+  // WHAT A WATCH SAYS ABOUT ITSELF (P6.g): its condition, its schedule and
+  // what the backtest found, each a field of the row where the row carries
+  // one (backend/app/services/self_reader.py, watches.py). Nothing here is
+  // a figure of the room's own; a field the row lacks is not drawn.
+  const said = (k: string) => (typeof row[k] === 'string' && String(row[k]).trim() ? String(row[k]) : null);
   return (
     <Shell quiet landing={p.landing} delay={p.delay}
            picked={p.focused}>
+      <BuiltHead o={p.o} canvas={p.canvas} />
       <p className="r-label">{subject}{p.earlier ? ' · from earlier' : ''}</p>
       <p className="r-note" style={{ marginTop: 8 }}>{state || 'no state recorded'}</p>
-      {row.by ? (
+      {(said('condition') || said('schedule') || said('would_have_fired')) && (
+        <dl className="r-system">
+          {said('condition') && <><dt>watching</dt><dd>{said('condition')}</dd></>}
+          {said('schedule') && <><dt>checks</dt><dd>{said('schedule')}</dd></>}
+          {said('would_have_fired') && <><dt>backtest</dt><dd>would have fired {said('would_have_fired')}</dd></>}
+        </dl>
+      )}
+      {row.by && !said('would_have_fired') ? (
         <p className="r-label" style={{ marginTop: 8, opacity: 0.8 }}>{String(row.by)}</p>
       ) : null}
       {when && !Number.isNaN(when.getTime()) && (
@@ -731,6 +764,7 @@ export function MemoryTile(p: TileProps) {
   return (
     <Shell quiet landing={p.landing} delay={p.delay}
            picked={p.focused}>
+      <BuiltHead o={p.o} canvas={p.canvas} />
       <p className="r-label">
         what I think right now
         {/* HOW MANY THERE ARE, so a list that scrolls is not a list that ends.

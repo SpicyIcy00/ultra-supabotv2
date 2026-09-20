@@ -329,8 +329,25 @@ async def read_automations(session: AsyncSession, *, username: str) -> dict:
         way = "" if w["direction"] == "either" else f" {w['direction']}"
         firing = sorted((w["last_state"] or {}).keys())
         backtest = w["backtest"] or {}
+        at = f"{w['hour']:02d}:{w['minute']:02d}"
+        if w["kind"] == "weekly" and w["days_of_week"]:
+            names = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+            schedule = ", ".join(names[d] for d in sorted(w["days_of_week"]) if 0 <= d <= 6) + f" at {at}"
+        else:
+            schedule = f"every day at {at}"
         rows.append({
             "what": f"watching{way}: {w['condition']} — {where}",
+            # WHAT IT SAYS ABOUT ITSELF (P6.g, 2026-09-20): the fields a
+            # `system` block draws on the page — the condition, where, the
+            # schedule and what the backtest found — each the watch's own,
+            # so the room never has to make a sentence of them.
+            "condition": w["condition"],
+            "where": where,
+            "schedule": schedule,
+            "would_have_fired": (
+                f"{backtest.get('days_fired')} of the last {backtest.get('days_checked')} days"
+                if backtest else None
+            ),
             # A watch has four states and they are NOT interchangeable:
             # quiet means it looked and there was nothing; stopped means it is
             # not looking; and "never backtested" means it cannot start.

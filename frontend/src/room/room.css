@@ -255,13 +255,16 @@
 /* CLAIM — the few words that ARE the point, in italic where he said them. */
 .r-claim { font-style: italic; }
 
-/* NEXT — the design's: a mono label, his sentence, a 3px rule facing the
-   figures. */
+/* NEXT — under the figures, last, at length (P6.f). A mono label, his words
+   in his serif with his line breaks kept, a 3px rule down the left. 62ch: a
+   plan reads as a column, not across the screen (keptChrome.test.ts). */
 .r-next {
-  margin: 6px 0 0; max-width: 44ch;
-  font: 400 14px/1.5 var(--serif); color: var(--ink);
-  border-right: 3px solid var(--ink); padding-right: 14px;
+  margin: 48px 0 0; max-width: 62ch;
+  font: 400 16px/1.55 var(--serif); color: var(--ink);
+  border-left: 3px solid var(--ink); padding-left: 16px;
+  white-space: pre-line; text-wrap: pretty;
 }
+.r-next + .r-foot-offers { margin-top: 14px; }
 .r-next-label {
   display: block;
   font: 500 10.5px/1.6 var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
@@ -2344,3 +2347,23 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
   .r-mk-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .r-board--laid .r-fig[data-weight="quiet"] .r-mk-body[data-mark="figure"] { grid-template-columns: minmax(0, 1fr); gap: 10px; }
 }
+
+/* THE BUILT THINGS ON THE CANVAS (P6.g): a draft, a system, a memory drawn as
+   sections of the page — no box, the small-caps label, the design's rows. */
+/* No box on the canvas: the draft passes `boxed={!canvas}` (layout.test.ts
+   keeps the one box rule). */
+.r-board--laid .r-label { font: 500 10px/1.6 var(--mono); letter-spacing: 0.11em; }
+.r-board--laid .r-rows { font-size: 12.5px; }
+.r-board--laid .r-rows th { font: 500 10px/1.2 var(--mono); letter-spacing: 0.11em; padding-bottom: 6px; }
+.r-board--laid .r-rows td { padding: 6px 10px 6px 0; border-bottom: 0; border-top: 1px solid var(--edge); }
+.r-board--laid .r-rows tr:first-child td { border-top: 0; }
+.r-board--laid .r-rows td:first-child { color: var(--ink); }
+.r-board--laid .r-memory { gap: 12px; }
+.r-board--laid .r-belief-claim { font: 400 13.5px/1.55 var(--serif); }
+/* A system's own fields: term, value. */
+.r-system {
+  display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px;
+  margin: 10px 0 0; font: 400 13px/1.5 var(--sans); color: var(--ink);
+}
+.r-system dt { font: 500 10px/1.6 var(--mono); letter-spacing: 0.11em; text-transform: uppercase; color: var(--ink-3); margin: 0; }
+.r-system dd { margin: 0; }

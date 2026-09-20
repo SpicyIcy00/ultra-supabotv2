@@ -223,7 +223,8 @@ describe('the six chrome tokens the old components paint with', () => {
     // 44ch. No page width may run an answer across a 1900px screen.
     expect(declsOn(ROOM, '.r-say--claim')['max-width']).toBe('30ch');
     expect(declsOn(ROOM, '.r-say--standing')['max-width']).toBe('56ch');
-    expect(declsOn(ROOM, '.r-next')['max-width']).toBe('44ch');
+    // 62ch since P6.f: under the figures, a plan reads as a column.
+    expect(declsOn(ROOM, '.r-next')['max-width']).toBe('62ch');
   });
 
   it('keeps the reserved colour out of this entirely', () => {

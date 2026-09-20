@@ -2983,3 +2983,12 @@ design's own CSS (P6.e, DECISIONS). Three guards pushed back and each was right:
 (`--up`/`--down` never named in CSS), ink (no `color` on a quiet rule, even ink). Frames
 `verification/frames/canvas5/`. Frontend 1127, backend 2142. Live: still untested.
 
+### 2026-09-20 — "how about other types of talks?" (build talks, next on the right)
+
+Three build talks through the real room from real reads (`canvas6/`): the Seikyo draft
+order, a watch on Greenhills' basket, memory. Found on the way: the frames harness composes
+only a fixture that carries `default_blocks` (a recorded post), so the first three frames
+drew packed; a watch's `by` and its backtest sentence were the same words drawn twice; the
+reader returned no condition or schedule for a watch to draw. All three fixed. `next` now
+sits under the figures with paragraphs (P6.f). Frontend 1130, backend 2142. Live: untested.
+

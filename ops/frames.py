@@ -170,6 +170,10 @@ FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
               # in the canvas vocabulary from recorded reads, rendered through
               # the real room and put beside the target page. No model, no cost.
               "canvas-doing": ROOT / "ops" / "frames_fixtures" / "canvas-doing.json",
+              # BUILD TALKS (P6.g): a draft order, a watch, memory — the canvas past reads.
+              "canvas-order": ROOT / "ops" / "frames_fixtures" / "canvas-order.json",
+              "canvas-watch": ROOT / "ops" / "frames_fixtures" / "canvas-watch.json",
+              "canvas-memory": ROOT / "ops" / "frames_fixtures" / "canvas-memory.json",
               "canvas-stores": ROOT / "ops" / "frames_fixtures" / "canvas-stores.json",
               "canvas-products": ROOT / "ops" / "frames_fixtures" / "canvas-products.json",
               "canvas-whatsdown": ROOT / "ops" / "frames_fixtures" / "canvas-whatsdown.json"}

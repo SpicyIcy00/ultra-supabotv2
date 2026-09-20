@@ -867,10 +867,8 @@ export default function Room() {
                            caveat={thoughts?.caveat} />
                 )}
                 <ReadingAsks reading={latest?.reading} busy={busy} onAsk={(q) => ask(q)} />
-                <ReadingNext reading={latest?.reading} />
-                {/* WHAT TO DO ABOUT ALL OF IT (P2.d) — the offers no row on a
-                    figure could carry, beside `next`, where "what now" is read. */}
-                <FootOffers offers={offers.foot} answers={answers} on={on} />
+                {/* WHAT HE'D DO NEXT IS UNDER THE FIGURES NOW (P6.f), with the
+                    offers that go with it — see the figures area below. */}
               </>
             )}
             {latest?.error && <p className="r-note r-failed">{latest.error}</p>}
@@ -937,6 +935,20 @@ export default function Room() {
                       this answer starts; and what it opens is drawn below
                       the newest turn's figures anyway, so the line now sits
                       where the things it opens appear. */}
+                  {/* WHAT HE'D DO NEXT, LAST, UNDER THE FIGURES (P6.f — the
+                      owner, 2026-09-20: "move what i'd do next to the right
+                      side, you can be more in depth"). The figures make the
+                      case; this is what to do about it, at the length the
+                      doing needs, and the offers that go with it beside it.
+                      Not while he is still working: a plan for figures that
+                      have not landed is not one. */}
+                  {!busy && (
+                    <>
+                      <ReadingNext reading={latest?.reading} calls={latest?.toolCalls}
+                                   onFigure={showFigure} />
+                      <FootOffers offers={offers.foot} answers={answers} on={on} />
+                    </>
+                  )}
                   <Earlier count={earlier.length} open={unfolded}
                            onToggle={() => setUnfolded((o) => !o)} />
                 </>
