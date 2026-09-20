@@ -467,6 +467,18 @@ def test_a_period_that_has_just_begun_is_refused():
         windows.same_elapsed(DEFS, "this_week", datetime(2026, 9, 7, 0, 0), DAY_OFFSET)
 
 
+def test_a_period_that_began_today_is_refused_and_names_the_closed_alternative():
+    # 2026-09-21 00:25, a Monday: the live turn read `this_week` at the same
+    # point last week — twenty-five minutes of nothing — and drew the zeros.
+    assert int(req(DEFS, "comparisons.to_date_same_elapsed.min_closed_days")) >= 1
+    with pytest.raises(ValueError, match="no closed day yet") as e:
+        windows.same_elapsed(DEFS, "this_week", datetime(2026, 9, 21, 0, 25), DAY_OFFSET)
+    assert "'last_week'" in str(e.value)
+    # A day is its own hours: today at 00:25 still compares.
+    (cs, ce), _, _ = windows.same_elapsed(DEFS, "today", datetime(2026, 9, 21, 0, 25), DAY_OFFSET)
+    assert cs < ce
+
+
 def test_every_partial_preset_has_a_same_elapsed_reading():
     for name, p in req(DEFS, "sales_day.presets").items():
         if p.get("includes_partial_day"):

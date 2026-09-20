@@ -5284,3 +5284,16 @@ folded. Watch: the weeks as bars of change, not a flat line on 280px. Memory: th
 list" (callout under a row, the fold), `test_enumerated_remainder_contract` (integrity
 outranks length), `test_voice_contract` (budget).
 
+## 2026-09-21 — P6.i: a compose is the act of finishing; the cap refuses reads, not batches
+
+**Decision.** The convergence cap counts and refuses READS only. A `compose`, a
+`record_findings`, a write or a composite never spends the budget and is never refused
+by it; when a batch past the cap mixes reads with any of those, the reads are refused and
+the rest runs, all answered in one user message. A `to_date_same_elapsed` comparison on a
+week or month that began today is refused, naming the closed alternative.
+
+**Why.** The first live page (DOGFOOD_LOG, 2026-09-21 00:25): the cap ate the compose and
+the owner saw the machine's board; the headline read a week twenty-five minutes old.
+
+**Held by.** `test_convergence_cap_contract` (6), `test_comparison_contract` (began today).
+

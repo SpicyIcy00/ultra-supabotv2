@@ -3320,6 +3320,9 @@ async def run(
     # pin it made rather than a figure, and a workflow's steps are its own to
     # replay. See ConversationLog.posts and _answer_payload.
     calls_made: list[dict] = []
+    # The cap's refusals for a batch whose other calls still run (2026-09-21).
+    cap_results: list[dict] = []
+    cap_text_pending: Optional[dict] = None
 
     # Every call this turn, by seq, as the finding validator sees it: what
     # ran, with what, whether it succeeded, whether it was a re-read, and
@@ -4212,9 +4215,16 @@ async def run(
             # A read already served this turn is not more searching either:
             # it is answered from the record whether or not the budget is
             # spent, so it does not trip the cap.
+            # NOR IS A COMPOSE OR A FINDING (2026-09-21). The live turn at
+            # 00:25: 22 reads in three rounds, then `compose` and
+            # `record_belief` in one batch — and the cap refused BOTH as "more
+            # reads", so the page he had composed never reached the board and
+            # the room drew the machine's. A compose is the act of finishing.
             more_reads = [b for b in tool_uses
                           if b.name not in write_tools.WRITE_TOOL_FUNCTIONS
                           and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS
+                          and b.name not in FINDING_TOOL_FUNCTIONS
+                          and b.name != COMPOSE_TOOL
                           and call_key(b.name, dict(b.input)) not in served_reads]
             # The budget is the READS that actually ran. A duplicate served
             # from this turn's own record did no work and is not counted, and
@@ -4251,7 +4261,11 @@ async def run(
                 # calls are answered as errors, in the same user message as
                 # the instruction, and shown to the client as refused calls.
                 refused = []
-                for b in tool_uses:
+                # ONLY THE READS ARE REFUSED. Whatever else is in the batch — a
+                # compose, a belief, a save — runs below, in this same
+                # iteration, and its results go back in the same user message
+                # as these refusals, so every tool_use is still answered once.
+                for b in more_reads:
                     reason = (
                         f"Not run: {executed} tool calls have already been made on "
                         f"this question, past the limit of {MAX_TOOL_CALLS}. "
@@ -4274,9 +4288,8 @@ async def run(
                     })
                     seq += 1
 
-                messages.append({
-                    "role": "user",
-                    "content": refused + [{
+                rest = [b for b in tool_uses if not any(b is r for r in more_reads)]
+                cap_text = {
                         "type": "text",
                         # WRITTEN FOR THE PERSON WHO READS THE ANSWER (P2S.7).
                         # It asked for "the single grouped or ranked call —
@@ -4297,9 +4310,14 @@ async def run(
                             "Write it for the owner, in the business's words — no "
                             "tool, argument or call, and no account of your search."
                         ),
-                    }],
-                })
-                continue
+                }
+                if not rest:
+                    messages.append({"role": "user", "content": refused + [cap_text]})
+                    continue
+                # The rest of the batch runs; the refusals and the instruction
+                # ride with its results (test_convergence_cap_contract).
+                cap_results, cap_text_pending = refused, cap_text
+                tool_uses = rest
 
             # ---- execute tools -------------------------------------------
             # Each tool_use gets a CONVERSATION-GLOBAL sequence number, assigned
@@ -4321,7 +4339,8 @@ async def run(
             for b in _expand_sets(tool_uses, defs):
                 is_read = (b.name not in write_tools.WRITE_TOOL_FUNCTIONS
                            and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS
-                           and b.name not in FINDING_TOOL_FUNCTIONS)
+                           and b.name not in FINDING_TOOL_FUNCTIONS
+                           and b.name != COMPOSE_TOOL)
                 key = call_key(b.name, dict(b.input)) if is_read else None
                 frame = {"seq": seq, "tool": b.name, "arguments": b.input}
                 if isinstance(b, _SetMember):
@@ -4855,8 +4874,11 @@ async def run(
                     })
 
             # All results go back in ONE user message — splitting them trains
-            # the model out of parallel tool use.
-            messages.append({"role": "user", "content": tool_results})
+            # the model out of parallel tool use. The reads the cap refused in
+            # this batch, if any, and its instruction to answer, ride in it.
+            messages.append({"role": "user", "content": cap_results + tool_results
+                             + ([cap_text_pending] if cap_text_pending else [])})
+            cap_results, cap_text_pending = [], None
 
             # NO EMPTY LAST ROUND (P2S.9(a), metrics.yaml rounds.settle). A
             # round of composes only, each standing whole, one naming the

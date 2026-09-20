@@ -1563,6 +1563,11 @@ comparisons:
     # (the 30th of a 31-day month against a 28-day February), the baseline
     # is the whole of that period, and meta.comparison.elapsed says so.
     baseline_clamped_to_its_period: true
+    # NO CLOSED DAY YET (2026-09-21): at 00:25 on a Monday `this_week` had
+    # twenty-five minutes elapsed and the read drew the zeros as figures. A
+    # week or a month that began today is refused, naming the closed
+    # alternative; a day compares its own hours.
+    min_closed_days: 1
     # A figure for the period so far is not a figure for the whole period.
     # Extrapolating it is recorded below as not supported.
     reports: [of, elapsed_fraction, elapsed_seconds, baseline_clamped]

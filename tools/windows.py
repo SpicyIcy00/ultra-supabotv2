@@ -230,6 +230,20 @@ def same_elapsed(defs: dict, preset: str, manila_now: datetime,
             f"{preset!r} has only just begun — nothing has elapsed to compare. "
             f"Use compare_to='previous_period' on its closed alternative."
         )
+    # NO CLOSED DAY YET (2026-09-21): at 00:25 on a Monday `this_week` had
+    # twenty-five minutes elapsed, the read returned nothing, and the room
+    # drew the nothing as zeros. A week or a month that began today has no
+    # point to compare at; its closed alternative has
+    # (comparisons.to_date_same_elapsed.min_closed_days). A day is its hours.
+    min_closed = int(_req(defs, "comparisons.to_date_same_elapsed.min_closed_days"))
+    if unit != "day" and (today - cur_start_d).days < min_closed:
+        alt = _req(defs, "sales_day.presets")[preset].get("closed_alternative")
+        raise ValueError(
+            f"{preset!r} began today and has no closed day yet, so there is nothing "
+            f"to compare at the same point. Use compare_to='previous_period' on "
+            f"{alt!r}, which compares whole periods. (metrics.yaml: "
+            f"comparisons.to_date_same_elapsed.min_closed_days)"
+        )
     period_end = datetime.combine(shift(cur_start_d, unit, length), time.min)
     if unit == "day":
         base_start_d = cur_start_d - timedelta(days=int(day_offset_days))

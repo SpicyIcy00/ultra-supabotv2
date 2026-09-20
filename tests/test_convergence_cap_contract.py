@@ -221,3 +221,35 @@ def test_the_forced_answer_is_never_asked_to_name_a_tool():
     body = source.split('f"STOP CALLING TOOLS.')[1].split("}]")[0]
     assert "naming the tool" not in body
     assert "no\n" in body or "no tool" in body.replace('"\n', "").replace('                            "', "")
+
+
+# ---------------------------------------------------------------------------
+# 6. A compose after the budget runs, beside the read the cap refuses
+# ---------------------------------------------------------------------------
+
+def test_a_compose_in_the_same_batch_as_a_refused_read_still_runs(monkeypatch):
+    """
+    2026-09-21 00:25, the first live page: 22 reads in three rounds, then
+    `compose` and `record_belief` in one batch. The cap counted the compose as
+    more searching and refused the whole batch, so the page he had composed
+    never reached the board and the room drew the machine's. A compose is the
+    act of finishing; the reads in its batch are refused, it is not.
+    """
+    writes: list = []
+    frames, requests = _drive(monkeypatch, [
+        _reads(bob_loop.MAX_TOOL_CALLS + 1),
+        [_ToolUse("tu-read-more", "get_sales", {"group_by": "store", "date_range": "last_week"}),
+         _ToolUse("tu-compose", "compose", {"blocks": [
+             {"op": "put", "key": "a", "seq": 0, "kind": "figure", "weight": "lead", "claim": "one"}]})],
+        [_TextBlock("Here it is.")],
+    ], writes)
+
+    results = frames_of(frames, "tool_result")
+    refused = [r for r in results if r.get("error")]
+    assert [r["tool"] for r in refused] == ["get_sales"], "only the read is refused"
+    assert "Not run" in refused[0]["error"]
+    composed = [f for f in frames_of(frames, "compose") if not f.get("default")]
+    assert composed and "a" in [b["key"] for b in composed[-1]["blocks"]]
+    assert frames_of(frames, "done")[0]["status"] == "ok"
+    _assert_every_tool_use_is_answered(requests[-1]["messages"])
+

@@ -3001,3 +3001,33 @@ body cap at 40 fired before the remainder sweep on a long reciting answer (gate 
 after the sweep); the watch's flat line on 280px was two hundred pixels of nothing (bars
 of change, and a line now fits its weight). Frontend 1135, backend 2144. Live: untested.
 
+### 2026-09-21 00:25 — the first live page, and it sucked (the owner's word)
+
+The owner asked "how are we doing?" on the deployed app at 00:25 Manila and got the old
+packed board: machine titles, `this week so far` figures reading 0 / "was zero", a table
+called "attention", and a left column reciting a dozen figures. The run record
+(george.tool_calls, conversation 93490237…) says exactly why, and none of it is the page:
+
+1. **The cap refused `compose`.** 22 reads in three rounds (this-week-so-far ×9,
+   last-week ×6, Magnolia ×7); then `record_belief` and `compose` in one batch, and the
+   cap refused both as "more reads" — `more_reads` excluded writes and composites but not
+   the compose tool. No composition, no arrangement, so the room drew the defaults. Fixed:
+   a compose or a finding is never a read, and at the cap only the reads in a batch are
+   refused — the rest runs, its results in the same user message as the refusals
+   (`test_a_compose_in_the_same_batch_as_a_refused_read_still_runs`).
+2. **`this_week` at 00:25 on a Monday.** Compared at the same point last week: twenty-five
+   minutes of nothing, drawn as zeros. `same_elapsed` now refuses a week or month that
+   began today and names the closed alternative
+   (`comparisons.to_date_same_elapsed.min_closed_days`).
+3. **The turn is not in the log at all** — no conversation row, no posts, no gap after
+   16:27:18 UTC. `a752f41` was pushed at 16:19:46 UTC and the reminder turn at 16:29 already
+   ran with its body cap, so the deploy went live during this turn and the old container
+   was killed mid-answer. The client had the streamed text; nothing was stored. A deploy
+   should drain; not fixed here.
+4. Also seen: three rounds against a policy of one, and the reads that did land were the
+   right ones (last week whole, the day series, store×week). And a standing question
+   worded "Remind me to send the StoreHub exports" fires as a QUESTION to Bob, who answers
+   "I can't set reminders" — a reminder is not a question; a gap for later.
+
+Still unverified: whether he composes the page when the cap does not eat it.
+
