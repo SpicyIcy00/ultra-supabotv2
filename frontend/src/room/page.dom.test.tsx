@@ -308,24 +308,36 @@ Shops: OPUS gave back 88,045, Greenhills 16,026 and Rockwell 4,901. The rest wer
     expect(sales.querySelector('.r-mk-more')).toBeNull();
   });
 
-  it('draws only the rows the thought names, and folds the rest to a line', () => {
+  /**
+   * WHOLE BY DEFAULT (the owner, 2026-09-20). A live turn drew a seven-shop
+   * comparison as ONE row under the claim "every shop rang fewer
+   * transactions": his sentence happened to name only the worst of them, the
+   * other six folded, and the chart then contradicted the sentence above it.
+   * *"what is this new feature ... it should be like this"*, over a screenshot
+   * of all seven.
+   *
+   * Folding is a reading of his prose and a reading can be wrong; drawing
+   * every row the read returned cannot be. The narrowing stays, one tap away.
+   */
+  it('draws every row the read returned, and offers to narrow', () => {
     const { container } = draw2(board);
     const tills = container.querySelector('[data-figure="tills"]') as HTMLElement;
+    expect(tills.querySelectorAll('.r-mk-row')).toHaveLength(5);
+    expect(tills.querySelector('.r-mk-more')?.textContent).toBe('only the ones he names');
+  });
+
+  it('narrows to the named rows, and back', () => {
+    const { container } = draw2(board);
+    const tills = container.querySelector('[data-figure="tills"]') as HTMLElement;
+    fireEvent.click(tills.querySelector('.r-mk-more') as HTMLElement);
     const names = Array.from(tills.querySelectorAll('.r-mk-row .r-mk-name-text, .r-mk-row .r-mk-name'))
       .map((el) => el.textContent);
     expect(tills.querySelectorAll('.r-mk-row')).toHaveLength(2);
     expect(names.join(' ')).toContain('OPUS');
     expect(names.join(' ')).toContain('Greenhills');
     expect(tills.querySelector('.r-mk-more')?.textContent).toBe('3 more · show');
-  });
-
-  it('opens to every row, and folds back', () => {
-    const { container } = draw2(board);
-    const tills = container.querySelector('[data-figure="tills"]') as HTMLElement;
     fireEvent.click(tills.querySelector('.r-mk-more') as HTMLElement);
     expect(tills.querySelectorAll('.r-mk-row')).toHaveLength(5);
-    fireEvent.click(tills.querySelector('.r-mk-more') as HTMLElement);
-    expect(tills.querySelectorAll('.r-mk-row')).toHaveLength(2);
   });
 
   it('offers no fold under a single number, which has no rows to open', () => {

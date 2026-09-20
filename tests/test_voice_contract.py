@@ -506,3 +506,40 @@ def test_the_client_treats_the_warning_as_process_not_caveat() -> None:
     # work line has to leave out exactly what the region above the board does.
     src = Path(__file__).resolve().parents[1].joinpath("frontend/src/room/data.ts").read_text(encoding="utf-8")
     assert "'restated_figure'" in src.split("const PROCESS")[1].split(";")[0]
+
+
+# ---------------------------------------------------------------------------
+# A notice is written for the person reading it (voice.plain, 2026-09-20)
+# ---------------------------------------------------------------------------
+
+def test_no_tool_notice_speaks_in_the_instrument_s_words() -> None:
+    """
+    THE HOLE voice.plain LEFT, found on a live turn the day it shipped. The
+    rule is taught on `compose`, so it governs what Bob WRITES — his claims,
+    his thoughts, his prose. A tool's notice is none of those: it is written in
+    Python, surfaced above the answer by UI rule 4, and read by the owner as
+    though Bob had said it. One of them said *"449 stock records in this window
+    are NEGATIVE, the lowest -26,170"* directly above his headline.
+
+    A HEURISTIC, AND IT SAYS SO. This reads the source rather than running the
+    notices, because building one needs a database. It scans the message text
+    of every `notices.append` block for the instrument words, which catches the
+    class that failed; a message assembled from a variable would slip through,
+    and that is the bound on what this proves.
+    """
+    import re
+    from pathlib import Path
+
+    banned = {w.lower() for w in req(load_defs(), "voice.plain.instrument_words")}
+    tools = Path(__file__).resolve().parents[1] / "tools"
+    offenders: list[str] = []
+    for path in sorted(tools.glob("*.py")):
+        src = path.read_text(encoding="utf-8")
+        for block in re.findall(r'"message":\s*\(((?:[^()]|\([^()]*\))*)\)', src, re.S):
+            said = " ".join(re.findall(r'"([^"]*)"', block)).lower()
+            for word in banned:
+                if re.search(rf"(?<![\w-]){re.escape(word)}(?![\w-])", said):
+                    offenders.append(f"{path.name}: {word!r} in {said[:70]!r}")
+    assert not offenders, (
+        "a notice is drawn to the person above the answer (UI rule 4), so it is held to "
+        "voice.plain like everything else he says:\n  " + "\n  ".join(offenders))

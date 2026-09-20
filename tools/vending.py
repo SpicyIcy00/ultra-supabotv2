@@ -310,7 +310,7 @@ def get_vending(
                         "kind": "profit_overstated",
                         "message": (
                             f"Profit is OVERSTATED: {cc['missing']} of {cc['lines']} "
-                            f"lines ({pct}%) in this window have no purchase cost "
+                            f"lines ({pct}%) here have no purchase cost "
                             f"recorded, covering PHP "
                             f"{float(cc['uncosted_revenue']):,.2f} of revenue that "
                             f"is counted as pure profit."
@@ -354,7 +354,7 @@ def get_vending(
                         "kind": "low_category_coverage",
                         "message": (
                             f"Only {category_coverage['coverage_pct']}% of lines in "
-                            f"this window have a real category "
+                            f"here have a real category "
                             f"({cvg['orphan_lines']} lines from "
                             f"{cvg['orphan_goods']} goods_ids are not in the "
                             f"catalog at all; {cvg['untagged_lines']} are catalogued "

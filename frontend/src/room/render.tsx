@@ -376,16 +376,33 @@ export function Board(p: BoardProps) {
     return needsWidth(mark, rows.length, shown.length, shown);
   });
   const columns = columnsFor(objects.length, width, objects.length === 1 && wide[0]);
-  // ONE STORE ORDER: the first figure of this answer that lists stores sets it.
-  const order = p.sameOrder ? (() => {
-    for (const o of objects) {
-      if (o.turn !== newest) continue;
-      const names = rowsOf(callOf(p.answers[o.turn], o.seq)).map((r) => r.store)
-        .filter((x): x is string => typeof x === 'string');
-      if (names.length > 1) return names;
-    }
-    return undefined;
-  })() : undefined;
+  // ONE STORE ORDER, AND ONLY ACROSS READS OF THE SAME STRETCH OF TIME.
+  //
+  // It exists so the eye finds a shop in the same place on every chart of an
+  // answer, which is worth having. What it did was take the order from the
+  // FIRST figure that listed shops, whatever that figure was about — and on
+  // the owner's live turn of 2026-09-20 the first one was "this week so far"
+  // while the chart beneath it was "last week". Last week's chart then drew
+  // Rockwell below a shop with a smaller figure, which on that chart alone is
+  // simply out of order, and reads as a sorting bug because on it, it is one.
+  //
+  // Two charts are only worth lining up when they cover the same period.
+  // Different periods are different stories, and each sorts itself.
+  const windowOf = (o: BoardObject) => {
+    const call = callOf(p.answers[o.turn], o.seq ?? o.seqs?.[0]);
+    const args = (call?.arguments ?? {}) as { date_range?: unknown };
+    return JSON.stringify(args.date_range ?? null);
+  };
+  const setter = p.sameOrder
+    ? objects.find((o) => o.turn === newest && rowsOf(callOf(p.answers[o.turn], o.seq))
+        .filter((r) => typeof r.store === 'string').length > 1)
+    : undefined;
+  const order = setter
+    ? rowsOf(callOf(p.answers[setter.turn], setter.seq)).map((r) => r.store)
+        .filter((x): x is string => typeof x === 'string')
+    : undefined;
+  const orderFor = (o: BoardObject) => (
+    order && setter && windowOf(o) === windowOf(setter) ? order : undefined);
   // A FIGURE TAKES THE WHOLE WIDTH UNLESS IT IS GATHERED UNDER ANOTHER (P3.l).
   //
   // This is the whole of what makes the board a page instead of a grid, and it
@@ -613,7 +630,7 @@ export function Board(p: BoardProps) {
               told={it.told}
               focus={it.focus}
               chrome={chromeFor(index, out)}
-              order={order}
+              order={orderFor(o)}
               o={o}
               turn={turn}
               local={p.local[o.key] ?? {}}

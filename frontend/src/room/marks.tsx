@@ -478,8 +478,23 @@ export function MarkBlock(p: TileProps) {
   // opened panel is about the tile's own subject. Local, because it is a
   // person looking at something and not a change to the board.
   const [revealed, setRevealed] = useState<string | null>(null);
-  // Whether the person asked for the rows his sentence did not name (`focus`).
-  const [whole, setWhole] = useState(false);
+  // WHOLE BY DEFAULT (the owner, 2026-09-20, of a seven-shop comparison drawn
+  // as ONE row under the claim "every shop rang fewer transactions": *"what is
+  // this new feature ... it should be like this"*, over a screenshot of all
+  // seven).
+  //
+  // It came in with P3.j (`af2304b`) and the reasoning was sound — a thought
+  // about two shops is served by their two rows and buried by seven. What it
+  // could not see is the case that broke it: a claim ABOUT ALL OF THEM whose
+  // sentence happens to name only the worst one. `namedIn` found "Greenhills",
+  // folded the other six, and the chart then contradicted the sentence above
+  // it. Folding is a reading of his prose, and a reading can be wrong; drawing
+  // every row the read returned cannot be.
+  //
+  // So the narrowing is still here and still one tap — it is the DEFAULT that
+  // was wrong. "All stores still matter" (the owner, 2026-09-15) is the older
+  // form of the same instruction.
+  const [whole, setWhole] = useState(true);
   const hueFor = useHueFor();
   const call = callFor(p);
   const rows = rowsOf(call);
@@ -613,7 +628,8 @@ export function MarkBlock(p: TileProps) {
         {folds && (
           <button type="button" className="r-mk-more" aria-expanded={whole}
                   onClick={(e) => { e.stopPropagation(); setWhole((w) => !w); }}>
-            {whole ? 'only the ones he names' : `${rows.length - named.length} more · show`}
+            {whole ? `only ${named.length === 1 ? 'the one' : 'the ones'} he names`
+                   : `${rows.length - named.length} more · show`}
           </button>
         )}
         <Receipts meta={meta} tool={p.o.tool} chrome={p.chrome} />

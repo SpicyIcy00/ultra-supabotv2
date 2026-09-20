@@ -592,7 +592,7 @@ def get_movement(
         notices.append({
             "kind": "snapshot_gaps",
             "message": (
-                f"{len(gaps)} gap(s) in the snapshot series over this window, "
+                f"{len(gaps)} day(s) here have no stock count, "
                 f"totalling {sum(g['missing_days'] for g in gaps)} missing day(s). "
                 f"No delta is reported across a gap — movement inside one is "
                 f"unobservable, so sum_of_observed_deltas understates activity. "
@@ -617,7 +617,7 @@ def get_movement(
         notices.append({
             "kind": "no_recorded_dispatch",
             "message": (
-                f"The balance declined by {decline:,.0f} grams over this window "
+                f"The balance declined by {decline:,.0f} grams "
                 f"and NOTHING records it — no stock transfer document names this "
                 f"product moving, and there are 0 rows in "
                 f"{_req(defs, 'movement.corroborating_source.table')}. The "
@@ -631,7 +631,7 @@ def get_movement(
         notices.append({
             "kind": "unmoved_transfer_value",
             "message": (
-                f"PHP {unmoved_value:,.2f} across the transfers in this window sits "
+                f"PHP {unmoved_value:,.2f} across these transfers sits "
                 f"in documents whose status says the goods have NOT moved "
                 f"(raised or not yet shipped). It is excluded from the moved "
                 f"totals. A transfer that has only been created is a document, "

@@ -248,7 +248,7 @@ def get_dead_stock(
             "message": (
                 f"{full_row_count} of {held_total} products held in scope "
                 f"({100.0 * full_row_count / held_total:.1f}%) recorded no sale "
-                f"in this window. A longer window would shrink this list; a "
+                f"in this period. A longer one would shrink this list; a "
                 f"shorter one would grow it."
             ),
             "source": "definitions/metrics.yaml: dead_stock",

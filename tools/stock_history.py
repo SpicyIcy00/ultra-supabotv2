@@ -441,7 +441,7 @@ def get_stock_history(
                 notices.append({
                     "kind": _req(hist, "coverage_notice_kind"),
                     "message": (
-                        f"{missing_days} of the {calendar_days} days in this window have no "
+                        f"{missing_days} of these {calendar_days} days have no "
                         f"stock record at all, so {observed_days} days were actually read. "
                         "A day with no record is not a day with no stock, and a run of days "
                         "out of stock is never counted across a missing day."
@@ -514,11 +514,19 @@ def get_stock_history(
                 if nrow["n"]:
                     notices.append({
                         "kind": _req(neg, "notice_kind"),
+                        # WRITTEN FOR THE PERSON READING IT, not for the query
+                        # that found it (voice.plain, 2026-09-20). It was
+                        # "N stock records in this window are NEGATIVE, the
+                        # lowest X" and it was drawn above the owner's headline
+                        # on a live turn: "in this window" is chrome the source
+                        # line already carries, and shouting NEGATIVE is the
+                        # column talking. `guidance` below is Bob's half and is
+                        # never drawn.
                         "message": (
-                            f"{nrow['n']:,} stock records in this window are NEGATIVE, the "
-                            f"lowest {nrow['lowest']:,}. A negative quantity is a broken "
-                            "record rather than a stock level, so a product shown as out of "
-                            "stock here may have a faulty record rather than an empty shelf."
+                            f"{nrow['n']:,} stock counts are below zero, the lowest "
+                            f"{nrow['lowest']:,}. A count below zero is a broken record and "
+                            "not a shelf, so something shown here as out of stock may just "
+                            "have a bad count."
                         ),
                         "guidance": (
                             "Negative rows count as out of stock and are excluded from "

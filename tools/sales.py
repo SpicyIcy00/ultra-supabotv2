@@ -205,7 +205,7 @@ def _reconcile(cur, defs: dict, metric: str, filters: dict, where_sql: str,
             "reason": (
                 "a product-level filter is active, so net_sales (which "
                 "cannot be filtered by product) is not comparable to "
-                "product_revenue for this window."
+                "product_revenue for the same period."
             ),
         }
     if left_out_applied:
@@ -216,7 +216,7 @@ def _reconcile(cur, defs: dict, metric: str, filters: dict, where_sql: str,
             "reason": (
                 "a category is left out at the person's instruction, so these "
                 "rows do not cover the whole till and are not comparable to "
-                "net_sales for this window."
+                "net_sales for the same period."
             ),
         }
     cur.execute(
@@ -254,7 +254,7 @@ def _reconcile(cur, defs: dict, metric: str, filters: dict, where_sql: str,
     }
     if not holds:
         explained = recon["explained_by_discount"]
-        which = f"the {window_label} window" if window_label else "this window"
+        which = f"{window_label}" if window_label else "this period"
         recon["note"] = (
             f"The two money measures disagree for {which} by "
             f"{gap:,.2f} PHP"
@@ -268,7 +268,7 @@ def _reconcile(cur, defs: dict, metric: str, filters: dict, where_sql: str,
                 else "does NOT account for it, so the cause is "
                      "something other than discounting."
             )
-            + " Store-level and product-level totals for this window "
+            + " Store-level and product-level totals here "
             "are NOT comparable — do not present them side by side "
             "as though they sum to the same thing."
         )
@@ -1578,7 +1578,7 @@ def get_sales(
                     notices.append({
                         "kind": "orphan_line_items",
                         "message": (
-                            f"{dq['orphan_line_items']} line item(s) in this window "
+                            f"{dq['orphan_line_items']} line item(s) here "
                             f"reference a product that does not exist in `products`. "
                             f"They are included in totals but have no name, SKU or "
                             f"category."
@@ -1731,7 +1731,7 @@ def get_sales(
             # (transaction_count) is zero". A notice message is the reader's,
             # so it takes the denominator's display name.
             "message": (
-                f"{_req(mdef, 'display_name')} is undefined for this window: "
+                f"{_req(mdef, 'display_name')} cannot be worked out here: "
                 f"there were no qualifying transactions, so the denominator "
                 f"({_denominator_label(defs, mdef)}) is zero. The value is "
                 f"reported as null, not as zero — nothing was sold, and nothing "

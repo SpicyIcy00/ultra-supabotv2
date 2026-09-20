@@ -594,7 +594,7 @@ def get_purchase_plan(
             "kind": _req(_req(plan, "availability"), "notice_kind"),
             "message": (
                 f"{len(starved_rows)} of these products had nothing on the shelf anywhere for at "
-                f"least one day in the window — the worst, {worst.get('product') or worst['product_id']}, "
+                f"least one day here — the worst, {worst.get('product') or worst['product_id']}, "
                 f"for {worst['days_with_nothing']} days. Their sales rate is what they sold while "
                 f"available, so it understates what they would have sold. The rate has not been "
                 f"adjusted: raising a measured figure to what it might have been would be inventing "
