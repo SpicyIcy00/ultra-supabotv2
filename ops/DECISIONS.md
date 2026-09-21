@@ -5550,3 +5550,42 @@ it, and the frontend suite would have. It is a function now.
 **Held by.** `test_compose_coercion_contract` (the count, and a place kept for a block not yet
 composed), `plan.test.ts` (that his plan is never split where he did not split it, and that
 `planSteps(t).join(' ')` is still his text), and the scene `doc-live2` — his own 17:05 turn.
+
+## 2026-09-21 — P14: the page is enforced, not asked for
+
+**Decision.** Four rules the system had asked for and never enforced become measurements.
+
+1. **A disclaimer that only explains how a figure was measured is not forced into the answer.**
+   `surface.desk.notices` classifies every kind as `data_may_be_wrong` (drawn, UI rule 4) or
+   `explains_only` (not drawn). `notices.<kind>.must_convey` makes the loop REQUIRE the kind in
+   his prose and append it verbatim if he leaves it out. **Twenty-three kinds were on both
+   lists**, so the loop produced exactly the text the surface is told never to draw. His page of
+   17:34 opened with 155 words of caveat whose longest clause was `comparison_incomplete`.
+   `_unsurfaced` reads the classification now — one derived place, so they cannot disagree
+   again — and prompt rule 3 says which kind reaches the answer. The notice still reaches the
+   MODEL with its `guidance`, so nothing he needed to obey is lost.
+2. **A page that leaves his own figures off it does not end the turn.** One corrective round
+   naming them, then it stands (`composition.arrangement.gate`, gap `page_left_blocks_off`). It
+   fires only where he wrote a page AS a page and left two or more off, so a good page never
+   costs a round. Measured against his real 17:05 turn: five left off.
+3. **The plan is a list of steps.** Twice the page tried to find the steps inside a paragraph
+   and twice it was wrong — the second time it split one of his own sentences in half. `next`
+   takes a list and stores it as the paragraphs the page already splits on.
+4. **A caption is held to 0.45 against its own heading**, the date line stopped counting reads,
+   and a section that ends with one figure draws it at the top of its words — text can only sit
+   beside a figure that comes BEFORE it, which is why no live page had ever had any.
+
+**Why these and not more instruction.** `agent/prose.py` had already written the lesson down
+about the same class of problem: *"The 8,623-word prompt asked for it in three places and got
+22%; the 1,793-word prompt asked once and got 19.5%. Words do not move it, so the loop enforces
+it."* Four rounds of page instruction had gone the same way.
+
+**The cost that came with the page, measured.** Median turn before the page existed: 37 s, 4
+rounds, 2,100 output tokens. Today: 130 s, 5 rounds, 9,444. Rounds barely moved — he writes
+4.5x more, and most of the extra was text the owner did not want: the mandated caveat, the same
+finding four times, captions restating their headings. The fixes above are the speed work.
+
+**Held by.** `tests/test_page_gate_contract.py` (the measure, the bound, and that the turn may
+not settle past it), the rewritten `test_notice_fingerprints` and `test_page_context_contract`
+(which held the reversed half and now record what replaced it), `test_reading_frame_contract`,
+`doc.dom.test.tsx`.

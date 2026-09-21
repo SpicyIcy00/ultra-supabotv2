@@ -870,6 +870,21 @@ export function Board(p: BoardProps) {
       sections[sections.length - 1].push(child);
       if ('lede' in child) sections.push([]);
     }
+    // A FIGURE CAN ONLY HAVE WORDS BESIDE IT IF IT COMES BEFORE THEM (P14).
+    // That is what a float is, and he writes head, paragraph, chart — so no
+    // figure on any live page has ever had words beside it. A section that
+    // ENDS with one figure, with words before it and no other block, draws
+    // that figure at the top of those words: the two end up side by side,
+    // which is where his own sentences already put them.
+    const beside = sections.map((parts) => {
+      const last = parts[parts.length - 1];
+      if (!last || !('block' in last) || last.size === 'full' || last.beside === false) return parts;
+      const blocks = parts.filter((c) => 'block' in c);
+      const says = parts.filter((c) => 'say' in c);
+      if (blocks.length !== 1 || !says.length) return parts;
+      const at = parts.findIndex((c) => 'say' in c);
+      return [...parts.slice(0, at), last, ...parts.slice(at, parts.length - 1)];
+    });
     // WHEN IT WAS READ, ONCE, AT THE HEAD OF THE PAGE (UI rule 6): every figure
     // in a sentence below wears this time; every drawing still wears its own.
     const stamps = (p.answers[newest]?.toolCalls ?? [])
@@ -883,10 +898,13 @@ export function Board(p: BoardProps) {
       <>
         {(when || window_) && (
           <p className="r-doc-dateline">
-            {[window_, when, stamps.length ? `${stamps.length} reads` : null].filter(Boolean).join(' · ')}
+            {/* THE WINDOW AND WHEN IT WAS READ (UI rule 6). It also counted the
+                reads — "18 READS" — which is bookkeeping: it says nothing
+                about the answer and nothing about whether a figure is fresh. */}
+            {[window_, when].filter(Boolean).join(' · ')}
           </p>
         )}
-        {sections.filter((parts) => parts.length).map((parts, i) => {
+        {beside.filter((parts) => parts.length).map((parts, i) => {
           // A FIGURE AND THE PARAGRAPHS THAT FOLLOW IT ARE ONE PAIR (doc.tsx):
           // the figure floats beside them, and if it cannot, goes under THEM —
           // not under whatever else the section holds.

@@ -320,7 +320,7 @@ def validate(submitted: Any, defs: Mapping[str, Any],
         if name not in submitted:
             continue
         try:
-            accepted[name] = _check(name, submitted[name], spec[name],
+            accepted[name] = _steps(name, submitted[name], spec[name],
                                     returned, presentation, coerced)
         except Rejected as why:
             # WHAT WAS REFUSED, NOT ONLY WHY. P1.f's run refused five slots
@@ -340,6 +340,34 @@ def validate(submitted: Any, defs: Mapping[str, Any],
             accepted[ASKS] = asks
         rejected.extend(refused)
     return accepted, rejected
+
+
+def _steps(name: str, value: Any, spec: Mapping[str, Any], returned: set[float],
+           presentation: int, coerced: Optional[list[str]] = None) -> str:
+    """
+    One slot, whether he wrote it as a sentence or as a list of steps.
+
+    THE STRUCTURE COMES FROM THE SOURCE (P14, 2026-09-21). The page numbers a
+    plan of more than one step, and twice it tried to find the steps inside a
+    paragraph: a short opening sentence broke his own sentence in half, and
+    requiring a capital only moved the error. He hands over the steps now, and
+    a list is kept as the paragraphs the page already splits on — so what is
+    stored is still one string, every word of it his, and nothing downstream
+    learns a new shape.
+
+    Each step is held to the slot's own rule, so a digit he may not write is
+    still refused, one step at a time.
+    """
+    if not isinstance(value, (list, tuple)):
+        return _check(name, value, spec, returned, presentation, coerced)
+    most = int(spec.get("max_steps") or 6)
+    steps: list[str] = []
+    for n, step in enumerate(value[:most], 1):
+        steps.append(_check(f"{name}[{n}]", step, spec, returned, presentation, coerced))
+    if len(value) > most and coerced is not None:
+        coerced.append(f"{name}: more than {most} steps, so the rest were left out — "
+                       f"a plan nobody can hold is not a plan")
+    return "\n\n".join(s for s in steps if s)
 
 
 def _asks(value: Any, spec: Mapping[str, Any], returned: set[float],

@@ -3165,3 +3165,25 @@ that had forgotten its figures — a different fix entirely, and one the screens
 would have sent me chasing.
 
 Frontend 1179, backend 2167. `verification/frames/p13/`.
+
+### 2026-09-21 — the afternoon I spent writing instructions
+
+Four rounds of prompt and recipe changes, each landing partly, each followed by the owner
+sending a screenshot of the same class of failure. The thing that broke the cycle was reading
+the run record instead of the screenshot, twice:
+
+- His caveat was not his. Four machine-mandated notices stitched together, one of them a kind
+  the UI is explicitly told never to draw. I had been editing prose guidance while the loop
+  generated the text he was objecting to.
+- His page was not the renderer's fault. Nine figures composed, one placed. Every departure
+  named on `coerced` — in the result of the last call of the turn, which he never reads.
+
+Both were enforcement problems wearing instruction clothes, and `agent/prose.py` had written
+the rule down a week earlier: words do not move it, so the loop enforces it. I read that file
+today for the first time.
+
+Also measured, because "it feels slower" deserved a number: 37 s and 2,100 output tokens per
+turn before the page; 130 s and 9,444 after. The rounds barely changed. The page costs words,
+and most of the extra words were the ones he was asking me to remove.
+
+Frontend 1181, backend 2179.

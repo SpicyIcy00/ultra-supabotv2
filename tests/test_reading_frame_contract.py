@@ -338,11 +338,23 @@ def test_the_schema_has_no_field_but_the_three_slots_and_the_asks():
     assert set(said["properties"]) == set(reading.SLOTS) | {reading.ASKS}
     assert said["additionalProperties"] is False
     # Bounded in the schema as well as in the validator, so the model is told
-    # the length rather than refused for it.
+    # the length rather than refused for it. A slot declared `steps: true` is
+    # a LIST of them or one string (P14, 2026-09-21): the page numbers a plan
+    # of more than one step and cannot find the steps inside a paragraph — it
+    # split one of his own sentences in half trying. Every alternative is still
+    # bounded by the slot's own length.
     for name in reading.SLOTS:
         spec = said["properties"][name]
-        assert spec["type"] == "string"
-        assert spec["maxLength"] == _DEFS["voice"]["reading"]["slots"][name]["max_length"]
+        rule = _DEFS["voice"]["reading"]["slots"][name]
+        shapes = spec["oneOf"] if "oneOf" in spec else [spec]
+        assert bool(rule.get("steps")) == ("oneOf" in spec), name
+        for shape in shapes:
+            if shape["type"] == "string":
+                assert shape["maxLength"] == rule["max_length"], name
+            else:
+                assert shape["type"] == "array"
+                assert shape["maxItems"] == rule["max_steps"], name
+                assert shape["items"]["maxLength"] == rule["max_length"], name
     asks = said["properties"][reading.ASKS]
     assert asks["type"] == "array"
     assert asks["maxItems"] == _DEFS["voice"]["reading"]["asks"]["max_items"]

@@ -181,7 +181,10 @@ describe('sections, and a figure paired with its words', () => {
     const { container } = draw();
     const lines = container.querySelectorAll('.r-doc-dateline');
     expect(lines).toHaveLength(1);
-    expect(lines[0].textContent).toMatch(/4 reads/);
+    // The window and when it was read (UI rule 6). It counted the reads until
+    // P14 — "18 READS" — which says nothing about the answer or its freshness.
+    expect(lines[0].textContent).toMatch(/read \d/i);
+    expect(lines[0].textContent).not.toMatch(/reads/i);
   });
 
   it('leaves an arrangement with no lede and no head exactly as it was drawn', () => {

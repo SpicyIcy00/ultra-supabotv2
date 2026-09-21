@@ -5901,7 +5901,7 @@ voice:
           and no longer: the steps in the order you would take them, what each
           one needs from the person (a decision, a count, a document), what it
           would touch and what you would watch afterwards. A quiet week is one
-          line; a real decision is a plan. Paragraphs are line breaks. Never a
+          line; a real decision is a plan. ONE STEP PER ITEM OF THE LIST. Never a
           read you could have made yourself. A figure belongs here only when a
           read returned it, never one you worked out yourself. Leave it out
           when there is genuinely nothing to do.
@@ -5911,6 +5911,14 @@ voice:
         # was refused at 160; what to do and why is one sentence, not a tag.
         # 320 → 1400 (P6.f, 2026-09-20): a plan, under the figures.
         max_length: 1400
+        # A LIST OF STEPS, NOT A PARAGRAPH (P14, 2026-09-21). The page numbers a
+        # plan of more than one step and cannot find the steps inside a
+        # paragraph: it split one of his own sentences in half trying, and the
+        # owner's word for the page was "all wrong". He hands the steps over,
+        # each held to this slot's own rule, and they are stored as the
+        # paragraphs the page already splits on — every word still his.
+        steps: true
+        max_steps: 6
         # Kept whole past it, like the caveat (P2S.7): a next may name what a
         # notice says no read can settle, and a cut would drop that.
         over_length: kept_whole

@@ -480,6 +480,25 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
             },
         }
 
+    def _slot_schema(name: str, rule: dict) -> dict:
+        # A PLAN IS A LIST OF STEPS (P14, 2026-09-21). The page numbers them and
+        # cannot find them inside a paragraph — it broke one of his sentences in
+        # half trying. `oneOf`, so a single sentence is still a single sentence.
+        said = " ".join(str(rule["about"]).split())
+        text = {"type": "string", "maxLength": int(rule.get("max_length") or 160)}
+        if not rule.get("steps"):
+            return {**text, "description": said}
+        return {
+            "oneOf": [
+                {"type": "array",
+                 "maxItems": int(rule.get("max_steps") or 6),
+                 "items": {"type": "string", "maxLength": int(rule.get("max_length") or 160)}},
+                text,
+            ],
+            "description": said + " ONE STEP PER ITEM, in the order you would do them; "
+                                  "the page numbers them. A single thing to do is one item.",
+        }
+
     if pname == "reading":
         # THE WHOLE OF WHAT THE MODEL MAY SAY ABOUT ITS OWN WORDS: three short
         # strings, bounded and checked (agent/reading.py). The claim is a
@@ -492,9 +511,7 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
         return {
             "type": "object",
             "properties": {
-                **{name: {"type": "string",
-                          "maxLength": int(spec[name].get("max_length") or 160),
-                          "description": " ".join(str(spec[name]["about"]).split())}
+                **{name: _slot_schema(name, spec[name])
                    for name in reading.SLOTS if name in spec},
                 # THE QUESTIONS HE SUGGESTS NEXT (2026-09-17), a short list.
                 reading.ASKS: {"type": "array",
