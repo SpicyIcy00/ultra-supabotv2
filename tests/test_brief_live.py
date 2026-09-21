@@ -86,3 +86,47 @@ def test_stock_section_reports_which_snapshot_days_it_compared():
     meta = get_brief()["meta"]
     compared = meta["sections"]["stock_crossed_out"]["compared"]
     assert len(compared) == 2 and all(compared), compared
+
+
+def test_the_stale_line_a_reader_sees_names_nothing_internal():
+    """
+    `stale_sources` is the notice most often forced into Bob's answer, and the
+    loop appends a forced message VERBATIM — so this string IS the block the
+    owner has asked three times to be rid of. It was ~100 words of per-source
+    dates naming `vending_aisles` and `stock_transfers`, which are TABLE NAMES,
+    in the one field `notices.contract` reserves for the reader.
+
+    UI rule 4's own amendment is the warrant: "a notice may be one line that
+    names it, visible without interaction, with its explanation on tap." The
+    dates moved to `guidance`, which reaches the model and is never rendered.
+    It stays COMPLETE ON ITS OWN, as the contract requires: which sources, that
+    they are old, and what that means for the figures.
+
+    IT LIVES HERE AND NOT IN THE CONTRACT FILE because it builds a real brief.
+    Written into tests/test_notice_drawing_contract.py on 2026-09-21 it broke
+    CI: `verify_integration.py pure` runs every test_*.py that is not
+    `_live.py` AND FAILS ON ANY SKIP, so a test that skips without a database
+    is a red build, not a quiet one. The half of it that needs no database —
+    that the message is BUILT from the yaml's reader names with the dates in
+    `guidance` — stayed there, where it runs every time.
+    """
+    import pytest
+
+    notice = get_brief()["meta"].get("notice")
+    notice = notice[0] if isinstance(notice, list) else notice
+    found = [n for n in ([notice] + list((notice or {}).get("items") or []))
+             if isinstance(n, dict) and n.get("kind") == "stale_sources"]
+    if not found:
+        pytest.skip("no source is stale right now")
+    said = found[0]["message"]
+
+    for internal in ("vending_aisles", "stock_transfers", "purchase_orders",
+                     "inventory_snapshots", "vending_lines"):
+        assert internal not in said, f"{internal} is a table name, not the reader's word"
+    assert len(said.split()) <= 45, f"the line a reader sees is {len(said.split())} words: {said}"
+    # And it still conveys its own fingerprint, so Bob echoing it passes the gate.
+    low = said.lower()
+    assert any(w in low for w in ("too old", "stale", "days old"))
+    assert any(w in low for w in ("source", "transfer", "purchase order", "vending",
+                                 "covers nothing"))
+    assert found[0].get("guidance"), "the dates have to survive somewhere, for the model"

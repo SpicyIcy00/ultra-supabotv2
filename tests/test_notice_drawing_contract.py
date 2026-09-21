@@ -114,49 +114,6 @@ def test_stale_data_is_still_warned_about():
         assert kind not in NOTICES["explains_only"], kind
 
 
-def test_the_stale_line_a_reader_sees_names_nothing_internal():
-    """
-    2026-09-21. `stale_sources` is the most common notice forced into Bob's
-    answer, and the loop appends a forced message VERBATIM — so this string IS
-    the grey block the owner has asked three times to be rid of. It was ~100
-    words of per-source dates naming `vending_aisles` and `stock_transfers`,
-    which are table names, in the one field `notices.contract` reserves for the
-    reader.
-
-    UI rule 4's own amendment is the warrant: "a notice may be one line that
-    names it, visible without interaction, with its explanation on tap." The
-    dates moved to `guidance`, which reaches the model and is never rendered.
-
-    Still COMPLETE ON ITS OWN, as the contract requires: which sources, that
-    they are old, and what it means for the figures.
-    """
-    import os
-    import pytest
-
-    if not os.environ.get("GEORGE_DATABASE_URL") and not os.environ.get("DATABASE_URL"):
-        pytest.skip("needs a database to build a real brief")
-    from tools.brief import get_brief
-
-    notice = get_brief()["meta"].get("notice")
-    notice = notice[0] if isinstance(notice, list) else notice
-    found = [n for n in ([notice] + list((notice or {}).get("items") or []))
-             if isinstance(n, dict) and n.get("kind") == "stale_sources"]
-    if not found:
-        pytest.skip("no source is stale right now")
-    said = found[0]["message"]
-
-    for internal in ("vending_aisles", "stock_transfers", "purchase_orders",
-                     "inventory_snapshots", "vending_lines"):
-        assert internal not in said, f"{internal} is a table name, not the reader's word"
-    assert len(said.split()) <= 45, f"the line a reader sees is {len(said.split())} words: {said}"
-    # And it still conveys its own fingerprint, so Bob echoing it passes the gate.
-    low = said.lower()
-    assert any(w in low for w in ("too old", "stale", "days old"))
-    assert any(w in low for w in ("source", "transfer", "purchase order", "vending",
-                                 "covers nothing"))
-    assert found[0].get("guidance"), "the dates have to survive somewhere, for the model"
-
-
 def test_the_stale_notice_is_built_that_way_at_all(tmp_path):
     """
     The test above needs a database and skips without one, and a skipped test
