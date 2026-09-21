@@ -4671,8 +4671,24 @@ async def run(
                         # turn: a later compose that says nothing about the
                         # arrangement leaves the one he already gave standing,
                         # exactly as a block he does not mention stays.
-                        if result["meta"].get("arrangement"):
-                            arrangement_recorded = result["meta"]["arrangement"]
+                        # AND WHAT IT COSTS TO SAY IT TWICE (2026-09-21). The
+                        # tool said "leave it out and it is packed", which is
+                        # not what the line above does — so every recompose
+                        # re-emitted the whole tree to keep a layout that was
+                        # never at risk. Measured on the six broad turns of
+                        # 2026-09-21: the arrangement is the largest single
+                        # thing in a compose (2.8-4.7 KB against 0.7-2.7 KB of
+                        # blocks) and most broad turns compose two or three
+                        # times. The description now says the truth; this
+                        # records what a re-send still costs, so the next
+                        # session reads the number instead of guessing.
+                        sent = result["meta"].get("arrangement")
+                        if sent:
+                            if sent == arrangement_recorded:
+                                log.gap("arrangement_resent",
+                                        f"{len(json.dumps(sent, default=str))} bytes of "
+                                        f"layout re-sent unchanged; it already stood")
+                            arrangement_recorded = sent
                         yield _sse("compose", {
                             "seq": gseq,
                             "blocks": composition_recorded,
