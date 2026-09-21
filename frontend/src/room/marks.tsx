@@ -53,6 +53,9 @@ import type { ActionOffer } from '../types/bob';
 import { ObjectPanel, kindOf } from './ObjectPanel';
 import { dimensionOf } from './data';
 import { restated } from './beside';
+
+/** Words of his that carry meaning — the measure `restated` needs enough of. */
+const wordCount = (text: string) => text.trim().split(/\s+/).filter((w) => w.length > 2).length;
 import { Swatch, useHueFor } from './swatch';
 import {
   COOL, NO_TAKE, RowName, RowOffers, beat, emphasised, moved, paint, told, type Offering,
@@ -462,7 +465,14 @@ function Line({ rows, meta, o, subject, p }: {
   // 280 for the chart the page rests on; less for one that supports it — a
   // five-point series at 280 was two hundred pixels of nothing (the watch
   // frame, 2026-09-20).
-  const H = canvas ? (p.o.weight === 'lead' ? 280 : p.o.weight === 'quiet' ? 140 : 200) : 128;
+  // AS TALL AS IT IS WIDE ENOUGH TO BE (P9, the artifact's own rule:
+  // `Math.round(Math.max(160, Math.min(230, W * 0.42)))`). A fixed 280 over a
+  // seven-point week left the top third empty whatever the width — dead air
+  // the owner counted as a gap. A lead keeps a little more room to breathe.
+  const H = canvas
+    ? Math.round(Math.max(160, Math.min(p.o.weight === 'lead' ? 260 : p.o.weight === 'quiet' ? 150 : 230,
+                                        W * (p.o.weight === 'quiet' ? 0.3 : 0.42))))
+    : 128;
   const pad = 10;
   const yTop = canvas ? (banded && p.o.thought?.trim() ? 44 : 14) : pad;
   const yBase = canvas ? H - 48 : H - pad;
@@ -886,7 +896,10 @@ export function MarkBlock(p: TileProps) {
           {!p.document && p.o.question?.trim() && (
             <span className="r-mk-ask">{p.o.question.trim()}</span>
           )}
-          {!restated(titleFor(p.o, meta), p.said ?? []) && (
+          {/* A CLAIM OF ONE OR TWO WORDS CANNOT BE "RESTATED" (P9): "Fell" is
+              said again by any sentence with "fell" in it, and the two halves
+              of a facing pair lost the only labels they had. */}
+          {(wordCount(titleFor(p.o, meta)) < 3 || !restated(titleFor(p.o, meta), p.said ?? [])) && (
             <span className="r-mk-title">
               {titleFor(p.o, meta)}{p.earlier ? ' · from earlier' : ''}
             </span>

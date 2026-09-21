@@ -1686,10 +1686,12 @@ tr[data-lit="yes"] td { font-weight: 600; }
 }
 .r-doc-sec > .r-doc-p, .r-doc-pair > .r-doc-p { margin: 0 0 14px; }
 .r-doc-sec .r-doc-p .r-page-say { max-width: 62ch; white-space: normal; }
-/* A FIGURE AND THE WORDS IT SITS BESIDE (doc.tsx, Pair). It contains its own
-   float, so whatever follows the pair — tabs, a figure at full width, the next
-   pair — starts clear of it without being told to. */
-.r-doc-pair { display: flow-root; min-width: 0; margin: 0 0 10px; }
+/* A FIGURE AND THE WORDS IT SITS BESIDE (doc.tsx, Pair) — WITH NO BOX OF ITS
+   OWN (P9). The pair measures a figure against its words and carries the phase;
+   the float belongs to the SECTION, so every paragraph, row and list after it
+   wraps up the left side until the float ends. Contained, the pair left a hole
+   under every short paragraph and the page read as half-height columns. */
+.r-doc-pair { display: contents; }
 
 /* A FIGURE TAKES THE ROOM IT NEEDS; beside its words it is a float. */
 .r-doc-fig { min-width: 0; }
@@ -1703,9 +1705,11 @@ tr[data-lit="yes"] td { font-weight: 600; }
 .r-doc-pair[data-phase="1"] > .r-doc-fig[data-beside][data-size="small"] { width: 40%; }
 .r-doc-pair[data-phase="1"] > .r-doc-fig[data-beside][data-size="medium"] { width: 56%; }
 .r-doc-pair[data-phase="1"] > .r-doc-fig[data-beside][data-size="wide"] { width: 46%; }
-.r-doc-pair[data-phase="2"] { display: flex; flex-direction: column; }
+/* Nothing in the section reaches past it, so it takes the width WHERE IT IS.
+   `order` moved it to the end of a flex column instead, which is how a caveat
+   ended up under the figures it qualified. */
 .r-doc-pair[data-phase="2"] > .r-doc-fig[data-beside] {
-  float: none; order: 2; width: min(100%, 680px); margin: 10px 0 0;
+  float: none; width: 100%; clear: both; margin: 10px 0 24px;
 }
 /* Inside a row or a grid the layout decides the width, as it always did; and a
    tree of blocks alone keeps the distance it had between them. */
@@ -1813,8 +1817,6 @@ tr[data-lit="yes"] td { font-weight: 600; }
    it sat beside — its own pair's, nothing else's — and a note stays where he
    put it, which is BEFORE the figures it qualifies. */
 @container (max-width: 620px) {
-  .r-doc-pair { display: flex; flex-direction: column; }
-  .r-doc-pair > .r-doc-fig[data-beside] { order: 2; }
   .r-doc-pair > .r-doc-fig[data-beside], .r-doc-sec > .r-doc-fig[data-size],
   .r-doc-pair > .r-doc-fig[data-size], .r-doc-sec > .r-doc-note {
     float: none; width: 100%; margin: 10px 0 18px;

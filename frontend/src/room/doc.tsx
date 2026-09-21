@@ -174,13 +174,11 @@ export function Prose({ text, figure }: {
 /** Past this many pixels of nothing under the words, it may read as a hole. */
 const HOLE = 96;
 /**
- * ...AND ONLY WHERE THE WORDS ARE SHORT BESIDE THE FIGURE. White under the last
- * paragraph of a section is how a section ends; it is a hole when three lines
- * sit beside a figure five times their height. The first rule was the pixels
- * alone, and it set a seven-shop comparison under two full paragraphs at the
- * width of the page — long empty tracks, the "empty spaces" the owner named.
+ * ...MEASURED AGAINST THE WHOLE SECTION (P9). It was measured against the
+ * paragraphs of the pair alone, which is why the page kept holes it had the
+ * material to fill: whatever came after those paragraphs started below the
+ * figure instead of beside it.
  */
-const FILL = 0.45;
 
 /** A section of the page: a head and what stands under it. It contains its own floats. */
 export function Section({ children }: { children: ReactNode }) {
@@ -222,16 +220,25 @@ export function Pair({ children }: { children: ReactNode }) {
     if (!pair) return undefined;
     const check = () => {
       const fig = pair.querySelector<HTMLElement>(':scope > .r-doc-fig[data-beside]');
-      const words = pair.querySelectorAll<HTMLElement>(':scope > .r-doc-p');
-      if (!fig || !words.length) return;
+      const sec = pair.closest<HTMLElement>('.r-doc-sec');
+      if (!fig || !sec) return;
+      // THE HOLE WHERE IT IS SEEN: the figure's bottom against the bottom of
+      // everything ELSE in its section — the paragraphs beside it, and every
+      // row, list and note that flows up the left side after them. A figure
+      // the section's own text runs past leaves no hole at all.
       const box = fig.getBoundingClientRect();
-      const end = words[words.length - 1].getBoundingClientRect().bottom;
-      const tall = end - words[0].getBoundingClientRect().top;
-      if (box.bottom - end > HOLE && tall < box.height * FILL) setPhase((p) => Math.min(2, p + 1));
+      const reach = Math.max(0, ...Array.from(
+        sec.querySelectorAll<HTMLElement>('.r-doc-p, .r-doc-h, .r-laid, .r-doc-tabs, .r-laid-when'))
+        .map((el) => el.getBoundingClientRect().bottom));
+      if (!reach) return;
+      if (box.bottom - reach > HOLE) setPhase((p) => Math.min(2, p + 1));
     };
     check();
     if (typeof ResizeObserver === 'undefined') return undefined;
-    const room = pair.closest<HTMLElement>('.r-doc-sec')?.parentElement ?? pair.parentElement ?? pair;
+    // The pair has no box of its own (`display: contents`), so the section is
+    // what is watched — both for the width and for anything landing in it.
+    const sec = pair.closest<HTMLElement>('.r-doc-sec');
+    const room = sec?.parentElement ?? pair.parentElement ?? pair;
     const seen = new ResizeObserver(() => {
       const w = Math.round(room.clientWidth);
       // A NEW WIDTH IS A NEW QUESTION; a new height is only the answer landing.
@@ -246,8 +253,8 @@ export function Pair({ children }: { children: ReactNode }) {
       check();
     });
     seen.observe(room);
-    seen.observe(pair);
-    pair.querySelectorAll(':scope > *').forEach((n) => seen.observe(n));
+    if (sec) seen.observe(sec);
+    sec?.querySelectorAll('*').forEach((n) => seen.observe(n));
     return () => seen.disconnect();
   }, [phase]);
 
