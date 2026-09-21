@@ -7593,7 +7593,13 @@ composition:
       by what it draws and balances it against the words); and "control":
       "<key of a control block>" to carry that control above its drawing.
       `tabs` is one space for the same question read at two scopes (give
-      "labels"); `row`, `grid`, `panel` and `stack` mean what they meant. CASE
+      "labels"); a `fold` is a long thing PRESENT WITHOUT BEING A WALL — give
+      it a "label" saying what is inside and it draws closed, so the page opens
+      short and a person opens the rest if they want it: the ten lines that
+      sold nothing, a list nobody reads every time, the working under a finding.
+      Fold what completeness demands and attention does not; never fold the
+      answer, and never fold a caveat that says a figure may be wrong.
+      `row`, `grid`, `panel` and `stack` mean what they meant. CASE
       BY CASE, NOT EVERYTHING EVERY TIME: a number that answers outright is a
       lede and nothing else; a small comparison sits beside its words; a
       series or many names takes the width; a control goes only where turning
@@ -7602,9 +7608,9 @@ composition:
       remembered, so a later compose that says nothing about it leaves the
       one you gave standing. Leave it out and the page is laid out for you.
     leaves: [block, say, next, lede, head, note, caveat]
-    # The grammar's own four, and one more that is the page's alone.
+    # The grammar's own four, and two more that are the page's alone.
     layouts_from: composition.grammar.layouts
-    extra_layouts: [tabs]
+    extra_layouts: [tabs, fold]
     # A page, not a dashboard: forty parts is a long read already.
     max_nodes: 40
     max_depth: 4
@@ -7635,6 +7641,22 @@ composition:
       min: 2
       max: 4
       label_max_length: 28
+    # A LONG THING PRESENT WITHOUT BEING A WALL (P15.a, 2026-09-21). The design
+    # folds the ten zero-lines and the caveat; the page had no disclosure at
+    # all, so everything he had was either shown in full or left out, and the
+    # owner's complaint about his own pages was the wall: "theres alot of text i
+    # think alot of it is useless".
+    #
+    # It is a LAYOUT and not a leaf, so it costs the same `max_nodes` and
+    # `max_depth` as a row, and what is inside it is ordinary page. Closed is
+    # the resting state, which is the whole point; the label is what a person
+    # decides to open, so it says what is in there and carries no digit — a
+    # count is the drawing's to make from the children, never his to assert
+    # (architecture rule 9).
+    fold:
+      min: 1
+      label_max_length: 48
+      closed_at_rest: true
     # A FIGURE INSIDE A SENTENCE. The key is a `figure` block of his; the
     # digits are the row's, drawn by the page with the read's receipt. His
     # words still carry no digit — the rule that kept a number out of his

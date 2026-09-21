@@ -808,6 +808,26 @@ export function Board(p: BoardProps) {
     if (node.layout === 'tabs') {
       return <Tabs key={at} labels={node.labels ?? []}>{kids}</Tabs>;
     }
+    if (node.layout === 'fold') {
+      // A LONG THING PRESENT WITHOUT BEING A WALL (P15.a, 2026-09-21). The
+      // design folds the ten zero-lines and the caveat; the page had no
+      // disclosure at all, so everything he had was a wall or absent.
+      //
+      // NATIVE `details`, so it is keyboard-reachable and open-by-find without
+      // any state of ours, and CLOSED AT REST — which is the whole point, and
+      // means the first still frame of the page is the short one. The label is
+      // his and says what is inside; the count beside it is the DRAWING's, off
+      // the children, never a figure he asserted (rule 9).
+      return (
+        <details key={at} className="r-doc-fold">
+          <summary className="r-doc-fold-lab">
+            {node.label}
+            <span className="r-doc-fold-n">{kids.length}</span>
+          </summary>
+          <div className="r-doc-fold-in">{kids}</div>
+        </details>
+      );
+    }
     if (node.layout === 'row') {
       // LISTS THAT FACE EACH OTHER ARE READ AGAINST EACH OTHER (P7): two or
       // more lists of movers in one row draw on one scale (marks.tsx).
@@ -911,6 +931,35 @@ export function Board(p: BoardProps) {
           const out: ReactNode[] = [];
           for (let n = 0; n < parts.length; n += 1) {
             const part = parts[n];
+            // ONE MARGIN NOTE AT A TIME (P15.a, 2026-09-21). Each `note` drew
+            // its own floated aside, so two of his in a row stacked in the
+            // margin and turned the bottom of the page back into the columns
+            // the page exists to stop being. A RUN of them is one aside with a
+            // paragraph each: they share the box and the rule, and not one word
+            // of either is dropped.
+            if ('note' in part) {
+              const run = [part as Extract<Arrangement, { note: string }>];
+              while (n + 1 < parts.length && 'note' in parts[n + 1]) {
+                n += 1;
+                run.push(parts[n] as Extract<Arrangement, { note: string }>);
+              }
+              if (run.length > 1) {
+                const label = run.find((r) => r.label)?.label;
+                out.push(
+                  <aside key={`note-${i}.${n}`} className="r-doc-note"
+                         data-long={run.reduce((k, r) => k + r.note.length, 0) > 280
+                           ? 'yes' : undefined}>
+                    {label && <span className="r-doc-note-lab">{label}</span>}
+                    {run.map((r, k) => (
+                      <p key={k} className="r-doc-note-p">
+                        <Prose text={r.note} figure={inline} />
+                      </p>
+                    ))}
+                  </aside>,
+                );
+                continue;
+              }
+            }
             const drawn = drawNode(part, `s${i}.${n}`, parts[n + 1]);
             const pairs = 'block' in part && part.beside !== false
               && Boolean(parts[n + 1] && 'say' in parts[n + 1]);

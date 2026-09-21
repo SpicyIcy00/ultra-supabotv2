@@ -1733,6 +1733,30 @@ tr[data-lit="yes"] td { font-weight: 600; }
   display: block; margin: 0 0 4px; font: 500 10px/1.6 var(--mono); letter-spacing: 0.1em;
   text-transform: uppercase; color: var(--ink-4);
 }
+/* ONE MARGIN NOTE AT A TIME (P15.a, 2026-09-21). Two asides stacked in the
+   margin turned the bottom of his page back into the columns the page exists to
+   stop being, so a run of his notes is ONE aside with a paragraph each. Not one
+   word of either is dropped; they share a box and a rule. */
+.r-doc-note-p { margin: 0; }
+.r-doc-note-p + .r-doc-note-p { margin-top: 8px; }
+
+/* A LONG THING PRESENT WITHOUT BEING A WALL (P15.a, 2026-09-21). Closed at rest,
+   so the page's first still frame is the short one; a rule and a caret say there
+   is more, and the count is the drawing's own. */
+.r-doc-fold { margin: 14px 0 18px; border-top: 1px solid var(--edge); }
+.r-doc-fold-lab {
+  display: flex; align-items: baseline; gap: 8px; padding: 9px 0; cursor: pointer;
+  font: 500 12px/1.5 var(--mono); letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-3); list-style: none;
+}
+.r-doc-fold-lab::-webkit-details-marker { display: none; }
+.r-doc-fold-lab::after {
+  content: '+'; margin-left: auto; font: 400 14px/1 var(--mono); color: var(--ink-4);
+}
+.r-doc-fold[open] > .r-doc-fold-lab::after { content: '2'; }
+.r-doc-fold-n { font: 400 11px/1.5 var(--mono); color: var(--ink-4); }
+.r-doc-fold-lab:focus-visible { outline: 2px solid var(--ink-4); outline-offset: 2px; }
+.r-doc-fold-in { padding: 2px 0 10px; }
 
 /* A LIVE FIGURE INSIDE A SENTENCE: the row's value, drawn by the page, tappable
    for its receipt. He wrote {key}; he never typed the digits. */

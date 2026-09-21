@@ -534,10 +534,13 @@ export interface SpecNode {
  * ABSENT IS THE PACKING, which is every answer composed before this.
  */
 export type Arrangement =
-  | { layout: 'stack' | 'row' | 'grid' | 'panel' | 'tabs'; children: Arrangement[];
+  | { layout: 'stack' | 'row' | 'grid' | 'panel' | 'tabs' | 'fold'; children: Arrangement[];
       cols?: number; heading?: string;
       /** For `tabs`: a plain label per view, in order. */
-      labels?: string[] }
+      labels?: string[];
+      /** For `fold`: what is inside it, so a person knows what they are opening
+       *  (P15.a). Closed at rest; never a digit — a count is the drawing's. */
+      label?: string }
   /** A block of his. `beside`: set beside the words that follow it; `size`: the
    *  room it takes; `control`: a control block carried above its drawing (P7). */
   | { block: string; beside?: boolean; size?: 'small' | 'medium' | 'wide' | 'full'; control?: string }

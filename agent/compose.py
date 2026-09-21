@@ -694,6 +694,22 @@ def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
                 out["layout"] = "stack"
             else:
                 out["labels"] = labels
+        if word == "fold":
+            # A LONG THING PRESENT WITHOUT BEING A WALL (P15.a). What a person
+            # decides to open has to say what is in there, so a fold with no
+            # label is a stack — otherwise the page hides something behind the
+            # word "more". No digit in it: a count is the drawing's to make.
+            rule = spec.get("fold") or {}
+            cap = int(rule.get("label_max_length") or 48)
+            label = item.get("label")
+            label = " ".join(str(label).split())[:cap] if isinstance(label, str) else ""
+            if (not label or any(ch.isdigit() for ch in label)
+                    or len(drawn) < int(rule.get("min") or 1)):
+                coerced.append(f"{path}: a fold takes a plain label saying what is inside "
+                               f"it, so this was laid out as a stack")
+                out["layout"] = "stack"
+            else:
+                out["label"] = label
         if word == "grid":
             cols = item.get("cols")
             out["cols"] = cols if isinstance(cols, int) and 1 < cols <= 6 else 2

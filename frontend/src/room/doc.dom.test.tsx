@@ -412,3 +412,105 @@ describe('a caption does not say the heading again (P14)', () => {
       .toContain('Rockwell is the only one clearly ahead');
   });
 });
+
+/**
+ * ONE MARGIN NOTE AT A TIME (P15.a, 2026-09-21).
+ *
+ * The card: *"two asides stacked turned the bottom of his page back into
+ * columns."* Each `note` drew its own floated aside at 31% of the page, so two
+ * of his in a row put two boxes down the margin — the shape the page exists to
+ * stop being. A RUN of them is one aside with a paragraph each: one box, one
+ * rule, and not one word of either dropped.
+ */
+describe('a run of margin notes', () => {
+  const page = (...notes: string[]): Arrangement => ({
+    layout: 'stack',
+    children: [
+      { lede: 'Seven shops took less.' },
+      { head: 'The shelf' },
+      { block: 'shops' },
+      ...notes.map((note) => ({ note })),
+    ],
+  }) as Arrangement;
+
+  it('is one aside, not one each', () => {
+    const { container } = draw(page(
+      'Stock counts run days behind the sales.',
+      'Thousands sit below zero, so a line that looks empty may be unrecorded.',
+    ));
+    expect(container.querySelectorAll('.r-doc-note')).toHaveLength(1);
+  });
+
+  it('keeps every word of every one of them', () => {
+    const { container } = draw(page(
+      'Stock counts run days behind the sales.',
+      'Thousands sit below zero, so a line that looks empty may be unrecorded.',
+    ));
+    const said = container.querySelector('.r-doc-note')?.textContent ?? '';
+    expect(said).toContain('run days behind the sales');
+    expect(said).toContain('may be unrecorded');
+  });
+
+  it('draws them as paragraphs, so they do not run together', () => {
+    const { container } = draw(page('First aside.', 'Second aside.'));
+    const paras = container.querySelectorAll('.r-doc-note .r-doc-note-p');
+    expect(paras).toHaveLength(2);
+    expect(paras[0].textContent).toBe('First aside.');
+    expect(paras[1].textContent).toBe('Second aside.');
+  });
+
+  it('leaves a single note exactly as it was', () => {
+    const { container } = draw(page('Just the one.'));
+    expect(container.querySelectorAll('.r-doc-note')).toHaveLength(1);
+    // The single-note path is the original one and draws no paragraph wrapper.
+    expect(container.querySelectorAll('.r-doc-note-p')).toHaveLength(0);
+    expect(container.querySelector('.r-doc-note')?.textContent).toContain('Just the one.');
+  });
+});
+
+/**
+ * A FOLD (P15.a, 2026-09-21).
+ *
+ * The card: *"a FOLD, so a long thing is present without being a wall (the
+ * artifact folds the ten zero-lines and the caveat; the page has no disclosure
+ * leaf, so everything is shown or absent)."* Native `details`, closed at rest,
+ * so the page's first still frame is the short one — and the label is his while
+ * the count beside it is the drawing's own, off the children (rule 9).
+ */
+describe('a fold', () => {
+  const folded = (label?: string): Arrangement => ({
+    layout: 'stack',
+    children: [
+      { lede: 'Seven shops took less.' },
+      { layout: 'fold', ...(label ? { label } : {}), children: [
+        { say: 'Ten lines traded the week before and nothing last week.' },
+        { say: 'They carry their old figure alone.' },
+      ] },
+    ],
+  }) as Arrangement;
+
+  it('is closed at rest, so the page opens short', () => {
+    const { container } = draw(folded('the ten lines that sold nothing'));
+    const fold = container.querySelector('details.r-doc-fold') as HTMLDetailsElement;
+    expect(fold).toBeTruthy();
+    expect(fold.open).toBe(false);
+  });
+
+  it('says what is inside it, in his words', () => {
+    const { container } = draw(folded('the ten lines that sold nothing'));
+    expect(container.querySelector('.r-doc-fold-lab')?.textContent)
+      .toContain('the ten lines that sold nothing');
+  });
+
+  it('counts what is in there itself, rather than taking his word for it', () => {
+    const { container } = draw(folded('the ten lines that sold nothing'));
+    expect(container.querySelector('.r-doc-fold-n')?.textContent).toBe('2');
+  });
+
+  it('still holds every word, so nothing is lost by folding it', () => {
+    const { container } = draw(folded('the ten lines that sold nothing'));
+    const inside = container.querySelector('.r-doc-fold-in')?.textContent ?? '';
+    expect(inside).toContain('traded the week before');
+    expect(inside).toContain('their old figure alone');
+  });
+});
