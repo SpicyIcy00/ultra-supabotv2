@@ -82,6 +82,8 @@ const API_BASE = '/api/v1';
 
 /** Matches MAX_HISTORY_TURNS in agent/loop.py; the server truncates too. */
 const MAX_HISTORY_TURNS = 20;
+/** Matches HistoryTurn.tool_calls' bound in backend/app/api/v1/routes/bob.py. */
+const MAX_HISTORY_CALLS = 20;
 
 /** Thrown to stop fetchEventSource retrying — see FatalError in its docs. */
 class BobStreamError extends Error {}
@@ -108,8 +110,13 @@ export function toHistory(turns: BobTurn[]): AskHistoryTurn[] {
       : {
           role: 'bob' as const,
           text: t.text,
+          // THE LAST 20, NOT ALL OF THEM (P11). The server takes 20 per turn;
+          // since the convergence cap stopped counting `compose` (P6.j) a turn
+          // can make more than that, and sending them all made the NEXT
+          // question fail validation with nothing on screen to say why.
           tool_calls: t.toolCalls
             .filter((c) => c.result && !c.result.error)
+            .slice(-MAX_HISTORY_CALLS)
             .map((c) => ({ tool: c.tool, arguments: c.arguments })),
         },
   );
@@ -344,9 +351,28 @@ export function useBobStream() {
           openWhenHidden: true,
 
           async onopen(res) {
-            if (!res.ok) {
-              throw new BobStreamError(`Bob returned ${res.status}`);
+            if (res.ok) return;
+            // WHAT THE SERVER SAID, NOT JUST THAT IT SAID NO (P11). "Bob
+            // returned 422" cost an afternoon: a 422 is the request being
+            // refused, and the reason is in the body. It is read here and
+            // shown, bounded, because a person who cannot see the reason
+            // cannot tell a refusal from a breakage.
+            let said = '';
+            try {
+              const body = await res.clone().json() as { detail?: unknown };
+              const detail = body?.detail;
+              said = typeof detail === 'string' ? detail
+                : Array.isArray(detail) && detail.length
+                  ? detail.map((d) => {
+                    const e = d as { loc?: unknown[]; msg?: string };
+                    return `${(e.loc ?? []).join('.')}: ${e.msg ?? ''}`;
+                  }).join('; ')
+                  : '';
+            } catch {
+              said = '';
             }
+            throw new BobStreamError(
+              `Bob returned ${res.status}${said ? ` — ${said.slice(0, 300)}` : ''}`);
           },
 
           onmessage(ev) {

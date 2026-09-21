@@ -679,13 +679,22 @@ export interface BoardContextObject {
   read?: { tool: string; arguments: Record<string, unknown> };
 }
 
+/**
+ * WHAT THE SERVER TAKES (P11): `max_objects` plus the figures a page holds in
+ * its words (`composition.arrangement.refs.max_in_words`), which is what
+ * `bounded` may leave here. Clamped where it is SENT rather than where it is
+ * drawn: the board on screen is the board on screen, and a request that
+ * exceeds a bound nobody can see is a 422 the person cannot act on.
+ */
+export const MAX_BOARD_SENT = MAX_OBJECTS + 12;
+
 export function boardContext(
   answers: AnswerTurn[],
   board: BoardObject[],
   local: Record<string, Local>,
   focused: string | null,
 ): BoardContextObject[] {
-  return inOrder(board, local, focused).map((o) => {
+  return inOrder(board, local, focused).slice(0, MAX_BOARD_SENT).map((o) => {
     const call = o.seq === undefined ? null
       : answers[o.turn]?.toolCalls.find((c) => c.seq === o.seq) ?? null;
     const meta = call?.result?.meta;

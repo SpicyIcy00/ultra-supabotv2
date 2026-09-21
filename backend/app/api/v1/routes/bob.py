@@ -214,7 +214,15 @@ _DESK_MAX_ATTENTION = int(_req(_DESK, "context.max_attention"))
 _DESK_ESTATE = tuple(str(p["key"]) for p in _req(_DESK, "estate.parts"))
 # The board's bound is the board's own, from metrics.yaml composition, so the
 # number the client folds to is the number the route refuses past.
-_BOARD_MAX = int(_req(_load_defs(), "composition.max_objects"))
+# WHAT THE BOARD MAY HOLD, AS THE CLIENT MAY HOLD IT (P11, 2026-09-21).
+# `max_objects` bounds what the board DRAWS. Since P7 a page can also name a
+# figure inside a sentence and carry a control on a figure; neither is drawn as
+# an object of its own and neither is counted there (frontend/src/room/board.ts
+# `bounded`), so a legitimate board is up to `max_objects + max_in_words`. The
+# server took 12 and refused the thirteenth with a 422 the person could neither
+# see nor undo — the next question simply failed.
+_BOARD_MAX = (int(_req(_load_defs(), "composition.max_objects"))
+              + int(_req(_load_defs(), "composition.arrangement.refs.max_in_words")))
 
 
 class DeskSubject(BaseModel):
