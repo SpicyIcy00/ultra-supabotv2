@@ -122,3 +122,42 @@ def test_he_is_told_it_exists_and_when_to_use_it(defs):
     # And what NOT to fold, because folding the answer would hide it and folding
     # a caveat would break UI rule 4.
     assert "never fold the answer" in low and "caveat that says a figure may be wrong" in low
+
+
+# ------------------------------------------- and it cannot hide a qualification
+
+def test_a_caveat_cannot_sit_inside_a_fold(defs):
+    """
+    A fold is CLOSED at rest. `{caveat: true}` placed inside one is drawn where
+    nobody sees it — and worse, the room reads "the page carries the caveat" and
+    STOPS drawing it beside his answer (`placesCaveat` -> `caveatOnPage`), so the
+    qualification leaves the screen entirely. Two features that were each safe
+    alone: the fold, and P7's placed caveat.
+    """
+    meta = _compose(_page({"layout": "fold", "label": "the detail",
+                           "children": [{"caveat": True},
+                                        {"say": "And the working under it."}]}), defs)
+    assert "caveat" not in str(meta["arrangement"])
+    assert any("cannot sit inside a fold" in c for c in meta.get("coerced") or [])
+    # NEVER REFUSED: the rest of the fold stands, and the caveat returns to its
+    # place beside his answer rather than being lost.
+    assert "And the working under it." in str(meta["arrangement"])
+
+
+def test_a_note_inside_a_fold_is_not_something_he_said(defs):
+    """
+    The notice gate counts a placed `note` as surfaced (P14's fix). A note inside
+    a closed fold is NOT surfaced, and counting it would let a notice UI rule 4
+    requires drawn be discharged by text nobody sees. The grammar tells him never
+    to fold a caveat; this is the half that does not depend on him reading it.
+    """
+    from agent import reading
+
+    tree = {"layout": "stack", "children": [
+        {"note": "Seen: the counts run behind."},
+        {"layout": "fold", "label": "the detail",
+         "children": [{"note": "Hidden: thousands sit below zero."}]},
+    ]}
+    said = reading.said_this_turn("Down on the week.", {}, tree)
+    assert "Seen: the counts run behind." in said
+    assert "Hidden" not in said

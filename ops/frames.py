@@ -635,7 +635,8 @@ def main(argv: list[str]) -> int:
         if stem.endswith("-voice"):
             print(f"{stem:<24} mic {m.get('mic')} · line {m.get('line')!r} · chips {m.get('chips')}")
             continue
-        cols = "/".join(str(round(c)) for c in m.get("columns_px") or [])
+        cols = "/".join("-" if c is None else str(round(c))
+                       for c in m.get("columns_px") or [])
         off = m.get("centre_offset_px")
         print(f"{stem:<24} {'-' if off is None else round(off, 1):>9} {cols:>16} "
               f"{m.get('figures'):>4} {m.get('wires'):>5} {len(m.get('visible_scrollbars') or []):>4} "

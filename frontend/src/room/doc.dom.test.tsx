@@ -580,3 +580,34 @@ describe('a margin note at the end of its section', () => {
     expect(note?.getAttribute('data-long')).toBeNull();
   });
 });
+
+/**
+ * A FOLD CANNOT HIDE A QUALIFICATION (2026-09-21).
+ *
+ * Two features each safe alone: a fold that is CLOSED at rest, and P7's caveat
+ * placed on the page. Together they are a way for a qualification to leave the
+ * screen — `placesCaveat` reads "the page carries it", Room stops drawing it
+ * beside his answer, and the page draws it inside something shut.
+ *
+ * The server drops a caveat out of a fold (agent/compose._unfold_caveat); this
+ * is the same reading on this end, so neither side depends on the other.
+ */
+describe('a caveat and a fold', () => {
+  it('is not counted as placed when it sits inside a fold', () => {
+    expect(placesCaveat({
+      layout: 'stack',
+      children: [{ lede: 'x' }, { layout: 'fold', label: 'the detail',
+                                  children: [{ caveat: true }] }],
+    } as Arrangement)).toBe(false);
+  });
+
+  it('is still counted as placed anywhere the reader can see it', () => {
+    expect(placesCaveat({
+      layout: 'stack', children: [{ lede: 'x' }, { caveat: true }],
+    } as Arrangement)).toBe(true);
+    expect(placesCaveat({
+      layout: 'stack',
+      children: [{ layout: 'row', children: [{ caveat: true }] }],
+    } as Arrangement)).toBe(true);
+  });
+});

@@ -719,7 +719,32 @@ def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
                 out["heading"] = head
         return out
 
+    def _unfold_caveat(n: Any, inside: bool) -> Any:
+        """
+        HIS CAVEAT IS NEVER BEHIND A DISCLOSURE (2026-09-21).
+
+        A fold is closed at rest and `{caveat: true}` placed inside one is drawn
+        nowhere a reader will see it — and worse, the room reads "the page
+        carries the caveat" and stops drawing it beside his answer, so the
+        qualification disappears from the screen entirely. Dropped from inside a
+        fold and named, which returns it to its place beside his answer.
+        """
+        if not isinstance(n, Mapping):
+            return n
+        if "children" in n:
+            folded = inside or n.get("layout") == "fold"
+            kids = [k for k in (_unfold_caveat(k, folded) for k in n["children"]) if k]
+            if not kids:
+                return None
+            return {**n, "children": kids}
+        if inside and "caveat" in n:
+            coerced.append("arrangement: a caveat cannot sit inside a fold — it would be "
+                           "closed, so it was left beside your answer instead")
+            return None
+        return n
+
     built = node(tree, 1, "arrangement")
+    built = _unfold_caveat(built, False)
     if built is None:
         return None
     # A BLOCK IS NEVER LOST. One he composed and did not place is drawn after
@@ -773,6 +798,13 @@ def notes_on_the_page(tree: Any) -> str:
                 walk(kid, depth + 1)
             return
         if not isinstance(node, Mapping):
+            return
+        # A NOTE INSIDE A FOLD IS NOT SURFACED (2026-09-21). A fold is CLOSED at
+        # rest, so a caveat written inside one is not on screen — and counting
+        # it as said would let a notice UI rule 4 requires drawn be discharged
+        # by text nobody sees. The grammar tells him never to fold a caveat;
+        # this is the half that does not depend on him reading it.
+        if node.get("layout") == "fold":
             return
         text = node.get("note")
         if isinstance(text, str) and text.strip():

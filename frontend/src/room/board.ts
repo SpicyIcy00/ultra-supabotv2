@@ -484,7 +484,15 @@ const REF = /\{([a-z0-9][a-z0-9_-]*)(?:\.[a-z_]+)?\}/g;
 /** Whether his page sets the reading's caveat on itself (`{caveat: true}`). */
 export function placesCaveat(tree: Arrangement | null | undefined): boolean {
   if (!tree) return false;
-  if ('children' in tree) return tree.children.some(placesCaveat);
+  // NOT INSIDE A FOLD. A fold is closed at rest, so a caveat in one is on the
+  // page and not on the screen — and this answer is what makes Room STOP
+  // drawing the caveat beside his answer. Read naively, a folded caveat would
+  // vanish from both places at once. The server drops it from inside a fold
+  // (agent/compose._unfold_caveat); this is the same reading on the other end.
+  if ('children' in tree) {
+    if (tree.layout === 'fold') return false;
+    return tree.children.some(placesCaveat);
+  }
   return 'caveat' in tree;
 }
 
