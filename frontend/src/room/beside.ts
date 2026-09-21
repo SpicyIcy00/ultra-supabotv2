@@ -166,17 +166,26 @@ export function bodyOf(text: string | null | undefined, claimSpan: string | null
     .join('\n\n');
 }
 
-export function restated(sentence: string, others: readonly string[]): boolean {
+export function restated(sentence: string, others: readonly string[],
+                         at: number = RESTATED_AT): boolean {
   const mine = wordsOf(sentence);
   if (!mine.size) return false;
   return others.some((other) => {
     const theirs = wordsOf(other);
     let shared = 0;
     for (const w of mine) if (theirs.has(w)) shared += 1;
-    return shared / mine.size >= RESTATED_AT;
+    return shared / mine.size >= at;
   });
 }
 const RESTATED_AT = 0.6;
+/**
+ * A CAPTION IS HELD TO A LOWER BAR (P14, 2026-09-21). His live page headed a
+ * section "Three shops fall; the rest are fine" and captioned the chart under
+ * it "Three shops fall, three hold, Rockwell gains" — half the words shared,
+ * under the 0.6 a sentence of prose needs, and the reader sees the heading
+ * twice. A caption has one job the heading has not already done.
+ */
+export const CAPTION_RESTATED_AT = 0.45;
 const GLUE = new Set(('the and for that this with was were are but not its his her our you your from '
   + 'than then they them into have has had just only also what which when where who how why all any '
   + 'one two out off per same about over more less most very there here been being will would could '

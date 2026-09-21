@@ -52,7 +52,7 @@ import {
 import type { ActionOffer } from '../types/bob';
 import { ObjectPanel, kindOf } from './ObjectPanel';
 import { dimensionOf } from './data';
-import { restated } from './beside';
+import { CAPTION_RESTATED_AT, restated } from './beside';
 
 /** Words of his that carry meaning — the measure `restated` needs enough of. */
 const wordCount = (text: string) => text.trim().split(/\s+/).filter((w) => w.length > 2).length;
@@ -899,7 +899,8 @@ export function MarkBlock(p: TileProps) {
           {/* A CLAIM OF ONE OR TWO WORDS CANNOT BE "RESTATED" (P9): "Fell" is
               said again by any sentence with "fell" in it, and the two halves
               of a facing pair lost the only labels they had. */}
-          {(wordCount(titleFor(p.o, meta)) < 3 || !restated(titleFor(p.o, meta), p.said ?? [])) && (
+          {(wordCount(titleFor(p.o, meta)) < 3
+            || !restated(titleFor(p.o, meta), p.said ?? [], CAPTION_RESTATED_AT)) && (
             <span className="r-mk-title">
               {titleFor(p.o, meta)}{p.earlier ? ' · from earlier' : ''}
             </span>

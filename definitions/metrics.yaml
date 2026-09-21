@@ -7626,6 +7626,18 @@ composition:
       # that figure: neither is a tile, so neither is counted there. They are
       # still bounded, here — a sentence with a dozen figures in it is a table.
       max_in_words: 12
+    # THE PAGE IS CHECKED BEFORE THE TURN MAY END (P14, 2026-09-21). He
+    # composed nine figures and put one on the page; every departure was named
+    # on `coerced`, in the result of the last call of the turn, which he never
+    # reads. The same answer the rest of this file gives: measure it, one
+    # corrective round, then it stands (agent/prose.py, "Words do not move
+    # it"). It fires only where the page is written as one — a lede or a head —
+    # and two or more of his own figures are not on it, so one forgotten block
+    # is a slip and a good page never pays a round for the check.
+    gate:
+      max_corrective_turns: 1
+      min_left_off: 2
+
     # A KEY PLACED TWICE IS PLACED ONCE. The board draws a read once
     # (board.readIdentity); a tree naming it twice would draw the same figure
     # under two headings, which is the widget disease with extra steps.

@@ -77,6 +77,8 @@ KINDS: dict[str, str] = {
     "history_marker_echoed":   "the model copied the seeded call list into its own answer, and it was stripped",
     "transaction_wording":     "raw table wording reached the answer",
     "body_over_length":        "the answer ran past the words the left column holds, and was cut at a sentence (voice.body)",
+    # THE PAGE HE WROTE LEFT HIS OWN FIGURES OFF IT (P14, 2026-09-21).
+    "page_left_blocks_off":    "the page he wrote left figures he composed off it; the room drew them above the plan and the turn spent a round putting them back (composition.arrangement.gate)",
     "compose_without_answer":  "a composes-only round named the claim and wrote nothing beside it, so the turn cost a round trip the settle rule exists to save (rounds.settle)",
     "restated_figure":         "prose said again what the board already draws",
     "misstated_figure":        "prose wrote a drawn figure WRONG — 800 over a row of 801",

@@ -414,27 +414,51 @@ def test_the_reasons_are_the_readers_reasons():
 # Fingerprints: the two caveats are enforced, not merely emitted
 # ---------------------------------------------------------------------------
 
-def test_page_context_partial_must_be_conveyed():
+def test_page_context_partial_is_the_model_s_to_obey_not_to_recite():
+    """
+    `page_context_partial` still reaches the MODEL, and is no longer forced into the answer.
+
+    It said the page he was given was not the whole page — which is a fact
+    about his own reading, not a warning that a figure on screen may be
+    wrong. `surface.desk.notices` classifies it `explains_only`, so UI rule
+    4 never drew it, and until P14 (2026-09-21) `must_convey` required it
+    in his prose anyway and appended it verbatim when he left it out.
+
+    The notice itself is unchanged: it rides the tool result with its
+    `guidance`, so he still knows not to answer as though he had the whole
+    page. Only the demand on his words is gone.
+    """
+    from agent import loop as bob_loop
+    from tools._common import load_defs, req
+
     defs = load_defs()
-    pending = [{"kind": "page_context_partial", "message": "..."}]
-    assert bob_loop._unsurfaced(pending, "Stock at AJI BARN is 4,120 units.", defs)
-    assert not bob_loop._unsurfaced(
-        pending, "Two pins on this page could not be reproduced now.", defs,
-    )
+    assert "page_context_partial" in (req(defs, "surface.desk.notices").get("explains_only") or [])
+    # It keeps its fingerprint, so a turn that DOES state it is recognised.
+    assert req(defs, "notices.page_context_partial.must_convey")
+    assert not bob_loop._unsurfaced([{"kind": "page_context_partial"}], "The shops held.", defs)
 
+def test_page_context_truncated_is_the_model_s_to_obey_not_to_recite():
+    """
+    `page_context_truncated` still reaches the MODEL, and is no longer forced into the answer.
 
-def test_page_context_truncated_must_be_conveyed():
+    It said the page he was given was not the whole page — which is a fact
+    about his own reading, not a warning that a figure on screen may be
+    wrong. `surface.desk.notices` classifies it `explains_only`, so UI rule
+    4 never drew it, and until P14 (2026-09-21) `must_convey` required it
+    in his prose anyway and appended it verbatim when he left it out.
+
+    The notice itself is unchanged: it rides the tool result with its
+    `guidance`, so he still knows not to answer as though he had the whole
+    page. Only the demand on his words is gone.
+    """
+    from agent import loop as bob_loop
+    from tools._common import load_defs, req
+
     defs = load_defs()
-    pending = [{"kind": "page_context_truncated", "message": "..."}]
-    assert bob_loop._unsurfaced(pending, "Stock at AJI BARN is 4,120 units.", defs)
-    assert not bob_loop._unsurfaced(
-        pending, "I read the newest 5 of the 12 pins; the other 7 are not inspected here.", defs,
-    )
-
-
-# ---------------------------------------------------------------------------
-# 4. The loop: evidence, not a figure
-# ---------------------------------------------------------------------------
+    assert "page_context_truncated" in (req(defs, "surface.desk.notices").get("explains_only") or [])
+    # It keeps its fingerprint, so a turn that DOES state it is recognised.
+    assert req(defs, "notices.page_context_truncated.must_convey")
+    assert not bob_loop._unsurfaced([{"kind": "page_context_truncated"}], "The shops held.", defs)
 
 def _drive(monkeypatch, replies, captured, *, reader, page_scope=None, page_context=None):
     fake = FakeClient(replies)

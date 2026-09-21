@@ -311,8 +311,27 @@ def test_a_fingerprint_accepts_prose_that_conveys_it(kind):
     )
 
 
+def _explains_only() -> set:
+    """The kinds UI rule 4 says not to draw: they explain, they do not warn."""
+    from tools._common import load_defs, req
+
+    return set(req(load_defs(), "surface.desk.notices").get("explains_only") or ())
+
+
 @pytest.mark.parametrize("kind", sorted(PAIRS))
 def test_a_fingerprint_rejects_prose_that_ignores_it(kind):
+    """
+    A notice that a figure may be WRONG is still required of the answer.
+
+    NOT REQUIRED SINCE P14 (2026-09-21): a kind `surface.desk.notices`
+    classifies as `explains_only`. Twenty-three kinds were on that list AND
+    carried `must_convey`, so the loop required in his prose exactly what the
+    surface is told never to draw — and appended it verbatim when he left it
+    out. The owner, of a page carrying three of them: *"i dont like the
+    disclaimers i dont want to see it"*, and on 2026-09-17: *"we dont need
+    those disclaimers unless it has wrong data"*. The check now reads the
+    classification, so the two halves cannot contradict again.
+    """
     from agent import loop as bob_loop
     from tools._common import load_defs
 
@@ -320,10 +339,43 @@ def test_a_fingerprint_rejects_prose_that_ignores_it(kind):
     missing = bob_loop._unsurfaced(
         [{"kind": kind, "message": "..."}], ignores, load_defs()
     )
+    if kind in _explains_only():
+        assert not missing, (
+            f"{kind} only explains how a figure was measured, and is still being "
+            f"forced into the answer"
+        )
+        return
     assert missing, (
         f"{kind}: an answer that drops the caveat passes the check, so the "
         f"caveat is no longer required of anyone"
     )
+
+
+def test_a_disclaimer_is_never_forced_and_a_warning_always_is():
+    """
+    The one rule, from the one classification (P14).
+
+    `surface.desk.notices` splits every kind into `data_may_be_wrong` (drawn,
+    UI rule 4) and `explains_only` (not drawn). `_unsurfaced` reads that same
+    split, so a kind cannot be undrawable and mandatory at once.
+    """
+    from agent import loop as bob_loop
+    from tools._common import load_defs, req
+
+    defs = load_defs()
+    desk = req(defs, "surface.desk.notices")
+    wrong = [k for k in (desk.get("data_may_be_wrong") or []) if k in fingerprints()]
+    assert wrong, "no warning kind carries a fingerprint; the check would be vacuous"
+
+    # Prose that says nothing at all.
+    for kind in sorted(_explains_only()):
+        assert not bob_loop._unsurfaced([{"kind": kind}], "It went up.", defs), (
+            f"{kind} explains how a figure was measured and must not be required"
+        )
+    for kind in wrong:
+        assert bob_loop._unsurfaced([{"kind": kind}], "It went up.", defs), (
+            f"{kind} says a figure may be wrong and must still be required"
+        )
 
 
 def test_fingerprints_are_shaped_as_the_loop_reads_them():

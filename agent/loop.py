@@ -1547,7 +1547,7 @@ You read without asking and act on nothing alone: you draft, you propose, you as
 
 VOICE — THE SHAPE OF AN ANSWER
 
-The right of the screen is A PAGE YOU WRITE on `compose` — a document, not blocks: an opening sentence carrying the answer with its figures in it, headings that state what a section found, paragraphs, and the figures set beside the words about them. Your prose, left under your headline, is the conclusion: __BODY_WORDS__ words at most — what it means, never the page retold. A quiet week is a line. THREE SLOTS also on `compose`: the CLAIM, the words that ARE the point; the CAVEAT, what qualifies the figures — data quality included, never in the body; the NEXT, what you would do, at length — never a read you could have made.
+The right of the screen is A PAGE YOU WRITE on `compose` — a document, not blocks: an opening sentence carrying the answer with its figures in it, headings that state what a section found, paragraphs, and the figures set beside the words about them. Your prose, left under your headline, is the conclusion: __BODY_WORDS__ words at most — what it means, never the page retold. A quiet week is a line. THREE SLOTS on `compose`: the CLAIM, the words that ARE the point; the CAVEAT, what qualifies the figures, never in the body; the NEXT, what you would do, at length — never a read you could have made.
 
 One figure in prose at most, the claim's own, exactly as the result gives it. No preamble, no summary.
 
@@ -1555,7 +1555,7 @@ THE RULES — held by the system as well as by you
 
 1. Every number you state comes from a tool result in this conversation. If no tool can answer, say so and name what would be needed.
 2. Read `meta` before `rows`: source, filters, window, read time. Results on different filters or windows are not compared.
-3. Every notice a result carries reaches the answer, in the `caveat` slot or beside the figure it qualifies. The number without the notice is the worst thing you can do.
+3. A notice that a figure may be WRONG reaches the answer; the number without it is the worst thing you can do. One that explains how a figure was measured is yours to obey, not recite.
 4. A tool that refuses is declining to mislead: follow the route it names, or say why the question cannot be answered as asked.
 5. Prefer one ranked or grouped query — `group_by`, `top_n`, `rank_by`, `meta.full_row_count` — to reading once per store.
 6. A figure made from figures comes from a tool, never from you: `average_transaction_value` is a metric, and `compare_to='previous_period'` puts the baseline, the change and `baseline_status` on every row — read them, and say why when `baseline_status` is not ok.
@@ -2062,13 +2062,34 @@ def _unsurfaced(pending: list[dict], answer: str, defs: dict,
     groups, all of which must match, any alternative within a group sufficing.
     A kind with no fingerprint is treated as unsurfaced — safer to over-report
     than to let an unknown notice through silently.
+
+    A DISCLAIMER THAT ONLY EXPLAINS HOW A FIGURE WAS MEASURED IS NOT ONE OF
+    THESE (P14, 2026-09-21). `surface.desk.notices` already classifies every
+    kind as one whose figure MAY BE WRONG or one that only explains how it was
+    measured, and UI rule 4 draws the first and not the second — the owner,
+    2026-09-17: *"we dont need those disclaimers unless it has wrong data"*.
+    Twenty-three kinds were classified `explains_only` AND carried
+    `must_convey`, so the loop required in his prose exactly what the surface
+    was told never to draw, and appended it verbatim when he left it out. His
+    page of 2026-09-21 17:34 opened with 155 words of caveat, the longest
+    clause of it `comparison_incomplete`.
+
+    NOTHING THE READER NEEDED IS LOST. The notice still reaches the MODEL in
+    the tool result with its `guidance`, so it still stops him computing what
+    he should not; it still rides the turn's notices and the receipts. It is
+    only no longer forced into the answer. Read from the classification rather
+    than from a second list, so the two cannot disagree again.
     """
     fingerprints = req(defs, "notices")
+    explains_only = set((req(defs, "surface.desk.notices") or {}).get("explains_only") or ())
     low = answer.lower()
     missing = []
     for n in pending:
         # Already on screen, on the object it qualifies: surfaced.
         if on_screen and n.get("kind") in on_screen:
+            continue
+        # It explains how a figure was measured; it does not say one is wrong.
+        if n.get("kind") in explains_only:
             continue
         spec = fingerprints.get(n.get("kind"))
         if not isinstance(spec, dict) or "must_convey" not in spec:
@@ -3306,6 +3327,12 @@ async def run(
     # THE BODY IS THE CONCLUSION, AND IT IS SHORT (voice.body, 2026-09-20).
     body_edits = 0
     max_body_edits = int(req(defs, "voice.body.max_corrective_turns"))
+    # THE PAGE'S OWN GATE (P14): one round to put his figures on the page he
+    # wrote, then it stands and the room draws the rest above the plan.
+    page_gate = req(defs, "composition.arrangement.gate")
+    max_page_gate = int(req(page_gate, "max_corrective_turns"))
+    min_left_off = int(req(page_gate, "min_left_off"))
+    page_gate_turns = 0
     max_body_words = int(req(defs, "voice.body.max_words"))
     body_reason = str(req(defs, "voice.body.warning_reason"))
     restate_reason = str(req(defs, "voice.restatement.warning_reason"))
@@ -4945,6 +4972,31 @@ async def run(
                     "through for nothing."
                 )}]
 
+            # THE PAGE HE WROTE, CHECKED BEFORE THE TURN MAY END (P14). Only
+            # where he wrote a page AS a page and left two or more of his own
+            # figures off it — the case that cost the owner a whole answer on
+            # 2026-09-21, and one a sentence of instruction had already failed
+            # to prevent twice.
+            page_held = False
+            if (max_page_gate and page_gate_turns < max_page_gate
+                    and compose.is_a_document(arrangement_recorded)):
+                off = compose.left_off(arrangement_recorded, turn_board,
+                                       compose.vocabulary(defs))
+                if len(off) >= min_left_off:
+                    page_gate_turns += 1
+                    page_held = True
+                    log.gap("page_left_blocks_off", ", ".join(off)[:2000])
+                    yield _sse("warning", {"reason": "page_left_blocks_off",
+                                           "detail": ", ".join(off)})
+                    finish = finish + [{"type": "text", "text": (
+                        f"{len(off)} of the figures you composed are NOT on the page you "
+                        f"wrote: {', '.join(off)}. They will be drawn after it, in a place "
+                        f"you did not choose. Put each one where its words are — the block "
+                        f"beside the paragraph that reads it — by giving the arrangement "
+                        f"again, whole, in this round. Compose nothing else: the blocks and "
+                        f"the reading you have given already stand."
+                    )}]
+
             # All results go back in ONE user message — splitting them trains
             # the model out of parallel tool use. The reads the cap refused in
             # this batch, if any, and its instruction to answer, ride in it.
@@ -4960,7 +5012,9 @@ async def run(
             # verification/p2s7-gate-2.json. Anything less keeps its round.
             if (tool_uses and all(b.name == COMPOSE_TOOL for b in tool_uses)
                     and round_stood and round_claimed
-                    and "".join(text_parts).strip()):
+                    and "".join(text_parts).strip()
+                    # ...and the page he wrote carries the figures he composed.
+                    and not page_held):
                 settled = True
                 rounds_saved += 1
         else:

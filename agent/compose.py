@@ -759,6 +759,51 @@ def _in_words(tree: Any, voc: Mapping[str, Any]) -> dict[str, str]:
     return {k: kind for k, kind in found.items() if k not in placed}
 
 
+def left_off(tree: Any, blocks: Iterable[Mapping[str, Any]],
+             voc: Mapping[str, Any]) -> list[str]:
+    """
+    The keys he composed and did not put on the page, in his order.
+
+    A figure is ON the page if the tree places it as a block, names it inside a
+    sentence (`{key}`), or carries it as a control on a figure — `_in_words`
+    already knows the last two. A block the MACHINE composed (`default`) is not
+    his and is not counted: he never chose it.
+
+    Empty when there is no page WRITTEN AS ONE, because a board with no
+    arrangement, or an arrangement that only lays blocks out, is laid out for
+    him (`pageOf`) and nothing has been left anywhere.
+    """
+    if not isinstance(tree, Mapping) or not is_a_document(tree):
+        return []
+    placed: set[str] = set()
+
+    def walk(node: Any, depth: int) -> None:
+        if depth > 8 or not isinstance(node, Mapping):
+            return
+        if isinstance(node.get("block"), str):
+            placed.add(node["block"])
+        kids = node.get("children")
+        if isinstance(kids, (list, tuple)):
+            for kid in kids:
+                walk(kid, depth + 1)
+
+    walk(tree, 0)
+    placed |= set(_in_words(tree, voc))
+    return [b["key"] for b in blocks
+            if isinstance(b, Mapping) and isinstance(b.get("key"), str)
+            and not b.get("default") and b["key"] not in placed]
+
+
+def is_a_document(tree: Any, depth: int = 0) -> bool:
+    """Whether the page is written as one: it has an opening sentence or a heading."""
+    if depth > 8 or not isinstance(tree, Mapping):
+        return False
+    if isinstance(tree.get("lede"), str) or isinstance(tree.get("head"), str):
+        return True
+    kids = tree.get("children")
+    return isinstance(kids, (list, tuple)) and any(is_a_document(k, depth + 1) for k in kids)
+
+
 def _mark_kinds(voc: Mapping[str, Any]) -> set[str]:
     """The widgets that are ways of drawing a read — the ones with a `rows` rule."""
     return {k for k, v in (voc.get("widgets") or {}).items()

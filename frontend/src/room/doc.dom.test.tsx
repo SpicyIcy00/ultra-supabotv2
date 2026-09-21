@@ -379,3 +379,33 @@ describe('his own emphasis reaches the page', () => {
     expect(said.querySelector('b')?.textContent).toBe('The rest hold.');
   });
 });
+
+describe('a caption does not say the heading again (P14)', () => {
+  it('is dropped when it half-repeats the head, not only when it copies it', () => {
+    // His live page: head "Three shops fall; the rest are fine", caption
+    // "Three shops fall, three hold, Rockwell gains" — half the words shared,
+    // which cleared the 0.6 a sentence of prose needs.
+    const board = [block('shops', 'dumbbell', 1, {
+      claim: 'Three shops fall, three hold, Rockwell gains' })];
+    const { container } = render(
+      <Board answers={[TURN]} board={board} local={{}} focused={null} selection={[]}
+             live={false} retuned={{}} on={ACTIONS()}
+             arrangement={{ layout: 'stack', children: [
+               { head: 'Three shops fall; the rest are fine' }, { block: 'shops' }] }} />,
+    );
+    expect(container.querySelector('.r-mk-title')).toBeNull();
+  });
+
+  it('keeps a caption that earns its place', () => {
+    const board = [block('shops', 'dumbbell', 1, {
+      claim: 'Rockwell is the only one clearly ahead' })];
+    const { container } = render(
+      <Board answers={[TURN]} board={board} local={{}} focused={null} selection={[]}
+             live={false} retuned={{}} on={ACTIONS()}
+             arrangement={{ layout: 'stack', children: [
+               { head: 'Three shops fall; the rest are fine' }, { block: 'shops' }] }} />,
+    );
+    expect(container.querySelector('.r-mk-title')?.textContent)
+      .toContain('Rockwell is the only one clearly ahead');
+  });
+});
