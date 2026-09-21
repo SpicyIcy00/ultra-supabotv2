@@ -3031,3 +3031,35 @@ called "attention", and a left column reciting a dozen figures. The run record
 
 Still unverified: whether he composes the page when the cap does not eat it.
 
+### 2026-09-21 12:25 — the second live page: he composed it, and the room threw it away
+
+The owner: *"its still messing up and it takes alot longer now."* The board he saw was
+twelve blocks drawn over one another; the turn took 156 s across eight iterations. The run
+record (conversation c1f272db) says he did his half well — 16 reads, then a compose
+carrying a real arrangement: two figures in a row, the day series beside a line of his own,
+a `say`, the shops, two rows of drivers, `{next: true}`. Read back into the harness as
+`live-page` it draws as a page. What went wrong is all on this side:
+
+1. **The arrangement has never been stored.** `ConversationLog.posts()` has taken one since
+   P3.p, and `_posts` called `_answer_payload` with seven positional arguments and stopped,
+   so `arrangement` defaulted to None on every turn ever logged. `restore.ts` would not
+   have read it either. Live the page was right; every reopen packed it. Both ends fixed,
+   both held by a test.
+2. **The packed board can pile up.** Its grid is 1px rows and each figure spans its
+   MEASURED height; until the ResizeObserver's first callback every height is 0, so every
+   figure spans FIGURE_GAP and they overlap by ~22px. Heights are now read synchronously in
+   the same layout pass. (A composed page is a flex column and could never hit this — which
+   is why the fix above is the one that matters.)
+3. **A chart could not size itself.** The canvas line drew at a fixed 940-wide viewBox
+   whatever column it was in; in his `row` that scaled a week into 72 px with unreadable
+   dates and squeezed his annotation into an 80 px gutter. The line now measures its own
+   box.
+4. **Slow, and two of the eight rounds were ours.** He named the claim in three
+   composes-only rounds and wrote the answer in a fourth (53.9 s + 24.6 s + 26.6 s);
+   `rounds.settle` ends the turn on a composes-only round that names the claim WITH his
+   words beside it, so he gets one reminder in that round. And the 40-word body cap cost a
+   whole model round trip to rewrite 48 words — it is cut at a sentence now, no turn spent.
+   The arrangement is remembered between composes, and the tool now says so.
+
+Frontend 1137, backend 2148. Local: `verification/frames/live2/`, `canvas8/`.
+

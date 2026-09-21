@@ -6086,7 +6086,11 @@ voice:
     # it wants in its canvas"). The left is the headline and a line or two;
     # the rest of his prose is `say` leaves placed on the page.
     max_words: 40
-    max_corrective_turns: 1
+    # 1 -> 0 (P6.j, 2026-09-21): a body over the cap cost a full model round
+    # trip to rewrite — 48 words against 40 on the first live page, and one
+    # of its eight iterations. It is cut at the sentence that crosses the cap
+    # instead, which needs no turn and keeps whole sentences.
+    max_corrective_turns: 0
     over_length: cut_at_sentence
     warning_reason: body_over_length
 
@@ -7533,7 +7537,9 @@ composition:
       your headline stays on the left with a line or two; every other
       paragraph of yours is a `say` placed beside the figure it is about,
       and `{"next": true}` places the plan - what you would do - where it
-      belongs, usually last. Left out, the plan is drawn last anyway.
+      belongs, usually last. Left out, the plan is drawn last anyway. GIVE IT
+      ONCE, when the page is settled: it is remembered, so a later compose
+      that says nothing about it leaves the one you gave standing.
     leaves: [block, say, next]
     # The same four the grammar already has; a fifth would be a second
     # vocabulary for the same job.

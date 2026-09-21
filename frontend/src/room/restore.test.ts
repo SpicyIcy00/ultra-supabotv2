@@ -123,3 +123,35 @@ describe('a reopened thread, and the offers on it', () => {
       .toBe('about four seconds');
   });
 });
+
+/**
+ * AND THE PAGE HE LAID OUT (P6.j, 2026-09-21). The arrangement was stored
+ * with the blocks it arranges and this read it back as `{seq, blocks,
+ * rejected}` — so every reopened thread packed a page he had designed. The
+ * owner's board of 2026-09-21: twelve blocks in two columns, drawn over one
+ * another, from a turn whose compose had laid them out in rows.
+ */
+describe('a reopened page', () => {
+  const tree = { layout: 'stack' as const, children: [{ block: 'seikyo-order' }, { next: true as const }] };
+
+  it('comes back laid out the way he laid it out', () => {
+    const [restored] = restoreFromPosts([stored()], [post({
+      charted: [{ seq: 2, tool: 'get_purchase_plan', arguments: {}, rows: ROWS, meta: META }],
+      composition: {
+        blocks: [{ op: 'put', kind: 'draft', key: 'seikyo-order', weight: 'lead', seq: 2 }],
+        arrangement: tree,
+      },
+    })]);
+    if (restored.role !== 'bob') throw new Error('expected bob');
+    expect(restored.composition?.arrangement).toEqual(tree);
+  });
+
+  it('packs, as it always did, when the post carries none', () => {
+    const [restored] = restoreFromPosts([stored()], [post({
+      charted: [{ seq: 2, tool: 'get_purchase_plan', arguments: {}, rows: ROWS, meta: META }],
+      composition: { blocks: [{ op: 'put', kind: 'draft', key: 'seikyo-order', weight: 'lead', seq: 2 }] },
+    })]);
+    if (restored.role !== 'bob') throw new Error('expected bob');
+    expect(restored.composition?.arrangement).toBeUndefined();
+  });
+});

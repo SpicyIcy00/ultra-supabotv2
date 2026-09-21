@@ -2704,6 +2704,12 @@ class ConversationLog:
             kw.get("charted"), kw.get("calls"), kw.get("page_context"),
             kw.get("reading"), kw.get("composition"),
             kw.get("default_composition"), kw.get("actions"),
+            # HOW HE LAID IT OUT, STORED WITH THE BLOCKS IT ARRANGES (2026-09-21).
+            # `posts()` has taken `arrangement` since P3.p and this call never
+            # passed it on, so no post has ever carried one: the page was right
+            # live and the packing came back on every reopen — the board the
+            # owner saw on 2026-09-21, twelve blocks deep and drawn over itself.
+            kw.get("arrangement"),
         )
 
         # author_user is NULL because BOB wrote it; owner_user is the person
@@ -3206,6 +3212,9 @@ async def run(
     # answer; the next pass runs the gates without a request (P2S.9(a)).
     settled = False
     rounds_saved = 0
+    # Said once per turn, in the round a compose named the claim and wrote
+    # nothing beside it (P6.j).
+    finish_asked = False
     # READS THAT RAN, the one thing the convergence cap counts (2026-09-18).
     # It counted every call — compose, record_belief, a pin — so a broad turn
     # of nine reads plus its board and a view met the cap at the edge of the
@@ -4873,10 +4882,35 @@ async def run(
                         "default": True,
                     })
 
+            # A COMPOSE THAT NAMED THE CLAIM AND SAID NOTHING (P6.j, 2026-09-21).
+            # `rounds.settle` ends the turn on a composes-only round that names
+            # the claim WITH his words beside it. The first live page named the
+            # claim three times in three composes-only rounds and wrote the
+            # answer in a fourth: three round trips the owner waited through,
+            # 53.9 s, 24.6 s and 26.6 s of the 156. The rule was already his to
+            # follow; this is the reminder, once per turn, in the round it
+            # matters — never a refusal, so a compose that genuinely has more
+            # to place still lands.
+            finish = []
+            if (tool_uses and all(b.name == COMPOSE_TOOL for b in tool_uses)
+                    and round_stood and round_claimed
+                    and not "".join(text_parts).strip() and not finish_asked):
+                finish_asked = True
+                log.gap("compose_without_answer",
+                        str((reading_recorded or {}).get("claim") or question)[:2000])
+                finish = [{"type": "text", "text": (
+                    "You have composed the page and named the claim, and written "
+                    "nothing beside it. Write the answer NOW, in this round: the "
+                    "blocks and the arrangement you have given stand, and a "
+                    "compose that repeats them is a round the person waits "
+                    "through for nothing."
+                )}]
+
             # All results go back in ONE user message — splitting them trains
             # the model out of parallel tool use. The reads the cap refused in
             # this batch, if any, and its instruction to answer, ride in it.
             messages.append({"role": "user", "content": cap_results + tool_results
+                             + finish
                              + ([cap_text_pending] if cap_text_pending else [])})
             cap_results, cap_text_pending = [], None
 

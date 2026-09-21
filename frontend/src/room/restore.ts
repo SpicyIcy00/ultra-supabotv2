@@ -5,7 +5,7 @@
  * `/w2` renderer was deleted: this was the only function in that module the
  * room still used, and everything else it exported is in `room/data.ts`.
  */
-import type { ActionOffer, CompositionBlock as Block, BobTurn, ReadingFrame, ToolCall, ToolMeta } from '../types/bob';
+import type { ActionOffer, Arrangement, CompositionBlock as Block, BobTurn, ReadingFrame, ToolCall, ToolMeta } from '../types/bob';
 import type { Post } from '../types/river';
 
 /** A result an answer post kept, as the loop stores it (`payload.charted`). */
@@ -33,7 +33,7 @@ export function restoreFromPosts(turns: BobTurn[], posts: Post[]): BobTurn[] {
     if (t.role !== 'bob' || !t.post?.answer_post_id) return t;
     const payload = byId.get(t.post.answer_post_id)?.payload as
       { charted?: unknown; reading?: unknown; actions?: unknown;
-        composition?: { blocks?: unknown; default_blocks?: unknown } }
+        composition?: { blocks?: unknown; default_blocks?: unknown; arrangement?: unknown } }
       | null | undefined;
     if (!payload) return t;
     const charted = (Array.isArray(payload.charted) ? payload.charted : []) as Charted[];
@@ -53,6 +53,9 @@ export function restoreFromPosts(turns: BobTurn[], posts: Post[]): BobTurn[] {
     // loop's over the ones he did not — rather than the two reading one way
     // in the room and another after a reload, which is the divergence the
     // receipts contract exists to prevent.
+    const arranged = payload.composition?.arrangement;
+    const laidOut = arranged && typeof arranged === 'object' && !Array.isArray(arranged)
+      ? arranged as Arrangement : null;
     const seeded = Array.isArray(payload.composition?.default_blocks)
       ? payload.composition!.default_blocks as Block[] : null;
     // AND WHAT HE SAID, IN ITS THREE SLOTS (P1.f). Stored with the snapshot,
@@ -71,7 +74,15 @@ export function restoreFromPosts(turns: BobTurn[], posts: Post[]): BobTurn[] {
     return {
       ...t, toolCalls,
       actions: offered?.length ? offered : t.actions,
-      composition: blocks?.length ? { seq: -1, blocks, rejected: [] } : t.composition,
+      // AND HOW HE LAID THEM OUT (P3.p). Stored with the blocks it arranges;
+      // without it a reopened thread packs a page he had designed — twelve
+      // blocks in two columns, which is the board the owner reopened on
+      // 2026-09-21. The packing is still the fallback for a post that carries
+      // none, which is every post written before today.
+      composition: blocks?.length
+        ? { seq: -1, blocks, rejected: [],
+            ...(laidOut ? { arrangement: laidOut } : {}) }
+        : t.composition,
       defaultComposition: seeded?.length
         ? { seq: -1, blocks: seeded, rejected: [], default: true } : t.defaultComposition,
       reading: reading ?? t.reading,

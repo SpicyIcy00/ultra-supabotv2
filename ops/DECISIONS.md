@@ -5297,3 +5297,20 @@ the owner saw the machine's board; the headline read a week twenty-five minutes 
 
 **Held by.** `test_convergence_cap_contract` (6), `test_comparison_contract` (began today).
 
+## 2026-09-21 — P6.j: the page is stored, a chart measures its box, a round is not spent twice
+
+**Decisions.** (1) The arrangement is part of the answer post: `_posts` passes it to
+`_answer_payload`, and a reopened thread restores it. Without it the packing came back on
+every reopen, which is what the owner saw. (2) The packed board reads its heights in the
+layout pass that mounts it, never a frame later. (3) A canvas chart's coordinates are its
+own measured width, so it is drawn at the size the column gives it. (4) A body over the cap
+is cut at a sentence, never re-asked — a rewrite is a whole model round trip. (5) A
+composes-only round that names the claim and writes nothing gets one reminder to finish,
+because `rounds.settle` already says that round is the last one.
+
+**Why.** The live turn of 2026-09-21 12:25: a page he composed, drawn as a pile, in 156 s.
+
+**Held by.** `test_answer_post_contract` (the post carries the page), `restore.test.ts`
+(reopened laid out; packed when the post carries none), `test_convergence_cap_contract`
+(the reminder, once), the frames `live-page` / `live-packed`.
+

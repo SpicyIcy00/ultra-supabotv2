@@ -467,9 +467,29 @@ export function Board(p: BoardProps) {
         return next;
       });
     });
-    nodes.current.forEach((n) => {
+    // MEASURED IN THIS LAYOUT, NOT THE NEXT ONE (P6.j, 2026-09-21). The
+    // observer's first callback is a frame away, and until it lands every
+    // height here is 0 — which in a grid of 1px rows means every figure
+    // spans FIGURE_GAP and they are drawn on top of one another. A
+    // composed page cannot hit it (his arrangement is a flex column), so
+    // it was the packed board, and the packed board is what the owner
+    // reopened on 2026-09-21 — twelve blocks piled at 22px apart.
+    const first: Record<string, number> = {};
+    nodes.current.forEach((n, key) => {
       seen.observe(n);
       if (n.firstElementChild) seen.observe(n.firstElementChild);
+      const body = n.firstElementChild as HTMLElement | null;
+      first[key] = Math.round((body ?? n).getBoundingClientRect().height);
+    });
+    setHeights((was) => {
+      let next = was;
+      for (const [key, h] of Object.entries(first)) {
+        if (h && was[key] !== h) {
+          if (next === was) next = { ...was };
+          next[key] = h;
+        }
+      }
+      return next;
     });
     return () => seen.disconnect();
   }, [keys]);
@@ -536,11 +556,24 @@ export function Board(p: BoardProps) {
     if ('say' in node) return;
     (node.children ?? []).forEach(walk);
   })(laidOut);
+  // THE READS HE DID NOT WRITE UP, as one line that opens — drawn just before
+  // the plan wherever the plan sits, so nothing follows what to do. Not gone:
+  // the board still holds them and they travel with the next question; the
+  // count is the length of a list this already has (UI rule 8). No accent.
+  const earlierLine = Boolean(said.length && unsaid.length) && (
+    <p className="r-label r-earlier" style={{ gridColumn: '1 / -1' }}>
+      <button type="button" className="r-earlier-line" aria-expanded={unfolded}
+              onClick={() => setUnfolded((o) => !o)}>
+        {unsaid.length} more {unsaid.length === 1 ? 'read' : 'reads'} he did not
+        {' '}write up · {unfolded ? 'fold' : 'show'}
+      </button>
+    </p>
+  );
   const drawNode = (node: Arrangement, at: string): ReactNode => {
     // THE PLAN, WHERE HE PUT IT (P6.h). The same element the foot draws
     // when he leaves it out, so it is one thing in one place.
     if ('next' in node) {
-      return <div key={at} className="r-laid-next">{p.foot}</div>;
+      return <div key={at} className="r-laid-next">{earlierLine}{p.foot}</div>;
     }
     if ('say' in node) {
       // HIS WORDS, WHEREVER HE PUT THEM — the "it doesn't have to have text
@@ -755,19 +788,13 @@ export function Board(p: BoardProps) {
           they still travel with the next question, and the count is the
           length of a list this already has rather than a number anybody
           wrote down (UI rule 8). No accent — this is navigation. */}
-      {Boolean(said.length && unsaid.length) && (
-        <p className="r-label r-earlier" style={{ gridColumn: '1 / -1' }}>
-          <button type="button" className="r-earlier-line" aria-expanded={unfolded}
-                  onClick={() => setUnfolded((o) => !o)}>
-            {unsaid.length} more {unsaid.length === 1 ? 'read' : 'reads'} he did not
-            {' '}write up · {unfolded ? 'fold' : 'show'}
-          </button>
-        </p>
-      )}
       {/* THE PLAN, LAST OF ALL, when his arrangement did not place it — after
           the reads he did not write up, so nothing follows what to do. */}
-      {(!laidOut || !placedNext) && p.foot && (
-        <div className={`r-laid-next${laidOut ? '' : ' r-laid-next--packed'}`}>{p.foot}</div>
+      {(!laidOut || !placedNext) && (
+        <>
+          {earlierLine}
+          {p.foot && <div className={`r-laid-next${laidOut ? '' : ' r-laid-next--packed'}`}>{p.foot}</div>}
+        </>
       )}
     </div>
   );

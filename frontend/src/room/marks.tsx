@@ -31,7 +31,7 @@
  * one arithmetic on this page is a percentage of a maximum, which is a
  * geometry and not a figure — nobody reads it and no answer cites it.
  */
-import { useState, type CSSProperties } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import type { ToolMeta } from '../types/bob';
 import {
   changeOf, fmt, measureOf, readAt, rowUnderClaim, rowsOf, sorted, subjectOf, tableShape,
@@ -358,6 +358,26 @@ function Line({ rows, meta, o, subject, p }: {
   const key = valueOf(points[0])?.key ?? 'value';
   const unit = unitOf(points[0]) ?? unitOf(meta);
   const canvas = Boolean(p.canvas);
+  // A CHART IS AS WIDE AS THE ROOM IT WAS GIVEN (P6.j, 2026-09-21). The
+  // canvas drew at a fixed 940-wide viewBox whatever its column, so the
+  // first live page — where he put the day series in a `row` beside a
+  // line of his own — scaled 940x200 into 340px and the whole week came
+  // out 72px tall with unreadable dates, his annotation squeezed into an
+  // 80px gutter beside it. The svg keeps `width: 100%`; the COORDINATES
+  // are now its own measured width, so the height is the height meant
+  // and the annotation's percentages are of the box it sits in.
+  const box = useRef<HTMLDivElement>(null);
+  const [room, setRoom] = useState(0);
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return undefined;
+    const read = () => setRoom(Math.round(el.getBoundingClientRect().width));
+    read();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const seen = new ResizeObserver(read);
+    seen.observe(el);
+    return () => seen.disconnect();
+  }, []);
   const label = (n: number) => String(by ? points[n][by] ?? '' : subjectOf(points[n]) ?? '');
   // A POINTED ANNOTATION (P6.a): the stretch his `span` names, as a band, with
   // his thought over it. The band's ends are rows; the sentence is his; no
@@ -368,7 +388,7 @@ function Line({ rows, meta, o, subject, p }: {
   const banded = iFrom >= 0 && iTo >= 0 ? [Math.min(iFrom, iTo), Math.max(iFrom, iTo)] : null;
   // THE DESIGN'S GEOMETRY ON THE CANVAS (P6.e, `.rhythm`): 940×280, the
   // note's room above, the axis and its dates below. Packed: as it was.
-  const W = canvas ? 940 : 560;
+  const W = canvas ? Math.max(320, room || 940) : 560;
   // 280 for the chart the page rests on; less for one that supports it — a
   // five-point series at 280 was two hundred pixels of nothing (the watch
   // frame, 2026-09-20).
@@ -412,7 +432,7 @@ function Line({ rows, meta, o, subject, p }: {
   const period = (windowLabel(meta) ?? 'period').replace(/^last /, '');
 
   return (
-    <div className="r-mk r-mk-line">
+    <div className="r-mk r-mk-line" ref={box}>
       {banded && p.o.thought?.trim() && (
         <p className="r-mk-annotation" data-canvas={canvas ? 'yes' : undefined}
            style={canvas

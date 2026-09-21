@@ -2310,7 +2310,10 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 .r-board--laid .r-mk-peak { fill: var(--ink); }
 .r-mk-annotation[data-canvas] {
   position: absolute; top: 0; margin: 0; padding: 0; border-left: 0;
-  font-size: 14.5px; line-height: 1.3; text-align: center; max-width: 90%;
+  font-size: 14.5px; line-height: 1.3; text-align: center;
+  /* Never narrower than a phrase: in a half-width column the percentage
+     placement left it five characters wide, down the side of the chart. */
+  width: max-content; max-width: min(100%, 46ch);
 }
 .r-mk-legend-line { font: 400 11px/1.4 var(--mono); color: var(--ink-3); margin: 6px 0 0; }
 .r-mk-legend-line i { display: inline-block; width: 18px; border-top: 1.6px solid var(--ink); vertical-align: middle; margin: 0 6px 0 0; }

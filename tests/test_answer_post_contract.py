@@ -30,7 +30,7 @@ sanitise every field, and never let this method raise.
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
@@ -198,3 +198,31 @@ def test_the_post_frame_is_what_the_browser_navigates_on():
     stream = room.read_text(encoding="utf-8")
     assert "case 'post':" in stream
     assert "setStoredThread(data.thread_id)" in stream
+
+
+# ---------------------------------------------------------------------------
+# The arrangement reaches the post (P6.j, 2026-09-21)
+# ---------------------------------------------------------------------------
+
+def test_the_post_carries_the_page_he_laid_out():
+    """
+    `posts()` has taken an `arrangement` since P3.p and never passed it on:
+    `_posts` called `_answer_payload` with seven positional arguments and
+    stopped, so `arrangement` defaulted to None on every turn ever logged. The
+    page was right live and the packing came back on every reopen — the board
+    the owner reopened on 2026-09-21, twelve blocks drawn over one another.
+    """
+    tree = {"layout": "stack", "children": [{"block": "a"}, {"next": True}]}
+    rows: list[tuple] = []
+    log = bob_loop.ConversationLog()
+    log._exec = lambda sql, params: rows.append((sql, params))    # noqa: SLF001
+    log._posts(                                                   # noqa: SLF001
+        user_id="owner", asked_at=datetime(2026, 9, 21, tzinfo=timezone.utc),
+        question="how are we doing", final_answer="Down on the week.",
+        composition=[{"kind": "figure", "key": "a", "seq": 0}],
+        arrangement=tree,
+    )
+    answer = [p for sql, p in rows if "george.posts" in sql][-1]
+    payload = json.loads(next(x for x in answer if isinstance(x, str) and '"composition"' in x))
+    assert payload["composition"]["arrangement"] == tree
+
