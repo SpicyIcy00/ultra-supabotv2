@@ -55,7 +55,8 @@ import anthropic
 import psycopg
 
 from agent import prose as _prose
-from agent import compose, composite_tools, default_composition, one_call, reading, surface, vocabulary, write_tools
+from agent import (compose, composite_tools, default_composition, one_call, provider, reading,
+                   surface, vocabulary, write_tools)
 from agent.model_receipts import ModelReceipts
 from agent.write_tools import WriteContext, call_key
 from tools import (
@@ -106,9 +107,12 @@ def _is_transient(exc: BaseException) -> bool:
 # Configuration
 # --------------------------------------------------------------------------
 
-MODEL = "claude-opus-5"
+# WHICH MODEL ANSWERS, AND WHERE (agent/provider.py, 2026-09-21). Unset, these
+# are the values this loop has always used and the request is byte for byte the
+# one it made before the switch existed; `BOB_API_BASE_URL` points it elsewhere.
+MODEL = provider.model()
 MAX_ITERATIONS = 15
-MAX_TOKENS = 64000
+MAX_TOKENS = provider.max_tokens()
 EFFORT = "high"
 
 # How long the STATIC prefix — the tools array and the system prompt — is kept
@@ -3207,7 +3211,8 @@ async def run(
     # workflow writer gets pin_answer and not save_workflow.
     tools_schema = build_tool_schemas(defs, extra=injected_surface(write_ctx))
 
-    client = anthropic.AsyncAnthropic()
+    # Empty kwargs on Anthropic, so this is the client it always was.
+    client = anthropic.AsyncAnthropic(**provider.client_kwargs())
     # Context on the QUESTION, never in the system prompt. Both of these vary
     # per request, and a page name or a list of past chats in the cached prefix
     # would invalidate it on every single call.
