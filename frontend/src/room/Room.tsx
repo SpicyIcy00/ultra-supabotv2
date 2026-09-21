@@ -18,7 +18,7 @@ import { useBob } from '../hooks/useBob';
 import { useThread } from '../hooks/useThread';
 import { threadHistory } from '../components/bob/threadHistory';
 import { replaysToRestore, restoreFromPosts } from './restore';
-import { boardContext, buildBoard, folded, placesCaveat, shapedByReplay,
+import { boardContext, buildBoard, folded, ledeOf, placesCaveat, shapedByReplay,
          type Local, type BoardObject } from './board';
 import { keepLocal, restoreLocal } from './arrangement';
 import { callOf, rowsOf, subjectOf, type AnswerTurn, type Block } from './data';
@@ -26,7 +26,8 @@ import { Board, turnNotices } from './render';
 import { FiguresArea, Wires, scrollToFigure } from './FiguresArea';
 import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
-import { bodyOf, caveatUnshown, claimAndStanding, thoughtsOf, unmark } from './beside';
+import { HEADLINE_RESTATED_AT, bodyOf, caveatUnshown, claimAndStanding, restated,
+         thoughtsOf, unmark } from './beside';
 import { pageOf } from './page';
 import { placeFigures as figuresInText } from './figures';
 import { identitiesFrom } from './identity';
@@ -282,6 +283,26 @@ export default function Room() {
   // HIS CAVEAT IS ON THE PAGE WHERE HIS PAGE PUTS IT (P7) — settled turns only,
   // for the reason the arrangement is: mid-turn there is no page yet.
   const caveatOnPage = !busy && placesCaveat(latest?.composition?.arrangement);
+  // AND HIS HEADLINE IS NOT SAID TWICE (P15.b's first half, 2026-09-21).
+  //
+  // Two places own the answer: this column's headline and the page's opening
+  // sentence. The card says the opening sentence IS the answer, so where the
+  // lede restates the headline the headline goes and the page keeps it — the
+  // Done-when is "nothing on screen repeats the headline". Where the lede says
+  // something ELSE, both stay: that is a second thing said, not a repeat.
+  //
+  // SETTLED TURNS ONLY, and this one matters more than it looks. Mid-turn the
+  // page is not drawn at all (`busy ? null` below) while this headline is the
+  // one thing on screen carrying his words for the 47-85 s a compose takes.
+  // Suppressing it while he works would leave the room blank.
+  const headlineOnPage = useMemo(() => {
+    if (busy) return false;
+    const lede = ledeOf(latest?.composition?.arrangement);
+    if (!lede) return false;
+    const said = claimAndStanding(unmark((latest?.text ?? '').trim()).plain,
+                                  latest?.reading?.claim).claimRaw;
+    return Boolean(said) && restated(said, [lede], HEADLINE_RESTATED_AT);
+  }, [busy, latest?.composition?.arrangement, latest?.text, latest?.reading?.claim]);
   const thoughts = useMemo(() => {
     if (!latest || busy) return null;
     // A chart that already carries his own thought takes no sentence of the
@@ -860,7 +881,7 @@ export default function Room() {
                     above the headline (UI rule 4). */}
                 <Reading part="claim" text={latest?.text} notices={drawnOnly(notices, explainsOnly)}
                          reading={latest?.reading} calls={latest?.toolCalls} onFigure={showFigure}
-                         speaking={reader.speaking} />
+                         speaking={reader.speaking} headlineOnPage={headlineOnPage} />
                 {/* HIS PROSE IS THE CONCLUSION, AND IT IS HERE (2026-09-20).
                     For one day it was drawn down the right side, a paragraph
                     over each chart — the thread the owner refused. The right

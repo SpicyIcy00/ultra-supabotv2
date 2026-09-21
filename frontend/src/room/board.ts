@@ -489,6 +489,28 @@ export function placesCaveat(tree: Arrangement | null | undefined): boolean {
 }
 
 /**
+ * The page's OPENING SENTENCE, or ''.
+ *
+ * The lede is the page's own statement of the answer, and the left column has a
+ * headline that is also one — the two owners P15.b exists to collapse. Reading
+ * it here lets the screen tell whether they say the same thing, without
+ * anything yet having to move.
+ */
+export function ledeOf(tree: Arrangement | null | undefined): string {
+  if (!tree) return '';
+  if ('children' in tree) {
+    for (const kid of tree.children) {
+      const found = ledeOf(kid);
+      if (found) return found;
+    }
+    return '';
+  }
+  return typeof (tree as { lede?: unknown }).lede === 'string'
+    ? ((tree as { lede: string }).lede).trim()
+    : '';
+}
+
+/**
  * The keys a page holds WITHOUT drawing them as a block: a figure named only
  * inside a sentence, a control carried on a figure. Placed as a block anywhere
  * on the page, a key is a block again — the same reading agent/compose.py

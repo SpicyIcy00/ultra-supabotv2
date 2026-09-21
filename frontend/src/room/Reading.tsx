@@ -179,7 +179,8 @@ export function unsaid(caveat: string | null | undefined, said: string): string 
     .join(' ');
 }
 
-export function Reading({ text, notices, reading, calls, onFigure, part = 'all', standing, caveat: shownCaveat, speaking }: {
+export function Reading({ text, notices, reading, calls, onFigure, part = 'all', standing,
+                         caveat: shownCaveat, speaking, headlineOnPage }: {
   /** The turn's own words. Streaming, so it fills as he speaks. */
   text: string | null | undefined;
   /** The turn's caveats, already filtered to the ones no object carries. */
@@ -205,6 +206,21 @@ export function Reading({ text, notices, reading, calls, onFigure, part = 'all',
   caveat?: string;
   /** He is reading the claim aloud (P2S.5(c)): it is lit while he does. */
   speaking?: boolean;
+  /**
+   * THE PAGE'S LEDE ALREADY SAYS THIS (P15.b's first half, 2026-09-21).
+   *
+   * Two places own the answer, and where the page's opening sentence restates
+   * the headline the reader is told twice — the card's own Done-when is
+   * "nothing on screen repeats the headline". The page wins, because the card
+   * says the opening sentence IS the answer.
+   *
+   * The headline alone goes. The notices and his caveat stay exactly where they
+   * are, ABOVE the figures, because UI rule 4 puts them there and this is not
+   * about them. Room decides (`beside.HEADLINE_RESTATED_AT`), and never while
+   * he is still working: mid-turn the page is not drawn and the headline is the
+   * only thing on screen carrying his words.
+   */
+  headlineOnPage?: boolean;
 }) {
   // HIS EMPHASIS IS DRAWN, NOT PRINTED. He writes `**the point**`; the frame
   // check (ops/frames.py, P2S.1) showed the asterisks in the claim. The markers
@@ -213,7 +229,12 @@ export function Reading({ text, notices, reading, calls, onFigure, part = 'all',
   const { plain, bold } = unmark((text ?? '').trim());
   const said = plain;
   const caveat = part === 'rest' && shownCaveat !== undefined ? shownCaveat : unsaid(reading?.caveat, said);
-  if (!said && !notices?.length && !caveat) return null;
+  // NOTHING LEFT TO DRAW IS NOTHING DRAWN, and a headline the page carries is
+  // not something left to draw (P15.b). Never a placeholder standing in for one
+  // (UI rule 8): the region either has words, notices or a caveat, or it is
+  // absent.
+  const headlineHere = !(headlineOnPage && part !== 'rest');
+  if ((!said || !headlineHere) && !notices?.length && !caveat) return null;
   // THE CLAIM, AND WHAT STANDS UNDER IT (P2S.1(c)). The design sets the point
   // as a sentence of its own, large, in serif, and the rest of what he said
   // beneath it; `claimAndStanding` takes the sentence his claim span sits in
@@ -243,7 +264,7 @@ export function Reading({ text, notices, reading, calls, onFigure, part = 'all',
       {notices && notices.length > 0 && (
         <div className="r-reading-caveats"><Caveats notices={notices} /></div>
       )}
-      {parts.claimRaw && (
+      {parts.claimRaw && headlineHere && (
         <h2 className="r-say r-say--claim" data-part="claim"
             data-speaking={speaking ? 'yes' : undefined}>
           {lit ? (

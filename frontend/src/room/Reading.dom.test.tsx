@@ -140,3 +140,50 @@ describe('the reading is drawn from the turn, not composed', () => {
     expect(board.map((o) => o.key)).toEqual(['shops']);
   });
 });
+
+/**
+ * AND WHEN THE PAGE ALREADY SAID IT (P15.b's first half, 2026-09-21).
+ *
+ * The headline and the page's opening sentence are two owners of one answer.
+ * Where they say the same thing the headline goes; the notices and his caveat do
+ * NOT, because UI rule 4 puts them above the figures and this is not about them.
+ */
+describe('a headline the page already carries', () => {
+  const SAID = 'Fewer transactions, not smaller baskets — and Greenhills fell hardest.';
+  const NOTICE: BobNotice = {
+    kind: 'negative_on_hand',
+    message: '2,180 stock counts are below zero, so a line that looks empty may be a bad count.',
+  } as BobNotice;
+
+  it('is not drawn', () => {
+    const { container } = render(<Reading part="claim" text={SAID} headlineOnPage />);
+    expect(container.querySelector('.r-say--claim')).toBeNull();
+  });
+
+  it('is drawn when the page did not carry it', () => {
+    const { container } = render(<Reading part="claim" text={SAID} />);
+    expect(container.querySelector('.r-say--claim')?.textContent).toContain('Fewer transactions');
+  });
+
+  it('takes no notice with it — those stay above the figures', () => {
+    const { container } = render(
+      <Reading part="claim" text={SAID} notices={[NOTICE]} headlineOnPage />);
+    expect(container.querySelector('.r-say--claim')).toBeNull();
+    expect(container.querySelector('.r-reading-caveats')?.textContent)
+      .toContain('below zero');
+  });
+
+  it('leaves NOTHING rather than an empty region when there is nothing else', () => {
+    // UI rule 8: not-yet-loaded and nothing-to-say are their own renderings,
+    // never an empty box standing in for one.
+    const { container } = render(<Reading part="claim" text={SAID} headlineOnPage />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('does not touch the rest — his caveat and body are their own part', () => {
+    const { container } = render(
+      <Reading part="rest" text={SAID} standing="Greenhills lost traffic." headlineOnPage />);
+    expect(container.querySelector('.r-say--standing')?.textContent)
+      .toContain('Greenhills lost traffic.');
+  });
+});

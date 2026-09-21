@@ -186,6 +186,24 @@ const RESTATED_AT = 0.6;
  * twice. A caption has one job the heading has not already done.
  */
 export const CAPTION_RESTATED_AT = 0.45;
+/**
+ * AND SO IS THE HEADLINE AGAINST THE PAGE'S LEDE (P15.b's first half,
+ * 2026-09-21). Two places own the answer: the left column's headline and the
+ * page's opening sentence. Where they say the same thing the reader is told
+ * twice, which is the owner's complaint and the card's own Done-when —
+ * "nothing on screen repeats the headline".
+ *
+ * MEASURED ON THE TWO LIVE TURNS OF 2026-09-21, which is why it is this bar and
+ * not the 0.6 a sentence of prose needs. DeepSeek's headline "Fewer
+ * transactions, not smaller baskets — and Greenhills is the shop that fell
+ * hardest" against its lede "…and the fall is fewer transactions, not smaller
+ * baskets" shares about 0.57 — the same finding in nearly the same words, and
+ * under 0.6 it would have drawn twice. Opus's headline "Greenhills is losing
+ * transactions, not basket — the reverse of what I had" against its lede about
+ * the estate's week shares far less and STAYS DRAWN: that is a second thing
+ * said, not the same thing repeated.
+ */
+export const HEADLINE_RESTATED_AT = 0.45;
 const GLUE = new Set(('the and for that this with was were are but not its his her our you your from '
   + 'than then they them into have has had just only also what which when where who how why all any '
   + 'one two out off per same about over more less most very there here been being will would could '

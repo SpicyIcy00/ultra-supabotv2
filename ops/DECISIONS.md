@@ -5679,3 +5679,61 @@ shops, which read none of them. That is the next one, and it is a bigger change 
 
 **Held by.** `test_a_section_that_cannot_exist_is_explained_not_warned_about`, and beside it
 `test_stale_data_is_still_warned_about`, so reclassifying the one never drags staleness along.
+
+## 2026-09-21 — P15.b is split, and the left column keeps the answer string
+
+The owner: *"go do as much as you can … you are not stopping until we reach our goal."* So the card
+was mapped before it was built — five read-only readers over the answer gates, the compose model,
+the left column, the page renderer and the contracts — and the map says the card's plain reading
+cannot be built in one pass without breaking the floor.
+
+**What the plain reading would break.**
+
+1. **Seven trust gates read one string.** The restatement, grounding, misstated-figure,
+   enumerated-remainder, volunteering, tool-vocabulary-leak and notice gates all take Bob's streamed
+   `answer` as their subject (`agent/loop.py` 3886, 3943, 4193, 4253, 5201 and the prose functions
+   they share with `tests/evals/checks.py`). That is architecture rule 9's enforcement surface.
+   Emptying the left column blinds all seven at once, and each one goes quiet without failing.
+2. **The notice gate would get WORSE, not quiet.** Its input loses the prose while `pending` is
+   unchanged, so it becomes a false-positive machine — pushing the appended *"(added
+   automatically)"* block back up, days after it was brought down. `said_this_turn` deliberately
+   refuses to read the page's `lede`/`say` (a `must_convey` fingerprint passes when any alternative
+   in a group appears, so 640 words of argument prose would let a real caveat count as conveyed by
+   coincidence). Widening it silences notices; not widening it forces duplicates. Neither is free.
+3. **A page-only turn would store no answer post.** `ConversationLog.posts` returns early when
+   `final_answer` is empty (`agent/loop.py:2782`), so there would be no thread to reply to, no
+   parent for the next question and no pin target after a reload. The lede's text also still holds
+   unresolved `{key}` references, so it cannot simply become `final_answer`.
+4. **The room would go blank for most of a turn.** `<Reading part="claim">` is the only child of
+   `.r-words` with no `busy` gate, so it is the one thing on screen carrying his words for the
+   47–85 s a compose takes; the page is gated on `!busy` because mid-turn the blocks have not
+   landed.
+5. **`voice.body.max_words: 40` is the only TOTAL bound on his prose.** The page's leaves are
+   bounded individually and never summed, so deleting it without a replacement removes the volume
+   cap the card exists to deliver.
+6. **Three more that look removable and are not:** the flat `blocks` list is how a key survives a
+   turn (so "this is that" and change-by-key ride on it); `default: true` blocks are the machine's
+   board and deliberately not his to place, so "a figure not on the page cannot exist" has to be
+   scoped to HIS figures; and "give the page once, settled" collides with "compose as you go", which
+   cannot both be true of a board derived from the page.
+
+**So the card is split, and the half that needs no decision shipped today.** P15.b's Done-when is
+two claims. *"Nothing on screen repeats the headline"* is now true and enforced: where the page's
+opening sentence restates the headline, the headline is not drawn and the page keeps it, because the
+card says the opening sentence IS the answer. The notices and his caveat stay exactly where they
+are — UI rule 4 puts them above the figures and this was never about them.
+
+**The bar is measured, not chosen** (`beside.HEADLINE_RESTATED_AT = 0.45`). On his two live turns of
+2026-09-21: DeepSeek's headline against its lede shares about 0.57 — the same finding in nearly the
+same words, and at the 0.6 a sentence of prose needs it would have drawn twice. Opus's headline is a
+reversal about one shop and its lede is the estate's week; they share far less and BOTH STAY DRAWN.
+Suppression is for a repeat, never for a second thing said. It never fires while he is working, and
+never when there is no page — a refusal, a one-figure lookup and a conversational turn are carried
+entirely by that column.
+
+**What is still open, and it is a decision rather than a task:** whether the streamed `answer`
+survives at all, and if it does not, what becomes the subject of those seven gates. That belongs
+here, answered, before the second half is built.
+
+**Held by.** `headlineOnPage.test.ts` (both directions, from the two real turns) and the new block in
+`Reading.dom.test.tsx` (the headline goes, the notices do not).
