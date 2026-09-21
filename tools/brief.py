@@ -217,6 +217,7 @@ def get_brief(as_of: Optional[date | str] = None) -> dict:
             freshness = {r["source"]: r["latest"] for r in cur.fetchall()}
             max_age = _req(defs, "brief.freshness.max_age_days")
             frozen = set(_req(defs, "brief.freshness.frozen_sources"))
+            reader_names = _req(defs, "brief.freshness.reader_names")
 
             sources = []
             for name, latest in freshness.items():
@@ -402,11 +403,39 @@ def get_brief(as_of: Optional[date | str] = None) -> dict:
     # left out reads as "nothing happened there".
     stale = [s for s in sources if not s["fresh"]]
     if stale:
+        # ONE LINE FOR THE READER, THE DATES FOR THE MODEL (2026-09-21).
+        #
+        # This message was a hundred words of per-source dates naming
+        # `vending_aisles` and `stock_transfers` — table names, in the one field
+        # `notices.contract` reserves for the reader — and the loop appends a
+        # forced message VERBATIM, so it reached his answer in exactly that
+        # shape, twice, inside the "(added automatically)" block he has asked
+        # three times to be rid of. UI rule 4's own amendment is the warrant:
+        # "a notice may be one line that names it, visible without interaction,
+        # with its explanation on tap."
+        #
+        # It stays COMPLETE ON ITS OWN, as the contract requires: it says which
+        # sources, that they are old, and what that means for the figures. Only
+        # the per-source dates and the frozen explanation move, and they move to
+        # `guidance`, which reaches the model and is never rendered.
+        names = [reader_names.get(s["source"], s["source"]) for s in stale]
+        listed = names[0] if len(names) == 1 else ", ".join(names[:-1]) + f" and {names[-1]}"
+        ages = [s["age_days"] for s in stale if s["age_days"] is not None]
+        if not ages:
+            aged = "those exports have never landed"
+        elif len(set(ages)) == 1:
+            aged = f"that export is {ages[0]} days old"
+        else:
+            aged = f"those exports are between {min(ages)} and {max(ages)} days old"
         notices.append({
             "kind": "stale_sources",
             "message": (
-                "These sources are too old to say what changed since yesterday, so "
-                "the brief covers nothing from them: "
+                f"The brief covers nothing from {listed} — {aged}, too old to say "
+                f"what changed since yesterday."
+            ),
+            "guidance": (
+                "Say which of these the answer would have rested on, and say it in "
+                "a clause rather than a list. The dates: "
                 + "; ".join(
                     f"{s['source']} last has data from {s['latest']} "
                     f"({s['age_days']} days ago"
@@ -415,7 +444,7 @@ def get_brief(as_of: Optional[date | str] = None) -> dict:
                     + ")"
                     for s in stale
                 )
-                + "."
+                + ". Do not recite the whole list to a question none of them feed."
             ),
             "source": "metrics.yaml: brief.freshness",
         })

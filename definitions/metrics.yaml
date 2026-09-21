@@ -4560,6 +4560,21 @@ brief:
       stock_transfers: 2
       purchase_orders: 2
     stale_policy: state_explicitly
+    # WHAT A READER CALLS THEM (2026-09-21). The stale_sources message named
+    # `vending_aisles` and `stock_transfers` — table names — in the one field
+    # the contract reserves for the reader (notices.contract, message_audience:
+    # reader, "names nothing internal"), and the loop appends that message
+    # VERBATIM when the caveat has to be forced. It reached his answer that way
+    # twice, at about a hundred words of per-source dates. The dates are now the
+    # notice's `guidance`, which is for the model and is never rendered; this is
+    # what the line he reads calls them.
+    reader_names:
+      transactions: sales
+      inventory_snapshots: the stock count
+      vending_lines: vending sales
+      vending_aisles: vending aisles
+      stock_transfers: stock transfers
+      purchase_orders: purchase orders
     frozen_sources: [stock_transfers, purchase_orders]
     frozen_reason: >
       Loaded once from a StoreHub CSV export. They cannot change until someone
