@@ -139,15 +139,17 @@ def test_each_phase_states_its_own_size():
         m = re.search(r'<p class="ph">([^<.]*)', sec)
         assert m, "a phase with no summary line"
         said = m.group(1).strip().lower()
-        want = WORDS[n].lower() + (" session" if n == 1 else " sessions")
-        assert said.startswith(want), f"a phase holds {n} open cards and says {said!r}"
+        want = WORDS[n].lower() + (" card" if n == 1 else " cards")
+        assert said.startswith(want), f"a wave holds {n} open cards and says {said!r}"
 
 
 def test_the_headline_session_count_matches():
     n = len(now_cards())
     phases = len(_sections())
-    said = (f"{WORDS[n]} {'session' if n == 1 else 'sessions'} in "
-            f"{WORDS[phases].lower()} {'phase' if phases == 1 else 'phases'}")
+    # CARDS IN WAVES since 2026-09-22: a wave's cards run at once, one agent
+    # each, so "sessions" stopped being the unit the owner is told.
+    said = (f"{WORDS[n]} {'card' if n == 1 else 'cards'} in "
+            f"{WORDS[phases].lower()} {'wave' if phases == 1 else 'waves'}")
     assert said in _plan(), (
         f"{n} cards are open over {phases} phases on the page; its headline "
         f"does not say '{said}'"

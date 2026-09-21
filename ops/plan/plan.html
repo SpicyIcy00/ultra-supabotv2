@@ -259,7 +259,7 @@
 <header>
   <p class="kick">plan · <b>Bob, ready for anything</b> · 22 Sep 2026</p>
   <h1>Ready for anything</h1>
-  <p class="lede">Thirteen sessions in four phases, one card each. <em>Back to the base</em>: Bob understands the business, builds things with you, and runs them &mdash; not a chat that draws pages. The base comes first, because everything else sits on it. Earlier plans are kept in <span class="arch">ops/archive/</span>; this page is the readable copy of ops/NOW.md.</p>
+  <p class="lede">Ten cards in three waves, each wave run at once by one agent per card. <em>Back to the base</em>: Bob understands the business, builds things with you, and runs them &mdash; not a chat that draws pages. The base comes first, because everything else sits on it. Earlier plans are kept in <span class="arch">ops/archive/</span>; this page is the readable copy of ops/NOW.md.</p>
 </header>
 
 <section class="why">
@@ -292,90 +292,81 @@
 </section>
 
 <section class="phase">
-  <h2>Phase 1 &mdash; the base</h2>
-  <p class="ph">Five sessions: he answers right, and does what you say. Eval spend for the whole plan: <b>$0.00</b> &mdash; each card is measured on a handful of live answers instead, about five cents each.</p>
-  <p class="gate"><b>Done when:</b> a fact comes back in about ten seconds, a narrow question in well under a minute, and every action phrase in the test above passes when tried again in the same words.</p>
+  <h2>Wave 1 &mdash; the base</h2>
+  <p class="ph">Five cards, run at once by five agents. Eval spend for the whole plan: <b>$0.00</b> &mdash; each wave is measured once, on live answers, about five cents each.</p>
+  <p class="gate"><b>How it runs.</b> Each agent works in its own copy of the code, so none can collide. The lead session merges them one at a time, runs every test after each, then re-runs the full capability test once, plus a speed check of three kinds of question. <b>Done when</b> a fact comes back in about ten seconds, a narrow question in well under a minute, and every action phrase that failed the test passes in the same words.</p>
+  <p class="pl" style="margin:14px 0 4px">the one prompt that runs this wave, with an agent per card</p><div class="cmd">Read ops/NOW.md. Run wave 1 as a workflow: one agent per card, each in its own worktree, then merge in order and measure.</div>
+  <div style="height:18px"></div>
 
-  <div class="card"><div class="ch"><span class="id">B1</span><h3>The answer is the size of the question</h3><span class="tags"><span class="tag free">no eval</span></span></div>
-    <p class="does">A fact gets a sentence. A narrow question gets a short answer and one or two charts, then <b>&ldquo;want this as a page?&rdquo;</b> instead of a page. A broad one gets the page. It is enforced in the code, not asked for, because asking has not worked all month. &ldquo;Remember that&hellip;&rdquo; is one line, no investigation. And DeepSeek finally gets its thinking setting where it reads it &mdash; today it thinks at full strength on everything.</p>
-    <p class="done-when"><b>Done when:</b> a fact answers in about 5&ndash;15 seconds and a narrow question in 20&ndash;40, measured over several tries each.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B1.</div></div>
+  <div class="card"><div class="ch"><span class="id">W1.1</span><h3>Answers and checks</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">Small questions get small answers, and a page is <b>offered</b>, not forced &mdash; enforced in the code. A missing warning is placed by code beside its figure, instead of Bob being told to rewrite his answer. With it, the bugs from your dashboard page: a check that wanted the word &ldquo;negative&rdquo;, a warning printed twice, figures that drew as dashes, a stock total of &minus;49 million, and a next-steps list with no limit.</p>
+    <p class="done-when"><b>Done when:</b> a fact answers in about 5&ndash;15 seconds, a narrow question in 20&ndash;40, and your dashboard turn replays with a real headline, no grey box and no dashes.</p>
+    <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W1.1.</div></div>
 
-  <div class="card"><div class="ch"><span class="id">B2</span><h3>Checks fix, they don&rsquo;t argue</h3><span class="tags"><span class="tag free">no eval</span></span></div>
-    <p class="does">A missing warning is placed by code beside its figure, and the &ldquo;rewrite your whole answer&rdquo; round goes. With it, the bugs from your dashboard page: the check that wanted the word &ldquo;negative&rdquo; when he had written &ldquo;below zero&rdquo;; the same warning printed twice; figures borrowed from earlier questions that drew as dashes; a stock total that added up negative counts to &minus;49 million; and a &ldquo;next steps&rdquo; list with no limit.</p>
-    <p class="done-when"><b>Done when:</b> your dashboard turn, replayed, has a headline that is an answer, no grey box, no dashes and no negative totals.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B2.</div></div>
+  <div class="card"><div class="ch"><span class="id">W1.2</span><h3>Your action words do what they say</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">&ldquo;Keep this&rdquo; pins. &ldquo;Every Monday&rdquo; delivers to your room. &ldquo;I want this every Monday&rdquo; schedules the report, not the watch. &ldquo;Build it&rdquo; makes something that <b>changes</b> when you ask. &ldquo;What do you remember?&rdquo; only reads.</p>
+    <p class="done-when"><b>Done when:</b> the save and build parts of the test pass in the same words.</p>
+    <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W1.2.</div></div>
 
-  <div class="card"><div class="ch"><span class="id">B3</span><h3>Your action words do what they say</h3><span class="tags"><span class="tag free">no eval</span></span></div>
-    <p class="does">&ldquo;Keep this&rdquo; pins. &ldquo;Every Monday&rdquo; on a workflow delivers to your room. &ldquo;I want this every Monday&rdquo; schedules the report, not the watch. &ldquo;Build it&rdquo; makes something that <b>changes</b> when you ask &mdash; &ldquo;add lead time&rdquo; edits the plan instead of adding a tile. &ldquo;What do you remember?&rdquo; only reads. Each one confirms in a line.</p>
-    <p class="done-when"><b>Done when:</b> the save and build turns of the test pass, tried again in the same words.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B3.</div></div>
+  <div class="card"><div class="ch"><span class="id">W1.3</span><h3>One read that already has the picture</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">One read finds what moved and hands Bob the findings as plain sentences, each with its receipt &mdash; including <b>what caused most of it</b>, like &ldquo;one shop carried most of the drop&rdquo;, worked out by code, never estimated in words.</p>
+    <p class="done-when"><b>Done when:</b> a fresh broad question is one read and two rounds, and names the shop or line that carried the change.</p>
+    <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W1.3.</div></div>
 
-  <div class="card"><div class="ch"><span class="id">B4</span><h3>One read that already has the picture</h3><span class="tags"><span class="tag free">no eval</span></span></div>
-    <p class="does">Instead of twenty or thirty separate lookups, one read finds what moved and hands Bob the findings as short plain sentences, each with its receipt &mdash; the numbers written by code, never by him. He can still dig deeper.</p>
-    <p class="done-when"><b>Done when:</b> a fresh broad question is one read and two rounds, measured, and the page is as good as today&rsquo;s.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B4.</div></div>
+  <div class="card"><div class="ch"><span class="id">W1.4</span><h3>Alive on every page</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">One Bob line on every page, including the dashboard, analytics, warehouse, packing and vending pages that have none today. He answers <b>right there</b>, knows which page you&rsquo;re on and what it shows, and stays on it.</p>
+    <p class="done-when"><b>Done when:</b> &ldquo;add date filters to this&rdquo; on a saved page edits that page without leaving it.</p>
+    <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W1.4.</div></div>
 
-  <div class="card"><div class="ch"><span class="id">B5</span><h3>Alive on every page</h3><span class="tags"><span class="tag free">no eval</span></span></div>
-    <p class="does">One Bob line on every page, including the dashboard, analytics, warehouse, packing and vending pages that have none today. He answers <b>right there</b>, beside the page, instead of sending you back to the main chat. He knows which page you&rsquo;re on and what it shows, and a conversation follows the page you&rsquo;re on.</p>
-    <p class="done-when"><b>Done when:</b> &ldquo;add date filters to this&rdquo; on a saved page reads and edits that page without leaving it.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B5.</div></div>
+  <div class="card"><div class="ch"><span class="id">W1.5</span><h3>Stock: what runs out, and where to get it</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">A warning per shop <b>before</b> a shelf empties &mdash; sales speed against what is left. &ldquo;Handle the AJI BARN reorder&rdquo; works. And before ordering more, Bob suggests moving stock you already have, from the warehouse or between shops, as a draft you key into StoreHub.</p>
+    <p class="done-when"><b>Done when:</b> a line running out is flagged with both numbers, and the reorder returns a draft instead of a refusal.</p>
+    <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W1.5.</div></div>
+
 </section>
 
 <section class="phase">
-  <h2>Phase 2 &mdash; ahead of you</h2>
-  <p class="ph">Three sessions: he notices before you have to ask.</p>
+  <h2>Wave 2 &mdash; ahead of you, and running things with you</h2>
+  <p class="ph">Four cards, run at once by four agents, once wave 1 is merged and measured.</p>
+  <p class="gate"><b>Two of these need something from you first:</b> the time for the morning page, and who your managers are.</p>
+  <p class="pl" style="margin:14px 0 4px">the one prompt that runs this wave, with an agent per card</p><div class="cmd">Read ops/NOW.md. Run wave 2 as a workflow: one agent per card, each in its own worktree, then merge in order and measure.</div>
+  <div style="height:18px"></div>
 
-  <div class="card"><div class="ch"><span class="id">B6</span><h3>The morning, answered before you ask</h3><span class="tags"><span class="tag feat">needs your time and your yes</span><span class="tag free">no eval</span></span></div>
+  <div class="card"><div class="ch"><span class="id">W2.1</span><h3>The morning, answered before you ask</h3><span class="tags"><span class="tag feat">needs your time and your yes</span><span class="tag free">no eval</span></span></div>
     <p class="does">At the time you choose, Bob answers &ldquo;how are we doing&rdquo; on his own, so the page is waiting when you open the app. Asked again that day, it is reused until the data changes. It starts switched off &mdash; you switch it on.</p>
     <p class="done-when"><b>Done when:</b> the app opens on the morning&rsquo;s page with nothing typed.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B6.</div></div>
+    <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W2.1.</div></div>
 
-  <div class="card"><div class="ch"><span class="id">B7</span><h3>Stock running out, per shop</h3><span class="tags"><span class="tag free">no eval</span></span></div>
-    <p class="does">Sales speed against what is left, per shop and line, so you hear about a shelf <b>before</b> it empties. It appears in the morning and can be watched. A stock count below zero is flagged as a broken record rather than trusted.</p>
-    <p class="done-when"><b>Done when:</b> a line still in stock but running out soon is flagged, naming both numbers.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B7.</div></div>
-
-  <div class="card"><div class="ch"><span class="id">B8</span><h3>What caused most of it</h3><span class="tags"><span class="tag free">no eval</span></span></div>
-    <p class="does">&ldquo;One shop carried most of the drop&rdquo; or &ldquo;one line is most of the category&rdquo; &mdash; worked out by code with its receipt, never a share Bob estimates in words.</p>
-    <p class="done-when"><b>Done when:</b> a broad answer names the shop or line that carried the change, from the data itself.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B8.</div></div>
-</section>
-
-<section class="phase">
-  <h2>Phase 3 &mdash; he runs things with you</h2>
-  <p class="ph">Three sessions: limits, approvals, and the work itself.</p>
-
-  <div class="card"><div class="ch"><span class="id">B9</span><h3>Authority, requests and approvals</h3><span class="tags"><span class="tag feat">needs who uses Bob</span><span class="tag free">no eval</span></span></div>
-    <p class="does">&ldquo;Don&rsquo;t ask me under &#8369;20,000&rdquo; becomes a real rule: those drafts go to a list instead of interrupting you. &ldquo;Managers request, I approve&rdquo; becomes a queue you approve, reject or change. &ldquo;You don&rsquo;t need my approval for this anymore&rdquo; is kept as a rule with its history. Nothing is ever sent on its own.</p>
+  <div class="card"><div class="ch"><span class="id">W2.2</span><h3>Authority, requests and approvals</h3><span class="tags"><span class="tag feat">needs who your managers are</span><span class="tag free">no eval</span></span></div>
+    <p class="does">&ldquo;Don&rsquo;t ask me under &#8369;20,000&rdquo; becomes a real rule &mdash; those drafts go to a list instead of interrupting you. &ldquo;Managers request, I approve&rdquo; becomes a queue you approve, reject or change. Nothing is ever sent on its own.</p>
     <p class="done-when"><b>Done when:</b> a draft under your line lands in the list quietly, and one over it arrives as a decision &mdash; Approve, Change, or Look into it.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B9.</div></div>
+    <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W2.2.</div></div>
 
-  <div class="card"><div class="ch"><span class="id">B10</span><h3>The warehouse reorder, and transfers</h3><span class="tags"><span class="tag free">no eval</span></span></div>
-    <p class="does">&ldquo;Handle the AJI BARN reorder&rdquo; works. And before ordering more, Bob suggests moving stock you already have &mdash; from the warehouse to a shop, or between shops &mdash; each move with its reason, as a draft you key into StoreHub.</p>
-    <p class="done-when"><b>Done when:</b> the reorder returns a draft instead of a refusal, and surplus in one place is offered against a shortage in another.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B10.</div></div>
-
-  <div class="card"><div class="ch"><span class="id">B11</span><h3>Dismiss it with a reason, and he learns</h3><span class="tags"><span class="tag free">no eval</span></span></div>
-    <p class="does">When you wave something off, one tap says why &mdash; already known, not important, or wrong &mdash; and that kind of alert gets quieter next time. You can see what he has learned and undo it.</p>
+  <div class="card"><div class="ch"><span class="id">W2.3</span><h3>Dismiss it with a reason, and he learns</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">When you wave something off, one tap says why, and that kind of alert gets quieter next time. You can see what he has learned and undo it.</p>
     <p class="done-when"><b>Done when:</b> something you dismissed stops coming back, and his memory shows why.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B11.</div></div>
+    <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W2.3.</div></div>
+
+  <div class="card"><div class="ch"><span class="id">W2.4</span><h3>The big answers as designed pages</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">Bob picks one of a few page designs made from your target page and writes into it, while code lays it out. &ldquo;Build me a dashboard&rdquo; opens a real dashboard instead of a report.</p>
+    <p class="done-when"><b>Done when:</b> a broad page reads like your target, and asking for a dashboard opens one.</p>
+    <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W2.4.</div></div>
+
 </section>
 
 <section class="phase">
-  <h2>Phase 4 &mdash; the page, and a new source</h2>
-  <p class="ph">Two sessions, last because they build on everything above.</p>
+  <h2>Wave 3 &mdash; a new source</h2>
+  <p class="ph">One card, last because it needs things only you can decide.</p>
+  <p class="gate"><b>Needs your yes to a paid image-reading model for photos only</b> &mdash; the cheap DeepSeek model cannot read images.</p>
+  <p class="pl" style="margin:14px 0 4px">the one prompt that runs this wave, with an agent per card</p><div class="cmd">Read ops/NOW.md. Run wave 3 as a workflow: one agent per card, each in its own worktree, then merge in order and measure.</div>
+  <div style="height:18px"></div>
 
-  <div class="card"><div class="ch"><span class="id">B12</span><h3>The big answers as designed pages</h3><span class="tags"><span class="tag free">no eval</span></span></div>
-    <p class="does">Bob picks one of a few page designs made from your target page &mdash; the week, one finding, a comparison &mdash; and writes into it, while code lays it out to the design. &ldquo;Build me a dashboard&rdquo; opens a real dashboard instead of a report.</p>
-    <p class="done-when"><b>Done when:</b> a broad page reads like your target, and asking for a dashboard opens one.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B12.</div></div>
-
-  <div class="card"><div class="ch"><span class="id">B13</span><h3>Photograph a delivery receipt</h3><span class="tags"><span class="tag feat">needs photo upload</span><span class="tag free">no eval</span></span></div>
-    <p class="does">A photo of a supplier&rsquo;s receipt becomes a draft receiving record matched to its order, and you confirm each line. It needs a way to upload photos and a model that can read them &mdash; the cheap DeepSeek model cannot &mdash; which is why it comes last.</p>
+  <div class="card"><div class="ch"><span class="id">W3.1</span><h3>Photograph a delivery receipt</h3><span class="tags"><span class="tag feat">needs your yes</span><span class="tag free">no eval</span></span></div>
+    <p class="does">A photo of a supplier&rsquo;s receipt becomes a draft receiving record matched to its order, and you confirm each line.</p>
     <p class="done-when"><b>Done when:</b> a real receipt photo produces a draft where every line can be accepted or corrected.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B13.</div></div>
+    <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W3.1.</div></div>
+
 </section>
 
-<p class="close">How you run it is unchanged: <em>&ldquo;Read ops/NOW.md. Do the next card.&rdquo;</em> Each session does one card, measures it, and ends with the one or two things that are yours to do.</p>
+<p class="close">How you run it: paste <em>one wave&rsquo;s prompt</em>. That session runs the wave with an agent per card, merges them, measures once, and ends with the one or two things that are yours to do.</p>
 </div>
