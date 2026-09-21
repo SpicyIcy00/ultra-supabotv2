@@ -244,77 +244,137 @@
   .why p b{color:var(--ink);font-weight:600}
   .est{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0 4px}
   .est th{text-align:left;font-family:var(--mono);font-size:10.5px;font-weight:500;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;padding:0 12px 8px 0;border-bottom:1px solid var(--edge)}
-  .est td{padding:10px 12px 10px 0;border-bottom:1px solid var(--edge);color:var(--ink-2);vertical-align:top}
-  .est td:nth-child(2),.est td:nth-child(3){font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
-  .est-wrap{overflow-x:auto;margin:0 0 22px}
-  .yours{border:1px solid rgba(var(--bob),.35);border-radius:16px;padding:18px 20px;margin:26px 0 0;max-width:78ch}
-  .yours b{display:block;font-family:var(--serif);font-size:17px;font-weight:600;margin-bottom:6px;color:var(--ink)}
-  .yours p{font-size:13.5px;color:var(--ink-2);margin:0}
+  .est td{padding:9px 12px 9px 0;border-bottom:1px solid var(--edge);color:var(--ink-2);vertical-align:top}
+  .est td:first-child{color:var(--ink)}
+  .est .ok{color:rgb(var(--up));font-family:var(--mono);font-size:12px;white-space:nowrap}
+  .est .half{color:var(--ink-2);font-family:var(--mono);font-size:12px;white-space:nowrap}
+  .est .no{color:rgb(var(--down));font-family:var(--mono);font-size:12px;white-space:nowrap}
+  .est-wrap{overflow-x:auto;margin:0 0 10px}
+  .rules4{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:18px 0 0}
+  .rules4 div{border:1px solid var(--edge);border-radius:12px;padding:14px 16px;font-size:13.5px;color:var(--ink-2)}
+  .rules4 div b{display:block;color:var(--ink);font-weight:600;margin-bottom:4px;font-family:var(--serif);font-size:15.5px}
   .arch{font-family:var(--mono);font-size:14px}
 </style>
 <div class="wrap">
 <header>
-  <p class="kick">plan · <b>the page, fast</b> · 21 Sep 2026</p>
-  <h1>The page, fast</h1>
-  <p class="lede">Five sessions in one phase, one card each. <em>This is the only thing we are doing</em> &mdash; everything else is paused, and every earlier card is kept in <span class="arch">ops/archive/</span>. The plan lives in ops/NOW.md; this page is the readable copy.</p>
+  <p class="kick">plan · <b>Bob, ready for anything</b> · 22 Sep 2026</p>
+  <h1>Ready for anything</h1>
+  <p class="lede">Thirteen sessions in four phases, one card each. <em>Back to the base</em>: Bob understands the business, builds things with you, and runs them &mdash; not a chat that draws pages. The base comes first, because everything else sits on it. Earlier plans are kept in <span class="arch">ops/archive/</span>; this page is the readable copy of ops/NOW.md.</p>
 </header>
 
 <section class="why">
-  <h2 style="font-family:var(--serif);font-size:22px;font-weight:600;margin:0 0 14px">Why a broad answer takes minutes</h2>
-  <div class="num">
-    <div><span>Sept 14&ndash;16</span><b>~30 s</b><small>"how are we doing"</small></div>
-    <div><span>Today, DeepSeek</span><b>~240 s</b><small>~125 s on Opus</small></div>
-    <div><span>Spent thinking</span><b>75&ndash;91%</b><small>the page is ~10%</small></div>
-    <div><span>One round</span><b>59 s</b><small>of a 130 s answer</small></div>
-  </div>
-  <p><b>It was not the page.</b> It slowed down on the evening of 17 September, three days before the page arrived, when Bob was asked to write a thought for every chart and choose from 17 chart types instead of 6. His instructions for building an answer more than doubled, with no limit on them. He also redoes the same twenty or thirty reads for every broad question, although your data only changes once a night &mdash; you asked it seven times on the 21st against identical data.</p>
-</section>
-
-<section class="phase">
-  <h2>Phase F &mdash; the fast page</h2>
-  <p class="ph">Five sessions, in this order. Each one is measured on the same question, over several answers, before and after.</p>
-  <p class="gate"><b>What we expect it to reach.</b> These are estimates, and each card replaces one with a measured number. Eval spend: <b>$0.00</b> &mdash; each card is measured on a handful of live answers instead, about five cents each.</p>
+  <h2 style="font-family:var(--serif);font-size:22px;font-weight:600;margin:0 0 14px">What the test found</h2>
+  <p style="margin-top:0">Every save, automation, build and approval you asked for, tried in your own words on the live system under a test user &mdash; 21 turns, $0.76, and every trace of it removed afterwards. <b>Nothing it made was switched on without you.</b></p>
   <div class="est-wrap">
   <table class="est">
-    <thead><tr><th>the question</th><th>today</th><th>after</th><th>why</th></tr></thead>
+    <thead><tr><th>you said</th><th>result</th><th>what happened</th></tr></thead>
     <tbody>
-      <tr><td>The morning / "how are we doing"</td><td>~240 s</td><td>~0 s</td><td>answered before you open the app (F2)</td></tr>
-      <tr><td>The same question again that day</td><td>~240 s</td><td>~0&ndash;2 s</td><td>reused, stamped with when it was read (F2)</td></tr>
-      <tr><td>A fresh broad question</td><td>~240 s</td><td>~40&ndash;70 s</td><td>one read, two rounds (F1, F3)</td></tr>
-      <tr><td>A narrow one &mdash; "why was Greenhills down?"</td><td>~150 s</td><td>~60&ndash;90 s</td><td>less to decide per answer (F3, F4)</td></tr>
+      <tr><td>&ldquo;Make this a page&rdquo;</td><td class="ok">works</td><td>four live tiles in 21 seconds</td></tr>
+      <tr><td>&ldquo;Watch this&rdquo;</td><td class="ok">works</td><td>created, tested against the past, left for you to switch on</td></tr>
+      <tr><td>&ldquo;Check this every morning&rdquo;</td><td class="ok">works</td><td>a 7 am check, off until you turn it on</td></tr>
+      <tr><td>&ldquo;Tell me if sales drop more than usual&rdquo;</td><td class="ok">works</td><td>and told you it would go off 48 of the last 60 mornings</td></tr>
+      <tr><td>&ldquo;Build it&rdquo; then changes</td><td class="half">half</td><td>builds a page, but each change adds a tile instead of changing the thing</td></tr>
+      <tr><td>&ldquo;Turn this into a workflow&rdquo;</td><td class="half">half</td><td>saves it; &ldquo;every Monday&rdquo; fails &mdash; nowhere to deliver it</td></tr>
+      <tr><td>&ldquo;Remember that&hellip;&rdquo;</td><td class="half">half</td><td>right, but 108 seconds and a page for one sentence</td></tr>
+      <tr><td>&ldquo;Keep this&rdquo;</td><td class="no">fails</td><td>pins nothing</td></tr>
+      <tr><td>&ldquo;Don&rsquo;t ask me unless it exceeds &#8369;20,000&rdquo;</td><td class="no">missing</td><td>there is no way to give Bob limits yet</td></tr>
+      <tr><td>&ldquo;Managers request, I approve&rdquo;</td><td class="no">missing</td><td>no requests, no approvals queue</td></tr>
+      <tr><td>&ldquo;Handle the AJI BARN reorder&rdquo;</td><td class="no">fails</td><td>the warehouse is outside what his reorder read covers</td></tr>
     </tbody>
   </table>
   </div>
-
-  <div class="card"><div class="ch"><span class="id">F1</span><h3>One read that already has the picture</h3><span class="tags"><span class="tag free">no eval</span></span></div>
-    <p class="does">Every broad question makes the same twenty or thirty reads and then thinks for minutes over the raw results. One read does all of it in code and hands Bob the findings already written as short plain sentences &mdash; <b>the numbers put in by code, never by him</b> &mdash; each with its receipt. It is built from exactly what his best broad answers already read, not guessed at, and he can still dig further when something needs explaining.</p>
-    <p class="done-when"><b>Done when:</b> a fresh broad question is one read and two rounds, measured over several answers, and the page is judged against today&rsquo;s.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card F1.</div></div>
-
-  <div class="card"><div class="ch"><span class="id">F2</span><h3>The morning, answered before you ask</h3><span class="tags"><span class="tag feat">needs your time and your yes</span><span class="tag free">no eval</span></span></div>
-    <p class="does">At the time you choose, Bob answers &ldquo;how are we doing&rdquo; on his own, so the page is waiting when you open the app. Asked again the same day, it is reused until the data changes, and says when it was read. It starts switched off &mdash; you switch it on. The shop lines also stop showing internal names, and &ldquo;usual&rdquo; is defined as the same weekday over several weeks rather than one.</p>
-    <p class="done-when"><b>Done when:</b> the room opens on the morning&rsquo;s page with no question typed, and a same-day repeat costs no model turn.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card F2.</div></div>
-
-  <div class="card"><div class="ch"><span class="id">F3</span><h3>He writes the findings, code lays them out</h3><span class="tags"><span class="tag free">no eval</span></span></div>
-    <p class="does">Bob writes sections &mdash; a heading that states the finding, a few paragraphs, and the figures it rests on &mdash; and code picks each chart&rsquo;s type, size and position, the way it already does when he leaves them out. <b>Every word stays his.</b> The layout is written once instead of twice, a figure can no longer be left off the page, and it is the shape that lets the page appear while it is being written.</p>
-    <p class="done-when"><b>Done when:</b> a broad page is written as sections and looks as good as today&rsquo;s, measured for time over several answers.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card F3.</div></div>
-
-  <div class="card"><div class="ch"><span class="id">F4</span><h3>What the other cards leave</h3><span class="tags"><span class="tag free">no eval</span></span></div>
-    <p class="does">The smaller fixes the research found, done only where the first three have not already made them moot: DeepSeek gets its thinking setting in the one place it reads it (it has been thinking at full strength on every question); a round ends once the page carries the answer, instead of forcing another; the instructions that ask for things no page draws are deleted; a bug that throws away every highlight he is asked to mark is fixed; and the cause of his answers opening with &ldquo;You&rsquo;re right &mdash;&rdquo; to the system&rsquo;s own correction is found before anything is called a fix.</p>
-    <p class="done-when"><b>Done when:</b> each is measured before and after, and the ones that bought nothing are said to.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card F4.</div></div>
-
-  <div class="card"><div class="ch"><span class="id">F5</span><h3>The page appears while it is written</h3><span class="tags"><span class="tag free">no eval</span></span></div>
-    <p class="does">Instead of a blank screen until the very end, each section appears as Bob finishes it, marked as still arriving until the checks pass. It only hides the last part of the wait &mdash; most of the time is thinking before any of the page is written &mdash; and whether DeepSeek can stream it at all is untested, so that is measured first.</p>
-    <p class="done-when"><b>Done when:</b> the first section is on screen before the answer finishes, on the model Bob runs on.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card F5.</div></div>
-
-  <div class="yours">
-    <b>One decision that is yours</b>
-    <p>The costliest correction is &ldquo;you didn&rsquo;t mention this warning &mdash; rewrite your whole answer.&rdquo; Code could put the warning beside the right figure itself and save that round. But having Bob say it in his own words is a trade you chose, so it stays as it is until you say otherwise.</p>
+  <div class="rules4">
+    <div><b>The answer is the size of the question</b>A fact is a sentence. A narrow question is a short answer and the chart that proves it, then an offer of a page. A broad one is the full page &mdash; and the morning one is ready before you ask.</div>
+    <div><b>Checks fix, they don&rsquo;t argue</b>A warning Bob left out is put beside its figure by code, always shown, instead of making him rewrite his answer &mdash; which is how the system&rsquo;s own words ended up in your headline.</div>
+    <div><b>Authority decides what reaches you</b>&ldquo;Don&rsquo;t ask me under &#8369;20,000&rdquo; sends those drafts to a list instead of interrupting you. Nothing leaves Bob without a person&rsquo;s yes.</div>
+    <div><b>The base before the features</b>Every new capability sits on the actions, the checks and the context, so those are fixed first.</div>
   </div>
+</section>
+
+<section class="phase">
+  <h2>Phase 1 &mdash; the base</h2>
+  <p class="ph">Five sessions: he answers right, and does what you say. Eval spend for the whole plan: <b>$0.00</b> &mdash; each card is measured on a handful of live answers instead, about five cents each.</p>
+  <p class="gate"><b>Done when:</b> a fact comes back in about ten seconds, a narrow question in well under a minute, and every action phrase in the test above passes when tried again in the same words.</p>
+
+  <div class="card"><div class="ch"><span class="id">B1</span><h3>The answer is the size of the question</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">A fact gets a sentence. A narrow question gets a short answer and one or two charts, then <b>&ldquo;want this as a page?&rdquo;</b> instead of a page. A broad one gets the page. It is enforced in the code, not asked for, because asking has not worked all month. &ldquo;Remember that&hellip;&rdquo; is one line, no investigation. And DeepSeek finally gets its thinking setting where it reads it &mdash; today it thinks at full strength on everything.</p>
+    <p class="done-when"><b>Done when:</b> a fact answers in about 5&ndash;15 seconds and a narrow question in 20&ndash;40, measured over several tries each.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B1.</div></div>
+
+  <div class="card"><div class="ch"><span class="id">B2</span><h3>Checks fix, they don&rsquo;t argue</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">A missing warning is placed by code beside its figure, and the &ldquo;rewrite your whole answer&rdquo; round goes. With it, the bugs from your dashboard page: the check that wanted the word &ldquo;negative&rdquo; when he had written &ldquo;below zero&rdquo;; the same warning printed twice; figures borrowed from earlier questions that drew as dashes; a stock total that added up negative counts to &minus;49 million; and a &ldquo;next steps&rdquo; list with no limit.</p>
+    <p class="done-when"><b>Done when:</b> your dashboard turn, replayed, has a headline that is an answer, no grey box, no dashes and no negative totals.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B2.</div></div>
+
+  <div class="card"><div class="ch"><span class="id">B3</span><h3>Your action words do what they say</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">&ldquo;Keep this&rdquo; pins. &ldquo;Every Monday&rdquo; on a workflow delivers to your room. &ldquo;I want this every Monday&rdquo; schedules the report, not the watch. &ldquo;Build it&rdquo; makes something that <b>changes</b> when you ask &mdash; &ldquo;add lead time&rdquo; edits the plan instead of adding a tile. &ldquo;What do you remember?&rdquo; only reads. Each one confirms in a line.</p>
+    <p class="done-when"><b>Done when:</b> the save and build turns of the test pass, tried again in the same words.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B3.</div></div>
+
+  <div class="card"><div class="ch"><span class="id">B4</span><h3>One read that already has the picture</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">Instead of twenty or thirty separate lookups, one read finds what moved and hands Bob the findings as short plain sentences, each with its receipt &mdash; the numbers written by code, never by him. He can still dig deeper.</p>
+    <p class="done-when"><b>Done when:</b> a fresh broad question is one read and two rounds, measured, and the page is as good as today&rsquo;s.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B4.</div></div>
+
+  <div class="card"><div class="ch"><span class="id">B5</span><h3>Alive on every page</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">One Bob line on every page, including the dashboard, analytics, warehouse, packing and vending pages that have none today. He answers <b>right there</b>, beside the page, instead of sending you back to the main chat. He knows which page you&rsquo;re on and what it shows, and a conversation follows the page you&rsquo;re on.</p>
+    <p class="done-when"><b>Done when:</b> &ldquo;add date filters to this&rdquo; on a saved page reads and edits that page without leaving it.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B5.</div></div>
+</section>
+
+<section class="phase">
+  <h2>Phase 2 &mdash; ahead of you</h2>
+  <p class="ph">Three sessions: he notices before you have to ask.</p>
+
+  <div class="card"><div class="ch"><span class="id">B6</span><h3>The morning, answered before you ask</h3><span class="tags"><span class="tag feat">needs your time and your yes</span><span class="tag free">no eval</span></span></div>
+    <p class="does">At the time you choose, Bob answers &ldquo;how are we doing&rdquo; on his own, so the page is waiting when you open the app. Asked again that day, it is reused until the data changes. It starts switched off &mdash; you switch it on.</p>
+    <p class="done-when"><b>Done when:</b> the app opens on the morning&rsquo;s page with nothing typed.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B6.</div></div>
+
+  <div class="card"><div class="ch"><span class="id">B7</span><h3>Stock running out, per shop</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">Sales speed against what is left, per shop and line, so you hear about a shelf <b>before</b> it empties. It appears in the morning and can be watched. A stock count below zero is flagged as a broken record rather than trusted.</p>
+    <p class="done-when"><b>Done when:</b> a line still in stock but running out soon is flagged, naming both numbers.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B7.</div></div>
+
+  <div class="card"><div class="ch"><span class="id">B8</span><h3>What caused most of it</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">&ldquo;One shop carried most of the drop&rdquo; or &ldquo;one line is most of the category&rdquo; &mdash; worked out by code with its receipt, never a share Bob estimates in words.</p>
+    <p class="done-when"><b>Done when:</b> a broad answer names the shop or line that carried the change, from the data itself.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B8.</div></div>
+</section>
+
+<section class="phase">
+  <h2>Phase 3 &mdash; he runs things with you</h2>
+  <p class="ph">Three sessions: limits, approvals, and the work itself.</p>
+
+  <div class="card"><div class="ch"><span class="id">B9</span><h3>Authority, requests and approvals</h3><span class="tags"><span class="tag feat">needs who uses Bob</span><span class="tag free">no eval</span></span></div>
+    <p class="does">&ldquo;Don&rsquo;t ask me under &#8369;20,000&rdquo; becomes a real rule: those drafts go to a list instead of interrupting you. &ldquo;Managers request, I approve&rdquo; becomes a queue you approve, reject or change. &ldquo;You don&rsquo;t need my approval for this anymore&rdquo; is kept as a rule with its history. Nothing is ever sent on its own.</p>
+    <p class="done-when"><b>Done when:</b> a draft under your line lands in the list quietly, and one over it arrives as a decision &mdash; Approve, Change, or Look into it.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B9.</div></div>
+
+  <div class="card"><div class="ch"><span class="id">B10</span><h3>The warehouse reorder, and transfers</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">&ldquo;Handle the AJI BARN reorder&rdquo; works. And before ordering more, Bob suggests moving stock you already have &mdash; from the warehouse to a shop, or between shops &mdash; each move with its reason, as a draft you key into StoreHub.</p>
+    <p class="done-when"><b>Done when:</b> the reorder returns a draft instead of a refusal, and surplus in one place is offered against a shortage in another.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B10.</div></div>
+
+  <div class="card"><div class="ch"><span class="id">B11</span><h3>Dismiss it with a reason, and he learns</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">When you wave something off, one tap says why &mdash; already known, not important, or wrong &mdash; and that kind of alert gets quieter next time. You can see what he has learned and undo it.</p>
+    <p class="done-when"><b>Done when:</b> something you dismissed stops coming back, and his memory shows why.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B11.</div></div>
+</section>
+
+<section class="phase">
+  <h2>Phase 4 &mdash; the page, and a new source</h2>
+  <p class="ph">Two sessions, last because they build on everything above.</p>
+
+  <div class="card"><div class="ch"><span class="id">B12</span><h3>The big answers as designed pages</h3><span class="tags"><span class="tag free">no eval</span></span></div>
+    <p class="does">Bob picks one of a few page designs made from your target page &mdash; the week, one finding, a comparison &mdash; and writes into it, while code lays it out to the design. &ldquo;Build me a dashboard&rdquo; opens a real dashboard instead of a report.</p>
+    <p class="done-when"><b>Done when:</b> a broad page reads like your target, and asking for a dashboard opens one.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B12.</div></div>
+
+  <div class="card"><div class="ch"><span class="id">B13</span><h3>Photograph a delivery receipt</h3><span class="tags"><span class="tag feat">needs photo upload</span><span class="tag free">no eval</span></span></div>
+    <p class="does">A photo of a supplier&rsquo;s receipt becomes a draft receiving record matched to its order, and you confirm each line. It needs a way to upload photos and a model that can read them &mdash; the cheap DeepSeek model cannot &mdash; which is why it comes last.</p>
+    <p class="done-when"><b>Done when:</b> a real receipt photo produces a draft where every line can be accepted or corrected.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card B13.</div></div>
 </section>
 
 <p class="close">How you run it is unchanged: <em>&ldquo;Read ops/NOW.md. Do the next card.&rdquo;</em> Each session does one card, measures it, and ends with the one or two things that are yours to do.</p>

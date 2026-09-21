@@ -5790,3 +5790,51 @@ times that day against identical data.
 **Estimated, not measured:** a fresh broad question ~40–70 s; the morning and a same-day repeat ~0 s.
 The one open decision is the owner's: whether code may place an unsurfaced notice itself, saving the
 "rewrite your whole answer" round, which today is his deliberate trade (`agent/loop.py` 3859-3867).
+
+## 2026-09-22 — back to the base: Bob, ready for anything
+
+The owner, after the answer-page work of 09-18..21: *"we focused too much on the page for the answers
+to 'how are doing' … thats just kinda of a chat with pages but our original goal for bob was ready
+for anything … we strayed too much its time to go back."* He asked for a test of everything he had
+said he wanted; then, offered the design choices, *"im not an expert you tell me"* — so the session
+decided, per NOW.md §1 (the owner reports what is wrong; the session decides the fix and says why).
+
+**The capability test.** Every save, automation, build and approval in STANDARD.md §9 and §11–§15, in
+his own phrases, through the same wiring the web route uses (the eight writers, recall, beliefs, page
+references), as the user `bob-capability-test`: 21 turns, $0.76, median 108 s a turn. Works: "make
+this a page", "watch this", "check this every morning", "tell me if sales drop more than usual".
+Half: "build it" (every change adds a tile rather than changing the thing), "turn this into a
+workflow" (a Monday schedule is refused — nowhere to deliver), "remember that…" (right, but 108 s),
+"I want this every Monday" (moved the watch, not the report). Fails or absent: **"keep this"** (pins
+nothing), **authority thresholds**, **manager requests and approvals**, **the AJI BARN reorder**.
+Nothing it created was switched on, scheduled or promoted — rule 7 held everywhere. It ran the
+owner's "PO Maker" workflow twice (as the test user), which a cleanup keyed only on the test user's
+own workflows would have missed; every one of the 47 rows it made was removed and the counts
+returned exactly to their starting values.
+
+**Decided, and what each reverses:**
+1. **The answer is the size of the question**, bound by the existing scope kinds (lookup / focused /
+   broad) and ENFORCED, with a page OFFERED on a narrow question rather than made. Reverses the
+   P12/P14 recipe that every answer is a page. Evidence: his own record (small questions 10–25 s when
+   they stay small, 150 s inflated) and the research (unprompted extras lower use; the products that
+   are trusted keep proactive output small and steerable).
+2. **Checks fix; they do not argue.** An unsurfaced notice is placed by code beside the figure it
+   qualifies, in its reader's words, and the "rewrite the full answer" round goes. **Reverses the
+   owner's own earlier trade** (`agent/loop.py` 3859–3867, that the caveat be said in Bob's words),
+   now at his word. The guarantee is kept and made stronger: the notice is always shown, never
+   negotiable, and never lost to a model that did not carry it. What goes is the round in which a
+   model writes to the gate — the dashboard turn's headline was the gate's own words.
+3. **Authority decides what reaches the owner, not what Bob does alone.** Action stays at level five
+   (CLAUDE.md, levels of automation): a threshold routes drafts to a list instead of an
+   interruption; nothing leaves Bob without a person's yes. A card that would raise a level is
+   recorded here first, with its test, before it is built.
+4. **The base before the features:** the actions, the checks and the context are fixed before any
+   new capability is added on them.
+
+**Features the owner chose from the market research** (ranked list in the session record): stock
+running out per shop, warehouse-to-shop transfers, "what caused most of it" insights, dismiss with a
+reason, and photographed delivery receipts. Declined for now: delivery through Messenger, and a
+payday/holiday calendar.
+
+**The plan:** NOW.md §3, cards B1–B13 in four phases; the page-speed cards of 09-21 are folded into
+B1, B2, B4, B6 and B12.

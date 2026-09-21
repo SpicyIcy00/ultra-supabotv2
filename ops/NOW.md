@@ -3,12 +3,13 @@
 The state of play for Bob, kept current. **Every working session starts by
 reading this file.** It exists so a prompt can be one line.
 
-**THIS IS THE ONLY THING WE ARE DOING.** Replaced 2026-09-21 at the owner's word:
-*"i want you to fully replace the now.md and plan artifact for now this is the
-only thing were doing."* One goal — **the page, fast** — and the five cards in §3.
-Every card, decision and number from before today is in
-`ops/archive/NOW-to-2026-09-21.md` (the old plan page beside it); nothing in
-it is lost and none of it is being worked on.
+**THIS IS THE ONLY THING WE ARE DOING: Bob, ready for anything.** Replaced
+2026-09-22 at the owner's word, after a capability test of everything he
+asked for: *"our original goal for bob was ready for anything … we strayed too
+much its time to go back."* Thirteen cards in §3, the base first. The plan
+before it (2026-09-21, *the page, fast*) is folded into these cards; the one
+before that is in `ops/archive/NOW-to-2026-09-21.md` (the old plan page beside
+it). Nothing in the archive is lost and none of it is being worked on.
 
 Five files, five jobs: **CLAUDE.md** — the rules that do not change;
 **ops/STANDARD.md** — the owner's product vision, the standard work is measured
@@ -55,58 +56,109 @@ this file wins. **A defect under Open in DOGFOOD_LOG outranks every card here.**
 
 ## 2. Where we are
 
-**The page works and it is slow.** "How are we doing?" takes **~240 s on
-DeepSeek** (the default provider) and ~125 s on Opus. On Sept 14–16 it took
-**~30 s**.
+**Back to the base: Bob, ready for anything** (the owner, 2026-09-22: *"we focused
+too much on the page for the answers to 'how are doing' … thats just kinda of a
+chat with pages but our original goal for bob was ready for anything … we
+strayed too much its time to go back"*). The plan before this one — making the
+answer page fast — is folded in rather than dropped: answering plainly by
+default is itself the biggest speed win.
 
-**Measured 2026-09-21, from `george.conversations`:**
+**The capability test, 2026-09-22** — every save, automation, build and approval
+in ops/STANDARD.md §9 and §11–§15, in the owner's own phrases, through the same
+wiring the web route uses, as a separate test user; 21 turns, $0.76, **median 108
+s a turn**; every row it made was deleted afterwards and the counts are back to
+where they were. Scripts: the session scratchpad `captest.py` and `capclean.py`.
 
-- **It was not the page.** The jump came on the evening of Sept 17 — when Bob
-  was asked to write a thought for every chart (`c6226ee`) and choose from 17
-  chart types instead of 6 (`eeb7c7d`) — three days before the page. The
-  compose tool grew 11,705 → 27,413 characters and 11 → 19 fields per block,
-  with no bound on it.
-- **On DeepSeek, 75–91% of everything generated is thinking.** The whole page is
-  about a tenth. Thinking runs at roughly 1,000 characters a second, so thinking
-  is most of the wall-clock.
-- **One round — the one that builds the page — is a median 59 s of a 130 s
-  turn.** A typical broad answer takes 6 rounds; 18 of 25 spent at least one
-  round correcting itself.
-- **Reads went 4 → 20–30** per broad answer, and it is the same investigation
-  every time, redone from scratch against data that syncs once a night.
-- **DeepSeek has no `medium`** (it maps to high) and does not document the
-  per-message effort marker the loop uses, so in production **it very likely
-  thinks at full strength on every question.** Top-level `low` averaged ~152 s
-  against ~241 s at high on three runs, with half the thinking and good pages —
-  a lean, not proof.
-- **Switching thinking off is not the answer:** 24 s, and it said the estate was
-  "flat" when it fell 4.5%.
+| his words | result |
+|---|---|
+| "Make this a page" | works — four live tiles in 21 s |
+| "Watch this" | works — created, backtested, left off |
+| "Check this every morning" | works — a standing question at 07:00, off |
+| "Tell me if sales drop more than usual" | works — and said it would fire 48 of 60 mornings |
+| "Build it" → "add lead time", "30-day velocity" | half — builds a page, and every change ADDS a tile instead of changing the thing |
+| "Turn this into a workflow" | half — saves v1; "every Monday" refused: *"A schedule needs somewhere to deliver to"* |
+| "I want this every Monday" | misread — moved the watch, not the report |
+| "Remember that…" | half — right, but 108 s and a page for one sentence |
+| **"Keep this"** | **fails** — pins nothing; records three beliefs |
+| **"Don't ask me unless it exceeds ₱20,000"** | **does not exist** — noted as a belief |
+| **"Managers can request but I approve"** | **does not exist** — no roles, no queue |
+| **"Handle the AJI BARN reorder"** | **fails** — the warehouse is outside the replenishment read; hit the 12-call cap |
 
-**The provider.** DeepSeek's cheap tier (`deepseek-chat`, an alias for
-`deepseek-v4-flash`) is the default in `agent/provider.py`; `BOB_PROVIDER=anthropic`
-restores Opus. Railway needs only `DEEPSEEK_API_KEY`.
+**Nothing the test made was switched on, scheduled or promoted** — rule 7 held
+everywhere.
+
+**Why answers are slow and wrong-shaped**, measured 2026-09-21 (DECISIONS, same
+date): the slowdown came on 09-17/18 when Bob was asked to write a thought for
+every chart and choose from 17 chart types, not with the page; on DeepSeek
+75–91% of output is thinking; every question is answered as a full
+investigation (small questions take 10–25 s when they stay small, 150 s when he
+inflates them); and the correction gates argue with him mid-answer, so he
+writes to the gate — the dashboard turn's headline was *"The caveat needs the
+magnitude and it belongs beside the counts it qualifies…"*.
+
+**Why Bob is not "alive everywhere"** (diagnosed 2026-09-22): the legacy BI pages
+(`/dashboard`, `/analytics`, `/warehouse`, `/packing`, `/vending`) have no ask line
+at all; the RoomShell ask line appends to whatever thread was last open and
+navigates to `/bob` (RoomShell.tsx:114-115, Room.tsx:186-188); on `/pages/:id`
+Bob is told "this screen" and never gets the page scope, so `view_page` has never
+run in production; and a reopened thread drops its scope (Room.tsx:180 —
+`threadScope` is dead code).
+
+**The provider:** DeepSeek (`deepseek-chat`, alias of `deepseek-v4-flash`) is the
+default; `BOB_PROVIDER=anthropic` restores Opus.
 
 ---
 
 ## 3. The cards
 
-The order is the owner's, agreed 2026-09-21. **Estimated, not measured:** a
-fresh broad question ~40–70 s after F1 and F3; the morning and a same-day repeat
-~0 s after F2. Each card replaces an estimate with a number. **Eval spend for
-the five: $0.00** — each is measured on a handful of live answers instead, about
-five cents each.
+**Decided by the session at the owner's word** (*"im not an expert you tell me"*),
+2026-09-22, recorded in DECISIONS:
 
-- [ ] **F1 one read that already has the picture** — `get_overview`: every read his best broad answers make, run in code and returned COMPACT and RANKED. What they make, measured over 23 broad turns since Sept 19: the warning list (`get_attention`, 22 of 23); the estate and each shop on net sales, transactions and average basket against the week before (16–19 of 23); each shop's week by day (19); what rose and what fell by product (15–16); the shelf — stockouts over the week (19). Each finding comes back as a ONE-LINE FACT written by code, with its row and receipts beside it — the Tableau Pulse pattern (models reason over templated facts far more easily than raw rows), and rule 9 holds because code writes every digit. A composite read like `get_change`, so rule 5 holds. The drill-down tools stay, so the breadth the blind panel rewarded is kept, computed once. **Done when:** a fresh broad question is one read and two rounds, measured over several runs, and the page is judged against today's.
-- [ ] **F2 the morning, answered before he asks** — the data syncs once a night and he asked the broad question seven times on 2026-09-21 against identical data, redoing every read each time. A standing question answers "how are we doing" at the slot the owner names — born off, switched on by him (rule 7) — and the room opens on its page; asked again the same day, the answer is reused until the data changes, stamped with when it was read (rule 6). Also from the old P3.b: the attention figure carries no internal name (`sales_vs_same_weekday|Fairview|` is an identity, never text), and `usual_weekday` — the same weekday over several closed weeks — is defined in metrics.yaml before anything draws it. **Needs from the owner: the time, and the switch.** **Done when:** the room opens on the morning's page with no question typed, and a same-day repeat costs no model turn.
-- [ ] **F3 he writes the findings, code lays them out** — he emits, per section, a `head` that states the finding, one to three `say` lines and the keys of the figures it rests on; code derives chart type (`default_composition.shape_for`, his override kept), size (`roomFor`), pairing (`pageOf`'s PAIRABLE) and caveat placement, and compiles the same arrangement the renderer already draws, so posts and the frontend do not change. Every word stays his; the layout is written once instead of twice; "left a figure off the page" becomes impossible, so the page gate's round goes. Keys stay his, for change-by-key and "this is that"; compiled blocks must not carry `default`. The derivation thresholds move into metrics.yaml. It is also the flat, self-contained shape that makes F5 possible. **Done when:** a broad page is written as sections and draws within measure of today's, measured for time over several runs.
-- [ ] **F4 what the other cards leave** — **(a)** DeepSeek gets its effort TOP-LEVEL, where it reads it, never `medium`, and `low` on broad questions if F1–F3 have not already made it moot — measured, because it is a lean from three runs; **(b)** a round settles once a compose carries a lede and names the claim, instead of costing another round for words beside it (the first live page lost ~100 s to that); **(c)** the text that asks for fields no page draws — `voice.reading.path`, the board addendum's `question`/`under` sentences, the compose docstring's "a thought: one or two sentences" — and the unused `spec` (0 of 186 blocks), if F3 has not removed them; **(d)** the recipe asks for a `span` and forbids the `thought` a span needs, and the validator drops a span without one, so every span he is asked for is thrown away; **(e)** after a correction, DeepSeek's answer replied to the correction instead of the owner ("You're right —") 2 of 7 times — a controlled test did not reproduce it, so find the cause before claiming a fix. **Done when:** each is measured before and after, and the ones that bought nothing are said to.
-- [ ] **F5 the page appears while it is written** — mark `compose` for eager input streaming, forward `input_json_delta` (the loop drops it today), parse leniently and draw each section as it closes, shown as provisional (UI rule 8) until the checks pass. It hides only the last part of the wait, because most of the time is thinking before any of the page is written; and whether DeepSeek streams tool arguments at all is undocumented, so measure it first. **Done when:** the first section is on screen before the turn ends, on the provider Bob runs on.
+- **The answer is the size of the question.** A fact is a sentence; a narrow
+  question is a short answer and the one or two figures that prove it, then an
+  OFFER of a page; a broad question is the full page, and the morning one is
+  waiting before it is asked. His own record: small questions take 10–25 s when
+  they stay small and 150 s when he inflates them.
+- **Checks fix; they do not argue.** A notice he did not surface is placed by
+  code, in its reader's words, beside the figure it qualifies — always shown,
+  never negotiated — instead of wiping his answer and demanding a rewrite. That
+  round is what put the gate's words in his headline.
+- **Authority decides what reaches the owner, not what Bob does alone.** Action
+  stays at level five: "don't ask me under ₱20,000" means those drafts go to a
+  list instead of an interruption; nothing leaves Bob without a person's yes.
+- **The base before the features.** Every new capability sits on the actions,
+  the checks and the context, so those are fixed first.
 
-**One decision that is the owner's, and it is open:** the costliest correction is
-"you did not surface this caveat — rewrite your whole answer." Code could place
-the notice beside the figure it qualifies itself and save that round, but saying
-it in his own words is a trade the owner chose (`agent/loop.py` 3859–3867).
-Nobody changes it without his word.
+**Eval spend for the thirteen: $0.00** — each card is measured on a handful of
+live answers instead (about five cents each), over several runs, because
+DeepSeek varies 90–325 s on one question with one setting.
+
+**Phase 1 — the base: he answers right, and does what you say**
+
+- [ ] **B1 the answer is the size of the question** — the scope kinds already exist (`investigation.scope.kinds`: lookup, focused, broad); tie the ANSWER to them and enforce it rather than ask for it (the whole session's lesson: words do not move it). Lookup: prose and at most one figure, no arrangement. Focused: a short answer, at most two or three figures, and an offer of a page instead of one. Broad: the page. Enforced in `compose` (a bound per kind, refused like any other over-bound) and in the read budget, which must count QUERIES run and not decisions made (`get_change` is one decision and seven reads). "Remember that…" is one line and no investigation. Also here: DeepSeek gets its effort TOP-LEVEL (it has no `medium` and does not read the per-message marker), and a round settles once a compose carries a lede and names the claim. **Done when:** a fact answers in ~5–15 s, a narrow question in ~20–40 s with an offer rather than a page, measured over several runs each.
+- [ ] **B2 checks fix, they do not argue** — (a) a missing notice is placed by code beside the figure it qualifies, in its reader's line, and the "rewrite the full answer" round goes (`agent/loop.py` 4253-4294; decision recorded); (b) the `negative_on_hand` fingerprint takes "below zero" (`metrics.yaml` ~4832) — it wiped a correct answer on the dashboard turn; (c) the forced block stops listing the same notice twice; (d) a correction's reply can never become the answer or its headline; (e) a page resolves only against its own turn's blocks, so no `{key}` borrows an earlier turn's figure or draws "–" after a reload (board.ts `bounded`/`MAX_OBJECTS`, render.tsx `inline`); (f) `get_stock group_by state` stops summing negative on-hand into its total (`metrics.yaml` ~5665 vs `inventory.history.negative_on_hand.exclude_from_sums`) and draws states as words; (g) the plan list is bounded (the design: four short steps); (h) the refused single-store `previous_period` comparisons that cost six reads on "how did Rockwell do". **Done when:** the dashboard turn, replayed, has a headline that is an answer, no forced box, no dash, no negative total.
+- [ ] **B3 your action words do what they say** — each phrase does exactly one thing and confirms in one line: "keep this" PINS (today it records beliefs and pins nothing); "every Monday" on a workflow delivers to his room (today: *"A schedule needs somewhere to deliver to"*); "I want this every Monday" schedules the REPORT, not the watch; "build it" makes a system whose changes CHANGE it ("add lead time" edits the plan in place, never adds a tile beside it); "what do you remember" reads memory and writes nothing. **Done when:** the capability test's §12 and §11 turns pass, re-run in the same words.
+- [ ] **B4 one read that already has the picture** — `get_overview`: the reads his best broad answers make (the warning list; estate and shops on net sales, transactions and basket against the week before; each shop's week by day; what rose and fell; stockouts), run in code and returned ranked, each finding a one-line FACT written by code with its receipts (the Tableau Pulse pattern). A composite read, so rules 5 and 9 hold; the drill-down tools stay. **Done when:** a fresh broad question is one read and two rounds, measured, the page judged against today's.
+- [ ] **B5 alive on every page** — one ask line mounted once above both chromes (App.tsx), so the legacy BI pages get it too; he answers IN PLACE beside the page (a panel on desktop, a sheet on the phone) with "open in Bob" instead of navigating to `/bob`; each page registers what it is and what it shows (`page_id` for kept pages so `view_page`/`edit_page` bind; key, subjects and window for BI pages, never figures); the conversation follows the page (a new thread when the page differs — reverses the "scope belongs to the thread" decision of DECISIONS 1692, recorded first); and the small bugs: `threadScope` on reopen, the rail's New resets, `screenName` for nested paths. **Done when:** "add date filters to this" on a kept page reads and edits that page without leaving it.
+
+**Phase 2 — ahead of you**
+
+- [ ] **B6 the morning, answered before you ask** — a standing question at the slot the owner names (born off; he switches it on, rule 7) answers "how are we doing" and the room opens on it; asked again that day, it is reused until the data changes, stamped with its read time. `usual_weekday` (the same weekday over several closed weeks) defined in metrics.yaml; the attention line carries no internal id. **Needs from the owner: the time, and the switch.** **Done when:** the room opens on the morning's page with nothing typed, and a same-day repeat costs no model turn.
+- [ ] **B7 stock running out, per shop** — sales speed against what is left, per shop and line, from the per-store levels the products import brings in: a definition in metrics.yaml, a read, a watch condition, and a line in the morning. A count below zero is a broken record and says so; a line with no level set says so rather than firing. **Done when:** a line still above zero whose cover is under its window fires, naming both numbers.
+- [ ] **B8 what caused most of it** — concentration and top-driver insights as definitions (Tableau Pulse's "concentrated contribution", "top drivers and detractors"): "one shop carried most of the fall", computed by code with its receipt, never a share he writes (rule 10: attribution shares in prose stay forbidden; a declared definition read from the yaml is a figure like any other). **Done when:** the broad answer names the shop or line that carried the change from a read's own row.
+
+**Phase 3 — he runs things with you**
+
+- [ ] **B9 authority, requests and approvals** — the owner's §15 as real rules: a threshold setting ("under ₱20,000, don't interrupt me") that routes drafts to a list instead of a notification; requests from other people ("managers request, I approve") as a queue he approves, rejects or changes; "you don't need my approval for this anymore" recorded as a versioned rule with its history. Level five holds — nothing is sent on its own. Needs the people and roles in the app's users table (S.6); what exists is the role column. **Done when:** a draft under the line lands in the list with no interruption, one over it arrives as a decision with Approve · Change · Look into it.
+- [ ] **B10 the warehouse reorder, and transfers** — "Handle the AJI BARN reorder" works: the warehouse gets its own read (today it is refused as outside the replenishment scope); and suggested moves from AJI BARN to a shop, or between shops, before an order — ranked, each with its reason, as a draft the owner keys into StoreHub (its API has no transfer route). **Done when:** the reorder turn returns a draft instead of a refusal, and a surplus in one place is offered against a shortfall in another.
+- [ ] **B11 dismiss it with a reason, and he learns** — dismissing a watch post, a morning finding or a proactive item takes one tap for why ("known", "not important", "wrong"); the reason becomes a belief that quiets that kind of item next time, with a way to see and undo what he has learned. **Done when:** a dismissed kind stops reappearing and the memory view shows why.
+
+**Phase 4 — the page, and a new source**
+
+- [ ] **B12 the broad page as designed page types** — from the research: every product that feels designed uses a fixed human design, an outline first, a few layouts and restraint. Bob picks a page type built from `ops/ideal/the-page-bob-writes.html` — the week, one finding, a comparison, the dashboard — and writes into it (lede, headings, short paragraphs, which findings go where); code builds it to the design. "Build me a dashboard" opens the real dashboard (george.pages) in the room instead of a report. **Done when:** a broad page reads like the target and the dashboard request opens a dashboard.
+- [ ] **B13 photograph a delivery receipt** — a photo becomes a draft receiving record matched to its purchase order, each line confirmed by a person and marked as extracted, never trusted as vetted data. Needs a place to upload a photo and a model that reads images (DeepSeek's cheap tier does not), which is why it is last. **Done when:** a real receipt photo produces a draft whose every line he can accept or correct.
+
+**The owner's prompt for any card:** *"Read ops/NOW.md. Do card B1."*
 
 ---
 
