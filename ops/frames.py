@@ -177,6 +177,8 @@ FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
               "doc-live": ROOT / "ops" / "frames_fixtures" / "doc-live.json",
               # His page of 17:05 — the first written with the new prompt (P13).
               "doc-live2": ROOT / "ops" / "frames_fixtures" / "doc-live2.json",
+              # His 17:05 page with a FOLD and two margin notes in a row (P15.a).
+              "doc-fold": ROOT / "ops" / "frames_fixtures" / "doc-fold.json",
               "live-packed": ROOT / "ops" / "frames_fixtures" / "live-packed.json",
               "live-page": ROOT / "ops" / "frames_fixtures" / "live-page.json",
               # BUILD TALKS (P6.g): a draft order, a watch, memory — the canvas past reads.

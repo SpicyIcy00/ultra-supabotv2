@@ -943,11 +943,20 @@ export function Board(p: BoardProps) {
                 n += 1;
                 run.push(parts[n] as Extract<Arrangement, { note: string }>);
               }
-              if (run.length > 1) {
+              // A FLOAT WITH NOTHING TO WRAP IT IS NOT A FLOAT. A margin note
+              // is an aside to the words beside it; ending a section it has no
+              // words beside it, and a 31% box floated right leaves a hole
+              // down the left the width of the page — which is the gap the
+              // owner kept finding ("too many gaps … trying to fill in
+              // columns"). At the tail of a section it runs at the measure
+              // instead, and the void goes with the float.
+              const tail = n + 1 >= parts.length;
+              if (run.length > 1 || tail) {
                 const label = run.find((r) => r.label)?.label;
                 out.push(
                   <aside key={`note-${i}.${n}`} className="r-doc-note"
-                         data-long={run.reduce((k, r) => k + r.note.length, 0) > 280
+                         data-tail={tail ? 'yes' : undefined}
+                         data-long={!tail && run.reduce((k, r) => k + r.note.length, 0) > 280
                            ? 'yes' : undefined}>
                     {label && <span className="r-doc-note-lab">{label}</span>}
                     {run.map((r, k) => (

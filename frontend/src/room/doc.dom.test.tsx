@@ -459,11 +459,31 @@ describe('a run of margin notes', () => {
     expect(paras[1].textContent).toBe('Second aside.');
   });
 
-  it('leaves a single note exactly as it was', () => {
+  it('leaves a single note floated beside the words that follow it', () => {
+    // The original path: one aside, floated, no paragraph wrapper. It needs
+    // words after it in the same section, which is what a margin note IS.
+    const withWords = {
+      layout: 'stack',
+      children: [
+        { lede: 'Seven shops took less.' },
+        { head: 'The shelf' },
+        { note: 'Just the one.' },
+        { say: 'And the words it sits beside.' },
+      ],
+    } as Arrangement;
+    const { container } = draw(withWords);
+    expect(container.querySelectorAll('.r-doc-note')).toHaveLength(1);
+    expect(container.querySelectorAll('.r-doc-note-p')).toHaveLength(0);
+    expect(container.querySelector('.r-doc-note')?.getAttribute('data-tail')).toBeNull();
+    expect(container.querySelector('.r-doc-note')?.textContent).toContain('Just the one.');
+  });
+
+  it('is still one aside when a single note ends its section', () => {
+    // It goes through the same path as a run, because at the tail it must stop
+    // floating -- but it is one aside carrying his words either way.
     const { container } = draw(page('Just the one.'));
     expect(container.querySelectorAll('.r-doc-note')).toHaveLength(1);
-    // The single-note path is the original one and draws no paragraph wrapper.
-    expect(container.querySelectorAll('.r-doc-note-p')).toHaveLength(0);
+    expect(container.querySelector('.r-doc-note')?.getAttribute('data-tail')).toBe('yes');
     expect(container.querySelector('.r-doc-note')?.textContent).toContain('Just the one.');
   });
 });
@@ -512,5 +532,51 @@ describe('a fold', () => {
     const inside = container.querySelector('.r-doc-fold-in')?.textContent ?? '';
     expect(inside).toContain('traded the week before');
     expect(inside).toContain('their old figure alone');
+  });
+});
+
+/**
+ * A FLOAT WITH NOTHING TO WRAP IT IS NOT A FLOAT (P15.a, 2026-09-21).
+ *
+ * Found by rendering the page rather than by reading it: a margin note ending
+ * its section has no words beside it, and a 31% box floated right left a hole
+ * down the left the width of the page — the gap the owner kept finding
+ * (*"theres still too many gaps, it still feels like its trying to fill in
+ * columns not the one big page"*). At the tail of a section it runs at the
+ * measure instead, and the void goes with the float.
+ */
+describe('a margin note at the end of its section', () => {
+  const page = (after: Arrangement[]): Arrangement => ({
+    layout: 'stack',
+    children: [
+      { lede: 'Seven shops took less.' },
+      { head: 'The shelf' },
+      { say: 'The counts are behind.' },
+      { note: 'Stock counts run days behind the sales.' },
+      ...after,
+    ],
+  }) as Arrangement;
+
+  it('runs at the measure rather than floating into a hole', () => {
+    const { container } = draw(page([]));
+    expect(container.querySelector('.r-doc-note')?.getAttribute('data-tail')).toBe('yes');
+  });
+
+  it('still floats where words follow it in the same section', () => {
+    const { container } = draw(page([{ say: 'And here are the words beside it.' }]));
+    expect(container.querySelector('.r-doc-note')?.getAttribute('data-tail')).toBeNull();
+  });
+
+  it('is not called long when it is running at the measure', () => {
+    // `data-long` widens a FLOATED note to 44%; at the measure it means nothing
+    // and would only fight the max-width.
+    const long = 'x'.repeat(300);
+    const { container } = draw({
+      layout: 'stack',
+      children: [{ lede: 'Seven shops took less.' }, { note: long }, { note: long }],
+    } as Arrangement);
+    const note = container.querySelector('.r-doc-note');
+    expect(note?.getAttribute('data-tail')).toBe('yes');
+    expect(note?.getAttribute('data-long')).toBeNull();
   });
 });

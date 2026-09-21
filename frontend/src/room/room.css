@@ -1743,6 +1743,11 @@ tr[data-lit="yes"] td { font-weight: 600; }
 /* A LONG THING PRESENT WITHOUT BEING A WALL (P15.a, 2026-09-21). Closed at rest,
    so the page's first still frame is the short one; a rule and a caret say there
    is more, and the count is the drawing's own. */
+/* A FLOAT WITH NOTHING TO WRAP IT IS NOT A FLOAT (P15.a, 2026-09-21). A margin
+   note ending its section has no words beside it, and floated it leaves a hole
+   down the left the width of the page. At the tail it runs at the measure. */
+.r-doc-note[data-tail] { float: none; width: auto; max-width: 62ch; margin: 10px 0 18px; }
+
 .r-doc-fold { margin: 14px 0 18px; border-top: 1px solid var(--edge); }
 .r-doc-fold-lab {
   display: flex; align-items: baseline; gap: 8px; padding: 9px 0; cursor: pointer;
