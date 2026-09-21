@@ -5589,3 +5589,64 @@ finding four times, captions restating their headings. The fixes above are the s
 not settle past it), the rewritten `test_notice_fingerprints` and `test_page_context_contract`
 (which held the reversed half and now record what replaced it), `test_reading_frame_contract`,
 `doc.dom.test.tsx`.
+
+## 2026-09-21 — P16: DeepSeek's cheap tier is the model Bob runs on
+
+The owner ran out of Anthropic credit mid-session — *"try this deepseek api for abit ... but make
+it easy to swap"* — and after it was measured against Opus on his own turns: *"go with the flash
+as default."* So the DEFAULT provider in `agent/provider.py` is DeepSeek, and
+`BOB_PROVIDER=anthropic` is the one variable that restores claude-opus-5 and the exact request
+every number recorded before today was measured on.
+
+**What was measured, from `george.conversations` and the published rates** (Opus at the repo's own
+`ops/cost_report.py` figures, DeepSeek at its peak — the worse — half):
+
+| | broad turn | mean of turns run | output tokens | `notice_forced` |
+|---|---|---|---|---|
+| claude-opus-5 | 136 s, $1.010 | 136 s | 9,732 | 8 of 197 turns (4%) |
+| deepseek-chat | 229 s, $0.082 | 130 s | 48,849 | 2 of 3 |
+| deepseek-v4-pro | 647 s, $0.289 | 647 s | 53,995 | 1 of 1 |
+
+**The same wall-clock for a twenty-third of the money**, and it is 5x the output tokens but they
+are cheap ones. A lookup stayed a lookup: *"how many stores do we have"* was 12 s, two calls,
+$0.003.
+
+**And the work is not worse — a blind panel preferred it 5–3.** Eight judges, four lenses
+(operator voice, page design, says-it-once, trustworthiness), each run twice with the reading
+order reversed for position bias, neither page naming its model. Page design was the only
+unanimous lens and it went to DeepSeek. It reads wider (29 net reads to 19) and DECIDES more: it
+caught that the replenishment plan's largest requests are the lines whose on-hand count is
+recorded below zero — *"the engine adds the negative to the shortfall, so the biggest lines are
+the worst records rather than the deepest needs… I would not ship that plan as printed"* — where
+Opus had the same rows, quantified them better, and never connected them to the dispatch being
+built out of them. One files a qualification; the other stops today's shipment. It also used the
+`drop` op to tidy figures off its own page between composes.
+
+**What Opus still does better, and it is one thing weighed three times.** It is the only one that
+says it got something wrong — *"I had Greenhills down as busy tills with a shrinking basket. It is
+the reverse"* — and all three of its panel wins lean on that move. Against it, on the same turn
+Opus never mentions the shop OPUS at all while asserting *"Three shops fall; the rest are fine."*
+
+**The known cost of the decision.** DeepSeek does not write a required notice into its own prose,
+so the loop appends it under *"**Caveats** (added automatically)"* — the disclaimer block the
+owner asked to be rid of on 2026-09-17 — on 2 of 3 turns against Opus's 4%. It earns more of them
+by reading wider (14 required notices against Opus's 7) and then does not carry them. **The figure
+to beat is 4%.** Open with it: what gets appended is raw diagnostics reaching the answer
+(*"16,430 stock counts are below zero, the lowest -25,641,517"*), which UI rule 4 forbids — but it
+is the designed backstop, so changing it is the owner's call and not a session's.
+
+**`deepseek-chat` is an alias for `deepseek-v4-flash`, and pro is not the upgrade.** The API offers
+exactly two models. `deepseek-v4-pro` was five times slower, six times the price of flash, and
+tripped MORE of this loop's gates — `composition_rejected`, `body_over_length` twice,
+`unsurfaced_notice`, `notice_forced`, and `page_left_blocks_off`, which is P14's page gate firing
+on a live turn for the first time.
+
+**Why the default is in code and not four Railway variables.** A variable that goes missing would
+send Bob silently back to an Anthropic account with no credit. A missing DeepSeek key now fails
+loudly and names both the variable and the way back. The cost of that choice landed immediately:
+142 tests build a client and none had a key, so `tests/conftest.py` sets a key-shaped string when
+the variable is absent — the tests need a constructible configuration, not a key.
+
+**Held by.** `tests/test_provider_contract.py` — the default is DeepSeek, one variable restores
+Anthropic byte for byte, an unknown provider raises rather than quietly serving another, the
+ceiling only comes down, and `describe()` leaks no key even from a URL containing one.

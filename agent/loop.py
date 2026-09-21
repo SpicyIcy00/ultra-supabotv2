@@ -107,9 +107,11 @@ def _is_transient(exc: BaseException) -> bool:
 # Configuration
 # --------------------------------------------------------------------------
 
-# WHICH MODEL ANSWERS, AND WHERE (agent/provider.py, 2026-09-21). Unset, these
-# are the values this loop has always used and the request is byte for byte the
-# one it made before the switch existed; `BOB_API_BASE_URL` points it elsewhere.
+# WHICH MODEL ANSWERS, AND WHERE (agent/provider.py, 2026-09-21). The DEFAULT is
+# DeepSeek's cheap tier, by the owner's decision after it was measured against
+# Opus on his own turns — same wall-clock, a twenty-third of the cost, and it won
+# a blind comparison 5-3. `BOB_PROVIDER=anthropic` restores claude-opus-5 and the
+# request every number recorded before 2026-09-21 was measured on.
 MODEL = provider.model()
 MAX_ITERATIONS = 15
 MAX_TOKENS = provider.max_tokens()

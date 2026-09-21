@@ -29,6 +29,22 @@ import pytest
 # anything that puts it back.
 _REAL_LOG_URL = os.environ.pop("GEORGE_LOG_DATABASE_URL", None)
 
+# A KEY-SHAPED STRING SO THE CLIENT CAN BE CONSTRUCTED (2026-09-21).
+#
+# Bob's default provider became DeepSeek that day, and unlike the Anthropic SDK
+# — which validates nothing until the first request — `provider.client_kwargs()`
+# refuses to build a client for an endpoint whose key is missing, so a
+# misconfigured deploy fails loudly at startup instead of once per turn. That
+# refusal fired on 142 tests here, every one of which stubs the client and makes
+# no network call; what they need is a CONSTRUCTIBLE configuration, not a key.
+#
+# Only when the variable is genuinely absent, so a developer who has the real
+# one keeps it, and never a string that could be mistaken for a real key. The
+# contract that the missing key DOES raise is held in
+# tests/test_provider_contract.py, which deletes this again.
+os.environ.setdefault("DEEPSEEK_API_KEY", "not-a-real-key-for-tests")
+os.environ.setdefault("ANTHROPIC_API_KEY", "not-a-real-key-for-tests")
+
 
 def pytest_configure(config):
     config.addinivalue_line(
