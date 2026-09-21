@@ -771,17 +771,40 @@ function List({ rows, meta, o, onPick, picked }: ShapeProps) {
   const nameKey = (['subject', 'product', 'sku'] as const)
     .find((k) => rows.some((r) => typeof r[k] === 'string'))
     ?? (nameKeyOf(rows) as string | null) ?? 'subject';
-  const key = figureKey(rows);
-  const unit = unitFor(rows, meta);
+  // PER ROW, NOT PER READ (P8): `get_attention` returns shops in pesos and
+  // product lines in units, and one unit over both drew a stock count of 0
+  // as "₱0". A row with no unit of its own draws a bare number.
+  // A row's own unit. Where NO row carries one the read's stands for all of
+  // them; where some do and some do not, the ones that do not have none —
+  // a count is not pesos because the row above it was.
+  const anyUnit = rows.some((r) => unitOf(r));
+  const unitOfRow = (r: Row) => unitOf(r) ?? (anyUnit ? null : unitFor(rows, meta));
   const whereOf = (r: Row) => (typeof r.store === 'string' && nameKey !== 'store' ? r.store
     : typeof r.category === 'string' && nameKey !== 'category' ? r.category : null);
   // WHAT IS THE SAME ON EVERY ROW IS NOT A COLUMN (the table's rule, P3.k, and
   // now the list's). The stockouts at one shop drew that shop's name on all
   // ten rows and an unlabelled `0` beside each — the first numeric column the
   // read happened to carry. A value every row shares tells no row from another.
+  // THE ROW'S OWN MEASURE, WHERE THE READ NAMES ONE (P8). `get_attention`
+  // returns rows measured differently — a shop by its `change`, a crossed-out
+  // line by what it `was`, a dead line by its `quantity_on_hand` — and each
+  // row says which on `measure`. Without that the list took the first numeric
+  // field it found, which for six rows was the read's own `rank`: 12, 13, 14
+  // drawn where a figure goes. A rank is an ordering, not a measurement.
+  const figureOfRow = (r: Row): { key: string; value: number } | null => {
+    const named = typeof r.measure === 'string' ? r.measure : null;
+    const own = named ? r[named] : undefined;
+    if (typeof own === 'number' && Number.isFinite(own)) return { key: named as string, value: own };
+    return valueOf(r);
+  };
   const same = (vs: unknown[]) => rows.length > 1 && new Set(vs.map(String)).size === 1;
   const sayWhere = !same(rows.map(whereOf));
-  const sayFigure = Boolean(key) && !same(rows.map((r) => num(r)));
+  const sayFigure = !same(rows.map((r) => figureOfRow(r)?.value ?? null));
+  // TWO KINDS OF ROW ARE TWO KINDS OF ROW. Where the read groups them itself
+  // (`section`), each run is named once — in the read's own words, never a
+  // heading this file invented.
+  const sectionOf = (r: Row) => (typeof r.section === 'string' ? r.section : null);
+  const saySection = !same(rows.map(sectionOf)) && rows.some(sectionOf);
   return (
     <ul className="r-mk r-mk-list" data-emphasis={emphasised(o) ? 'yes' : undefined}
         data-bare={!sayWhere && !sayFigure ? 'yes' : undefined}>
@@ -789,14 +812,16 @@ function List({ rows, meta, o, onPick, picked }: ShapeProps) {
         const name = String(r[nameKey] ?? subjectOf(r) ?? '');
         const where = sayWhere ? whereOf(r) : null;
         const lit = isLit(o, r);
-        const v = sayFigure ? num(r) : null;
+        const shown = sayFigure ? figureOfRow(r) : null;
+        const opens = saySection && sectionOf(r) !== sectionOf(rows[n - 1] ?? {});
         return (
-          <li key={n} className="r-mk-list-row" data-lit={lit ? 'yes' : 'no'} style={beat(n)}>
+          <li key={n} className="r-mk-list-row" data-lit={lit ? 'yes' : 'no'} style={beat(n)}
+              data-opens={opens ? String(sectionOf(r)).replace(/_/g, ' ') : undefined}>
             <RowName name={name} className="r-mk-name" dimension={dimensionOf(rows, name)}
                      pickable onPick={onPick} picked={picked?.includes(name)} />
             {where && <span className="r-mk-list-where">{where}</span>}
-            {v !== null && Number.isFinite(v) && (
-              <span className="r-mk-list-fig">{fmt(key as string, v, unit)}</span>
+            {shown && (
+              <span className="r-mk-list-fig">{fmt(shown.key, shown.value, unitOfRow(r))}</span>
             )}
           </li>
         );

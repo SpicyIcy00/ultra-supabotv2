@@ -173,6 +173,8 @@ FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
               # THE FIRST LIVE PAGE (P6.j): what he composed, and what the owner saw.
               # THE PAGE AS A DOCUMENT (P7): the same turn, written the new way.
               "doc-doing": ROOT / "ops" / "frames_fixtures" / "doc-doing.json",
+              # HIS OWN live page, from the run record (P8).
+              "doc-live": ROOT / "ops" / "frames_fixtures" / "doc-live.json",
               "live-packed": ROOT / "ops" / "frames_fixtures" / "live-packed.json",
               "live-page": ROOT / "ops" / "frames_fixtures" / "live-page.json",
               # BUILD TALKS (P6.g): a draft order, a watch, memory — the canvas past reads.

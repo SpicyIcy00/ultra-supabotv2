@@ -5386,3 +5386,51 @@ adding, once a live page shows it is wanted. The default page (`pageOf`) is unch
 **Held by.** `tests/test_compose_coercion_contract.py` (fourteen on the grammar, the bounds
 and the schema), `frontend/src/room/doc.dom.test.tsx` (twenty-two), the frames in
 `verification/frames/p7-doc/`.
+
+## 2026-09-21 — P8: one voice on the page
+
+**Decision.** On a page Bob wrote as a document, a block carries a `claim` and nothing else.
+Its `question` is never drawn — the section's head is the question. Its `thought` is never
+drawn as prose — the paragraph beside it is the thought — and survives only where it POINTS:
+a `span` over a stretch of a series, a callout on a row it names. Its claim is not drawn
+either where the head above it or the paragraphs of its section already say it (`restated`,
+the rule the caveat has used since P2S.1). The caption is 13px, the artifact's `.figh`, not
+15px in the same serif as the heads.
+
+**Why.** The owner, of the first page Bob wrote himself: *"it still doesnt look like your
+artifact it still looks like a reskin."* The run record says he was right about the cause and
+that it was not the grammar: he wrote heads, paragraphs, a placed caveat, rows and a figure
+beside its words. What made it a reskin is that every block still talked. "Which shops carry
+the fall?" in bold serif, then "Three shops fall, three hold, Rockwell climbs", then the
+chart, inside a section headed "Three shops fall, three hold, Rockwell climbs". Four voices
+per figure, and the page had no single one.
+
+**And the recipe was telling him to do it.** `composition.page_first.about` still carried the
+board-era instruction — "ON THE PAGE A HEAD IS ONE LINE: the bold lead is your `question` if
+you give one … a figure's `thought` sits under its number" — which is a caption-the-tiles rule
+inside a document. He followed it exactly. It now reads YOU ARE WRITING, NOT CAPTIONING, and
+says what a page needs instead: a lede that says the answer again with its figures inside it;
+two or three paragraphs a section, so a figure has words to sit beside; `**bold**` where a
+paragraph opens with its finding; no `size` unless the figure needs the width.
+
+**His emphasis reaches the page.** `Prose` runs his text through the same `unmark` his answer
+goes through, so `**a finding**` is drawn in weight and the markers never appear. The room
+does NOT decide which of his sentences is the finding — that would be the room writing.
+
+**Three things his own page exposed, none of them layout.**
+- His plan ran as one paragraph with the steps inside it ("Greenhills first. … Magnolia
+  second. … Then the exports."), and drew as a wall of italic. `planSteps` breaks on his own
+  openings where he left no blank line, and `planSteps(t).join(' ')` is still his text.
+- The `span` band filled a third of the chart, which is a selection box's language; the
+  bracket under it already said the same stretch. On a document the bracket points alone.
+- `get_attention` returns rows measured differently — a shop by its `change`, a crossed-out
+  line by what it `was`, a dead line by its `quantity_on_hand` — and each row says which on
+  `measure`. The list took the first numeric field it found (the read's own `rank`, for six
+  rows) and the first row's unit (so a stock count of 0 drew as "₱0"). Each row now draws the
+  measure it names, in its own unit, under the `section` the read put it in. A rank is an
+  ordering, not a measurement; a count is not pesos because the row above it was.
+
+**Held by.** `frontend/src/room/doc.dom.test.tsx` (one voice, his emphasis), `plan.test.ts`
+(the run-on plan, and that no word changes), `canvas.dom.test.tsx` (the list's measure, unit
+and runs). The scene `doc-live` is his own turn, from the run record, and is what the room is
+now measured against.

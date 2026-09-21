@@ -304,3 +304,78 @@ describe('the plan as steps', () => {
     expect(planSteps('I would look at Greenhills next.')).toHaveLength(1);
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * ONE VOICE (P8, 2026-09-21)
+ *
+ * The owner, of the first page Bob wrote himself: *"it still doesnt look like
+ * your artifact it still looks like a reskin."* The run record said why — he
+ * wrote a real page, and every block on it still carried its own question,
+ * headline and comment inside a section that had a heading and a paragraph.
+ * ------------------------------------------------------------------------ */
+
+const LIVE: Arrangement = { layout: 'stack', children: [
+  { head: 'Three shops fall, three hold, Rockwell climbs' },
+  { block: 'shops' },
+  { say: 'Rockwell is the only shop clearly ahead. **The rest hold.**' },
+] };
+
+const SPOKEN = [
+  block('shops', 'dumbbell', 1, {
+    claim: 'Three shops fall, three hold, Rockwell climbs',
+    question: 'Which shops carry the fall?',
+    thought: 'Rockwell is the only one clearly ahead.',
+  }),
+];
+
+function speak(arrangement: Arrangement, board = SPOKEN) {
+  return render(
+    <Board answers={[TURN]} board={board} local={{}} focused={null} selection={[]} live={false}
+           retuned={{}} on={ACTIONS()} arrangement={arrangement} />,
+  );
+}
+
+describe('a block on a document does not talk over the page', () => {
+  it('draws no question: the section head is the question', () => {
+    const { container } = speak(LIVE);
+    expect(container.querySelector('.r-mk-ask')).toBeNull();
+    expect(container.textContent).not.toContain('Which shops carry the fall?');
+  });
+
+  it('draws no thought: the paragraph beside it is the thought', () => {
+    const { container } = speak(LIVE);
+    expect(container.querySelector('.r-mk-thought')).toBeNull();
+    expect(container.querySelector('.r-mk-verdict')).toBeNull();
+  });
+
+  it('does not draw the section head again as the caption under it', () => {
+    const { container } = speak(LIVE);
+    const heads = Array.from(container.querySelectorAll('.r-doc-h, .r-mk-title'))
+      .map((el) => el.textContent?.trim());
+    expect(heads).toEqual(['Three shops fall, three hold, Rockwell climbs']);
+  });
+
+  it('keeps the claim where the page has not said it', () => {
+    const { container } = speak({ layout: 'stack', children: [
+      { head: 'What moved on the shelf' }, { block: 'shops' }] });
+    expect(container.querySelector('.r-mk-title')?.textContent)
+      .toContain('Three shops fall');
+  });
+
+  it('leaves a page the ROOM laid out exactly as it was', () => {
+    // No lede and no head is not a document: the block's own words are the
+    // only ones there, and every one of them still stands.
+    const { container } = speak({ layout: 'stack', children: [{ block: 'shops' }] });
+    expect(container.querySelector('.r-mk-ask')?.textContent).toBe('Which shops carry the fall?');
+    expect(container.querySelector('.r-mk-thought')).not.toBeNull();
+  });
+});
+
+describe('his own emphasis reaches the page', () => {
+  it('is drawn in weight, and the markers never are', () => {
+    const { container } = speak(LIVE);
+    const said = container.querySelector('.r-doc-p .r-page-say') as HTMLElement;
+    expect(said.textContent).toBe('Rockwell is the only shop clearly ahead. The rest hold.');
+    expect(said.querySelector('b')?.textContent).toBe('The rest hold.');
+  });
+});

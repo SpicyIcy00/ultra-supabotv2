@@ -106,6 +106,26 @@ export interface TileProps {
    */
   canvas?: boolean;
   /**
+   * ON A DOCUMENT (P8, 2026-09-21): he wrote the page as prose — a lede,
+   * headings, paragraphs — so the page already says what each figure is for.
+   * A block drawn inside it is a FIGURE IN AN ARTICLE: one caption line, its
+   * source line, and nothing else. Its `question` is not drawn (the section's
+   * head is the question) and its `thought` is not drawn (the paragraph
+   * beside it is the thought) — except where the thought POINTS, which is the
+   * annotation over a chart and part of the drawing.
+   *
+   * Unset on a page the ROOM laid out (pageOf): there is no prose there, so
+   * the block's own words are the only ones and they all stand.
+   */
+  document?: boolean;
+  /**
+   * WHAT THE PAGE HAS ALREADY SAID where this block sits — its section's head
+   * and the paragraphs beside it. A claim those already make is not drawn a
+   * second time (P8, `restated`): the owner's live page carried its section
+   * heading again as the caption over the chart under it.
+   */
+  said?: readonly string[];
+  /**
    * WHICH STRETCH OF TIME THIS FIGURE COVERS, drawn above it — set only when
    * the answer draws figures from MORE THAN ONE period (P3.q, render.tsx).
    *
@@ -433,9 +453,11 @@ function Note({ o }: { o: BoardObject }) {
  * him they open the way a step does — his claim in bold, his thought running
  * on — so a build talk reads as a page, not a form.
  */
-function BuiltHead({ o, canvas }: { o: TileProps['o']; canvas?: boolean }) {
+function BuiltHead({ o, canvas, document: doc }: {
+  o: TileProps['o']; canvas?: boolean; document?: boolean;
+}) {
   const claim = o.claim?.trim();
-  const thought = o.thought?.trim();
+  const thought = doc ? '' : o.thought?.trim();
   if (!canvas || (!claim && !thought)) return null;
   return (
     <p className="r-mk-say">
@@ -461,7 +483,7 @@ export function DraftTile(p: TileProps) {
 
   return (
     <Shell boxed={!p.canvas} landing={p.landing} delay={p.delay}>
-      <BuiltHead o={p.o} canvas={p.canvas} />
+      <BuiltHead o={p.o} canvas={p.canvas} document={p.document} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
         <div>
           <p className="r-label">draft order{meta?.supplier ? ` · ${meta.supplier}` : ''}</p>
@@ -736,7 +758,7 @@ export function SystemTile(p: TileProps) {
   return (
     <Shell quiet landing={p.landing} delay={p.delay}
            picked={p.focused}>
-      <BuiltHead o={p.o} canvas={p.canvas} />
+      <BuiltHead o={p.o} canvas={p.canvas} document={p.document} />
       <p className="r-label">{subject}{p.earlier ? ' · from earlier' : ''}</p>
       <p className="r-note" style={{ marginTop: 8 }}>{state || 'no state recorded'}</p>
       {(said('condition') || said('schedule') || said('would_have_fired')) && (
@@ -800,7 +822,7 @@ export function MemoryTile(p: TileProps) {
   return (
     <Shell quiet landing={p.landing} delay={p.delay}
            picked={p.focused}>
-      <BuiltHead o={p.o} canvas={p.canvas} />
+      <BuiltHead o={p.o} canvas={p.canvas} document={p.document} />
       <p className="r-label">
         what I think right now
         {/* HOW MANY THERE ARE, so a list that scrolls is not a list that ends.

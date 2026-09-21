@@ -30,6 +30,7 @@ import {
   callOf, changeOf, fmt, pct, readAt, receiptsLine, rowUnderClaim, rowsOf, type AnswerTurn,
 } from './data';
 import { colourOf, figureOf } from './catalogue';
+import { unmark } from './beside';
 import { paint } from './markParts';
 
 /** `{key}`, `{key.change}`, `{key.was}` — the same shape the loop validates. */
@@ -109,6 +110,24 @@ export function Prose({ text, figure }: {
   /** The live figure for a reference, or null when the page cannot resolve it. */
   figure(key: string, part: string | undefined, at: number): ReactNode;
 }) {
+  // HIS EMPHASIS IS DRAWN, NOT PRINTED — the same `unmark` his answer goes
+  // through, so `**a finding**` at the head of a paragraph reads the way the
+  // design draws it and the asterisks never reach the page.
+  const { plain, bold } = unmark(text);
+  /** A slice of his text, with the ranges he weighted set in weight. */
+  const weigh = (from: number, to: number, tag: string): ReactNode[] => {
+    const out: ReactNode[] = [];
+    let at = from;
+    for (const [a, b] of bold) {
+      if (b <= at || a >= to) continue;
+      if (a > at) out.push(plain.slice(at, a));
+      out.push(<b key={`b-${tag}-${a}`}>{plain.slice(Math.max(a, at), Math.min(b, to))}</b>);
+      at = Math.min(b, to);
+    }
+    if (at < to) out.push(plain.slice(at, to));
+    return out;
+  };
+
   // A FIGURE NEVER BREAKS FROM WHAT TOUCHES IT. A live figure is an atomic
   // inline, and a line may break on either side of one whatever the characters
   // are — so "(" ended a line with its figure on the next, and a comma could
@@ -122,28 +141,31 @@ export function Prose({ text, figure }: {
     if (run.length) out.push(<span key={`run-${n}-${out.length}`} className="r-inl-run">{run}</span>);
     run = [];
   };
-  for (const m of text.matchAll(REF)) {
+  for (const m of plain.matchAll(REF)) {
     const at = m.index ?? 0;
-    const between = text.slice(last, at);
+    const between = plain.slice(last, at);
     if (between) {
       // what trails the figure before (",", ")") closes its run; what leads
       // this one ("(") opens the next.
       const trail = run.length ? /^\S*/.exec(between)?.[0] ?? '' : '';
       const lead = /\S*$/.exec(between.slice(trail.length))?.[0] ?? '';
-      if (trail) run.push(trail);
-      const middle = between.slice(trail.length, between.length - lead.length);
-      if (middle || !run.length) { close(); if (middle) out.push(middle); }
-      if (lead) run.push(lead);
+      const mid = [last + trail.length, at - lead.length] as const;
+      if (trail) run.push(...weigh(last, last + trail.length, `t${n}`));
+      if (mid[1] > mid[0] || !run.length) {
+        close();
+        if (mid[1] > mid[0]) out.push(...weigh(mid[0], mid[1], `m${n}`));
+      }
+      if (lead) run.push(...weigh(at - lead.length, at, `l${n}`));
     }
     run.push(figure(m[1], m[2], n) ?? <span key={`r-${n}`} className="r-inl r-inl--missing">—</span>);
     last = at + m[0].length;
     n += 1;
   }
-  const rest = text.slice(last);
+  const rest = plain.slice(last);
   const trail = run.length ? /^\S*/.exec(rest)?.[0] ?? '' : '';
-  if (trail) run.push(trail);
+  if (trail) run.push(...weigh(last, last + trail.length, 'tz'));
   close();
-  if (rest.length > trail.length) out.push(rest.slice(trail.length));
+  if (rest.length > trail.length) out.push(...weigh(last + trail.length, plain.length, 'z'));
   return <>{out}</>;
 }
 

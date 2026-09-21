@@ -301,3 +301,49 @@ describe('one page, on every list', () => {
     expect(container.querySelector('.r-mk-more')?.textContent).toBe('8 more lines · show');
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * A LIST OF TWO KINDS OF ROW (P8, 2026-09-21)
+ *
+ * `get_attention` returns what crossed a line: shops measured in pesos by
+ * their `change`, crossed-out lines by what they `was`, dead lines by their
+ * `quantity_on_hand`. Each row NAMES its own measure. Drawn as one column with
+ * one unit, a stock count of 0 came out as "₱0" and six rows wore the read's
+ * own `rank` — 12, 13, 14 — where a figure goes.
+ * ------------------------------------------------------------------------ */
+
+const CROSSED_KINDS = [
+  { section: 'sales_vs_same_weekday', subject: 'Magnolia', unit: 'PHP', rank: 1,
+    value: 26666.19, change: -32478.89, measure: 'change' },
+  { section: 'stock_crossed_out', subject: 'G16 plum mizu 1g', store: 'OPUS', rank: 4,
+    now: -129, was: 271, measure: 'was' },
+  { section: 'newly_dead', subject: 'Fruit and veggies 1g', store: 'OPUS', rank: 12,
+    size: 161, quantity_on_hand: 161, measure: 'quantity_on_hand' },
+];
+
+describe('a list draws each row by the measure its read names', () => {
+  it('uses that measure, never the read\'s own rank', () => {
+    const { container } = draw({ kind: 'list', claim: 'What crossed a line' }, CROSSED_KINDS, true);
+    const figures = Array.from(container.querySelectorAll('.r-mk-list-fig')).map((f) => f.textContent);
+    expect(figures).toEqual(['-₱32,479', '271', '161']);
+  });
+
+  it('gives a row with no unit no unit, whatever the row above it carries', () => {
+    const { container } = draw({ kind: 'list', claim: 'What crossed a line' }, CROSSED_KINDS, true);
+    const figures = Array.from(container.querySelectorAll('.r-mk-list-fig')).map((f) => f.textContent);
+    expect(figures.filter((f) => f?.includes('₱'))).toHaveLength(1);
+  });
+
+  it('names each run where the read groups its own rows', () => {
+    const { container } = draw({ kind: 'list', claim: 'What crossed a line' }, CROSSED_KINDS, true);
+    const opens = Array.from(container.querySelectorAll('[data-opens]'))
+      .map((el) => el.getAttribute('data-opens'));
+    expect(opens).toEqual(['sales vs same weekday', 'stock crossed out', 'newly dead']);
+  });
+
+  it('names nothing where every row is the same kind', () => {
+    const rows = CROSSED_KINDS.map((r) => ({ ...r, section: 'stock_crossed_out' }));
+    const { container } = draw({ kind: 'list', claim: 'What crossed a line' }, rows, true);
+    expect(container.querySelector('[data-opens]')).toBeNull();
+  });
+});

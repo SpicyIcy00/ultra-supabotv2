@@ -52,6 +52,7 @@ import {
 import type { ActionOffer } from '../types/bob';
 import { ObjectPanel, kindOf } from './ObjectPanel';
 import { dimensionOf } from './data';
+import { restated } from './beside';
 import { Swatch, useHueFor } from './swatch';
 import {
   COOL, NO_TAKE, RowName, RowOffers, beat, emphasised, moved, paint, told, type Offering,
@@ -128,7 +129,7 @@ function Figure(p: TileProps & { rows: Row[]; meta: Meta }) {
       {/* THE VERDICT UNDER THE NUMBER (P6.e, the design's `.pair .verdict`):
           on the canvas a figure's thought is what the number means, set
           under it, not a third sentence on the head. */}
-      {p.canvas && !p.told && p.o.thought?.trim() && (
+      {p.canvas && !p.document && !p.told && p.o.thought?.trim() && (
         <p className="r-mk-verdict"><Figures text={p.o.thought.trim()} calls={p.turn.toolCalls} /></p>
       )}
     </>
@@ -522,7 +523,10 @@ function Line({ rows, meta, o, subject, p }: {
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={canvas ? undefined : H} role="img"
            aria-label={`${measureOf(meta, key)} over ${points.length} points`}
            style={{ display: 'block', overflow: 'visible' }}>
-        {banded && !onePoint && (
+        {/* THE BRACKET POINTS; THE REGION SELECTED (P8). Over a third of a chart
+            the filled band read as a dragged selection, which is a control's
+            language — and the leader below already says the same stretch. */}
+        {banded && !onePoint && !p.document && (
           <rect className="r-mk-span-band" data-dir={bandDir} style={bandColour ? { color: bandColour } : undefined}
                 x={x(banded[0])} y={canvas ? yTop : 0}
                width={Math.max(2, x(banded[1]) - x(banded[0]))} height={canvas ? yBase - yTop : H} />
@@ -875,16 +879,22 @@ export function MarkBlock(p: TileProps) {
             "still some widgets not page". Where he asked no question the head
             is exactly what it was, and every board composed before this draws
             unchanged. */}
-        <p className="r-mk-say" data-step={p.o.question?.trim() ? 'yes' : undefined}>
-          {p.o.question?.trim() && (
+        {/* ONE CAPTION ON A DOCUMENT (P8): the claim, and the source line
+            under the drawing. The question and the thought are the page's
+            job there — see TileProps.document. */}
+        <p className="r-mk-say" data-step={!p.document && p.o.question?.trim() ? 'yes' : undefined}>
+          {!p.document && p.o.question?.trim() && (
             <span className="r-mk-ask">{p.o.question.trim()}</span>
           )}
-          <span className="r-mk-title">
-            {titleFor(p.o, meta)}{p.earlier ? ' · from earlier' : ''}
-          </span>
+          {!restated(titleFor(p.o, meta), p.said ?? []) && (
+            <span className="r-mk-title">
+              {titleFor(p.o, meta)}{p.earlier ? ' · from earlier' : ''}
+            </span>
+          )}
           {/* ON THE CANVAS A FIGURE'S THOUGHT IS ITS VERDICT, under the number
               (P6.e), so the head stays one line. */}
-          {!p.told && p.o.thought?.trim() && !spanResolves && !(p.canvas && mark === 'figure') && (
+          {!p.told && !p.document && p.o.thought?.trim() && !spanResolves
+            && !(p.canvas && mark === 'figure') && (
             <>
               {/[.!?:…]["'”’)\]]?$/.test(`${titleFor(p.o, meta)}`.trim()) ? ' ' : '. '}
               <span className="r-mk-thought">

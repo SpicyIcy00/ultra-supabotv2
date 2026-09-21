@@ -2392,9 +2392,16 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 /* The rows as a list: name, where, figure. */
 .r-mk-list { list-style: none; margin: 4px 0 0; padding: 0;
   columns: 2; column-gap: 28px; }
-.r-mk-list-row { break-inside: avoid; display: flex; align-items: baseline; gap: 10px;
+.r-mk-list-row { break-inside: avoid; display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px;
   padding: 5px 0; border-top: 1px solid var(--edge); font: 400 13px/1.5 var(--sans); }
 .r-mk-list-where { font: 400 11px/1.5 var(--mono); color: var(--ink-3); }
+/* WHERE A READ GROUPS ITS OWN ROWS, the list names each run once (P8). */
+.r-mk-list-row[data-opens]::before {
+  content: attr(data-opens); display: block; flex: 0 0 100%;
+  font: 500 10px/1.6 var(--mono); letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-4); margin: 10px 0 2px;
+}
+.r-mk-list-row:first-child[data-opens]::before { margin-top: 0; }
 .r-mk-list-fig { margin-left: auto; font: 500 12px/1.5 var(--mono); }
 /* Seven shops across on a desk; a phone folds them to two. */
 .r-mk-multiples { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
@@ -2435,6 +2442,15 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
   font: 600 15px/1.45 var(--serif); letter-spacing: 0; margin: 0 0 6px; max-width: none;
 }
 .r-board--laid .r-mk-say .r-mk-thought, .r-board--laid .r-mk-say[data-step] .r-mk-title { font-weight: 400; }
+/* ON A DOCUMENT IT IS A CAPTION, NOT A HEADING (P8, the artifact's `.figh`):
+   13px, under the section's head rather than beside it in weight. At 15px in
+   the same serif it read as a second heading over every figure — which is most
+   of what made his first live page "a reskin". */
+.r-doc-fig .r-mk-say, .r-doc-fig .r-fig--lead .r-mk-say,
+.r-doc-fig .r-fig[data-under] .r-mk-say, .r-doc-fig .r-fig[data-told="yes"] .r-mk-say {
+  font: 600 13px/1.5 var(--serif); margin: 0 0 7px;
+}
+.r-doc-fig .r-mk-verdict { font-size: 13px; }
 /* THE SOURCE LINE (`.src`): 10px, the quietest ink. */
 .r-board--laid .r-src { font-size: 10px; color: var(--ink-4); }
 /* A NUMBER (`.totals`, `.pair`): mono 500, its change as coloured text at
@@ -2475,6 +2491,10 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 /* The band is the direction of the rows in it, at a tenth; ink when they
    disagree or the tool declared none. */
 .r-mk-span-band[data-dir] { fill: currentColor; opacity: 0.10; }
+/* ON A DOCUMENT IT POINTS; IT DOES NOT SELECT (P8). At 0.12 over a third of
+   the chart it read as a dragged selection box, which is a control's language. */
+.r-doc-fig .r-mk-span-band { opacity: 0.055; }
+.r-doc-fig .r-mk-span-band[data-dir] { opacity: 0.05; }
 /* The design's `.l-now` and `.l-was`: the month in ink, the month before
    dashed in ink-3, the one labelled point in ink. */
 .r-board--laid .r-mk-series-line { stroke: var(--ink); }

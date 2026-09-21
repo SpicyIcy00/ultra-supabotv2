@@ -3106,3 +3106,23 @@ their own profile and a `timeout`; nothing is killed by image name again.
 
 Frontend 1165, backend 2162. `verification/frames/p7-doc/` — desk, 600 px and phone.
 NOT verified: that Bob writes such a page. That is one live turn, and it is the owner's call.
+
+### 2026-09-21 — the first page Bob wrote himself, and what it cost to read it
+
+He ran "how are we doing?" on the deployed build at 15:05 and sent two screenshots: *"can you
+see this? it still doesnt look like your artifact it still looks like a reskin."*
+
+The useful thing is that the diagnosis did not need a guess. The run record holds the whole
+composition — eleven blocks, the arrangement, the reading — and reading it said plainly that
+the GRAMMAR worked and the VOICE did not. He wrote a lede-less page of six heads, five
+paragraphs, a placed caveat, two rows and one figure set beside its words. Every block also
+carried a question, a claim and a thought, because the recipe still told him to write all
+three. Three of his claims were his heads repeated word for word.
+
+What this says about how the last card was verified: the P7 fixture was a page I wrote by
+hand, in the new grammar, using every part of it well. It proved the renderer could draw a
+good document. It could not have caught that Bob would write a mediocre one, because it was
+not his. The fixture for this card is his own turn (`ops/frames_fixtures/doc-live.json`),
+pulled from `george.posts`, and every future page card should start from one of those.
+
+Frontend 1180, backend 2162. `verification/frames/p8/`.

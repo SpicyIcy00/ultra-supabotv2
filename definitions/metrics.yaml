@@ -7508,21 +7508,31 @@ composition:
   # THE PAGE FOR A BROAD QUESTION, as a recipe on `compose` (P6.c). Read at
   # the moment he composes, which is where it is needed, and not in the prompt.
   page_first:
+    # WRITE IT, DO NOT CAPTION IT (P8, 2026-09-21). What stood here until today
+    # told him how to write a block's head — "the bold lead is your `question`
+    # ... a figure's `thought` sits under its number" — which is the board era
+    # giving orders inside a document. He followed it and the owner's word for
+    # the result was "a reskin": eleven tiles, each with its own question,
+    # headline and comment, with section headings in between.
     about: >
-      For a broad question, the page: a `lede` that says the answer with the
-      estate's total, its movement and what moved it, each by reference; the
-      series that shows WHEN, read AGAINST ITS OWN BASELINE so the drawing can
-      show the gap, set beside the words that read it, a `span` on the point
-      that matters; a `head` and the comparison that shows WHERE, beside its
-      words, with a window `control` if the month would tell a different
-      story; the one place you cannot explain, in its own section; what moved,
-      drops and gains facing each other in a `row`, in `tabs` if you read it
-      at two scopes; a `note` where the data cannot be trusted as read; and
-      the plan last. ON THE PAGE A HEAD IS ONE LINE: the bold lead is your
-      `question` if you give one, else the `claim`; the claim runs on after
-      a question in plain weight; a figure's `thought` sits under its number,
-      a span's on the chart. Six words bold, a short sentence after, never
-      three sentences stacked, which reads as a thread.
+      For a broad question, the page: a `lede` that says the answer AGAIN, in
+      one or two sentences, with the estate's total, its movement and what
+      moved it by reference inside them; the series that shows WHEN, read
+      AGAINST ITS OWN BASELINE so the drawing can show the gap, with a `span`
+      on the point that matters; a `head` and the comparison that shows WHERE,
+      with a window `control` if the month would tell a different story; the
+      one place you cannot explain, in its own section; what moved, drops and
+      gains facing each other in a `row`, in `tabs` if you read it at two
+      scopes; a `caveat` where the data cannot be trusted as read; and the plan
+      last. YOU ARE WRITING, NOT CAPTIONING. On a page a block carries a
+      `claim` — the few words under its drawing — and nothing else: no
+      `question`, no `thought`, because the section's head is the question and
+      the paragraph beside it is the thought. Give each section TWO OR THREE
+      paragraphs, so the figure has words to sit beside; one thin line over a
+      full-width chart is the thread you are replacing. Open a paragraph with
+      its finding in **bold** where it helps. Leave `size` out unless the
+      figure needs the width — a series over many points, a list of many
+      names; the page sizes the rest and sets them beside your words.
 
   arrangement:
     # THE PAGE IS A DOCUMENT (P7, 2026-09-21). The owner: "i want it like an
@@ -7537,14 +7547,17 @@ composition:
       stays on the left; everything else you say is on the page. The text is
       the spine. Open with a `lede`: one sentence that carries the answer with
       its figures INSIDE it. Then the argument in sections, each opened by a
-      `head` that states its finding, then `say` paragraphs with the figure
-      they discuss set `beside` them. A FIGURE INSIDE A SENTENCE IS A
+      `head` that states its finding, then TWO OR THREE `say` paragraphs with
+      the figure they discuss set `beside` them. A block on this page carries
+      a `claim` and nothing else: its `question` and its `thought` are not
+      drawn here, because you have written both into the page. A FIGURE INSIDE A SENTENCE IS A
       REFERENCE, NEVER A DIGIT: compose a `figure` block for the number and
       write {its-key} where it belongs, {its-key.change} for how it moved,
       {its-key.was} for what it was; the page draws the row's own value with
       its receipt. A leaf is {"lede": "..."}, {"head": "..."}, {"say": "..."},
       {"note": "...", "label": "..."} (a margin note: what qualifies the
-      page), {"block": "<key>"}, {"next": true} (the plan, usually last), or
+      page), {"block": "<key>"}, {"next": true} (the plan, usually last — give
+      each step its own paragraph, separated by a blank line), or
       {"caveat": true} (your reading's caveat, set as the margin note of the
       section it qualifies — placed, it is on the page and no longer beside
       your answer; write it once, there, and never again as a `note`).

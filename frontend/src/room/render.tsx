@@ -668,6 +668,32 @@ export function Board(p: BoardProps) {
     // Then what the tree did not place, in the order it is drawn after it.
     for (const key of readOrder) if (!laidOut || !placedKeys.has(key)) say(key);
   }
+  // WHAT THE PAGE ALREADY SAYS WHERE A BLOCK SITS (P8): its section's head and
+  // every paragraph of that section. A block's own claim that restates one of
+  // them is not drawn again over the drawing — the owner's live page carried
+  // "Three shops fall, three hold, Rockwell climbs" as the heading AND as the
+  // caption of the chart beneath it.
+  const saidNear = new Map<string, string[]>();
+  if (laidOut && 'children' in laidOut) {
+    const sections: Arrangement[][] = [[]];
+    for (const child of laidOut.children) {
+      if ('head' in child && sections[sections.length - 1].length) sections.push([]);
+      sections[sections.length - 1].push(child);
+    }
+    for (const parts of sections) {
+      const words: string[] = [];
+      const keys: string[] = [];
+      const gather = (node: Arrangement): void => {
+        if ('children' in node) { node.children.forEach(gather); return; }
+        if ('block' in node) { keys.push(node.block); return; }
+        for (const leaf of ['head', 'say', 'lede'] as const) {
+          if (leaf in node) words.push((node as Record<string, string>)[leaf]);
+        }
+      };
+      parts.forEach(gather);
+      for (const key of keys) saidNear.set(key, words);
+    }
+  }
   // THE FIGURE A SENTENCE POINTS AT (P7): the block he named, drawn as the one
   // value of its row. A key that names nothing on the board draws a dash.
   const inline = (key: string, part: string | undefined, n: number): ReactNode => {
@@ -817,7 +843,10 @@ export function Board(p: BoardProps) {
     const stamps = (p.answers[newest]?.toolCalls ?? [])
       .map((c) => c.result?.meta?.snapshot_timestamp).filter((x): x is string => Boolean(x)).sort();
     const when = stamps.length ? readAt(stamps[0]) : null;
-    const window_ = periods.size === 1 ? [...periods][0] : null;
+    // The one window every figure shares, IN WORDS. `periods` holds the key a
+    // window is compared by (its two dates), which is not a thing to read.
+    const window_ = periods.size === 1
+      ? objects.map(periodOf).find((x): x is string => Boolean(x)) ?? null : null;
     return (
       <>
         {(when || window_) && (
@@ -949,6 +978,8 @@ export function Board(p: BoardProps) {
               focus={it.focus}
               chrome={chromeFor(index, out)}
               canvas={laid}
+              document={isDocument}
+              said={saidNear.get(o.key)}
               period={manyPeriods ? periodOf(o) : null}
               order={orderFor(o)}
               o={o}
