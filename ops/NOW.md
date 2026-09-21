@@ -3694,7 +3694,7 @@ UI), P3.e (into P3.d), P3.f (into P3.b).
       proven against a real turn until the phase close; and the design file
       still holds the old right side, so its half of the frame is not yet
       like-for-like (P3.l). No eval, at the owner's word.
-- [ ] **P3.k the table stops drawing the same column three times** — the owner's
+- [x] **P3.k the table stops drawing the same column three times** **BUILT 2026-09-21.** The fold, the caption naming what it dropped, `Rows` handing `tableShape` every row instead of the eight on screen, and `needsWidth` reading the folded count — all present and held by `tableShape.test.ts` (17). Two of its Done-whens had no test until today: a column that mirrors another only across the FIRST EIGHT rows of forty is kept (a folded table shows 8 of N, and what was tolerable for a caption is a deletion once the pass removes a column), and the caller is asserted to pass `all` — the bug was invisible in `tableShape`'s own tests because it lived in its caller. Frontend 1183. — the owner's
       cuttlefish read drew `days out of stock`, `current stockout run` and
       `longest stockout run` as three columns holding THE SAME NUMBER in every
       row. `data.ts:327` folds a column that is constant DOWN the rows; nothing

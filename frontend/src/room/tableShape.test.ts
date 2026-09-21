@@ -188,4 +188,34 @@ describe('a column that only repeats another', () => {
     const { columns } = tableShape(stockout.slice(0, 2), null);
     expect(columns).toContain('current_stockout_run');
   });
+
+  // OVER EVERY ROW, NOT THE VISIBLE ONES (P3.k's second half).
+  //
+  // A folded table shows 8 of N. `Rows` used to hand those 8 to `tableShape`,
+  // which was tolerable while the worst outcome was a caption naming a column
+  // "constant" that was not -- and became a deletion the moment this pass
+  // started REMOVING a mirrored column. Two columns that happen to agree on
+  // the first eight rows of forty are not the same column.
+  it('keeps a column that only mirrors another on the first eight rows', () => {
+    const forty = Array.from({ length: 40 }, (_, i) => ({
+      store: `S${i}`,
+      days_out_of_stock: i,
+      // Agrees for the first eight rows, then goes its own way.
+      current_stockout_run: i < 8 ? i : i * 2,
+    }));
+    expect(tableShape(forty.slice(0, 8), null).columns).not.toContain('current_stockout_run');
+    const { columns } = tableShape(forty, null);
+    expect(columns).toContain('days_out_of_stock');
+    expect(columns).toContain('current_stockout_run');
+  });
+
+  it('is handed every row by the table that draws it', async () => {
+    // The behaviour above is only protective if the caller passes the whole
+    // set. `Rows` slices for display on the line before; this asserts the call
+    // takes `all`, because the bug was invisible in tableShape's own tests.
+    const fs = await import('node:fs');
+    const src = fs.readFileSync('src/room/marks.tsx', 'utf8');
+    expect(src).toContain('tableShape(all, meta)');
+    expect(src).not.toContain('tableShape(rows, meta)');
+  });
 });
