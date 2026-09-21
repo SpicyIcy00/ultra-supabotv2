@@ -5314,3 +5314,27 @@ because `rounds.settle` already says that round is the last one.
 (reopened laid out; packed when the post carries none), `test_convergence_cap_contract`
 (the reminder, once), the frames `live-page` / `live-packed`.
 
+## 2026-09-21 — P6.k: the page is the default, not the reward
+
+**Decision.** A board Bob composed is drawn as a page whether or not he sent an
+`arrangement`. `pageOf` builds one from his own blocks: his order, two neighbours of the
+same shape side by side (a number beside a number, a ranking beside a ranking), charts,
+tables and lists at full width, blocks he drew and never wrote up after the page, the plan
+last. Fewer than three blocks he wrote up is not a page and packs, as before. His own tree
+always wins. The packing now draws only the board the machine composed — the reads he never
+wrote up — and its contract tests say so.
+
+**Why.** The owner, of a reopened thread: *"did we reach our goal?"* It drew as the
+two-column packing, because the canvas was conditional on an arrangement he had to
+remember to send, and on a post that had never stored one. "It should feel great in every
+scenario" cannot rest on that.
+
+**What the change exposed.** A line on the canvas lost its subject's swatch when the legend
+replaced the ends line — identity on its one channel (P2S.2(e)), put back. And the relation
+word: suppressed on a page HE laid out (P6.e — the placement is his statement), it is kept
+on a page the room laid out, except where the point sits immediately after its own stem
+and position already says it.
+
+**Held by.** `pageOf.test.ts` (six), `identity.dom.test.tsx`, `room.dom.test.tsx` (the
+packer, on the machine's board).
+

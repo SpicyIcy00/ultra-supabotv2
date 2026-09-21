@@ -3063,3 +3063,13 @@ a `say`, the shops, two rows of drivers, `{next: true}`. Read back into the harn
 
 Frontend 1137, backend 2148. Local: `verification/frames/live2/`, `canvas8/`.
 
+### 2026-09-21 — "did we reach our goal?" (no: the canvas was conditional)
+
+The owner reopened the 12:25 turn after the deploy. The overlap was gone — that fix held —
+but what he saw was the packing: eleven tiles in two columns, three competing big numbers,
+the day chart crushed with its sentence down a six-character gutter. The page was drawing
+only when Bob sent an arrangement, and that post (written before this morning) carried
+none. So the page became the default (P6.k). The same turn, same data, no arrangement, now
+draws as a page: `verification/frames/page-default/live-packed-1440-closed-room.png`.
+Frontend 1143, backend 2148.
+

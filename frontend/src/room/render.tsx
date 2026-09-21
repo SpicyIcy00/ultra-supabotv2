@@ -22,6 +22,7 @@ import { FIGURE_GAP, columnsFor, needsWidth, placeFigures, revealAt } from './be
 import { CHILD_GAP, gather, type Relation } from './gather';
 import { focusFor, sectionFor, type Section } from './page';
 import { readIndexes } from './work';
+import { pageOf } from './pageOf';
 import { PROCESS, callOf, rowsOf, tableShape, windowLabel, type AnswerTurn, type Dimension } from './data';
 import { markFor } from './catalogue';
 import type { ToolCall } from '../types/bob';
@@ -376,6 +377,15 @@ export function Board(p: BoardProps) {
     }
   }
   const objects = items.flatMap((it) => (it.kind === 'fig' ? [it.o] : []));
+  // WHERE POSITION ALREADY SAYS IT (P6.k). A point drawn immediately after
+  // the point it belongs to needs no word over it; one a screen away does,
+  // which is the whole of why the word exists (P3.o). On a page HE laid
+  // out, neither: the placement is his statement (P6.e).
+  const afterItsStem = new Set<string>();
+  objects.forEach((o, n) => {
+    const up = plan.parentOf[o.key];
+    if (up && objects[n - 1]?.key === up) afterItsStem.add(o.key);
+  });
   const width = useViewport();
   // WHAT EACH FIGURE NEEDS, from what it draws (beside.needsWidth).
   const wide = objects.map((o) => {
@@ -544,7 +554,12 @@ export function Board(p: BoardProps) {
   // server says so on `coerced` as well; this is the half that makes it true
   // on screen, because a figure that vanishes because an arrangement forgot it
   // is the one failure this may not have.
-  const laidOut = p.arrangement ?? null;
+  // THE PAGE IS THE DEFAULT (P6.k, 2026-09-21): a board he composed is laid
+  // out whether or not he said how. His own tree wins; `pageOf` draws when
+  // he left it alone, and returns null for a board that is only the
+  // machine's — which is the packing, exactly as before.
+  const laidOut = p.arrangement
+    ?? pageOf(items.flatMap((it) => (it.kind === 'fig' ? [it.o] : [])));
   const byKey = new Map(items.flatMap((it) => (it.kind === 'fig' ? [[it.o.key, it] as const] : [])));
   // WHICH KEYS HIS TREE ACTUALLY PLACES, so the rest can be drawn after it.
   const placedKeys = new Set<string>();
@@ -689,8 +704,11 @@ export function Board(p: BoardProps) {
               const up = plan.parentOf[o.key];
               // ON THE CANVAS HIS ARRANGEMENT IS THE RELATION (P6.e): what
               // sits beside or under what is already said by where he put
-              // it, and a WHY line over a chart he placed is a caption.
-              if (!up || laid) return null;
+              // it, and a WHY line over a chart he placed is a caption. On
+              // a page the room laid out for him (P6.k) the word stands
+              // wherever position cannot carry it.
+              if (!up || p.arrangement) return null;
+              if (laid && afterItsStem.has(o.key)) return null;
               // ADJACENT IS `it.under` — the same decision that placed it
               // tight under its stem, so the word and the placement can no
               // longer disagree, which is the whole of the defect.

@@ -488,6 +488,15 @@ function Line({ rows, meta, o, subject, p }: {
           the axis — the packed board's ends line says it in its own place. */}
       {canvas && (
         <p className="r-mk-legend-line">
+          {/* WHOSE SERIES THIS IS (P2S.2(e)): one store's line wears that
+              store's swatch here, as it does in every other mark — the
+              canvas legend replaced the ends line and took the dot with
+              it (identity.dom.test.tsx). */}
+          {subject && (
+            <span className="r-mk-key r-mk-series">
+              <Swatch name={subject} dimension={dimensionOf(rows, subject) ?? 'store'} />{subject}
+            </span>
+          )}
           <i />this {period}
           {drawnBase && <><i className="r-mk-legend-was" />the {period} before, {by ?? 'point'} for {by ?? 'point'}</>}
         </p>

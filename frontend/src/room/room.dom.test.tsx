@@ -253,6 +253,14 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
   // whole width (beside.needsWidth), which is a different test.
   const many = (n: number) => Array.from({ length: n }, (_, i) => object('ranked', { key: `f${i}` }));
   /**
+   * THE BOARD THE PACKER STILL DRAWS (P6.k, 2026-09-21). Three or more blocks
+   * HE composed are laid out as a page now (`pageOf`), so the packing draws
+   * what it draws in production: the machine's own board — the reads he never
+   * wrote up, which carry no claim and are opened from the line at the foot.
+   * Its contract is unchanged and is what the rest of this block holds.
+   */
+  const machine = (o: BoardObject): BoardObject => ({ ...o, default: true });
+  /**
    * A POINT TAKES THE WHOLE WIDTH; ONLY WHAT IS GATHERED UNDER ONE SHARES IT.
    *
    * Three tries got here (P3.l). Two columns packed shortest-first was a
@@ -270,7 +278,7 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
    * answer rests on across the top, and the rest beside each other beneath.
    */
   it.each([[2], [3], [4], [5]])('pairs %i points when none of them leads', (n) => {
-    const { container } = draw(many(n as number));
+    const { container } = draw(many(n as number).map(machine));
     expect(container.querySelector('.r-flow')?.getAttribute('data-columns')).toBe('2');
     const figs = Array.from(container.querySelectorAll<HTMLElement>('[data-figure]'));
     expect(figs).toHaveLength(n as number);
@@ -278,7 +286,8 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
   });
 
   it('gives the lead the whole width and pairs the rest beneath it', () => {
-    const { container } = draw([object('ranked', { key: 'top', weight: 'lead' }), ...many(3)]);
+    const { container } = draw([object('ranked', { key: 'top', weight: 'lead' }),
+                                ...many(3)].map(machine));
     const at = (k: string) => (container.querySelector(`[data-figure="${k}"]`) as HTMLElement).style.gridColumn;
     expect(at('top')).toBe('1 / -1');
     for (const k of ['f0', 'f1', 'f2']) expect(['1', '2']).toContain(at(k));
@@ -289,7 +298,7 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
       object('ranked', { key: 'fall', weight: 'lead' }),
       object('ranked', { key: 'stock', under: 'fall', relation: 'evidence' }),
       object('ranked', { key: 'grew', under: 'fall', relation: 'counter' }),
-    ]);
+    ].map(machine));
     const at = (key: string) => container
       .querySelector<HTMLElement>(`[data-figure="${key}"]`) as HTMLElement;
     expect(at('fall').style.gridColumn).toBe('1 / -1');
@@ -309,7 +318,7 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
       object('table', { key: 'grew', under: 'fall', relation: 'counter' }),
       object('table', { key: 'cats', under: 'fall', relation: 'scale' }),
       object('table', { key: 'stock', under: 'fall' }),
-    ]);
+    ].map(machine));
     const rel = (key: string) => container
       .querySelector(`[data-figure="${key}"] .r-fig-rel`)?.textContent;
     expect(rel('grew')).toBe('against that');
@@ -330,7 +339,7 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
     const figures = [
       object('ranked', { key: 'a' }), object('ranked', { key: 'b' }),
       object('ranked', { key: 'c', weight: 'lead' }),
-    ];
+    ].map(machine);
     const { container } = draw(figures);
     const first = container.querySelector('[data-figure]') as HTMLElement;
     expect(first.getAttribute('data-figure')).toBe('c');
