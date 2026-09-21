@@ -479,9 +479,17 @@ def test_a_fingerprint_is_never_satisfied_by_naming_the_column():
     )
 
     # And the answer that does it is still reported as unsurfaced.
+    #
+    # THE WORKED EXAMPLE MOVED, 2026-09-21. This was `low_stock_not_operational`,
+    # which the owner reclassified `explains_only` that day — it says a section
+    # is ABSENT, not that a figure is wrong — so `_unsurfaced` now skips it
+    # before any fingerprint is consulted and it can no longer demonstrate
+    # anything about fingerprints. The guarantee is unchanged and is the
+    # `offenders` check above; what is shown here is that a notice still
+    # REQUIRED in prose is not discharged by naming the schema.
     missing = bob_loop._unsurfaced(
-        [{"kind": "low_stock_not_operational", "message": "..."}],
-        "inventory.warning_stock is null on 100% of rows, so nothing is flagged.",
+        [{"kind": "negative_on_hand", "message": "..."}],
+        "inventory.quantity_on_hand is below zero on 2,180 rows.",
         load_defs(),
     )
     assert missing

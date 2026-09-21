@@ -8019,6 +8019,17 @@ surface:
         - replenishment_mixed_algorithms
         - replenishment_days_of_stock_tail
         - same_store_scope
+        # 2026-09-21, the owner's call. It was in NEITHER list, so "fail toward
+        # showing" drew it and the loop forced it into the answer — and what it
+        # says is "there is no 'newly low on stock' section, because the
+        # low-stock level has never been set on any product". No figure shown
+        # is wrong; it explains why a section is ABSENT, which is what
+        # `empty_section` above already is. It reached his answer twice on
+        # 2026-09-21 as part of the appended block he has asked three times to
+        # be rid of. The refusal still says what it refused (the message is
+        # unchanged and still reaches the model): this is what the room DRAWS
+        # and what the loop REQUIRES in his prose, nothing more.
+        - low_stock_not_operational
       data_may_be_wrong:
         - weekday_misaligned
         - reconciliation_failed

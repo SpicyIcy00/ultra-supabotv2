@@ -83,3 +83,32 @@ def test_the_rule_says_so():
     rule = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
     assert "surface.desk.notices" in rule
     assert "unless it has wrong" in rule
+
+
+def test_a_section_that_cannot_exist_is_explained_not_warned_about():
+    """
+    The owner, 2026-09-21: *"Want it gone?"* — *"Ok go."*
+
+    `low_stock_not_operational` says there is no "newly low on stock" section
+    because the low-stock level has never been set on any product. No figure
+    shown is wrong; it explains why a section is ABSENT, exactly as
+    `empty_section` does. It was in NEITHER list, so "fail toward showing"
+    drew it AND the loop forced it into his prose — it reached his answers
+    twice that day inside the appended block he has asked three times to be
+    rid of.
+
+    What did NOT change: the tool still raises it, the refusal still says what
+    it refused, and the model still receives the message as guidance. This is
+    what the room draws and what the loop requires in prose, nothing more.
+    """
+    assert "low_stock_not_operational" in NOTICES["explains_only"]
+    assert "low_stock_not_operational" not in NOTICES["data_may_be_wrong"]
+
+
+def test_stale_data_is_still_warned_about():
+    # The counterweight to the test above: "stale" is named in UI rule 4 as a
+    # kind that IS drawn, and reclassifying the one above must not drag it
+    # along. Staleness remains the most common forced notice on DeepSeek.
+    for kind in ("stale_sources", "stale_stock"):
+        assert kind in NOTICES["data_may_be_wrong"], kind
+        assert kind not in NOTICES["explains_only"], kind

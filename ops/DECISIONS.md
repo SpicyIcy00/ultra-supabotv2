@@ -5650,3 +5650,32 @@ the variable is absent — the tests need a constructible configuration, not a k
 **Held by.** `tests/test_provider_contract.py` — the default is DeepSeek, one variable restores
 Anthropic byte for byte, an unknown provider raises rather than quietly serving another, the
 ceiling only comes down, and `describe()` leaks no key even from a URL containing one.
+
+## 2026-09-21 — a section that cannot exist is explained, not warned about
+
+The owner, asked whether it should go: *"Ok go."*
+
+`low_stock_not_operational` says there is no "newly low on stock" section, because the low-stock
+level has never been set on any product. **No figure shown is wrong** — it explains why a section
+is ABSENT, which is what `empty_section` already is. It was listed in NEITHER
+`surface.desk.notices` list, so the "fail toward showing" default both DREW it and left it
+`must_convey`, and it reached his answers twice on 2026-09-21 inside the appended
+*"**Caveats** (added automatically)"* block he has asked three times to be rid of. A blind judge
+reading the page without knowing what produced it flagged the same bullet unprompted, as
+explaining a measurement rather than warning a figure was wrong.
+
+**What did not change.** The tool still raises it, the refusal still says what it refused, and the
+model still receives the message as `guidance` — so it still stops him claiming a low-stock
+figure he does not have. This is what the room DRAWS and what the loop REQUIRES in his prose,
+nothing more.
+
+**Measured, on the three forced turns of that day.** Four forced notices become three: the 10:56
+answer loses its 60-word low-stock bullet. The turns are still forced, on `stale_sources` twice
+and `negative_on_hand` once, and both of those genuinely say a figure may be wrong — "stale" is
+named in UI rule 4 as a kind that IS drawn. **So this does not fix the caveat block; it shortens
+it.** What would fix it is scoping `stale_sources` to the sources an answer actually used: it
+fired about `vending_aisles`, `stock_transfers` and `purchase_orders` on a question about retail
+shops, which read none of them. That is the next one, and it is a bigger change than a list entry.
+
+**Held by.** `test_a_section_that_cannot_exist_is_explained_not_warned_about`, and beside it
+`test_stale_data_is_still_warned_about`, so reclassifying the one never drags staleness along.
