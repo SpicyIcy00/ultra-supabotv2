@@ -5338,3 +5338,51 @@ and position already says it.
 **Held by.** `pageOf.test.ts` (six), `identity.dom.test.tsx`, `room.dom.test.tsx` (the
 packer, on the machine's board).
 
+## 2026-09-21 — P7: the page is a document, not a board
+
+**Decision.** The right-hand side is a document Bob writes. The `arrangement` keeps its
+four layouts and gains the parts of a page: a `lede`, `head`s, `say` paragraphs, a `note`,
+`{caveat: true}`, `tabs`, and on a block leaf `beside`, `size` and `control`. A sentence may
+hold a figure BY REFERENCE — `{key}`, `{key.change}`, `{key.was}` — where `key` is a `figure`
+block of the same composition; the page draws the row's own value with its receipt in place.
+The target is `ops/ideal/the-page-bob-writes.html`.
+
+**Why.** The owner, of the page laid out as blocks in rows: *"it feels like it has to fit
+the stuff in columns and rows or a grid but an artifact/page isnt like that. it makes its
+own."* A grid leaves holes wherever two neighbours differ in height, and puts every number
+in a tile of its own, away from the sentence that says what it means.
+
+**Rule 9 is untouched, and that is the design.** His words still carry no digit — a line
+with one is dropped, exactly as a claim is. What lets a number into his sentence is the rule
+that kept one out of his prose: he names the block, and the digits are the row's, formatted
+by the same `fmt` the block uses. definition → vetted SQL → the row → the sentence.
+
+**What counts as a block.** `max_blocks` (8) bounds what the page DRAWS as a block. A figure
+named only inside a sentence, and a control carried on a figure, are parts of something else
+and are bounded on their own (`composition.arrangement.refs.max_in_words`, 12). Headings have
+their own bound (`max_heads`, 6) and leave `max_says` to the prose. The client agrees: a
+control has no read identity (it REPLACED the chart it drives — "this is that" — the first
+time a page carried one), and sentence-figures do not count against `MAX_OBJECTS`.
+
+**UI rule 4, read for the caveat.** His caveat is drawn whole, in his ink, and BEFORE the
+figures it qualifies: placed with `{caveat: true}` it is the margin note of its section on a
+desk and the first thing under that section's head on a phone; unplaced it stands beside his
+answer as before. The machine's notices are unchanged — above their figure, everywhere.
+
+**UI rule 6, read for a figure in a sentence.** The page wears one date line (when it was
+read, how many reads), every drawing keeps its own source line, and a figure in a sentence
+says its read and its time where it is tapped.
+
+**Case by case.** The tool says so in words ("a number that answers outright is a lede and
+nothing else … a control goes only where turning it answers the person's next question"),
+and the room holds its half: a figure floats only where words follow it; the balance is
+judged against the words beside it (`doc.tsx` `FILL`), not pixels alone; a row of positions
+becomes a dropdown where its figure is narrow.
+
+**Not done, deliberately.** No new control argument: a store filter would ride the replay
+path that exists (`surface.desk.replay.arguments.store`) and is the next control worth
+adding, once a live page shows it is wanted. The default page (`pageOf`) is unchanged.
+
+**Held by.** `tests/test_compose_coercion_contract.py` (fourteen on the grammar, the bounds
+and the schema), `frontend/src/room/doc.dom.test.tsx` (twenty-two), the frames in
+`verification/frames/p7-doc/`.

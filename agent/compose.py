@@ -266,6 +266,10 @@ def _existing_reads(board: Any) -> dict[str, str]:
         key = obj.get("key")
         if not isinstance(read, Mapping) or not isinstance(key, str):
             continue
+        # A CONTROL IS A HANDLE ON A READ, NOT A DRAWING OF IT (P7): it names
+        # the read of the figure it drives, and is never that figure's twin.
+        if obj.get("kind") == "control":
+            continue
         out.setdefault(read_identity(read.get("tool"), read.get("arguments"),
                                      obj.get("about")), key)
     return out
@@ -438,22 +442,40 @@ def _question(text: Any, voc: Mapping[str, Any], coerced: Optional[list[str]] = 
 # THE ARRANGEMENT — how he lays the right-hand side out for this answer (P3.p)
 # ---------------------------------------------------------------------------
 
+# A figure inside a sentence: {key}, {key.change}, {key.was}. The key is a block
+# of his; the digits are the row's. (composition.arrangement.refs)
+_REF = re.compile(r"\{([a-z0-9][a-z0-9_-]*)(?:\.([a-z_]+))?\}")
+
+
 def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
-                 coerced: list[str]) -> Optional[dict]:
+                 coerced: list[str], blocks: Any = None, board: Any = None) -> Optional[dict]:
     """
-    HIS ARRANGEMENT OF HIS OWN BLOCKS, validated into a tree the room draws.
+    THE PAGE HE WRITES, validated into a tree the room draws.
 
     The owner, 2026-09-20: *"i want it to use that space like its designing its
     own page or artifact for its answer … in that space its its playground."*
-    So this refuses as little as it can and NEVER refuses the composition: a
-    page that cannot be understood is dropped, the blocks stand, and the room
-    packs them as it always did. A layout is presentation; nothing here can
-    change a figure, so nothing here is worth a round trip.
+    And 2026-09-21, of the first pages it produced: *"it feels like it has to
+    fit the stuff in columns and rows or a grid but an artifact/page isnt like
+    that. it makes its own ... it can also have buttons, drop downs, filters
+    ... it shouldnt use everything for everything. its case to case."*
 
-    THE FOUR LAYOUTS ARE THE GRAMMAR'S OWN (composition.grammar.layouts), not a
-    second vocabulary — same words, same meanings, one level up. A leaf is one
-    of HIS block keys or his words; there is no value, colour or size anywhere
-    in the tree, which is what makes an unbounded playground safe.
+    So this is a DOCUMENT (P7, ops/ideal/the-page-bob-writes.html): a `lede`,
+    sections opened by a `head`, paragraphs (`say`) with the figure they
+    discuss set `beside` them, a margin `note`, `tabs` over reads made at two
+    scopes, a `control` carried by the figure it drives, the plan (`next`).
+
+    It refuses as little as it can and NEVER refuses the composition: a part
+    that cannot be understood is dropped and said, the blocks stand, and the
+    room lays them out as it always did. Nothing here can change a figure:
+
+    A FIGURE INSIDE A SENTENCE IS A REFERENCE. `{key}` names a `figure` block
+    of his; the page draws that row's own value, `{key.change}` its change,
+    `{key.was}` its baseline. His words still carry no digit, so the rule that
+    kept a number out of his prose is what lets a number into his sentence.
+
+    THE FOUR LAYOUTS ARE THE GRAMMAR'S OWN (composition.grammar.layouts) plus
+    `tabs` — one space, the same question at two scopes, switched by the
+    person with no read and no turn.
 
     Every departure is named on `coerced`, because a page he cannot see is one
     he will describe wrongly.
@@ -461,17 +483,69 @@ def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
     if tree is None:
         return None
     spec = voc.get("arrangement") or {}
-    layouts = set((voc.get("grammar") or {}).get("layouts") or {})
-    max_nodes = int(spec.get("max_nodes") or 24)
-    max_depth = int(spec.get("max_depth") or 3)
-    budget = [max_nodes, int(spec.get("max_says") or 6)]
+    layouts = (set((voc.get("grammar") or {}).get("layouts") or {})
+               | set(spec.get("extra_layouts") or []))
+    max_nodes = int(spec.get("max_nodes") or 40)
+    max_depth = int(spec.get("max_depth") or 4)
+    budget = [max_nodes, int(spec.get("max_says") or 12), int(spec.get("max_heads") or 6)]
     placed: set[str] = set()
-    known = set(keys)
-    # THE PLAN IS A PART OF THE PAGE (P6.h, the owner 2026-09-21: "add what i
-    # would do next to the page ... so it feels like ONE PAGE"). `{"next":
-    # true}` places the reading's `next` where he wants it; unplaced, the
-    # room draws it last. Once: a plan drawn twice is two plans.
+    # WHAT HE MAY POINT AT: the blocks this call just validated, and what is
+    # already on the board — he is told to give the page ONCE, when it is
+    # settled, and a block he put two composes ago is still his.
+    kinds: dict[str, Any] = {}
+    for obj in list(board or []) + list(blocks or []):
+        if isinstance(obj, Mapping) and isinstance(obj.get("key"), str):
+            kinds[obj["key"]] = obj.get("kind")
+    known = set(keys) | set(kinds)
+    refs = spec.get("refs") or {}
+    ref_parts = set(refs.get("parts") or [])
+    ref_kind = str(refs.get("of_kind") or "figure")
+    sizes = set(spec.get("sizes") or [])
+    # THE PLAN IS A PART OF THE PAGE (P6.h): `{"next": true}` places the
+    # reading's `next`; unplaced, the room draws it last. Once: a plan drawn
+    # twice is two plans. And one lede: a page opens once.
     placed_next = [False]
+    placed_lede = [False]
+    # HIS CAVEAT, ON THE PAGE (P7): `{"caveat": true}` sets the reading's
+    # caveat beside the section it qualifies. Once, for the plan's reason.
+    placed_caveat = [False]
+
+    def words(path: str, raw: Any, leaf: str) -> Optional[str]:
+        """A line of his — lede, head, say or note — with its references checked."""
+        said = " ".join(str(raw or "").split())
+        if not said:
+            return None
+        rule = spec.get(leaf) or {}
+        if rule.get("no_digits", True) and any(ch.isdigit() for ch in _REF.sub("", said)):
+            # NOT A REFUSAL OF THE COMPOSITION, and not silent either: it sits
+            # in the same space as the figures, so it is held to the claim's
+            # rule, and the line is dropped rather than the page.
+            coerced.append(f"{path}: a line on the page carries no digits — write {{key}} where a "
+                           f"`{ref_kind}` block's number belongs and the page draws it with its "
+                           f"receipt (metrics.yaml composition.arrangement.refs) — so it was left out")
+            return None
+        for m in _REF.finditer(said):
+            key, part = m.group(1), m.group(2)
+            if key not in known or kinds.get(key) != ref_kind:
+                coerced.append(f"{path}: {{{key}}} names no `{ref_kind}` block of this composition, "
+                               f"so the line was left out — compose the figure, then point at it")
+                return None
+            if part and part not in ref_parts:
+                coerced.append(f"{path}: {{{key}.{part}}} is not a part of a figure — it has "
+                               f"{', '.join(sorted(ref_parts))} — so the line was left out")
+                return None
+        try:
+            said = _reading.over_length(path, said, rule, 360, coerced,
+                                        f"metrics.yaml composition.arrangement.{leaf}")
+        except _reading.Rejected:
+            return None
+        if said.count("{") != said.count("}"):
+            # The cut fell inside a reference: end the line before it.
+            said = said[:said.rfind("{")].rstrip(" ,;:—-")
+        if not said:
+            return None
+        placed.update(m.group(1) for m in _REF.finditer(said))
+        return said
 
     def node(item: Any, depth: int, path: str) -> Optional[dict]:
         if budget[0] <= 0:
@@ -500,31 +574,42 @@ def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
             budget[0] -= 1
             return {"next": True}
 
-        if "say" in item:
-            said = " ".join(str(item.get("say") or "").split())
-            if not said:
+        if item.get("caveat") is True or ("caveat" in item and len(item) == 1):
+            if placed_caveat[0]:
+                coerced.append(f"{path}: your caveat is already placed, so it was left out "
+                               f"a second time")
                 return None
-            if budget[1] <= 0:
-                coerced.append(f"{path}: more than {spec.get('max_says')} of your own lines "
-                               f"in the arrangement, so this one was left out")
-                return None
-            say_spec = spec.get("say") or {}
-            if say_spec.get("no_digits", True) and any(ch.isdigit() for ch in said):
-                # NOT A REFUSAL OF THE COMPOSITION, and not silent either: it
-                # sits in the same space as the figures, so it is held to the
-                # claim's rule, and the line is dropped rather than the page.
-                coerced.append(f"{path}: a line on the page carries no digits — the figure is "
-                               f"drawn beside it with its own receipts "
-                               f"(metrics.yaml composition.arrangement.say) — so it was left out")
-                return None
-            try:
-                said = _reading.over_length(path, said, say_spec, 200, coerced,
-                                            "metrics.yaml composition.arrangement.say")
-            except _reading.Rejected:
-                return None
+            placed_caveat[0] = True
             budget[0] -= 1
-            budget[1] -= 1
-            return {"say": said}
+            return {"caveat": True}
+
+        for leaf in ("lede", "head", "say", "note"):
+            if leaf not in item:
+                continue
+            purse = 2 if leaf == "head" else 1
+            if budget[purse] <= 0:
+                coerced.append(
+                    f"{path}: more than {spec.get('max_heads')} headings on one page, so this one "
+                    f"was left out" if purse == 2 else
+                    f"{path}: more than {spec.get('max_says')} of your own lines "
+                    f"in the arrangement, so this one was left out")
+                return None
+            said = words(path, item.get(leaf), leaf)
+            if said is None:
+                return None
+            if leaf == "lede":
+                if placed_lede[0]:
+                    leaf = "say"          # a page opens once; a second opening is a paragraph
+                placed_lede[0] = True
+            budget[0] -= 1
+            budget[purse] -= 1
+            out: dict[str, Any] = {leaf: said}
+            if leaf == "note" and isinstance(item.get("label"), str):
+                label = " ".join(item["label"].split())
+                cap = int((spec.get("note") or {}).get("label_max_length") or 48)
+                if label and not any(ch.isdigit() for ch in label):
+                    out["label"] = label[:cap]
+            return out
 
         if "block" in item:
             key = item.get("block")
@@ -540,7 +625,29 @@ def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
                 return None
             placed.add(key)
             budget[0] -= 1
-            return {"block": key}
+            leaf_out: dict[str, Any] = {"block": key}
+            # HOW IT SITS, never what it says: beside the words that follow it,
+            # at a size — or neither, and the page sizes it by what it draws
+            # and balances it against the words.
+            if item.get("beside") is True:
+                leaf_out["beside"] = True
+            size = item.get("size")
+            if size is not None:
+                if size in sizes:
+                    leaf_out["size"] = size
+                else:
+                    coerced.append(f"{path}: {size!r} is not a size — {', '.join(sorted(sizes))} "
+                                   f"— so the page sizes {key!r} itself")
+            control = item.get("control")
+            if control is not None:
+                if (isinstance(control, str) and control in known
+                        and kinds.get(control) == "control" and control not in placed):
+                    leaf_out["control"] = control
+                    placed.add(control)
+                else:
+                    coerced.append(f"{path}: {control!r} is not a control block of this "
+                                   f"composition, so {key!r} is drawn without one")
+            return leaf_out
 
         # ---- a layout arranges other parts ---------------------------------
         word = item.get("layout")
@@ -563,7 +670,21 @@ def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
                              for n, k in enumerate(kids)) if c]
         if not drawn:
             return None
-        out: dict[str, Any] = {"layout": word, "children": drawn}
+        out = {"layout": word, "children": drawn}
+        if word == "tabs":
+            # ONE SPACE, SEVERAL VIEWS — and a view nobody can name is a stack.
+            rule = spec.get("tabs") or {}
+            lo, hi = int(rule.get("min") or 2), int(rule.get("max") or 4)
+            cap = int(rule.get("label_max_length") or 28)
+            labels = item.get("labels") if isinstance(item.get("labels"), (list, tuple)) else []
+            labels = [" ".join(str(x).split())[:cap] for x in labels]
+            if (not lo <= len(drawn) <= hi or len(labels) != len(drawn)
+                    or any(not x or any(ch.isdigit() for ch in x) for x in labels)):
+                coerced.append(f"{path}: tabs take {lo} to {hi} views and a plain label for "
+                               f"each, so this was laid out as a stack")
+                out["layout"] = "stack"
+            else:
+                out["labels"] = labels
         if word == "grid":
             cols = item.get("cols")
             out["cols"] = cols if isinstance(cols, int) and 1 < cols <= 6 else 2
@@ -578,13 +699,51 @@ def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
         return None
     # A BLOCK IS NEVER LOST. One he composed and did not place is drawn after
     # the tree, in his order — a figure that vanishes because an arrangement
-    # forgot it is the one failure this may not have.
+    # forgot it is the one failure this may not have. A figure he pointed at
+    # from a sentence IS placed: it is in the sentence.
     left = [k for k in keys if k not in placed]
     if left:
         coerced.append(f"arrangement: {', '.join(repr(k) for k in left)} "
                        f"{'was' if len(left) == 1 else 'were'} not placed, so "
                        f"{'it is' if len(left) == 1 else 'they are'} drawn after it")
     return built
+
+
+def _in_words(tree: Any, voc: Mapping[str, Any]) -> dict[str, str]:
+    """
+    The keys this page does NOT draw as a block, each with the kind it must be:
+    a `figure` named only inside a sentence (`{key}`), a `control` carried on a
+    figure. Placed as a block anywhere in the tree, a key is a block again.
+
+    Read from the RAW tree, because it decides what `validate` may accept and
+    the tree is validated after the blocks it arranges. Bounded by the same
+    `max_nodes`, so a hostile tree costs what an honest one does.
+    """
+    spec = voc.get("arrangement") or {}
+    ref_kind = str((spec.get("refs") or {}).get("of_kind") or "figure")
+    budget = [int(spec.get("max_nodes") or 40) * 2]
+    found: dict[str, str] = {}
+    placed: set[str] = set()
+
+    def walk(node: Any, depth: int) -> None:
+        if budget[0] <= 0 or depth > 8 or not isinstance(node, Mapping):
+            return
+        budget[0] -= 1
+        if isinstance(node.get("block"), str):
+            placed.add(node["block"])
+        if isinstance(node.get("control"), str):
+            found.setdefault(node["control"], "control")
+        for leaf in ("lede", "head", "say", "note"):
+            if isinstance(node.get(leaf), str):
+                for m in _REF.finditer(node[leaf]):
+                    found.setdefault(m.group(1), ref_kind)
+        kids = node.get("children")
+        if isinstance(kids, (list, tuple)):
+            for kid in kids:
+                walk(kid, depth + 1)
+
+    walk(tree, 0)
+    return {k: kind for k, kind in found.items() if k not in placed}
 
 
 def _mark_kinds(voc: Mapping[str, Any]) -> set[str]:
@@ -631,6 +790,7 @@ def validate(
     board: Any = None,
     coerced: Optional[list[str]] = None,
     question: Optional[str] = None,
+    arrangement: Any = None,
 ) -> tuple[list[dict], list[dict]]:
     """
     Split a submitted composition into the blocks that may be drawn and those
@@ -671,6 +831,13 @@ def validate(
     allowed = set(voc["allowed_fields"])
     key_re = re.compile(voc["key_pattern"])
     max_blocks = int(voc["max_blocks"])
+    # WHAT THE PAGE DOES NOT DRAW AS A BLOCK (P7): a figure that lives only in
+    # a sentence of his, a control that rides on a figure. Read off the page he
+    # sent with this same call, before it is validated — a line later dropped
+    # leaves its figure a block like any other, drawn after the tree.
+    in_words = _in_words(arrangement, voc)
+    max_in_words = int(((voc.get("arrangement") or {}).get("refs") or {}).get("max_in_words") or 0)
+    drawn = spoken = 0
     state_labels = set(voc.get("state_labels", []))
     arguments = set(voc.get("control_arguments", []))
     # Which argument carries a window, per tool. One map, already declared for
@@ -699,10 +866,16 @@ def validate(
         rejected.append({"block": submitted, "reason": "a composition is a list of blocks"})
         return accepted, rejected
 
-    for item in list(blocks)[: max_blocks + 1]:
+    for item in list(blocks)[: max_blocks + max_in_words + 1]:
         try:
-            if len(accepted) >= max_blocks:
-                raise Rejected(f"more than {max_blocks} blocks; a workspace is not a report")
+            rides = (isinstance(item, Mapping) and isinstance(item.get("key"), str)
+                     and in_words.get(item["key"]) == item.get("kind"))
+            if rides and spoken >= max_in_words:
+                raise Rejected(f"more than {max_in_words} figures inside your sentences; past that "
+                               f"it is a table — draw the read as one")
+            if not rides and drawn >= max_blocks:
+                raise Rejected(f"more than {max_blocks} blocks; a workspace is not a report — a "
+                               f"figure written into a sentence as {{key}} is not counted")
             if not isinstance(item, Mapping):
                 raise Rejected("not a block")
 
@@ -786,7 +959,7 @@ def validate(
             # subject: it becomes a `change` of that object, and the model is
             # told which key it became.
             rewritten_from: Optional[str] = None
-            if op == "put" and existing and key not in {
+            if op == "put" and existing and kind != "control" and key not in {
                 o.get("key") for o in (board or []) if isinstance(o, Mapping)
             }:
                 seq_for = item.get("seq")
@@ -1138,6 +1311,10 @@ def validate(
                 block["key"] = key
                 block["rewritten_from"] = rewritten_from
             accepted.append(block)
+            if rides:
+                spoken += 1
+            else:
+                drawn += 1
         except Rejected as why:
             rejected.append({"block": item, "reason": str(why)})
 
@@ -1165,7 +1342,7 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: 
     """
     coerced: list[str] = []
     accepted, rejected = validate(blocks, calls, defs, board=board, coerced=coerced,
-                                  question=question)
+                                  question=question, arrangement=arrangement)
     # ONE CALL, TWO STATEMENTS (P1.a, 2026-09-13; the second one swapped in
     # P1.f). The board and the reading are said at the same moment, about the
     # same turn, and neither reads anything. Splitting them across two tools
@@ -1187,7 +1364,8 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: 
     # it is settled after them and never before. Presentation only — it cannot
     # reach a figure — so it is coerced to the last and never refuses the
     # composition.
-    laid_out = _arrangement(arrangement, vocabulary(defs), [e["key"] for e in accepted], coerced)
+    laid_out = _arrangement(arrangement, vocabulary(defs), [e["key"] for e in accepted], coerced,
+                            blocks=accepted, board=board)
 
     said, said_rejected = ({}, [])
     if reading is not None:

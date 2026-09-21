@@ -1,0 +1,490 @@
+<title>The Page Bob Writes</title>
+<!--
+  THE PAGE BOB WRITES — the design target for the right-hand side (P7, 2026-09-21).
+
+  The owner: "i want it like an artifact claude can make ... it feels like it has to fit the
+  stuff in columns and rows or a grid but an artifact/page isnt like that. it makes its own."
+
+  So the right-hand side is a DOCUMENT, not an arrangement of blocks:
+    - the text is the spine, and a figure lives INSIDE the sentence that needs it
+      (by reference to a read — he still never types a number);
+    - a figure takes the size it needs and floats into the prose that discusses it,
+      so nothing sits in a cell with a hole under it;
+    - a wide chart breaks out; a caveat is a margin note; the plan is the last section;
+    - a control appears only where turning it answers the next question.
+
+  EVERY NUMBER HERE IS A VALUE A VETTED READ RETURNED. Reads 1-16 are the live turn of
+  2026-09-21 12:25 (conversation c1f272db); three more were run locally, free, with the
+  read-only role: the week by day AGAINST the week before, Greenhills likewise, and the
+  shops over thirty days. The words and the layout are the session's. No model turn.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap">
+<style>
+  /* The room's own tokens (frontend/src/room/room.css), light on bare :root. */
+  :root {
+    --ground: #f7f8f8; --card: #ffffff; --sunk: #f0f1f3;
+    --edge: rgba(16, 17, 19, 0.09); --edge-strong: rgba(16, 17, 19, 0.18); --track: rgba(16, 17, 19, 0.07);
+    --ink: #101113; --ink-2: #3c4149; --ink-3: #6b7079; --ink-4: #9aa0a8;
+    --up: 26, 138, 90; --down: 200, 68, 43; --accent: 183, 121, 31; --bob: #101113;
+    --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+    --mono: 'Geist Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+    --sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0f1011; --card: #17181a; --sunk: #202124;
+      --edge: rgba(255, 255, 255, 0.08); --edge-strong: rgba(255, 255, 255, 0.16); --track: rgba(255, 255, 255, 0.08);
+      --ink: #f7f8f8; --ink-2: #c9ced6; --ink-3: #8a8f98; --ink-4: #62666d;
+      --up: 47, 168, 116; --down: 232, 98, 75; --accent: 232, 176, 75; --bob: #f7f8f8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0f1011; --card: #17181a; --sunk: #202124;
+    --edge: rgba(255, 255, 255, 0.08); --edge-strong: rgba(255, 255, 255, 0.16); --track: rgba(255, 255, 255, 0.08);
+    --ink: #f7f8f8; --ink-2: #c9ced6; --ink-3: #8a8f98; --ink-4: #62666d;
+    --up: 47, 168, 116; --down: 232, 98, 75; --accent: 232, 176, 75; --bob: #f7f8f8;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans);
+         -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--ink-3); outline-offset: 3px; border-radius: 4px; }
+
+  /* ------------------------------------------------------------------ the room */
+  .room { display: grid; grid-template-columns: minmax(260px, 360px) minmax(0, 1fr); gap: 64px;
+          max-width: 1360px; margin: 0 auto; padding-inline: 32px; padding-block: 44px 110px; }
+
+  /* The left: Bob and the claim. Quiet on purpose — the page is on the right. */
+  .words { position: sticky; top: 28px; align-self: start; text-align: right; }
+  .mark { width: 210px; height: 158px; margin: 0 0 40px auto; background: var(--bob);
+          border-radius: 46% 54% 44% 56% / 57% 44% 56% 43%; box-shadow: 0 0 70px rgba(127, 127, 127, 0.16); }
+  .asked { font: 400 10.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); margin: 0 0 16px; }
+  .asked b { font: 500 13px var(--sans); letter-spacing: 0; text-transform: none; color: var(--ink); margin-left: 8px; }
+  .claim { font: 400 29px/1.24 var(--serif); margin: 0 0 16px; text-wrap: balance; }
+  .claim i { font-style: italic; }
+  .body { font: 400 15.5px/1.55 var(--serif); margin: 0 0 22px; color: var(--ink); text-wrap: pretty; }
+  .asks { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .ask { border: 1px solid var(--edge-strong); background: transparent; border-radius: 999px; padding: 7px 14px;
+         font: 400 13.5px/1.2 var(--serif); color: var(--ink-2); cursor: pointer; }
+  .ask:hover { color: var(--ink); border-color: var(--ink-3); }
+
+  /* ------------------------------------------------------------------ the page
+     One flowing column. Prose is the spine; a figure floats INTO it at the size it
+     needs, so there is never a cell with a hole under it. */
+  .page { max-width: 900px; min-width: 0; }
+  .page::after { content: ''; display: block; clear: both; }
+
+  .dateline { font: 400 10.5px/1.6 var(--mono); letter-spacing: .09em; text-transform: uppercase;
+              color: var(--ink-4); margin: 0 0 18px; }
+
+  .lede { font: 400 27px/1.36 var(--serif); margin: 0 0 30px; max-width: 30em; text-wrap: pretty; }
+  .p { font: 400 17.5px/1.62 var(--serif); margin: 0 0 16px; max-width: 62ch; text-wrap: pretty; }
+  .p b { font-weight: 600; }
+  .h { font: 600 22px/1.28 var(--serif); margin: 0 0 12px; text-wrap: balance; max-width: 28em; }
+  /* A SECTION CONTAINS ITS OWN FLOATS, so a heading never has to clear one — and the page
+     can ask, section by section, whether the figure and the words beside it balance. */
+  .sec { display: flow-root; margin: 0 0 40px; }
+  .sec:last-of-type { margin-bottom: 0; }
+  /* IT DID NOT BALANCE (settle(), below): the figure is taller than the words beside it at
+     every size, so it sits under them at the text measure instead of leaving a hole. */
+  .sec[data-stack] { display: flex; flex-direction: column; }
+  .sec[data-stack] > .fig[data-float] { float: none; order: 2; width: min(100%, 680px); margin: 10px 0 0; }
+
+  /* A LIVE FIGURE INSIDE A SENTENCE: the row's value, drawn by the page, tappable
+     for its receipt. He writes {estate-week}; he never types the digits. */
+  .n { font: 500 .88em/1 var(--mono); letter-spacing: -.01em; white-space: nowrap; cursor: pointer;
+       background: none; border: 0; padding: 0 0 1px; border-bottom: 1px dotted var(--ink-4); color: var(--ink); }
+  .n:hover { border-bottom-color: var(--ink); }
+  .d { font: 500 .74em/1 var(--mono); white-space: nowrap; margin-left: .3em; }
+  .d.dn { color: rgb(var(--down)); } .d.up { color: rgb(var(--up)); }
+
+  /* A FIGURE: the finding as its title, the drawing, one quiet source line. */
+  .fig { margin: 8px 0 24px; min-width: 0; }
+  .fig[data-float="right"] { float: right; margin: 6px 0 20px 44px; }
+  .fig[data-size="small"] { width: 31%; } .fig[data-size="medium"] { width: 45%; }
+  .fig[data-size="wide"] { width: 58%; }   .fig[data-size="full"] { width: 100%; clear: both; }
+  .figh { font: 600 15px/1.4 var(--serif); margin: 0 0 10px; text-wrap: balance; }
+  .figh span { font-weight: 400; }
+  .src { font: 400 10.5px/1.6 var(--mono); color: var(--ink-4); margin: 10px 0 0; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font: 400 11px/1.4 var(--mono); color: var(--ink-3); margin: 6px 0 0; }
+  .legend i { display: inline-block; width: 18px; vertical-align: middle; margin-right: 6px; border-top: 1.7px solid var(--ink); }
+  .legend i.was { border-top: 1.2px dashed var(--ink-3); }
+  .legend i.gap { border-top: 3px solid rgba(var(--down), .7); width: 10px; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  svg text { font-family: var(--mono); }
+
+  /* A margin note: what qualifies the page, beside it rather than above it. */
+  .aside { float: right; clear: right; width: 31%; margin: 6px 0 20px 44px; padding: 2px 0 2px 14px;
+           border-left: 1px solid var(--edge-strong); font: 400 13px/1.55 var(--sans); color: var(--ink-2); }
+  .aside .lab { display: block; font: 500 10px/1.6 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+                color: var(--ink-4); margin: 0 0 4px; }
+  .fold { border: 0; background: none; padding: 0; margin-top: 8px; cursor: pointer;
+          font: 500 10.5px/1.6 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+  .fold:hover { color: var(--ink); }
+  .zero { list-style: none; margin: 8px 0 0; padding: 0; font: 400 12.5px/1.75 var(--sans); color: var(--ink); }
+
+  /* A CONTROL, ONLY WHERE TURNING IT ANSWERS THE NEXT QUESTION. */
+  .ctl { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 10px;
+         font: 500 10px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); }
+  .seg { display: inline-flex; border: 1px solid var(--edge-strong); border-radius: 999px; padding: 2px; }
+  .seg button { border: 0; background: none; border-radius: 999px; padding: 5px 11px; cursor: pointer;
+                font: 500 11.5px/1 var(--sans); letter-spacing: 0; text-transform: none; color: var(--ink-3); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--ground); }
+  .retuned { font: 400 11px/1.5 var(--mono); color: var(--ink-3); margin: 8px 0 0; }
+
+  /* the shops: where it was, where it is */
+  .db { display: grid; grid-template-columns: max-content minmax(60px, 1fr) max-content; gap: 9px 12px; align-items: center; }
+  .db .nm { font: 500 13px/1.2 var(--sans); }
+  .db .tr { position: relative; height: 12px; }
+  .db .tr::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--edge); }
+  .db .tr i { position: absolute; top: 50%; }
+  .db .tr .sg { height: 2px; margin-top: -1px; }
+  .db .tr .a { width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--ground); border: 1.6px solid; }
+  .db .tr .b { width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; }
+  .db .vl { font: 500 12px/1.25 var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+  .db .vl small { display: block; font: 400 10.5px/1.3 var(--mono); color: var(--ink-3); }
+  .db .row { display: contents; cursor: default; }
+
+  /* what fell faces what rose */
+  .mv { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 36px; }
+  .mv h4 { font: 500 10px/1 var(--mono); letter-spacing: .11em; text-transform: uppercase; color: var(--ink-4); margin: 0 0 6px; }
+  .mv .r { display: grid; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--edge); font: 400 13px/1.3 var(--sans); }
+  .mv .fell .r { grid-template-columns: minmax(0, 1.3fr) minmax(50px, 1fr) 70px; }
+  .mv .rose .r { grid-template-columns: minmax(50px, 1fr) minmax(0, 1.3fr) 70px; }
+  .mv .t { position: relative; height: 8px; }
+  .mv .t i { position: absolute; top: 0; height: 8px; border-radius: 1px; }
+  .mv .fell .t i { right: 0; background: rgb(var(--down)); }
+  .mv .rose .t i { left: 0; background: rgb(var(--up)); }
+  .mv .f { font: 500 11.5px/1 var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* THE PLAN CLOSES THE PAGE — steps, because it IS a sequence. */
+  .plan { clear: both; list-style: none; margin: 8px 0 0; padding: 0; counter-reset: step; max-width: 66ch; }
+  .plan li { counter-increment: step; position: relative; padding: 0 0 20px 46px; font: 400 17px/1.6 var(--serif); }
+  .plan li::before { content: counter(step); position: absolute; left: 0; top: 1px; width: 28px; height: 28px; border-radius: 50%;
+                     border: 1px solid var(--edge-strong); display: grid; place-items: center; font: 500 12px/1 var(--mono); color: var(--ink-2); }
+  .plan li:not(:last-child)::after { content: ''; position: absolute; left: 14px; top: 34px; bottom: 4px; border-left: 1px solid var(--edge); }
+  .plan b { font-weight: 600; }
+  .act { display: inline-block; margin: 10px 0 0; border: 1px solid rgb(var(--accent)); color: rgb(var(--accent)); background: transparent;
+         border-radius: 999px; padding: 7px 15px; font: 500 12.5px/1 var(--sans); cursor: pointer; }
+  .act + small { display: block; margin-top: 6px; font: 400 11px/1.5 var(--mono); color: var(--ink-3); }
+  .foot { clear: both; margin: 34px 0 0; padding-top: 14px; border-top: 1px solid var(--edge); font: 400 10.5px/1.7 var(--mono); color: var(--ink-4); }
+
+  /* the receipt of a figure, where you tapped it */
+  .tip, .rcpt { position: absolute; z-index: 5; pointer-events: none; background: var(--card); border: 1px solid var(--edge-strong);
+                border-radius: 8px; padding: 9px 11px; font: 400 11.5px/1.55 var(--mono); color: var(--ink-2);
+                box-shadow: 0 12px 32px -18px rgba(0, 0, 0, .6); max-width: 300px; }
+  .tip b, .rcpt b { color: var(--ink); font-weight: 500; }
+  .rcpt { pointer-events: auto; }
+
+  @media (max-width: 860px) {
+    .room { grid-template-columns: minmax(0, 1fr); gap: 34px; padding-inline: 18px; padding-block: 24px 80px; }
+    .words { position: static; text-align: left; }
+    .mark { margin: 0 0 24px; width: 150px; height: 112px; }
+    .asks { align-items: flex-start; }
+    .lede { font-size: 22px; }
+    .sec { display: flex; flex-direction: column; }
+    .sec > .fig, .sec > .aside { order: 2; }     /* the words first, then what they point at */
+    .fig[data-float], .fig[data-size], .aside, .sec[data-stack] > .fig[data-float] { float: none; width: 100%; margin: 10px 0 18px; }
+    .mv { grid-template-columns: minmax(0, 1fr); gap: 22px 0; }
+  }
+  @media (prefers-reduced-motion: no-preference) { .seg button, .ask, .n { transition: color .15s, background .15s, border-color .15s; } }
+</style>
+
+<div class="room">
+  <aside class="words">
+    <div class="mark" aria-hidden="true"></div>
+    <p class="asked">you asked <b>how are we doing</b></p>
+    <h1 class="claim">We are down on the week, <i>and every peso of it is fewer people at the till.</i></h1>
+    <p class="body">Most of it is one Saturday. Greenhills I still can't explain.</p>
+    <div class="asks">
+      <button class="ask" type="button">What happened that Saturday?</button>
+      <button class="ask" type="button">Is Greenhills' mall quieter?</button>
+      <button class="ask" type="button">Which kiamoy lines were relabelled?</button>
+    </div>
+  </aside>
+
+  <main class="page" id="page">
+    <section class="sec">
+    <p class="dateline">Week of 14&ndash;20 Sep &middot; against 7&ndash;13 Sep &middot; read 21 Sep 12:25</p>
+
+    <p class="lede">We took <button class="n" data-r="net">&#8369;1,621,528</button><span class="d dn">&#9660; 4.5%</span> last week &mdash; the second week running &mdash; and every peso of it is fewer people at the till: <button class="n" data-r="tills">3,814</button> transactions<span class="d dn">&#9660; 4.9%</span>, against a basket that did not move (<button class="n" data-r="basket">&#8369;425.15</button><span class="d up">&#9650; 0.4%</span>).</p>
+    </section>
+
+    <section class="sec">
+    <figure class="fig" data-size="wide" data-float="right">
+      <p class="figh">The week, day by day. <span>Against the same day the week before.</span></p>
+      <div id="week"></div>
+      <p class="legend"><span><i></i>last week</span><span><i class="was"></i>the week before</span><span><i class="gap"></i>the gap</span></p>
+      <p class="src">read 17 &middot; net sales &middot; by day &middot; 14&ndash;20 Sep against 7&ndash;13 Sep &middot; read 13:32</p>
+    </figure>
+    <p class="p"><b>Most of the gap is one day.</b> Saturday took <button class="n" data-r="sat">&#8369;339,293</button> against <button class="n" data-r="satwas">&#8369;392,406</button> the Saturday before. Tuesday and Friday gave a little more back; the other four days held or grew.</p>
+    <p class="p">So this is not a slow leak across the week. It is one weak Saturday on top of a slightly thin week &mdash; which makes it a footfall question before it is a product one.</p>
+
+    </section>
+
+    <section class="sec">
+    <h2 class="h">Three shops carry it; three hold</h2>
+    <figure class="fig" data-size="medium" data-float="right">
+      <div class="ctl"><span id="winlab">window</span>
+        <span class="seg" role="group" aria-labelledby="winlab">
+          <button type="button" id="win-7" aria-pressed="true" data-win="7">last 7 days</button>
+          <button type="button" id="win-30" aria-pressed="false" data-win="30">last 30 days</button>
+        </span>
+      </div>
+      <div class="db" id="shops"></div>
+      <p class="retuned" id="retuned" hidden>You are looking at the last 30 days. His words beside this are about the last 7.</p>
+      <p class="src" id="shops-src">read 7 &middot; net sales &middot; per shop &middot; last 7 days against the 7 before &middot; read 12:25</p>
+    </figure>
+    <p class="p">Greenhills gave back the most &mdash; <button class="n" data-r="gh">&#8369;241,519</button><span class="d dn">&#9660; 13.2%</span> &mdash; then Magnolia<span class="d dn">&#9660; 10.8%</span> and Shangri-La<span class="d dn">&#9660; 8.6%</span>. OPUS slipped a little on the biggest base. Rockwell grew; North Edsa and Fairview held.</p>
+    <p class="p">Turn the window to the month and it is a different page: that one is Rockwell's August, not this week.</p>
+
+    </section>
+
+    <section class="sec">
+    <h2 class="h">Greenhills is the one I can't explain</h2>
+    <figure class="fig" data-size="medium" data-float="right">
+      <p class="figh">Greenhills, day by day. <span>Under the week before on every day but Friday.</span></p>
+      <div id="ghweek"></div>
+      <p class="src">read 18 &middot; net sales &middot; Greenhills &middot; by day &middot; 14&ndash;20 Sep against 7&ndash;13 Sep &middot; read 13:32</p>
+    </figure>
+    <p class="p">It rang <button class="n" data-r="ghtills">606</button> tills against <button class="n" data-r="ghtillswas">693</button><span class="d dn">&#9660; 12.6%</span>, while its basket stayed within a peso (<button class="n" data-r="ghbasket">&#8369;398.55</button>). Fewer people, not smaller baskets.</p>
+    <p class="p">A shop that loses tills on a Monday, a Tuesday and a Saturday alike has not had one bad day. That is footfall or opening hours &mdash; and nothing in the sales data can tell those two apart.</p>
+
+    </section>
+
+    <section class="sec">
+    <h2 class="h">What moved on the shelf</h2>
+    <aside class="aside">
+      <span class="lab">how far to trust the shelf</span>
+      <button class="n" data-r="neg">2,180</button> stock counts are below zero. A count below zero is a broken record, not an empty shelf &mdash; so a line &ldquo;at zero all week&rdquo; may just be miscounted.
+      <br><button class="fold" type="button" id="zero-btn" aria-expanded="false" aria-controls="zero-list">ten lines at zero all week &middot; show</button>
+      <ul class="zero" id="zero-list" hidden></ul>
+    </aside>
+    <p class="p"><b>The kiamoy money moved rather than left.</b> Kiamoy White nearly stopped selling while king seedless and the premium pack rose in the same week &mdash; a deliberate switch, or a relabel nobody told us about.</p>
+    <p class="p">At Greenhills it is sharper: Kiamoy White all but vanished from the till, and Dikiam fell by half.</p>
+    <figure class="fig" data-size="full">
+      <div class="ctl"><span id="scopelab">showing</span>
+        <span class="seg" role="group" aria-labelledby="scopelab">
+          <button type="button" id="scope-estate" aria-pressed="true" data-scope="estate">the estate</button>
+          <button type="button" id="scope-gh" aria-pressed="false" data-scope="gh">Greenhills</button>
+        </span>
+      </div>
+      <div class="mv" id="movers"></div>
+      <p class="src" id="movers-src">reads 8 &amp; 9 &middot; product revenue &middot; biggest drop / biggest gain &middot; last 7 days against the 7 before &middot; read 12:25</p>
+    </figure>
+
+    </section>
+
+    <section class="sec">
+    <h2 class="h">What I'd do</h2>
+    <ol class="plan">
+      <li><b>Greenhills first.</b> Ask the manager what changed in the mall or the roster after 13 September, and count the kiamoy shelf by hand. A hand count is the only way to know &mdash; the stock record has too many counts below zero to answer it.</li>
+      <li><b>Magnolia second.</b> It was the weakest shop yesterday against the same weekday, and it is down again on the week: two readings pointing the same way. I'd rather look this week than after a third.</li>
+      <li><b>Then the shelf.</b> Dikiam fell by half at Greenhills &mdash; the same too-thin-to-serve pattern I recorded a week ago.
+        <br><button class="act" type="button" id="draft">Draft the AJI BARN order</button><small>a draft &mdash; nothing is sent until you send it</small></li>
+      <li><b>The one structural fix.</b> Set low-stock levels and clear the negative counts. Until both are done I can only tell you a line has already gone, never that it is about to.</li>
+    </ol>
+
+    </section>
+
+    <p class="foot">19 reads &middot; every figure on this page is a value a read returned &mdash; tap one for its receipt.</p>
+  </main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var peso = function (n, dp) { return '₱' + Number(n).toLocaleString('en-US', { minimumFractionDigits: dp || 0, maximumFractionDigits: dp || 0 }); };
+  var pct = function (p) { return (p < 0 ? '▼ ' : '▲ ') + Math.abs(p).toFixed(1) + '%'; };
+  var DAYS = ['Mon 14', 'Tue 15', 'Wed 16', 'Thu 17', 'Fri 18', 'Sat 19', 'Sun 20'];
+
+  // ---- the rows, as the reads returned them -------------------------------------------
+  var WEEK = { now: [151942.72, 164595.19, 161048.78, 191294.78, 196311.56, 339292.68, 417042.56],
+               was: [148663.24, 181260.21, 155969.47, 192329.99, 206386.11, 392406.28, 421044.35],
+               pct: [2.2, -9.2, 3.3, -0.5, -4.9, -13.5, -1.0], mark: 5, note: 'most of the week’s gap is this one Saturday' };
+  var GH = { now: [26693, 22145, 22464, 37694, 31348, 44000, 57175],
+             was: [32849, 29016, 30440, 38511, 26825, 61486, 59139],
+             pct: [-18.7, -23.7, -26.2, -2.1, 16.9, -28.4, -3.3], mark: null, note: null };
+  var SHOPS = {
+    7: [['OPUS', 450944.37, 467102.44, -3.5], ['Greenhills', 241519, 278266, -13.2], ['Rockwell', 223448, 206799.5, 8.1],
+        ['Shangri-La', 203465.47, 222678.78, -8.6], ['Magnolia', 186458.5, 208997.6, -10.8],
+        ['North Edsa', 169040.93, 168069.83, 0.6], ['Fairview', 146652, 146145.5, 0.3]],
+    30: [['OPUS', 2185523.09, 2255576.81, -3.1], ['Greenhills', 1170341.1, 1186343.4, -1.3], ['Shangri-La', 923246.01, 1015812, -9.1],
+         ['Rockwell', 885766.5, 1502443.49, -41.0], ['Magnolia', 844633.57, 857121.4, -1.5],
+         ['North Edsa', 740695.26, 715048.76, 3.6], ['Fairview', 613886.01, 623515, -1.5]]
+  };
+  var SHOP_SRC = { 7: 'read 7 · net sales · per shop · last 7 days against the 7 before · read 12:25',
+                   30: 'read 19 · net sales · per shop · last 30 days against the 30 before · read 13:32' };
+  var MOVERS = {
+    estate: { fell: [['Aji Mix', -20277], ['Aji Kiamoy White', -17512], ['Aji Kiamoy Strips', -14129], ['Aji Dilis Spicy', -9867], ['Fuan Haw Flakes', -7524.5]],
+              rose: [['Aji Kiamoy king seedless M', 14651], ['Aji Squid Rings', 13972], ['Hxd premium Seedless Kiamoy 100G', 9177], ['Hxd Japanese Plums 250G', 6986], ['Aji Kiamoy Curl Sour', 5572]],
+              src: 'reads 8 & 9 · product revenue · biggest drop / biggest gain · last 7 days against the 7 before · read 12:25' },
+    gh: { fell: [['Aji Kiamoy White', -10348], ['Aji Kiamoy Strips', -5771], ['KD mixed flavor fruit candy tin can', -3805.5], ['Aji Dikiam Sweet Taiwan', -3781], ['aji plum wakayama', -3383]],
+          rose: [['Aji Kiamoy Curl Sour', 6567], ['Aji Kiamoy king seedless M', 4186], ['Aji Dilis', 3887], ['aji chicharon', 2587], ['Aji Dilis Spicy', 2392]],
+          src: 'reads 14 & 15 · product revenue · Greenhills · biggest drop / biggest gain · last 7 days against the 7 before · read 12:26' }
+  };
+  var ZERO = ['Nerds Rope Tropical 26g', 'Maynards Jelly Babies', 'Honey Roasted Satay Fish', 'Koikeya Strong Steak', 'Blueberry plum 1kg',
+              'Lim chee guan pork floss with seaweed', 'Mermaid Lollipop', 'Tohato Caramel Corn Honey Butter', 'Royal Family Blueberry 184G', 'GZ Jelly balloon peach'];
+  var RECEIPTS = {
+    net: ['Net sales, the estate', '₱1,621,528 · was ₱1,698,060', 'read 2 · new_transactions · 7 retail shops, cancelled excluded · last 7 days against the 7 before · read 12:25'],
+    tills: ['Transactions, the estate', '3,814 · was 4,010', 'read 3 · new_transactions · last 7 days against the 7 before · read 12:25'],
+    basket: ['Average transaction value', '₱425.15 · was ₱423.46', 'read 4 · net sales over transactions · last 7 days against the 7 before · read 12:25'],
+    sat: ['Net sales, Saturday 19 Sep', '₱339,292.68', 'read 17 · by day · read 13:32'],
+    satwas: ['Net sales, Saturday 12 Sep', '₱392,406.28', 'read 17 · by day, the week before · read 13:32'],
+    gh: ['Net sales, Greenhills', '₱241,519 · was ₱278,266', 'read 10 · store = Greenhills · last 7 days against the 7 before · read 12:26'],
+    ghtills: ['Transactions, Greenhills', '606', 'read 11 · store = Greenhills · last 7 days · read 12:26'],
+    ghtillswas: ['Transactions, Greenhills, the week before', '693', 'read 11 · store = Greenhills · the 7 days before · read 12:26'],
+    ghbasket: ['Average transaction value, Greenhills', '₱398.55 · was ₱401.54', 'read 12 · store = Greenhills · read 12:26'],
+    neg: ['Stock counts below zero', '2,180 · the lowest −78,291', 'read 16 · inventory_snapshots · 8 locations · read 12:26']
+  };
+
+  var el = function (tag, attrs, kids) {
+    var n = document.createElementNS(tag === 'svg' || /^(g|path|line|circle|rect|text|polyline)$/.test(tag) ? 'http://www.w3.org/2000/svg' : 'http://www.w3.org/1999/xhtml', tag);
+    Object.keys(attrs || {}).forEach(function (k) { n.setAttribute(k, attrs[k]); });
+    (kids || []).forEach(function (k) { n.appendChild(typeof k === 'string' ? document.createTextNode(k) : k); });
+    return n;
+  };
+  var ink = function (v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); };
+
+  // ---- a week against the week before, drawn at the width it was given ------------------
+  var tip = el('div', { 'class': 'tip', hidden: '' }); document.body.appendChild(tip);
+  function week(host, data) {
+    var W = Math.max(240, host.clientWidth), H = Math.round(Math.max(160, Math.min(230, W * 0.42)));
+    var names = W < 430 ? DAYS.map(function (d) { return d.slice(0, 3); }) : DAYS;
+    var top = data.note ? 40 : 12, base = H - 26, L = 6, R = W - 6;
+    // A LINE ENCODES POSITION, not length, so it need not start at zero — and from zero a
+    // week of 150k-420k days is two lines lying on each other. The gap strokes stay honest:
+    // their length is the difference on the same scale as everything else.
+    var all = data.now.concat(data.was), hi = Math.max.apply(null, all) * 1.04, lo = Math.min.apply(null, all) * 0.72;
+    var x = function (i) { return L + (i / 6) * (R - L); }, y = function (v) { return base - ((v - lo) / (hi - lo)) * (base - top); };
+    var line = function (vs) { return vs.map(function (v, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); }).join(' '); };
+    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Net sales by day, last week against the week before' });
+    svg.appendChild(el('line', { x1: L, x2: R, y1: base, y2: base, stroke: ink('--edge-strong') }));
+    data.now.forEach(function (v, i) {            // the gap, where it is
+      var dn = v < data.was[i];
+      svg.appendChild(el('line', { x1: x(i), x2: x(i), y1: y(v), y2: y(data.was[i]), 'stroke-width': 3, 'stroke-linecap': 'round',
+        stroke: 'rgba(' + ink(dn ? '--down' : '--up') + ',' + (dn ? .72 : .5) + ')' }));
+    });
+    svg.appendChild(el('path', { d: line(data.was), fill: 'none', stroke: ink('--ink-3'), 'stroke-width': 1.2, 'stroke-dasharray': '3 3' }));
+    svg.appendChild(el('path', { d: line(data.now), fill: 'none', stroke: ink('--ink'), 'stroke-width': 1.8, 'stroke-linejoin': 'round' }));
+    data.now.forEach(function (v, i) {
+      svg.appendChild(el('circle', { cx: x(i), cy: y(v), r: i === data.mark ? 4 : 2.6, fill: ink('--ink'), stroke: ink('--ground'), 'stroke-width': 1.5 }));
+      svg.appendChild(el('text', { x: x(i), y: base + 17, 'text-anchor': i === 0 ? 'start' : i === 6 ? 'end' : 'middle', 'font-size': 10.5, fill: ink('--ink-3') }, [names[i]]));
+    });
+    if (data.note && data.mark !== null) {       // it points and characterises; it names no number
+      var mx = x(data.mark), tx = Math.min(R - 4, mx + 6);
+      svg.appendChild(el('path', { d: 'M' + mx + ' ' + (y(Math.max(data.now[data.mark], data.was[data.mark])) - 8) + ' V' + 26, fill: 'none', stroke: ink('--ink-3') }));
+      var t = el('text', { x: tx, y: 17, 'text-anchor': 'end', 'font-size': 13.5, fill: ink('--ink') }, [data.note]);
+      t.style.fontFamily = ink('--serif'); svg.appendChild(t);
+    }
+    for (var i = 0; i < 7; i += 1) (function (i) {   // a touch anywhere on a day says its two figures
+      var hit = el('rect', { x: x(i) - (R - L) / 12, y: top - 8, width: (R - L) / 6, height: base - top + 16, fill: 'transparent' });
+      hit.addEventListener('mousemove', function (e) {
+        tip.hidden = false;
+        tip.innerHTML = '<b>' + DAYS[i] + '</b><br>' + peso(data.now[i]) + ' · was ' + peso(data.was[i]) + '<br>' + pct(data.pct[i]);
+        tip.style.left = (e.pageX + 14) + 'px'; tip.style.top = (e.pageY - 10) + 'px';
+      });
+      hit.addEventListener('mouseleave', function () { tip.hidden = true; });
+      svg.appendChild(hit);
+    })(i);
+    host.replaceChildren(svg);
+  }
+
+  // ---- the shops: where each was, where it is --------------------------------------------
+  function shops(win) {
+    var host = document.getElementById('shops'), rows = SHOPS[win];
+    var hi = Math.max.apply(null, rows.map(function (r) { return Math.max(r[1], r[2]); }));
+    host.replaceChildren.apply(host, rows.map(function (r) {
+      var dn = r[3] < 0, c = 'rgb(' + ink(dn ? '--down' : '--up') + ')', a = r[2] / hi * 100, b = r[1] / hi * 100;
+      var row = el('div', { 'class': 'row', title: r[0] + ': ' + peso(r[1]) + ', was ' + peso(r[2]) + ' (' + pct(r[3]) + ')' });
+      var tr = el('span', { 'class': 'tr', role: 'img', 'aria-label': r[0] + ' ' + pct(r[3]) }, [
+        el('i', { 'class': 'sg', style: 'left:' + Math.min(a, b) + '%;width:' + Math.abs(a - b) + '%;background:' + c }),
+        el('i', { 'class': 'a', style: 'left:' + a + '%;border-color:' + c }),
+        el('i', { 'class': 'b', style: 'left:' + b + '%;background:' + c })]);
+      var vl = el('span', { 'class': 'vl' }, [peso(r[1])]);
+      vl.appendChild(el('small', {}, [pct(r[3]) + ' · was ' + peso(r[2])]));
+      row.appendChild(el('span', { 'class': 'nm' }, [r[0]])); row.appendChild(tr); row.appendChild(vl);
+      return row;
+    }));
+    document.getElementById('shops-src').textContent = SHOP_SRC[win];
+    document.getElementById('retuned').hidden = win === 7;
+  }
+
+  // ---- what fell faces what rose ----------------------------------------------------------
+  function movers(scope) {
+    var m = MOVERS[scope], hi = Math.max.apply(null, m.fell.concat(m.rose).map(function (r) { return Math.abs(r[1]); }));
+    var side = function (rows, cls, head) {
+      var box = el('div', { 'class': cls }, [el('h4', {}, [head])]);
+      rows.forEach(function (r) {
+        var bar = el('span', { 'class': 't' }, [el('i', { style: 'width:' + (Math.abs(r[1]) / hi * 100) + '%' })]);
+        var name = el('span', {}, [r[0]]), fig = el('span', { 'class': 'f' }, [(r[1] < 0 ? '−' : '+') + peso(Math.abs(r[1]))]);
+        box.appendChild(el('div', { 'class': 'r', title: r[0] + ' ' + fig.textContent }, cls === 'fell' ? [name, bar, fig] : [bar, name, fig]));
+      });
+      return box;
+    };
+    document.getElementById('movers').replaceChildren(side(m.fell, 'fell', 'fell'), side(m.rose, 'rose', 'rose'));
+    document.getElementById('movers-src').textContent = m.src;
+  }
+
+  // ---- the controls, and the receipt of any figure ---------------------------------------
+  function press(group, chosen) { group.forEach(function (b) { b.setAttribute('aria-pressed', String(b === chosen)); }); }
+  var wins = [document.getElementById('win-7'), document.getElementById('win-30')];
+  wins.forEach(function (b) { b.addEventListener('click', function () { press(wins, b); shops(Number(b.dataset.win)); }); });
+  var scopes = [document.getElementById('scope-estate'), document.getElementById('scope-gh')];
+  scopes.forEach(function (b) { b.addEventListener('click', function () { press(scopes, b); movers(b.dataset.scope); }); });
+
+  var zl = document.getElementById('zero-list'), zb = document.getElementById('zero-btn');
+  ZERO.forEach(function (z) { zl.appendChild(el('li', {}, [z])); });
+  zb.addEventListener('click', function () {
+    zl.hidden = !zl.hidden; zb.setAttribute('aria-expanded', String(!zl.hidden));
+    zb.textContent = 'ten lines at zero all week · ' + (zl.hidden ? 'show' : 'fold');
+  });
+
+  var rc = el('div', { 'class': 'rcpt', hidden: '' }); document.body.appendChild(rc);
+  document.querySelectorAll('.n').forEach(function (b) {
+    b.addEventListener('click', function (e) {
+      e.stopPropagation(); var r = RECEIPTS[b.dataset.r]; if (!r) return;
+      rc.innerHTML = '<b>' + r[0] + '</b><br>' + r[1] + '<br>' + r[2]; rc.hidden = false;
+      var box = b.getBoundingClientRect();
+      rc.style.left = Math.max(12, Math.min(window.scrollX + box.left, window.scrollX + document.documentElement.clientWidth - 312)) + 'px';
+      rc.style.top = (window.scrollY + box.bottom + 8) + 'px';
+    });
+  });
+  document.addEventListener('click', function () { rc.hidden = true; });
+  document.getElementById('draft').addEventListener('click', function (e) { e.target.textContent = 'Drafted — waiting for you'; e.target.disabled = true; });
+
+  function draw() { week(document.getElementById('week'), WEEK); week(document.getElementById('ghweek'), GH); }
+
+  // THE PAGE BALANCES ITSELF. Whoever writes it cannot measure pixels, so a floated figure
+  // taller than the words beside it would leave a hole under them. For each section: try the
+  // figure at the size it was given, then at the other; keep the first where the words reach
+  // (nearly) as far as the figure does; if neither does, set it under its words instead.
+  function settle() {
+    var narrow = window.matchMedia('(max-width: 860px)').matches;
+    document.querySelectorAll('.sec').forEach(function (sec) {
+      var fig = sec.querySelector(':scope > .fig[data-float]');
+      sec.removeAttribute('data-stack');
+      if (!fig || narrow) return;
+      var asked = fig.dataset.asked || (fig.dataset.asked = fig.dataset.size);
+      var words = sec.querySelectorAll(':scope > .p');
+      var fits = function (size) {
+        fig.dataset.size = size; draw();
+        var end = words[words.length - 1].getBoundingClientRect().bottom;
+        // A designer tolerates a modest gap under the words - the space between sections
+        // absorbs it. Past that it reads as a hole.
+        return fig.getBoundingClientRect().bottom - end <= 96;
+      };
+      var sizes = asked === 'wide' ? ['wide', 'medium'] : ['medium', 'wide'];
+      if (!sizes.some(fits)) { fig.dataset.size = asked; sec.setAttribute('data-stack', ''); draw(); }
+    });
+  }
+
+  shops(7); movers('estate'); draw(); settle();
+  var again; window.addEventListener('resize', function () { clearTimeout(again); again = setTimeout(settle, 120); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(settle);
+  wins.forEach(function (b) { b.addEventListener('click', function () { settle(); }); });
+})();
+</script>

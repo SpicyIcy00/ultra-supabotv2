@@ -152,7 +152,9 @@ describe('"if its stating whats already stated or shown in the page … dont mak
   it('is fed what the room draws: the reads on screen and his words beside them', () => {
     expect(ROOM).toMatch(/thoughtsOf\(latest\.text, latest\.reading\?\.claim, latest\.toolCalls, thoughtful,\s*\{ drawn: shown, said \}\)/);
     expect(ROOM).toMatch(/latest\.reading\?\.next, \.\.\.\(latest\.reading\?\.asks \?\? \[\]\)/);
-    expect(ROOM).toMatch(/caveat=\{thoughts\?\.caveat\}/);
+    // Beside his answer it is still the caveat LESS what the screen says — unless his
+    // page set it on itself (P7), and then it is there and not here too.
+    expect(ROOM).toMatch(/caveat=\{caveatOnPage \? '' : thoughts\?\.caveat\}/);
   });
 });
 

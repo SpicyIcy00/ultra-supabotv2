@@ -773,14 +773,23 @@ function List({ rows, meta, o, onPick, picked }: ShapeProps) {
     ?? (nameKeyOf(rows) as string | null) ?? 'subject';
   const key = figureKey(rows);
   const unit = unitFor(rows, meta);
+  const whereOf = (r: Row) => (typeof r.store === 'string' && nameKey !== 'store' ? r.store
+    : typeof r.category === 'string' && nameKey !== 'category' ? r.category : null);
+  // WHAT IS THE SAME ON EVERY ROW IS NOT A COLUMN (the table's rule, P3.k, and
+  // now the list's). The stockouts at one shop drew that shop's name on all
+  // ten rows and an unlabelled `0` beside each — the first numeric column the
+  // read happened to carry. A value every row shares tells no row from another.
+  const same = (vs: unknown[]) => rows.length > 1 && new Set(vs.map(String)).size === 1;
+  const sayWhere = !same(rows.map(whereOf));
+  const sayFigure = Boolean(key) && !same(rows.map((r) => num(r)));
   return (
-    <ul className="r-mk r-mk-list" data-emphasis={emphasised(o) ? 'yes' : undefined}>
+    <ul className="r-mk r-mk-list" data-emphasis={emphasised(o) ? 'yes' : undefined}
+        data-bare={!sayWhere && !sayFigure ? 'yes' : undefined}>
       {rows.slice(0, 40).map((r, n) => {
         const name = String(r[nameKey] ?? subjectOf(r) ?? '');
-        const where = typeof r.store === 'string' && nameKey !== 'store' ? r.store
-          : typeof r.category === 'string' && nameKey !== 'category' ? r.category : null;
+        const where = sayWhere ? whereOf(r) : null;
         const lit = isLit(o, r);
-        const v = key ? num(r) : null;
+        const v = sayFigure ? num(r) : null;
         return (
           <li key={n} className="r-mk-list-row" data-lit={lit ? 'yes' : 'no'} style={beat(n)}>
             <RowName name={name} className="r-mk-name" dimension={dimensionOf(rows, name)}

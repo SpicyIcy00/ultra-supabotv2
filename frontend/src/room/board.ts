@@ -26,6 +26,7 @@
  * on top. Mixing the two would let a click look like something Bob decided.
  */
 import type { AnswerTurn, Block } from './data';
+import type { Arrangement } from '../types/bob';
 
 /** metrics.yaml composition.max_objects. A bound on attention, not on memory. */
 export const MAX_OBJECTS = 12;
@@ -146,8 +147,13 @@ function carried(edit: Block): Partial<BoardObject> {
  * are the same thing shown two ways, and one board holds one of them.
  */
 export function readIdentity(answers: AnswerTurn[], turn: number, edit: {
-  seq?: number; seqs?: number[]; subject?: string;
+  seq?: number; seqs?: number[]; subject?: string; kind?: string;
 }): string | null {
+  // A CONTROL IS A HANDLE ON A READ, NOT A DRAWING OF IT (P7). It names the
+  // read it re-runs, which is the read the figure beside it draws — so with an
+  // identity it REPLACED that figure ("this is that"), and the page lost the
+  // chart the control was for.
+  if (edit.kind === 'control') return null;
   const seq = edit.seq ?? edit.seqs?.[0];
   if (seq === undefined) return null;
   const call = answers[turn]?.toolCalls.find((c) => c.seq === seq);
@@ -455,15 +461,56 @@ function oneLead(board: BoardObject[]): BoardObject[] {
  * A bounded board. What leaves first is the object pushed aside longest ago —
  * what was made quiet and never returned to is what nobody is coming back for.
  */
-function bounded(board: BoardObject[]): BoardObject[] {
-  if (board.length <= MAX_OBJECTS) return board;
+function bounded(board: BoardObject[], inWords: ReadonlySet<string>): BoardObject[] {
+  // WHAT ASKS FOR ATTENTION IS WHAT IS DRAWN AS A BLOCK (P7). A figure that
+  // lives in a sentence of his page, and a control that rides on a figure, are
+  // parts of something else on it — counted, they pushed the lede's own
+  // numbers off a page that was well inside the bound.
+  const counts = (o: BoardObject) => !inWords.has(o.key);
+  if (board.filter(counts).length <= MAX_OBJECTS) return board;
   const out = board.slice();
-  while (out.length > MAX_OBJECTS) {
-    const pool = out.some((o) => o.weight === 'quiet') ? out.filter((o) => o.weight === 'quiet') : out;
+  while (out.filter(counts).length > MAX_OBJECTS) {
+    const drawn = out.filter(counts);
+    const pool = drawn.some((o) => o.weight === 'quiet') ? drawn.filter((o) => o.weight === 'quiet') : drawn;
     const oldest = pool.reduce((a, b) => (b.touched < a.touched ? b : a));
     out.splice(out.indexOf(oldest), 1);
   }
   return out;
+}
+
+/** `{key}`, `{key.change}`, `{key.was}` in a line of the page (agent/compose.py `_REF`). */
+const REF = /\{([a-z0-9][a-z0-9_-]*)(?:\.[a-z_]+)?\}/g;
+
+/** Whether his page sets the reading's caveat on itself (`{caveat: true}`). */
+export function placesCaveat(tree: Arrangement | null | undefined): boolean {
+  if (!tree) return false;
+  if ('children' in tree) return tree.children.some(placesCaveat);
+  return 'caveat' in tree;
+}
+
+/**
+ * The keys a page holds WITHOUT drawing them as a block: a figure named only
+ * inside a sentence, a control carried on a figure. Placed as a block anywhere
+ * on the page, a key is a block again — the same reading agent/compose.py
+ * `_in_words` makes, so the two ends agree about what the bound counts.
+ */
+export function inWordsOf(tree: Arrangement | null | undefined): Set<string> {
+  const found = new Set<string>();
+  const placed = new Set<string>();
+  const walk = (node: Arrangement): void => {
+    if ('children' in node) { node.children.forEach(walk); return; }
+    if ('block' in node) {
+      placed.add(node.block);
+      if (node.control) found.add(node.control);
+      return;
+    }
+    const text = 'say' in node ? node.say : 'lede' in node ? node.lede
+      : 'head' in node ? node.head : 'note' in node ? node.note : '';
+    for (const m of text.matchAll(REF)) found.add(m[1]);
+  };
+  if (tree) walk(tree);
+  for (const key of placed) found.delete(key);
+  return found;
 }
 
 export function buildBoard(answers: AnswerTurn[], kept: ReadonlySet<string> = new Set()): BoardObject[] {
@@ -471,6 +518,9 @@ export function buildBoard(answers: AnswerTurn[], kept: ReadonlySet<string> = ne
   // A key Bob chose for a twin, mapped to the key of the object it
   // replaced — so his later edits under the new name land on the old object.
   const aliases = new Map<string, string>();
+  // What each page holds in its words rather than as a block (P7). A later
+  // page that PLACES one of them makes it a block again.
+  const inWords = new Set<string>();
   answers.forEach((turn, i) => {
     const edits = editsFor(turn, i);
     // WHERE THIS TURN'S NEW OBJECTS GO (P2S.7): above every earlier turn's,
@@ -506,6 +556,7 @@ export function buildBoard(answers: AnswerTurn[], kept: ReadonlySet<string> = ne
       if (op === 'put' && at < 0) {
         const identity = readIdentity(answers, i, edit);
         if (identity) {
+          // Never a control: it shares its figure's read and is not that figure.
           const twin = board.findIndex((o) => readIdentity(answers, o.turn, o) === identity);
           if (twin >= 0) {
             aliases.set(edit.key, board[twin].key);
@@ -555,9 +606,16 @@ export function buildBoard(answers: AnswerTurn[], kept: ReadonlySet<string> = ne
         inserted += 1;
       }
     }
+    // Settled AFTER the edits, so a key he gave a twin is read as the key
+    // the board kept for it.
+    const page = turn.composition?.arrangement;
+    if (page) {
+      for (const b of turn.composition?.blocks ?? []) inWords.delete(aliases.get(b.key) ?? b.key);
+      for (const key of inWordsOf(page)) inWords.add(aliases.get(key) ?? key);
+    }
     board = oneLead(board);
     board = expired(board, i, kept);
-    board = bounded(board);
+    board = bounded(board, inWords);
   });
   return board;
 }

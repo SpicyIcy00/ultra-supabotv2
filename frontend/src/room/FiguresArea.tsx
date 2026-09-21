@@ -151,11 +151,18 @@ export function Wires({ frameRef, markRef, wordsRef, areaRef, version }: {
     // a point reaches him THROUGH that point — that is what gathering means —
     // and a line to every child would draw the composition back into the pile
     // of separate things the gathering exists to end.
-    const figures = area
-      ? Array.from(area.querySelectorAll<HTMLElement>(
-        '[data-figure][data-arrived="yes"]:not([data-under])'))
-          .map((el) => ({ key: el.dataset.figure ?? '', box: boxOf(el) as Box }))
-      : [];
+    // ONE LINE TO A PAGE HE WROTE (P7). On a document the figures sit inside
+    // his prose, and a line to each of them ran through the paragraphs it had
+    // to cross to get there. The page is one thing he made: the line goes to
+    // where it opens.
+    const page = area?.querySelector<HTMLElement>('.r-doc-lede, .r-doc-sec') ?? null;
+    const figures = page
+      ? [{ key: 'page', box: boxOf(page) as Box }]
+      : area
+        ? Array.from(area.querySelectorAll<HTMLElement>(
+          '[data-figure][data-arrived="yes"]:not([data-under])'))
+            .map((el) => ({ key: el.dataset.figure ?? '', box: boxOf(el) as Box }))
+        : [];
     setWires(wireEnds({
       frame: boxOf(host) as Box,
       mark: boxOf(markRef.current?.querySelector('canvas') ?? markRef.current),

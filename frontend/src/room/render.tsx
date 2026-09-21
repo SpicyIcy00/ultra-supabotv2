@@ -23,14 +23,15 @@ import { CHILD_GAP, gather, type Relation } from './gather';
 import { focusFor, sectionFor, type Section } from './page';
 import { readIndexes } from './work';
 import { pageOf } from './pageOf';
-import { PROCESS, callOf, rowsOf, tableShape, windowLabel, type AnswerTurn, type Dimension } from './data';
+import { InlineFigure, Pair, Prose, Section as DocSection, Tabs, refsOf } from './doc';
+import { PROCESS, callOf, readAt, rowsOf, tableShape, windowLabel, type AnswerTurn, type Dimension } from './data';
 import { markFor } from './catalogue';
 import type { ToolCall } from '../types/bob';
 import {
   ControlTile, DraftTile, MemoryTile, SpecTile, StateTile, SystemTile,
   ownNotices, type TileActions, type TileProps,
 } from './tiles';
-import { MarkBlock } from './marks';
+import { FacingScale, MarkBlock, facingScale } from './marks';
 import { Marked } from './Reading';
 import type { ActionOffer, Arrangement, BobNotice } from '../types/bob';
 
@@ -44,6 +45,12 @@ export interface BoardProps {
    * next to the page ... so it feels like ONE PAGE".
    */
   foot?: ReactNode;
+  /**
+   * HIS CAVEAT, FOR THE PAGE (P7): drawn where his arrangement places
+   * `{caveat: true}` — the margin note of the section it qualifies. Unplaced,
+   * the Board draws none and the room keeps it beside his answer.
+   */
+  caveat?: string | null;
   board: BoardObject[];
   local: Record<string, Local>;
   focused: string | null;
@@ -435,8 +442,16 @@ export function Board(p: BoardProps) {
   // leaves the source line, so it is read first and still said only once.
   const periodOf = (o: BoardObject) =>
     windowLabel(callOf(p.answers[o.turn], o.seq ?? o.seqs?.[0])?.result?.meta ?? null);
-  const periods = new Set(objects.filter((o) => o.turn === newest)
-    .map(periodOf).filter((x): x is string => Boolean(x)));
+  // THE SAME DAYS ARE THE SAME PERIOD, whatever they were asked as (P7):
+  // `last_7_days` and the pair of dates it resolved to are one window, and
+  // told apart by their labels the page announced a change that was not one.
+  const periodKeyOf = (o: BoardObject): string | null => {
+    const w = callOf(p.answers[o.turn], o.seq ?? o.seqs?.[0])?.result?.meta?.window as
+      { start?: unknown; end?: unknown } | null | undefined;
+    return w?.start && w?.end ? `${String(w.start)}|${String(w.end)}` : periodOf(o);
+  };
+  const periods = new Set(objects.filter((o) => o.turn === newest && o.kind !== 'control')
+    .map(periodKeyOf).filter((x): x is string => Boolean(x)));
   const manyPeriods = periods.size > 1;
 
   const orderFor = (o: BoardObject) => (
@@ -564,12 +579,26 @@ export function Board(p: BoardProps) {
   // WHICH KEYS HIS TREE ACTUALLY PLACES, so the rest can be drawn after it.
   const placedKeys = new Set<string>();
   let placedNext = false;
+  // A DOCUMENT HAS A LEDE OR A HEAD (P7); a tree of blocks alone is the
+  // arrangement it always was, and is drawn exactly as it was.
+  let isDocument = false;
   (function walk(node: Arrangement | null) {
     if (!node) return;
-    if ('block' in node) { placedKeys.add(node.block); return; }
+    if ('children' in node) { node.children.forEach(walk); return; }
+    if ('block' in node) {
+      placedKeys.add(node.block);
+      // A control carried by a figure is placed with it.
+      if (node.control) placedKeys.add(node.control);
+      return;
+    }
     if ('next' in node) { placedNext = true; return; }
-    if ('say' in node) return;
-    (node.children ?? []).forEach(walk);
+    if ('caveat' in node) return;
+    // A FIGURE HE POINTED AT FROM A SENTENCE IS PLACED: it is in the sentence,
+    // and drawing it again after the page would say it twice.
+    const line = 'lede' in node ? node.lede : 'head' in node ? node.head
+      : 'note' in node ? node.note : node.say;
+    refsOf(line).forEach((key) => placedKeys.add(key));
+    if ('lede' in node || 'head' in node) isDocument = true;
   })(laidOut);
   // THE READS HE DID NOT WRITE UP, as one line that opens — drawn just before
   // the plan wherever the plan sits, so nothing follows what to do. Not gone:
@@ -589,26 +618,110 @@ export function Board(p: BoardProps) {
   const readOrder: string[] = [];
   (function walk(node: Arrangement | null) {
     if (!node) { readOrder.push(...objects.map((o) => o.key)); return; }
-    if ('block' in node) { readOrder.push(node.block); return; }
-    if ('say' in node || 'next' in node) return;
-    (node.children ?? []).forEach(walk);
+    if ('children' in node) { node.children.forEach(walk); return; }
+    if ('block' in node) readOrder.push(node.block);
   })(laidOut);
   for (const o of objects) if (!readOrder.includes(o.key)) readOrder.push(o.key);
   const saysPeriod = new Set<string>();
+  // A ROW SAYS ITS WINDOW ONCE, OVER THE ROW (P7). Said on the first block of
+  // a row and not the second, the label pushed one list a line below the list
+  // it faces. Where every block of a row reads one window, the row wears it.
+  const rowSays = new Map<Arrangement, string>();
   {
-    const byKeyPeriod = new Map(objects.map((o) => [o.key, periodOf(o)] as const));
+    // A control states no figure, so it has no window to announce; and a
+    // figure that lives in a sentence is not a block with a head to wear one.
+    const byKeyPeriod = new Map(objects.filter((o) => o.kind !== 'control')
+      .map((o) => [o.key, periodKeyOf(o)] as const));
     let above: string | null = null;
-    for (const key of readOrder) {
+    const say = (key: string) => {
       const per = byKeyPeriod.get(key) ?? null;
       if (per && per !== above) saysPeriod.add(key);
       if (per) above = per;
-    }
+    };
+    const walk = (node: Arrangement): void => {
+      if (!('children' in node)) { if ('block' in node) say(node.block); return; }
+      if (node.layout === 'tabs') {
+        // One view shows at a time, so each is read from what stands above
+        // the tabs — and what follows them cannot know which was showing.
+        const entry = above;
+        let moved = false;
+        for (const view of node.children) { above = entry; walk(view); moved = moved || above !== entry; }
+        above = moved ? null : entry;
+        return;
+      }
+      if (node.layout === 'row' || node.layout === 'grid') {
+        const leaves = node.children.filter((c): c is Extract<Arrangement, { block: string }> => 'block' in c);
+        const pers = new Set(leaves.map((c) => byKeyPeriod.get(c.block) ?? null));
+        const [one] = [...pers];
+        if (leaves.length > 1 && leaves.length === node.children.length && pers.size === 1 && one) {
+          if (one !== above) {
+            const first = byKey.get(leaves[0].block);
+            rowSays.set(node, (first && periodOf(first.o)) ?? one);
+          }
+          above = one;
+          return;
+        }
+      }
+      node.children.forEach(walk);
+    };
+    if (laidOut) walk(laidOut);
+    // Then what the tree did not place, in the order it is drawn after it.
+    for (const key of readOrder) if (!laidOut || !placedKeys.has(key)) say(key);
   }
-  const drawNode = (node: Arrangement, at: string): ReactNode => {
+  // THE FIGURE A SENTENCE POINTS AT (P7): the block he named, drawn as the one
+  // value of its row. A key that names nothing on the board draws a dash.
+  const inline = (key: string, part: string | undefined, n: number): ReactNode => {
+    const it = byKey.get(key);
+    return it
+      ? <InlineFigure key={`${key}-${part ?? 'v'}-${n}`} o={it.o} turn={p.answers[it.o.turn]} part={part} />
+      : null;
+  };
+  // HOW MUCH ROOM A FIGURE NEEDS WHEN IT SITS BESIDE ITS WORDS, from what it
+  // draws — "it should know how much size it needs" (the log, 2026-09-17).
+  const roomFor = (o: BoardObject): 'small' | 'medium' | 'wide' | 'full' => {
+    const rows = rowsOf(callOf(p.answers[o.turn], o.seq ?? o.seqs?.[0]));
+    const mark = markFor(o, rows);
+    if (mark === 'figure') return 'small';
+    if (mark === 'line') return o.weight === 'lead' ? 'wide' : 'medium';
+    // A dumbbell is a name, a track and two figures: at less than the wider
+    // room the track is what gives, and the track is the chart.
+    if (mark === 'dumbbell' && rows.length <= 8) return 'wide';
+    if ((mark === 'ranked' || mark === 'contributors' || mark === 'list')
+        && rows.length <= 8) return 'medium';
+    return 'full';
+  };
+  const drawNode = (node: Arrangement, at: string, after?: Arrangement): ReactNode => {
     // THE PLAN, WHERE HE PUT IT (P6.h). The same element the foot draws
     // when he leaves it out, so it is one thing in one place.
     if ('next' in node) {
       return <div key={at} className="r-laid-next">{earlierLine}{p.foot}</div>;
+    }
+    if ('caveat' in node) {
+      // WHAT QUALIFIES THESE FIGURES, BESIDE THEM. Whole, in his ink, where he
+      // set it; the room stops drawing it beside his answer (Room.tsx).
+      return p.caveat ? (
+        <aside key={at} className="r-doc-note" data-caveat="yes"
+               // A long caveat in a third of the page is a ribbon; it takes the
+               // wider margin, and the words still run beside it.
+               data-long={p.caveat.length > 280 ? 'yes' : undefined}>
+          <span className="r-doc-note-lab">what qualifies these figures</span>
+          {p.caveat}
+        </aside>
+      ) : null;
+    }
+    if ('lede' in node) {
+      return <p key={at} className="r-say r-doc-lede"><Prose text={node.lede} figure={inline} /></p>;
+    }
+    if ('head' in node) {
+      return <h2 key={at} className="r-doc-h"><Prose text={node.head} figure={inline} /></h2>;
+    }
+    if ('note' in node) {
+      return (
+        <aside key={at} className="r-doc-note">
+          {node.label && <span className="r-doc-note-lab">{node.label}</span>}
+          <Prose text={node.note} figure={inline} />
+        </aside>
+      );
     }
     if ('say' in node) {
       // HIS WORDS, WHEREVER HE PUT THEM — the "it doesn't have to have text
@@ -622,8 +735,8 @@ export function Board(p: BoardProps) {
       // same?"*. The playground may rearrange what the app draws; it may not
       // draw it differently.
       return (
-        <div key={at} className="r-para">
-          <p className="r-say r-page-say">{node.say}</p>
+        <div key={at} className="r-para r-doc-p">
+          <p className="r-say r-page-say"><Prose text={node.say} figure={inline} /></p>
         </div>
       );
     }
@@ -632,11 +745,45 @@ export function Board(p: BoardProps) {
       // A key whose block is not on the board draws nothing rather than a
       // hole: the server already dropped unknown keys, and a block can still
       // be missing here if an earlier turn dropped it.
-      return it ? <Fragment key={at}>{drawFigure(it, 0, true)}</Fragment> : null;
+      if (!it) return null;
+      // BESIDE THE WORDS THAT FOLLOW IT (P7): where he said so, or where a
+      // figure that needs less than the width is followed by a paragraph —
+      // the section balances it against them, and sets it under them if it
+      // cannot (doc.tsx, Section). A block with no words after it takes the
+      // width, exactly as every arrangement before this drew it.
+      // Beside NOTHING it is a float with a hole where its words would be, so
+      // it sits beside words only where words follow it.
+      const wordsFollow = Boolean(after && 'say' in after);
+      const room = node.size ?? (wordsFollow && node.beside !== false ? roomFor(it.o) : 'full');
+      const beside = room !== 'full' && wordsFollow && node.beside !== false;
+      const control = node.control ? byKey.get(node.control) : undefined;
+      return (
+        <div key={at} className="r-doc-fig" data-size={room} data-beside={beside ? 'yes' : undefined}>
+          {control && <div className="r-doc-ctl-host">{drawFigure(control, 0, true)}</div>}
+          {drawFigure(it, 0, true)}
+        </div>
+      );
     }
-    const kids = (node.children ?? []).map((c, n) => drawNode(c, `${at}.${n}`));
+    const kids = node.children.map((c, n) => drawNode(c, `${at}.${n}`, node.children[n + 1]));
+    if (node.layout === 'tabs') {
+      return <Tabs key={at} labels={node.labels ?? []}>{kids}</Tabs>;
+    }
     if (node.layout === 'row') {
-      return <div key={at} className="r-laid r-laid--row">{kids}</div>;
+      // LISTS THAT FACE EACH OTHER ARE READ AGAINST EACH OTHER (P7): two or
+      // more lists of movers in one row draw on one scale (marks.tsx).
+      const movers = node.children.flatMap((c) => {
+        const it = 'block' in c ? byKey.get(c.block) : undefined;
+        if (!it) return [];
+        const rows = rowsOf(callOf(p.answers[it.o.turn], it.o.seq ?? it.o.seqs?.[0]));
+        return markFor(it.o, rows) === 'contributors' ? [rows] : [];
+      });
+      const when = manyPeriods ? rowSays.get(node) : undefined;
+      return (
+        <FacingScale.Provider key={at} value={movers.length > 1 ? facingScale(movers) : null}>
+          {when && <p className="r-fig-when r-laid-when">{when}</p>}
+          <div className="r-laid r-laid--row">{kids}</div>
+        </FacingScale.Provider>
+      );
     }
     if (node.layout === 'grid') {
       return (
@@ -653,6 +800,53 @@ export function Board(p: BoardProps) {
       );
     }
     return <div key={at} className="r-laid r-laid--stack">{kids}</div>;
+  };
+  // THE PAGE, SECTION BY SECTION (P7). A `head` opens a section and the lede
+  // stands alone above them; each section contains its own floats and balances
+  // them. A tree with neither is one section — the arrangement it always was.
+  const drawPage = (root: Arrangement): ReactNode => {
+    if (!('children' in root) || root.layout !== 'stack' || !isDocument) return drawNode(root, 'root');
+    const sections: Arrangement[][] = [[]];
+    for (const child of root.children) {
+      if ('head' in child && sections[sections.length - 1].length) sections.push([]);
+      sections[sections.length - 1].push(child);
+      if ('lede' in child) sections.push([]);
+    }
+    // WHEN IT WAS READ, ONCE, AT THE HEAD OF THE PAGE (UI rule 6): every figure
+    // in a sentence below wears this time; every drawing still wears its own.
+    const stamps = (p.answers[newest]?.toolCalls ?? [])
+      .map((c) => c.result?.meta?.snapshot_timestamp).filter((x): x is string => Boolean(x)).sort();
+    const when = stamps.length ? readAt(stamps[0]) : null;
+    const window_ = periods.size === 1 ? [...periods][0] : null;
+    return (
+      <>
+        {(when || window_) && (
+          <p className="r-doc-dateline">
+            {[window_, when, stamps.length ? `${stamps.length} reads` : null].filter(Boolean).join(' · ')}
+          </p>
+        )}
+        {sections.filter((parts) => parts.length).map((parts, i) => {
+          // A FIGURE AND THE PARAGRAPHS THAT FOLLOW IT ARE ONE PAIR (doc.tsx):
+          // the figure floats beside them, and if it cannot, goes under THEM —
+          // not under whatever else the section holds.
+          const out: ReactNode[] = [];
+          for (let n = 0; n < parts.length; n += 1) {
+            const part = parts[n];
+            const drawn = drawNode(part, `s${i}.${n}`, parts[n + 1]);
+            const pairs = 'block' in part && part.beside !== false
+              && Boolean(parts[n + 1] && 'say' in parts[n + 1]);
+            if (!pairs) { out.push(drawn); continue; }
+            const held: ReactNode[] = [drawn];
+            while (n + 1 < parts.length && 'say' in parts[n + 1]) {
+              n += 1;
+              held.push(drawNode(parts[n], `s${i}.${n}`, parts[n + 1]));
+            }
+            out.push(<Pair key={`pair-${i}.${n}`}>{held}</Pair>);
+          }
+          return <DocSection key={`sec-${i}`}>{out}</DocSection>;
+        })}
+      </>
+    );
   };
 
   const drawPara = (it: Extract<Item, { kind: 'para' }>, at: number, laid: boolean) => {
@@ -809,7 +1003,7 @@ export function Board(p: BoardProps) {
       {laidOut
         ? (
           <>
-            {drawNode(laidOut, 'root')}
+            {drawPage(laidOut)}
             {/* A BLOCK HE DID NOT PLACE IS STILL DRAWN, after his arrangement
                 and in his order. The server names it on `coerced`; this is the
                 half that keeps it on screen, because a figure that vanishes

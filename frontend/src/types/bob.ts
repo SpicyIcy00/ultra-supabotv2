@@ -534,12 +534,22 @@ export interface SpecNode {
  * ABSENT IS THE PACKING, which is every answer composed before this.
  */
 export type Arrangement =
-  | { layout: 'stack' | 'row' | 'grid' | 'panel'; children: Arrangement[];
-      cols?: number; heading?: string }
-  | { block: string }
+  | { layout: 'stack' | 'row' | 'grid' | 'panel' | 'tabs'; children: Arrangement[];
+      cols?: number; heading?: string;
+      /** For `tabs`: a plain label per view, in order. */
+      labels?: string[] }
+  /** A block of his. `beside`: set beside the words that follow it; `size`: the
+   *  room it takes; `control`: a control block carried above its drawing (P7). */
+  | { block: string; beside?: boolean; size?: 'small' | 'medium' | 'wide' | 'full'; control?: string }
+  /** His words on the page. A `{key}` in any of them is a live figure (P7). */
   | { say: string }
+  | { lede: string }
+  | { head: string }
+  | { note: string; label?: string }
   /** The plan — the reading's `next` — placed where he wants it (P6.h). */
-  | { next: true };
+  | { next: true }
+  /** His reading's caveat, set on the page as the margin note of a section (P7). */
+  | { caveat: true };
 
 export interface CompositionFrame {
   /** The seq of the compose call itself; -1 when restored from a stored post. */

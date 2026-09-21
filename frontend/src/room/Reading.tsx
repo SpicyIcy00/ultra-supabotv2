@@ -42,6 +42,7 @@ import { Caveats } from './tiles';
 import { splitClaim } from './claim';
 import { placeFigures } from './figures';
 import { claimAndStanding, unmark } from './beside';
+import { leadOf, planSteps } from './plan';
 
 /**
  * EVERY FIGURE IN WHAT HE SAID, MARKED OR VISIBLY UNMARKED (P1.k, P2.b).
@@ -339,10 +340,25 @@ export function ReadingNext({ reading, calls, onFigure }: {
   // was one sentence beside the headline; it is the last thing on the page
   // now, after the figures have made the case, and it keeps his line breaks.
   // A mono label, his words in serif, a rule down the side.
+  // A PLAN IS A SEQUENCE (P7): more than one paragraph is drawn as steps, each
+  // led by its own short opening sentence. One paragraph is one paragraph.
+  const steps = planSteps(next);
   return (
-    <div className="r-next">
+    <div className="r-next" data-steps={steps.length > 1 ? steps.length : undefined}>
       <b className="r-next-label">what I&rsquo;d do next</b>
-      <Figures text={next} calls={calls ?? []} onFigure={onFigure} />
+      {steps.length > 1 ? (
+        <ol className="r-plan">
+          {steps.map((step) => {
+            const [lead, rest] = leadOf(step);
+            return (
+              <li key={step}>
+                {lead && <b className="r-plan-lead">{lead} </b>}
+                <Figures text={rest} calls={calls ?? []} onFigure={onFigure} />
+              </li>
+            );
+          })}
+        </ol>
+      ) : <Figures text={next} calls={calls ?? []} onFigure={onFigure} />}
     </div>
   );
 }

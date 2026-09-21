@@ -3073,3 +3073,36 @@ none. So the page became the default (P6.k). The same turn, same data, no arrang
 draws as a page: `verification/frames/page-default/live-packed-1440-closed-room.png`.
 Frontend 1143, backend 2148.
 
+### 2026-09-21 — "like an artifact claude can make" (P7: the page is a document)
+
+The owner, of the P6 page: *"right is still feels a little clunky … it feels like it has to
+fit in the stuff in columns and rows or a grid but an artifact/page isnt like that. it makes
+its own … it can also have buttons, drop downs. filters … its case to case."* So the design
+came first this time — `ops/ideal/the-page-bob-writes.html`, the 21 Sep turn as an article
+with its figures inside its sentences — and then the room was rebuilt to produce it.
+
+What the first honest render in the room found, none of it caught by a test:
+
+1. **The validator refused the target page.** Eight blocks was the cap and a lede with four
+   figures spends four of them. A figure in a sentence is not a tile; it has its own bound now.
+2. **The control replaced the chart it drives.** Same read, so "this is that" — the first
+   page to carry a control lost its dumbbell. A control has no read identity.
+3. **The lede's own numbers fell off the page.** Sixteen objects, a bound of twelve on
+   attention, the oldest dropped first: `{net}` drew as a dash.
+4. **The renderer hung.** A section sat shrink-to-fit in a flex column, so its width was a
+   function of its own phase; balancing changed the width and a new width restarted the
+   balance, forever. The page's measure is the column's; the balance listens to the page.
+5. **The section, not the pair.** A figure set under its words went to the END of its
+   section — past the tabs — and on a phone the caveat went with it, below the figures it
+   qualifies. A figure is paired with the paragraphs that follow it and nothing else moves.
+6. **An unlabelled `0`.** The stockout list printed `days_negative` beside every name and
+   the shop's name ten times. What every row shares is not a column.
+7. **The chart labelled the wrong day.** His sentence and his callout were about Saturday;
+   the page put a figure on Sunday, the high. The point he calls out wears its figure.
+
+Also: I killed every Chrome process on the machine (`taskkill /IM chrome.exe`) to clear a
+hung headless run, which may have closed the owner's own windows. Headless runs now get
+their own profile and a `timeout`; nothing is killed by image name again.
+
+Frontend 1165, backend 2162. `verification/frames/p7-doc/` — desk, 600 px and phone.
+NOT verified: that Bob writes such a page. That is one live turn, and it is the owner's call.

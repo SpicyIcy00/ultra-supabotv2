@@ -18,7 +18,7 @@ import { useBob } from '../hooks/useBob';
 import { useThread } from '../hooks/useThread';
 import { threadHistory } from '../components/bob/threadHistory';
 import { replaysToRestore, restoreFromPosts } from './restore';
-import { boardContext, buildBoard, folded, shapedByReplay,
+import { boardContext, buildBoard, folded, placesCaveat, shapedByReplay,
          type Local, type BoardObject } from './board';
 import { keepLocal, restoreLocal } from './arrangement';
 import { callOf, rowsOf, subjectOf, type AnswerTurn, type Block } from './data';
@@ -280,6 +280,9 @@ export default function Room() {
   // HIS SENTENCES BY THE CHART THEY CITE (the owner, 2026-09-17: "if the ai
   // thoughts are with the charts it feels likes your going thorugh it
   // together"). What no chart takes stays with the rest of his words.
+  // HIS CAVEAT IS ON THE PAGE WHERE HIS PAGE PUTS IT (P7) — settled turns only,
+  // for the reason the arrangement is: mid-turn there is no page yet.
+  const caveatOnPage = !busy && placesCaveat(latest?.composition?.arrangement);
   const thoughts = useMemo(() => {
     if (!latest || busy) return null;
     // A chart that already carries his own thought takes no sentence of the
@@ -864,7 +867,10 @@ export default function Room() {
                   <Reading part="rest" text={latest?.text} reading={latest?.reading}
                            calls={latest?.toolCalls} onFigure={showFigure}
                            standing={bodyOf(latest?.text, latest?.reading?.claim, latest?.reading?.next)}
-                           caveat={thoughts?.caveat} />
+                           // ON THE PAGE WHERE HE SET IT (P7), and then not here
+                           // too: said twice it is the wall of text the owner
+                           // kept finding on this side.
+                           caveat={caveatOnPage ? '' : thoughts?.caveat} />
                 )}
                 <ReadingAsks reading={latest?.reading} busy={busy} onAsk={(q) => ask(q)} />
                 {/* WHAT HE'D DO NEXT IS UNDER THE FIGURES NOW (P6.f), with the
@@ -930,6 +936,8 @@ export default function Room() {
                     // where his arrangement says, else last. Not while he is
                     // still working — a plan for figures that have not landed
                     // is not one.
+                    caveat={caveatOnPage && latest?.reading?.caveat?.trim()
+                      ? latest.reading.caveat.trim() : null}
                     foot={busy ? null : (
                       <>
                         <ReadingNext reading={latest?.reading} calls={latest?.toolCalls}

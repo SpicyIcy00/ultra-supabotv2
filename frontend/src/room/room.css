@@ -1655,6 +1655,173 @@
 tr[data-lit="yes"] td { font-weight: 600; }
 .r-mk-series { display: inline-flex; align-items: center; color: var(--ink-2); }
 
+/* ===================== THE PAGE IS A DOCUMENT (P7, 2026-09-21) ==============
+   ops/ideal/the-page-bob-writes.html. The owner: "it feels like it has to fit
+   the stuff in columns and rows or a grid but an artifact/page isnt like that.
+   it makes its own." So the text is the spine: a lede, sections opened by a
+   head, paragraphs with the figure they discuss floated INTO them at the size
+   it needs, a margin note, a control carried by the figure it drives, the plan
+   as steps. Set before the marks' own section on purpose: this is the page's
+   furniture, and it may use the room's shadow and ground. */
+.r-board--laid { container-type: inline-size; }
+.r-doc-dateline {
+  font: 400 10.5px/1.6 var(--mono); letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--ink-4); margin: 0 0 16px;
+}
+/* A section contains its own floats, so a head never has to clear one — and
+   the page can ask, section by section, whether figure and words balance. */
+.r-doc-sec { display: flow-root; margin: 0 0 40px; min-width: 0; }
+/* THE PAGE'S MEASURE IS THE COLUMN'S, NEVER ITS CONTENT'S. The flow aligns its
+   children to the start (it packs figures), so in the laid column a section
+   sat shrink-to-fit and its width answered to what was in it. */
+.r-board--laid > .r-doc-sec, .r-board--laid > .r-doc-dateline { align-self: stretch; width: 100%; box-sizing: border-box; }
+.r-board--laid > .r-doc-sec:last-child { margin-bottom: 0; }
+.r-doc-lede {
+  font: 400 25px/1.36 var(--serif); color: var(--ink); margin: 0; max-width: 31em;
+  white-space: normal; text-wrap: pretty;
+}
+.r-doc-h {
+  font: 600 21px/1.28 var(--serif); color: var(--ink); margin: 0 0 12px;
+  max-width: 28em; text-wrap: balance;
+}
+.r-doc-sec > .r-doc-p, .r-doc-pair > .r-doc-p { margin: 0 0 14px; }
+.r-doc-sec .r-doc-p .r-page-say { max-width: 62ch; white-space: normal; }
+/* A FIGURE AND THE WORDS IT SITS BESIDE (doc.tsx, Pair). It contains its own
+   float, so whatever follows the pair — tabs, a figure at full width, the next
+   pair — starts clear of it without being told to. */
+.r-doc-pair { display: flow-root; min-width: 0; margin: 0 0 10px; }
+
+/* A FIGURE TAKES THE ROOM IT NEEDS; beside its words it is a float. */
+.r-doc-fig { min-width: 0; }
+.r-doc-sec > .r-doc-fig, .r-doc-pair > .r-doc-fig { margin: 8px 0 24px; }
+.r-doc-fig[data-size="small"] { width: 31%; }
+.r-doc-fig[data-size="medium"] { width: 46%; }
+.r-doc-fig[data-size="wide"] { width: 56%; }
+.r-doc-fig[data-size="full"] { width: 100%; clear: both; }
+.r-doc-pair > .r-doc-fig[data-beside] { float: right; margin: 4px 0 18px 36px; }
+/* IT BALANCES ITSELF (doc.tsx, Pair): the other size, then under its words. */
+.r-doc-pair[data-phase="1"] > .r-doc-fig[data-beside][data-size="small"] { width: 40%; }
+.r-doc-pair[data-phase="1"] > .r-doc-fig[data-beside][data-size="medium"] { width: 56%; }
+.r-doc-pair[data-phase="1"] > .r-doc-fig[data-beside][data-size="wide"] { width: 46%; }
+.r-doc-pair[data-phase="2"] { display: flex; flex-direction: column; }
+.r-doc-pair[data-phase="2"] > .r-doc-fig[data-beside] {
+  float: none; order: 2; width: min(100%, 680px); margin: 10px 0 0;
+}
+/* Inside a row or a grid the layout decides the width, as it always did; and a
+   tree of blocks alone keeps the distance it had between them. */
+.r-laid--row > .r-doc-fig, .r-laid--grid > .r-doc-fig { width: auto; float: none; margin: 0; clear: none; }
+.r-laid--stack > .r-doc-fig, .r-laid--panel > .r-doc-fig { margin: 0 0 48px; }
+.r-laid--stack > .r-doc-fig:last-child, .r-laid--panel > .r-doc-fig:last-child { margin-bottom: 0; }
+.r-doc-sec > .r-laid { margin: 8px 0 24px; clear: both; }
+.r-doc-fig .r-fig-body { padding-bottom: 0; }
+
+/* A MARGIN NOTE: what qualifies the page, beside it rather than above it. His
+   words, so his ink. */
+.r-doc-note {
+  float: right; clear: right; width: 31%; margin: 4px 0 18px 36px; padding: 2px 0 2px 14px;
+  border-left: 1px solid var(--edge-strong); font: 400 13px/1.55 var(--sans); color: var(--ink);
+}
+.r-doc-note[data-long] { width: 44%; }
+.r-doc-note-lab {
+  display: block; margin: 0 0 4px; font: 500 10px/1.6 var(--mono); letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+
+/* A LIVE FIGURE INSIDE A SENTENCE: the row's value, drawn by the page, tappable
+   for its receipt. He wrote {key}; he never typed the digits. */
+.r-inl-wrap { position: relative; white-space: nowrap; }
+.r-inl {
+  font: 500 0.88em/1 var(--mono); letter-spacing: -0.01em; color: var(--ink); white-space: nowrap;
+  background: none; border: 0; padding: 0 0 1px; border-bottom: 1px dotted var(--ink-4); cursor: pointer;
+}
+.r-inl:hover, .r-inl[aria-expanded="true"] { border-bottom-color: var(--ink); }
+.r-inl--missing { cursor: default; border-bottom: 0; color: var(--ink-3); }
+.r-inl-d { font: 500 0.74em/1 var(--mono); white-space: nowrap; margin-left: 0.3em; }
+.r-inl-receipt {
+  position: absolute; left: 0; top: calc(100% + 7px); z-index: 6; display: grid; gap: 3px;
+  min-width: 230px; max-width: 320px; white-space: normal; text-align: left;
+  background: var(--card); border: 1px solid var(--edge-strong); border-radius: 8px; padding: 9px 11px;
+  font: 400 11.5px/1.5 var(--mono); letter-spacing: 0; color: var(--ink-2); box-shadow: var(--shadow-2);
+}
+.r-inl-receipt b { font-weight: 500; color: var(--ink); }
+
+/* TABS, AND A CONTROL ON A FIGURE: one small segmented shape, placed only
+   where turning it answers the person's next question. */
+.r-doc-tabs { min-width: 0; }
+.r-doc-ctl { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 10px; }
+.r-doc-seg { display: inline-flex; border: 1px solid var(--edge-strong); border-radius: 999px; padding: 2px; }
+.r-doc-seg button {
+  border: 0; background: none; border-radius: 999px; padding: 5px 11px; cursor: pointer;
+  font: 500 11.5px/1 var(--sans); color: var(--ink-3);
+}
+.r-doc-seg button[aria-pressed="true"] { background: var(--ink); color: var(--ground); }
+.r-doc-ctl-host .r-tile { flex-direction: row; align-items: center; gap: 10px; margin: 0 0 10px; }
+.r-doc-ctl-host .r-label { font: 500 10px/1 var(--mono); letter-spacing: 0.1em; color: var(--ink-4); margin: 0; }
+.r-doc-ctl-host .r-ctl-options {
+  border: 1px solid var(--edge-strong); border-radius: 999px; padding: 2px; gap: 0 !important;
+}
+.r-doc-ctl-host .r-chip {
+  border: 0; background: none; padding: 5px 11px; font: 500 11.5px/1 var(--sans); color: var(--ink-3);
+}
+.r-doc-ctl-host .r-chip[aria-pressed="true"] { background: var(--ink); color: var(--ground); }
+/* THE SAME CONTROL AS A DROPDOWN, where the figure it rides on is narrow. */
+.r-doc-ctl-host { container-type: inline-size; }
+.r-ctl-select {
+  display: none; appearance: none; cursor: pointer;
+  font: 500 11.5px/1 var(--sans); color: var(--ink); background: transparent;
+  border: 1px solid var(--edge-strong); border-radius: 999px; padding: 6px 28px 6px 12px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%;
+  background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+}
+.r-ctl-select option { color: var(--ink); background: var(--card); }
+@container (max-width: 620px) {
+  .r-doc-ctl-host .r-ctl-select { display: inline-block; }
+  .r-doc-ctl-host .r-ctl-options { display: none !important; }
+}
+/* A figure of the page is a container, so what it holds answers to the room
+   the FIGURE has — beside its words that is a third of the page's. */
+.r-doc-sec > .r-doc-fig, .r-doc-pair > .r-doc-fig { container-type: inline-size; }
+/* What follows a set of tabs starts clear of them. */
+.r-doc-sec > .r-doc-tabs { margin: 8px 0 30px; clear: both; }
+.r-doc-tabs > .r-laid { margin: 0; }
+
+/* THE PLAN AS STEPS — because it IS a sequence; the numeral is the page's. */
+.r-next[data-steps] { border-left: 0; padding-left: 0; white-space: normal; max-width: 66ch; }
+.r-plan { list-style: none; margin: 10px 0 0; padding: 0; counter-reset: step; }
+.r-plan li { counter-increment: step; position: relative; padding: 0 0 18px 44px; }
+.r-plan li:last-child { padding-bottom: 0; }
+.r-plan li::before {
+  content: counter(step); position: absolute; left: 0; top: 0; width: 27px; height: 27px;
+  border-radius: 50%; border: 1px solid var(--edge-strong); display: grid; place-items: center;
+  font: 500 12px/1 var(--mono); color: var(--ink-2);
+}
+.r-plan li:not(:last-child)::after {
+  content: ''; position: absolute; left: 13px; top: 33px; bottom: 4px; border-left: 1px solid var(--edge);
+}
+.r-plan-lead { font-weight: 600; }
+/* On the page the plan is the last SECTION, so its label is a head like theirs. */
+.r-laid-next .r-next[data-steps] .r-next-label {
+  font: 600 21px/1.28 var(--serif); letter-spacing: 0; text-transform: none; color: var(--ink);
+  margin: 0 0 4px;
+}
+
+/* A NARROW COLUMN IS ONE COLUMN: the words first, then what they point at. It
+   follows the PAGE's width, not the window's — the rail can be open. */
+/* A PHONE IS ONE COLUMN, IN THE ORDER IT IS READ: a figure goes under the words
+   it sat beside — its own pair's, nothing else's — and a note stays where he
+   put it, which is BEFORE the figures it qualifies. */
+@container (max-width: 620px) {
+  .r-doc-pair { display: flex; flex-direction: column; }
+  .r-doc-pair > .r-doc-fig[data-beside] { order: 2; }
+  .r-doc-pair > .r-doc-fig[data-beside], .r-doc-sec > .r-doc-fig[data-size],
+  .r-doc-pair > .r-doc-fig[data-size], .r-doc-sec > .r-doc-note {
+    float: none; width: 100%; margin: 10px 0 18px;
+  }
+  .r-doc-lede { font-size: 21px; }
+}
+
 /* ---------------------------------------------------------------- the six
  *
  * SIX MARKS, DRAWN ONE WAY EACH (P1.e). The frame is the same every time —
@@ -2298,7 +2465,12 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 .r-board--laid .r-mk-line svg { margin-top: 8px; }
 .r-mk-axis { stroke: var(--edge-strong); }
 .r-mk-tick { font: 500 10.5px var(--mono); fill: var(--ink-3); }
-.r-board--laid .r-mk-point { font-size: 12px; }
+.r-board--laid .r-mk-point {
+  font-size: 12px;
+  /* A figure on a chart is read over whatever it crosses: a gap stroke, the
+     dotted baseline. The ground behind the glyphs, not a box. */
+  paint-order: stroke; stroke: var(--ground); stroke-width: 4px; stroke-linejoin: round;
+}
 .r-mk-note-l { stroke: var(--ink-3); fill: none; stroke-width: 1; }
 /* The band is the direction of the rows in it, at a tenth; ink when they
    disagree or the tool declared none. */
@@ -2308,6 +2480,7 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 .r-board--laid .r-mk-series-line { stroke: var(--ink); }
 .r-board--laid .r-mk-baseline { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
 .r-board--laid .r-mk-peak { fill: var(--ink); }
+.r-board--laid .r-mk-pt { fill: var(--ink); }
 .r-mk-annotation[data-canvas] {
   position: absolute; top: 0; margin: 0; padding: 0; border-left: 0;
   font-size: 14.5px; line-height: 1.3; text-align: center;
@@ -2315,9 +2488,13 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
      placement left it five characters wide, down the side of the chart. */
   width: max-content; max-width: min(100%, 46ch);
 }
-.r-mk-legend-line { font: 400 11px/1.4 var(--mono); color: var(--ink-3); margin: 6px 0 0; }
+.r-mk-legend-line {
+  font: 400 11px/1.4 var(--mono); color: var(--ink-3); margin: 6px 0 0;
+  display: flex; flex-wrap: wrap; gap: 2px 16px; align-items: center;
+}
+.r-mk-legend-line .r-mk-key { display: inline-flex; align-items: center; white-space: nowrap; }
 .r-mk-legend-line i { display: inline-block; width: 18px; border-top: 1.6px solid var(--ink); vertical-align: middle; margin: 0 6px 0 0; }
-.r-mk-legend-line i.r-mk-legend-was { border-top: 1px dashed var(--ink-3); margin-left: 10px; }
+.r-mk-legend-line i.r-mk-legend-was { border-top: 1px dashed var(--ink-3); }
 /* THE STRIP (`.multiples`, `.shop`): seven across on a desk, two on a phone. */
 /* Seven across in a 600px column: 7×68 + 6×14. */
 .r-mk-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(68px, 1fr)); gap: 14px; margin-top: 12px; }
@@ -2343,6 +2520,13 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 .r-board--laid .r-mk-contributors .r-mk-fig b { font: 500 11.5px/1.35 var(--mono); }
 /* THE LIST (`.need ul`): two columns of name and where, no rules. */
 .r-board--laid .r-mk-list { margin-top: 8px; }
+/* NAMES ALONE RUN IN TWO COLUMNS (the design's `.need ul`): nothing is being
+   compared down the rows, so a single column is a tall strip of white. */
+/* `display: block`, because every mark is a grid (`.r-mk`) and a grid has no
+   columns to flow into — which is why this list never once drew in two. */
+.r-board--laid .r-mk-list[data-bare] { display: block; columns: 2; column-gap: 40px; }
+.r-board--laid .r-mk-list[data-bare] .r-mk-list-row { break-inside: avoid; }
+@container (max-width: 520px) { .r-board--laid .r-mk-list[data-bare] { columns: 1; } }
 .r-board--laid .r-mk-list-row { border-top: 0; padding: 0; font: 400 13px/1.7 var(--sans); gap: 8px; }
 .r-board--laid .r-mk-list-row .r-mk-name { font: 400 13px/1.7 var(--sans); padding: 0; }
 .r-board--laid .r-mk-list-where { font: 500 11px/1.7 var(--mono); }
@@ -2384,4 +2568,29 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 .r-mk-callout--row { grid-column: 1 / -1; margin: 2px 0 6px; }
 /* On the page the period label is the quietest ink: correct, not loud. */
 .r-board--laid .r-fig-when { color: var(--ink-4); margin-bottom: 4px; }
+/* The window of a whole row, over the row (render.tsx, rowSays). */
+.r-laid-when { clear: both; margin: 8px 0 6px; }
+.r-doc-sec > .r-laid-when + .r-laid { margin-top: 0; }
+/* FACING LISTS LINE UP ROW FOR ROW: a name keeps to one line and carries the
+   whole of itself on the element, so a long product cannot make its row — and
+   only its row — a line taller than the one it faces. */
+.r-board--laid .r-mk-contributors .r-mk-name,
+.r-board--laid .r-mk-contributors .r-mk-name-text {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; min-width: 0;
+}
+/* A figure and what touches it — a bracket, a comma, its own movement — never
+   part at a line's end (doc.tsx, Prose). */
+.r-inl-run { white-space: nowrap; }
 .r-board--laid .r-earlier { margin-bottom: 48px; }
+
+/* THE GAP, WHERE IT IS (P7): a stroke from each point to its own baseline, in
+   the direction the tool declared — the week's shortfall is ONE Saturday and
+   this is what shows it. Painted through `paint`, like every direction. */
+.r-mk-gap { stroke-width: 3; stroke-linecap: round; opacity: 0.72; }
+/* The scale row explains two dots the row already names ("was"). Off the page. */
+.r-board--laid .r-mk-dumbbells .r-mk-scale { display: none; }
+/* What rose faces what fell: the bar first, then the name. */
+.r-board--laid .r-mk-contributors[data-gains] .r-mk-row {
+  grid-template-columns: minmax(50px, 1fr) minmax(0, 1.4fr) 82px;
+}
+.r-board--laid .r-mk-contributors[data-gains] .r-mk-bar { order: -1; }

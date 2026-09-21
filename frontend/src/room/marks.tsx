@@ -31,10 +31,12 @@
  * one arithmetic on this page is a percentage of a maximum, which is a
  * geometry and not a figure — nobody reads it and no answer cites it.
  */
-import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import {
+  createContext, useContext, useLayoutEffect, useRef, useState, type CSSProperties,
+} from 'react';
 import type { ToolMeta } from '../types/bob';
 import {
-  changeOf, fmt, measureOf, readAt, rowUnderClaim, rowsOf, sorted, subjectOf, tableShape,
+  changeOf, fmt, measureOf, pct, readAt, rowUnderClaim, rowsOf, sorted, subjectOf, tableShape,
   unitFor, unitOf,
   valueOf, windowLabel,
   type Change,
@@ -153,8 +155,9 @@ function RowCallout({ callout, name }: { callout: Callout; name: string }) {
   return <p className="r-mk-callout r-mk-callout--row">{callout.text}</p>;
 }
 
-function Dumbbell({ rows: given, meta, o, offers, seq, onTake, onPick, picked, order, callout }:
-                  { rows: Row[]; meta: Meta; o: TileProps['o']; order?: string[]; callout?: Callout } & Offering) {
+function Dumbbell({ rows: given, meta, o, offers, seq, onTake, onPick, picked, order, callout, canvas }:
+                  { rows: Row[]; meta: Meta; o: TileProps['o']; order?: string[]; callout?: Callout;
+                    canvas?: boolean } & Offering) {
   // ONE STORE ORDER ACROSS THE ANSWER, where the room asks for it: a row the
   // order names takes its place, the rest keep theirs after it. Nothing is
   // dropped and nothing is ranked by this — it is where the eye finds a store.
@@ -166,7 +169,14 @@ function Dumbbell({ rows: given, meta, o, offers, seq, onTake, onPick, picked, o
   const now = (r: Row) => Number(valueOf(r)?.value ?? 0);
   const before = (r: Row) => Number(r.baseline);
   const ends = rows.flatMap((r) => [now(r), before(r)]).filter(Number.isFinite);
-  const low = Math.min(0, ...ends);
+  // A DOT ENCODES POSITION, NOT LENGTH (P7), so on the page the scale need not
+  // start at zero — and from zero seven shops between 146k and 467k spent
+  // their track on the distance nobody asked about, the two dots of each row
+  // drawn on top of each other. Every row is on the one scale, so the
+  // segments still compare with each other honestly. Packed: from zero.
+  const least = ends.length ? Math.min(...ends) : 0;
+  const reach = ends.length ? Math.max(...ends) - least : 0;
+  const low = canvas && reach > 0 && least > 0 ? Math.max(0, least - reach * 0.12) : Math.min(0, ...ends);
   const high = Math.max(1, ...ends);
   const span = high - low || 1;
   const x = (n: number) => `${(((n - low) / span) * 100).toFixed(2)}%`;
@@ -208,7 +218,13 @@ function Dumbbell({ rows: given, meta, o, offers, seq, onTake, onPick, picked, o
             </span>
             <span className="r-mk-fig">
               <b>{fmt(key, b, unit)}</b>
-              <small>was {fmt(key, a, unit)}</small>
+              {/* On the page the row says how far it moved, in the tool's own
+                  percentage, since the scale under the rows is gone (P7). */}
+              <small>
+                {canvas && change && change.pct !== null
+                  ? `${change.pct > 0 ? '▲' : change.pct < 0 ? '▼' : ''} ${pct(change.pct)} · ` : ''}
+                was {fmt(key, a, unit)}
+              </small>
             </span>
             <RowOffers offers={offers} seq={seq} subject={subjectOf(r)}
                        onTake={onTake ?? NO_TAKE} />
@@ -285,15 +301,21 @@ function Ranked({ rows, meta, o, offers, seq, onTake, onPick, picked, callout }:
  */
 function Contributors({ rows, meta, o, offers, seq, onTake, onPick, picked, canvas, callout }:
                       { rows: Row[]; meta: Meta; o: TileProps['o']; canvas?: boolean; callout?: Callout } & Offering) {
-  const signed = (r: Row) => {
-    const n = typeof r.change === 'number' ? r.change : Number(r.change_pct);
-    return Number.isFinite(n) ? n : 0;
-  };
-  const key = typeof rows[0]?.change === 'number' ? 'change' : 'change_pct';
+  const signed = (r: Row) => moveOf(r).value;
+  const key = moveOf(rows[0] ?? {}).key;
   const unit = key === 'change' ? unitOf(rows[0]) ?? unitOf(meta) : null;
-  const most = Math.max(1, ...rows.map((r) => Math.abs(signed(r))));
+  // ONE SCALE FOR LISTS THAT FACE EACH OTHER (P7). Set side by side, what fell
+  // and what rose are read against each other, and each scaled to its own
+  // largest drew a ₱14k gain as long as a ₱20k drop. Still a share of nothing:
+  // the largest change the tool measured, on either side.
+  const shared = useContext(FacingScale);
+  const most = Math.max(1, ...rows.map((r) => Math.abs(signed(r))),
+                        shared && shared.key === key ? shared.most : 0);
   return (
-    <div className="r-mk r-mk-contributors" data-emphasis={emphasised(o) ? 'yes' : undefined}>
+    <div className="r-mk r-mk-contributors" data-emphasis={emphasised(o) ? 'yes' : undefined}
+         // WHAT ROSE FACES WHAT FELL (P7): set beside a list of drops, a list of
+         // gains draws its bar first, so the two grow toward each other.
+         data-gains={canvas && rows.length > 0 && rows.every((r) => signed(r) > 0) ? 'yes' : undefined}>
       {rows.slice(0, 40).map((r, n) => {
         const lit = isLit(o, r);
         const change = changeIfAny(r);
@@ -333,7 +355,50 @@ function Contributors({ rows, meta, o, offers, seq, onTake, onPick, picked, canv
   );
 }
 
+/** A row's movement as the contributors draw it: the tool's `change`, else its `change_pct`. */
+function moveOf(r: Row): { key: 'change' | 'change_pct'; value: number } {
+  const key = typeof r.change === 'number' ? 'change' : 'change_pct';
+  const n = Number(key === 'change' ? r.change : r.change_pct);
+  return { key, value: Number.isFinite(n) ? n : 0 };
+}
+
+/** The largest movement across several reads, where they are measured the same way. */
+export function facingScale(reads: Row[][]): { key: string; most: number } | null {
+  const keys = new Set(reads.filter((rows) => rows.length).map((rows) => moveOf(rows[0]).key));
+  if (keys.size !== 1) return null;
+  const most = Math.max(0, ...reads.flat().map((r) => Math.abs(moveOf(r).value)));
+  return most > 0 ? { key: [...keys][0], most } : null;
+}
+
+/** Set by a row of the page that holds two or more lists of movers. */
+export const FacingScale = createContext<{ key: string; most: number } | null>(null);
+
 /* -------------------------------------------------------------------- line */
+
+type Bound = { start?: unknown; end?: unknown; convention?: unknown };
+
+/**
+ * A WINDOW AS A LEGEND SAYS IT: "14–20 Sep", "28 Aug – 3 Sep". The read's own
+ * bounds (`meta.window`, `meta.comparison.baseline`), half-open as the tools
+ * declare them, with no year — the period over the chart already carries it.
+ * Null where the read gave no dates, and the legend falls back to words.
+ */
+function spanOf(w: Bound | null | undefined): string | null {
+  const day = (v: unknown) => /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v ?? ''));
+  const a = day(w?.start);
+  const b = day(w?.end);
+  if (!a || !b) return null;
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const from = new Date(Date.UTC(Number(a[1]), Number(a[2]) - 1, Number(a[3])));
+  const to = new Date(Date.UTC(Number(b[1]), Number(b[2]) - 1, Number(b[3])));
+  if (/half-open/.test(String(w?.convention ?? 'half-open'))) to.setUTCDate(to.getUTCDate() - 1);
+  if (to.getTime() < from.getTime()) return null;
+  const m = (d: Date) => MONTHS[d.getUTCMonth()];
+  if (to.getTime() === from.getTime()) return `${from.getUTCDate()} ${m(from)}`;
+  return from.getUTCMonth() === to.getUTCMonth() && from.getUTCFullYear() === to.getUTCFullYear()
+    ? `${from.getUTCDate()}–${to.getUTCDate()} ${m(to)}`
+    : `${from.getUTCDate()} ${m(from)} – ${to.getUTCDate()} ${m(to)}`;
+}
 
 /**
  * A SERIES OVER AN ORDERED FIELD, and its baseline dotted where the tool
@@ -353,7 +418,11 @@ function Line({ rows, meta, o, subject, p }: {
   const drawnBase = hasBaseline(points);
   const all = drawnBase ? [...values, ...bases] : values;
   const max = Math.max(1, ...all);
-  const min = Math.min(0, ...all);
+  // A LINE ENCODES POSITION, NOT LENGTH (P7), so on the page it need not
+  // start at zero — and from zero a week of 150k-420k days is two lines
+  // lying on each other. The gap strokes stay honest: their length is the
+  // difference on the same scale as everything else. Packed: from zero.
+  const min = p.canvas ? Math.min(...all) * 0.72 : Math.min(0, ...all);
   const span = max - min || 1;
   const key = valueOf(points[0])?.key ?? 'value';
   const unit = unitOf(points[0]) ?? unitOf(meta);
@@ -426,6 +495,15 @@ function Line({ rows, meta, o, subject, p }: {
     const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${Number(m[3])} ${MONTHS[Number(m[2]) - 1] ?? m[2]}`;
   };
+  // A week of days reads by its weekdays: "Sat 19", not "19 Sep".
+  const weekOfDays = by === 'day' && points.length <= 8;
+  const weekday = (v: string) => {
+    const d = new Date(`${v.slice(0, 10)}T00:00:00Z`);
+    if (Number.isNaN(d.getTime())) return short(v);
+    return `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()]} ${d.getUTCDate()}`;
+  };
+  // HIS SPAN NAMED ONE ROW: a callout on that point, not a band over a stretch.
+  const onePoint = Boolean(banded && banded[0] === banded[1]);
   const every = points.length > 14 ? 7 : 1;
   const ticks = points.map((_, n) => n).filter((n) => n % every === 0 || (n === last && n % every > 2));
   const midPct = banded ? ((x(banded[0]) + x(banded[1])) / 2 / W) * 100 : 0;
@@ -444,19 +522,31 @@ function Line({ rows, meta, o, subject, p }: {
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={canvas ? undefined : H} role="img"
            aria-label={`${measureOf(meta, key)} over ${points.length} points`}
            style={{ display: 'block', overflow: 'visible' }}>
-        {banded && (
+        {banded && !onePoint && (
           <rect className="r-mk-span-band" data-dir={bandDir} style={bandColour ? { color: bandColour } : undefined}
                 x={x(banded[0])} y={canvas ? yTop : 0}
                width={Math.max(2, x(banded[1]) - x(banded[0]))} height={canvas ? yBase - yTop : H} />
         )}
         {canvas && banded && p.o.thought?.trim() && (
           <path className="r-mk-note-l"
-                d={`M${x(banded[0])} ${yTop - 8} v-6 h${x(banded[1]) - x(banded[0])} v6`} />
+                d={onePoint
+                  ? `M${x(banded[0])} ${y(Math.max(values[banded[0]], Number.isFinite(bases[banded[0]]) ? bases[banded[0]] : values[banded[0]])) - 8} V${yTop - 12}`
+                  : `M${x(banded[0])} ${yTop - 8} v-6 h${x(banded[1]) - x(banded[0])} v6`} />
         )}
+        {/* THE GAP, WHERE IT IS (P7): each point against its own baseline,
+            in the direction the tool declared for that row. */}
+        {canvas && drawnBase && points.map((r, n) => {
+          if (!Number.isFinite(bases[n])) return null;
+          const c = colourOf(changeIfAny(r), true);
+          return (
+            <line key={`gap-${n}`} className="r-mk-gap" x1={x(n)} x2={x(n)}
+                  y1={y(values[n])} y2={y(bases[n])} stroke={paint(c)} />
+          );
+        })}
         {canvas && <line className="r-mk-axis" x1={x(0)} x2={x(last)} y1={yBase} y2={yBase} />}
         {canvas && ticks.map((n) => (
           <text key={`t-${n}`} className="r-mk-tick" x={x(n)} y={yBase + 18} textAnchor="middle">
-            {short(label(n))}
+            {weekOfDays ? weekday(label(n)) : short(label(n))}
           </text>
         ))}
         {drawnBase && (
@@ -466,7 +556,17 @@ function Line({ rows, meta, o, subject, p }: {
         {/* pathLength 1, so the line can draw itself in without measuring. */}
         <polyline className="r-mk-series-line" fill="none" stroke={paint(c)} strokeWidth={canvas ? 1.6 : 1.8}
                   pathLength={1} points={path(values)} />
-        {points.length > 2 && Array.from(new Set(canvas ? [iHi] : [iHi, iLo, last])).map((i) => (
+        {/* A DOT A DAY, on the page, where the days are few enough to be days. */}
+        {canvas && points.length <= 14 && points.map((_, n) => (
+          <circle key={`pt-${n}`} className="r-mk-pt" cx={x(n)} cy={y(values[n])} r={2.4}
+                  fill={paint(c)} stroke="var(--card)" strokeWidth={1.2} />
+        ))}
+        {/* THE POINT HE CALLED OUT IS THE POINT THAT WEARS ITS FIGURE (P7). The
+            page labelled the week's highest day while his sentence and his
+            callout were about the Saturday beside it — two figures, one of
+            them nobody was talking about. No callout: the high, as before. */}
+        {points.length > 2 && Array.from(new Set(
+          canvas ? [onePoint && banded ? banded[0] : iHi] : [iHi, iLo, last])).map((i) => (
           <g key={i}>
             <circle className="r-mk-peak" cx={x(i)} cy={y(values[i])} r={3.4} fill={paint(c)}
                     stroke="var(--card)" strokeWidth={1.5} />
@@ -497,8 +597,14 @@ function Line({ rows, meta, o, subject, p }: {
               <Swatch name={subject} dimension={dimensionOf(rows, subject) ?? 'store'} />{subject}
             </span>
           )}
-          <i />this {period}
-          {drawnBase && <><i className="r-mk-legend-was" />the {period} before, {by ?? 'point'} for {by ?? 'point'}</>}
+          <span className="r-mk-key"><i />{spanOf(meta?.window) ?? `this ${period}`}</span>
+          {drawnBase && (
+            <span className="r-mk-key">
+              <i className="r-mk-legend-was" />
+              {spanOf((meta?.comparison as { baseline?: Bound } | null | undefined)?.baseline)
+                ?? `the ${period} before, ${by ?? 'point'} for ${by ?? 'point'}`}
+            </span>
+          )}
         </p>
       )}
       {!canvas && <div className="r-mk-ends">
@@ -789,7 +895,7 @@ export function MarkBlock(p: TileProps) {
         </p>
         <div className="r-mk-body" data-mark={mark} data-read={readAt(meta?.snapshot_timestamp) ?? ''}>
           {mark === 'figure' && <Figure {...p} rows={rows} meta={meta} />}
-          {mark === 'dumbbell' && <Dumbbell rows={drawn} meta={meta} o={p.o} order={p.order} callout={callout} {...offering} />}
+          {mark === 'dumbbell' && <Dumbbell rows={drawn} meta={meta} o={p.o} order={p.order} callout={callout} canvas={p.canvas} {...offering} />}
           {mark === 'ranked' && <Ranked rows={drawn} meta={meta} o={p.o} callout={callout} {...offering} />}
           {mark === 'contributors' && <Contributors rows={drawn} meta={meta} o={p.o} canvas={p.canvas} callout={callout} {...offering} />}
           {mark === 'line' && <Line rows={rows} meta={meta} o={p.o} subject={seriesOf} p={p} />}

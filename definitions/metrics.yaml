@@ -7509,51 +7509,106 @@ composition:
   # the moment he composes, which is where it is needed, and not in the prompt.
   page_first:
     about: >
-      For a broad question, the page: the estate total as a `figure` weighted
-      lead, its claim the verdict; the estate by day as a `line` with a `span`
-      over the stretch that matters and your thought pointing at it; every
-      shop by week as `multiples`, a `span` naming the one shop your thought
-      is about; the movers as two `contributors`, gains and drops, stacked
-      beside a stack of two `figure`s, transactions and basket, each thought
-      a verdict under its number; what needs a person as a `list` with its
-      action; and a source that cannot be compared as a quiet `figure`. Then
-      lay it out. ON THE PAGE A HEAD IS ONE LINE: the bold lead is your
+      For a broad question, the page: a `lede` that says the answer with the
+      estate's total, its movement and what moved it, each by reference; the
+      series that shows WHEN, read AGAINST ITS OWN BASELINE so the drawing can
+      show the gap, set beside the words that read it, a `span` on the point
+      that matters; a `head` and the comparison that shows WHERE, beside its
+      words, with a window `control` if the month would tell a different
+      story; the one place you cannot explain, in its own section; what moved,
+      drops and gains facing each other in a `row`, in `tabs` if you read it
+      at two scopes; a `note` where the data cannot be trusted as read; and
+      the plan last. ON THE PAGE A HEAD IS ONE LINE: the bold lead is your
       `question` if you give one, else the `claim`; the claim runs on after
       a question in plain weight; a figure's `thought` sits under its number,
-      a span's on the chart. Six words bold, a short sentence after — never
+      a span's on the chart. Six words bold, a short sentence after, never
       three sentences stacked, which reads as a thread.
 
   arrangement:
+    # THE PAGE IS A DOCUMENT (P7, 2026-09-21). The owner: "i want it like an
+    # artifact claude can make ... it feels like it has to fit the stuff in
+    # columns and rows or a grid but an artifact/page isnt like that. it makes
+    # its own ... it can also have buttons, drop downs, filters ... it shouldnt
+    # use everything for everything. its case to case." The target is
+    # ops/ideal/the-page-bob-writes.html. Nothing in this tree can carry a
+    # figure of his own, which is what keeps an unbounded page safe.
     about: >
-      how the right-hand side is laid out for this answer, as one arrangement:
-      `stack` (one under another), `row` (side by side), `grid` (even columns,
-      `cols`) or `panel` (a headed area), nested. A leaf is `{"block": "<key>"}`
-      — one of the blocks you put this turn, with its figure, its receipts and
-      its read time — or `{"say": "<your words>"}`, which may sit anywhere in
-      the arrangement and carries no digits. Use the space: one figure across
-      the top with two beside each other under it, a panel per shop, a row of
-      small numbers, a chart with your sentence next to it rather than above
-      it. Leave it out and the page is packed for you. THE PAGE IS ONE THING:
-      your headline stays on the left with a line or two; every other
-      paragraph of yours is a `say` placed beside the figure it is about,
-      and `{"next": true}` places the plan - what you would do - where it
-      belongs, usually last. Left out, the plan is drawn last anyway. GIVE IT
-      ONCE, when the page is settled: it is remembered, so a later compose
-      that says nothing about it leaves the one you gave standing.
-    leaves: [block, say, next]
-    # The same four the grammar already has; a fifth would be a second
-    # vocabulary for the same job.
+      THE PAGE YOU WRITE for this answer: a document, not a grid. Your headline
+      stays on the left; everything else you say is on the page. The text is
+      the spine. Open with a `lede`: one sentence that carries the answer with
+      its figures INSIDE it. Then the argument in sections, each opened by a
+      `head` that states its finding, then `say` paragraphs with the figure
+      they discuss set `beside` them. A FIGURE INSIDE A SENTENCE IS A
+      REFERENCE, NEVER A DIGIT: compose a `figure` block for the number and
+      write {its-key} where it belongs, {its-key.change} for how it moved,
+      {its-key.was} for what it was; the page draws the row's own value with
+      its receipt. A leaf is {"lede": "..."}, {"head": "..."}, {"say": "..."},
+      {"note": "...", "label": "..."} (a margin note: what qualifies the
+      page), {"block": "<key>"}, {"next": true} (the plan, usually last), or
+      {"caveat": true} (your reading's caveat, set as the margin note of the
+      section it qualifies — placed, it is on the page and no longer beside
+      your answer; write it once, there, and never again as a `note`).
+      A block leaf may say "beside": true to sit beside the words that follow
+      it; a "size" of small, medium, wide or full (left out, the page sizes it
+      by what it draws and balances it against the words); and "control":
+      "<key of a control block>" to carry that control above its drawing.
+      `tabs` is one space for the same question read at two scopes (give
+      "labels"); `row`, `grid`, `panel` and `stack` mean what they meant. CASE
+      BY CASE, NOT EVERYTHING EVERY TIME: a number that answers outright is a
+      lede and nothing else; a small comparison sits beside its words; a
+      series or many names takes the width; a control goes only where turning
+      it answers the person's next question; a note only where the data
+      cannot be trusted as read. GIVE IT ONCE, when the page is settled: it is
+      remembered, so a later compose that says nothing about it leaves the
+      one you gave standing. Leave it out and the page is laid out for you.
+    leaves: [block, say, next, lede, head, note, caveat]
+    # The grammar's own four, and one more that is the page's alone.
     layouts_from: composition.grammar.layouts
-    # A page is not a document either. Deliberately tighter than the grammar's
-    # own 40 nodes: this arranges a handful of blocks, and a forty-node page is
-    # a thing nobody can take in.
-    max_nodes: 24
-    max_depth: 3
-    max_says: 6
+    extra_layouts: [tabs]
+    # A page, not a dashboard: forty parts is a long read already.
+    max_nodes: 40
+    max_depth: 4
+    max_says: 12
+    # A HEADING IS NOT A PARAGRAPH: it names a section in a few words, so it is
+    # bounded on its own and leaves the prose budget (`max_says`: lede, say and
+    # note) to the prose.
+    max_heads: 6
     say:
       no_digits: true
-      max_length: 200
+      max_length: 360
       over_length: cut_at_word_boundary
+    lede:
+      no_digits: true
+      max_length: 340
+      over_length: cut_at_word_boundary
+    head:
+      no_digits: true
+      max_length: 90
+      over_length: cut_at_word_boundary
+    note:
+      no_digits: true
+      max_length: 300
+      over_length: cut_at_word_boundary
+      label_max_length: 48
+    sizes: [small, medium, wide, full]
+    tabs:
+      min: 2
+      max: 4
+      label_max_length: 28
+    # A FIGURE INSIDE A SENTENCE. The key is a `figure` block of his; the
+    # digits are the row's, drawn by the page with the read's receipt. His
+    # words still carry no digit — the rule that kept a number out of his
+    # prose is what lets a number into his sentence.
+    refs:
+      about: "{key} is the value of the figure block with that key; {key.change} how it moved against its baseline; {key.was} that baseline. Each is the read's own row."
+      of_kind: figure
+      parts: [change, was]
+      # WHAT COUNTS AS A BLOCK (P7, 2026-09-21). `max_blocks` bounds what the
+      # page DRAWS as a block. A figure that lives only inside a sentence is a
+      # number in his prose, and a control that rides on a figure is a part of
+      # that figure: neither is a tile, so neither is counted there. They are
+      # still bounded, here — a sentence with a dozen figures in it is a table.
+      max_in_words: 12
     # A KEY PLACED TWICE IS PLACED ONCE. The board draws a read once
     # (board.readIdentity); a tree naming it twice would draw the same figure
     # under two headings, which is the widget disease with extra steps.

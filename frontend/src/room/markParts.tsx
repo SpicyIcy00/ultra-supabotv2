@@ -158,7 +158,7 @@ export function RowName({ name, pickable, onPick, picked, className, dimension, 
   // needs `overflow: hidden`, and a dot inside that box lost its left edge and
   // its ring. The dot is a sibling now; only the words are clamped.
   const swatch = plain ? null : <Swatch name={name} dimension={dimension} />;
-  const words = <span className="r-mk-name-text">{name}</span>;
+  const words = <span className="r-mk-name-text" title={name}>{name}</span>;
   if (!pickable || !onPick) return <span className={className}>{swatch}{words}</span>;
   return (
     <button

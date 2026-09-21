@@ -700,3 +700,193 @@ def test_a_second_plan_is_left_out_and_said(defs):
     assert sum(1 for c in tree["children"] if c.get("next")) == 1
     assert any("plan is already placed" in c for c in coerced)
 
+
+# ---------------------------------------------------------------------------
+# The page is a document (P7, 2026-09-21)
+#
+# The owner: "i want it like an artifact claude can make ... it feels like it
+# has to fit the stuff in columns and rows or a grid but an artifact/page isnt
+# like that." So the arrangement grew the parts of a page: a lede, heads,
+# paragraphs with the figure INSIDE the sentence — by reference, never a digit
+# — figures set beside their words, a margin note, tabs, a control on a figure.
+# ---------------------------------------------------------------------------
+
+def _doc(arrangement, defs, blocks=None):
+    week = [{"value": 1621528.27, "baseline": 1698059.65, "change_pct": -4.5, "direction": "down"}]
+    shops = [{"store": "OPUS", "value": 1, "baseline": 2}, {"store": "Greenhills", "value": 2, "baseline": 3}]
+    # As the loop hands them over: the rows on the call, and on its result.
+    calls = {0: {"seq": 0, "tool": "get_sales", "is_read": True, "rows": week,
+                 "result": {"rows": week, "meta": {}}},
+             1: {"seq": 1, "tool": "get_sales", "is_read": True, "rows": shops,
+                 "result": {"rows": shops, "meta": {}}}}
+    out = compose.compose(blocks or [
+        {"kind": "figure", "key": "net", "seq": 0, "weight": "lead", "claim": "the week"},
+        {"kind": "dumbbell", "key": "shops", "seq": 1, "weight": "supporting", "claim": "the shops"},
+    ], None, None, arrangement, calls=calls, defs=defs)
+    return out["meta"]["arrangement"], out["meta"]["coerced"]
+
+
+def test_a_figure_sits_inside_the_sentence_by_reference(defs):
+    tree, coerced = _doc({"layout": "stack", "children": [
+        {"lede": "We took {net} last week, {net.change} on the week before; it was {net.was}."},
+        {"block": "shops"}]}, defs)
+    assert tree["children"][0] == {
+        "lede": "We took {net} last week, {net.change} on the week before; it was {net.was}."}
+    # Pointed at from a sentence, it is placed: it is not drawn again after the page.
+    assert not [c for c in coerced if "not placed" in c]
+
+
+def test_a_digit_of_his_own_still_drops_the_line(defs):
+    tree, coerced = _doc({"layout": "stack", "children": [
+        {"say": "We took 1,621,528 last week."}, {"block": "net"}, {"block": "shops"}]}, defs)
+    assert [list(c)[0] for c in tree["children"]] == ["block", "block"]
+    assert any("carries no digits" in c and "{key}" in c for c in coerced)
+
+
+def test_a_reference_names_a_figure_block_or_the_line_goes(defs):
+    tree, coerced = _doc({"layout": "stack", "children": [
+        {"say": "The shops: {shops}."}, {"say": "And {nothing}."}, {"say": "Or {net.rank}."},
+        {"block": "net"}, {"block": "shops"}]}, defs)
+    assert [list(c)[0] for c in tree["children"]] == ["block", "block"]
+    assert sum("names no `figure` block" in c for c in coerced) == 2
+    assert any("is not a part of a figure" in c for c in coerced)
+
+
+def test_the_parts_of_a_page_come_back_as_he_wrote_them(defs):
+    tree, coerced = _doc({"layout": "stack", "children": [
+        {"lede": "Down on the week: {net}."},
+        {"head": "Three shops carry it"},
+        {"block": "shops", "beside": True, "size": "medium"},
+        {"say": "Greenhills gave back the most."},
+        {"note": "The stock side cannot be trusted as read.", "label": "how far to trust it"},
+        {"next": True}]}, defs)
+    assert [list(c)[0] for c in tree["children"]] == ["lede", "head", "block", "say", "note", "next"]
+    assert tree["children"][2] == {"block": "shops", "beside": True, "size": "medium"}
+    assert tree["children"][4]["label"] == "how far to trust it"
+    # Nothing about the PAGE was adjusted (a figure taking its one row's name is the block's).
+    assert not [c for c in coerced if c.startswith("arrangement")]
+
+
+def test_a_size_that_is_not_one_is_left_to_the_page(defs):
+    tree, coerced = _doc({"layout": "stack", "children": [
+        {"block": "shops", "size": "enormous"}, {"block": "net"}]}, defs)
+    assert tree["children"][0] == {"block": "shops"}
+    assert any("is not a size" in c for c in coerced)
+
+
+def test_a_second_lede_is_a_paragraph(defs):
+    tree, _ = _doc({"layout": "stack", "children": [
+        {"lede": "Down on the week."}, {"lede": "And again."}, {"block": "net"}, {"block": "shops"}]}, defs)
+    assert [list(c)[0] for c in tree["children"]][:2] == ["lede", "say"]
+
+
+def test_tabs_take_a_label_for_each_view_or_become_a_stack(defs):
+    good, _ = _doc({"layout": "tabs", "labels": ["the estate", "the shops"],
+                    "children": [{"block": "net"}, {"block": "shops"}]}, defs)
+    assert good["layout"] == "tabs" and good["labels"] == ["the estate", "the shops"]
+    bad, coerced = _doc({"layout": "tabs", "labels": ["only one"],
+                         "children": [{"block": "net"}, {"block": "shops"}]}, defs)
+    assert bad["layout"] == "stack" and "labels" not in bad
+    assert any("tabs take" in c for c in coerced)
+
+
+def test_a_control_rides_on_the_figure_it_drives(defs):
+    blocks = [
+        {"kind": "dumbbell", "key": "shops", "seq": 1, "weight": "lead", "claim": "the shops"},
+        {"kind": "control", "key": "window", "seq": 1, "argument": "date_range", "weight": "quiet"},
+        {"kind": "figure", "key": "net", "seq": 0, "weight": "supporting", "claim": "the week"},
+    ]
+    tree, coerced = _doc({"layout": "stack", "children": [
+        {"block": "shops", "control": "window"}, {"block": "net"}]}, defs, blocks)
+    assert tree["children"][0] == {"block": "shops", "control": "window"}
+    # Carried by the figure, the control is placed: not drawn again after the page.
+    assert not [c for c in coerced if "not placed" in c]
+    tree, coerced = _doc({"layout": "stack", "children": [
+        {"block": "shops", "control": "net"}, {"block": "window"}]}, defs, blocks)
+    assert tree["children"][0] == {"block": "shops"}
+    assert any("is not a control block" in c for c in coerced)
+
+
+
+def _many(defs, n_words, n_drawn, arrangement):
+    """`n_words` figures and `n_drawn` tables, all of reads that ran, under one page."""
+    week = [{"value": 1621528.27, "baseline": 1698059.65, "change_pct": -4.5, "direction": "down"}]
+    shops = [{"store": "OPUS", "value": 1, "baseline": 2}, {"store": "Greenhills", "value": 2, "baseline": 3}]
+    calls = {0: {"seq": 0, "tool": "get_sales", "is_read": True, "rows": week,
+                 "result": {"rows": week, "meta": {}}}}
+    blocks = [{"kind": "figure", "key": f"f{i}", "seq": 0, "weight": "supporting", "claim": "the week"}
+              for i in range(n_words)]
+    for i in range(n_drawn):
+        # One read is one object, so each drawn block needs a read of its own.
+        calls[i + 1] = {"seq": i + 1, "tool": "get_sales", "is_read": True, "rows": shops,
+                        "arguments": {"group_by": "store", "date_range": f"w{i}"},
+                        "result": {"rows": shops, "meta": {}}}
+        blocks.append({"kind": "table", "key": f"t{i}", "seq": i + 1, "weight": "supporting",
+                       "claim": "the shops"})
+    return compose.compose(blocks, None, None, arrangement, calls=calls, defs=defs)
+
+
+def test_a_figure_in_a_sentence_is_not_counted_as_a_block(defs):
+    # The owner's page has eight things drawn AND a handful of figures inside
+    # its sentences. Counted together the cap refused the ninth — a page Bob
+    # could not write in one call. What is bounded is what is DRAWN.
+    n = int(req(defs, "composition.max_blocks"))
+    page = {"layout": "stack", "children": [
+        {"lede": "We took {f0}{f0.change}, on {f1} tills and a basket of {f2}."},
+        *[{"block": f"t{i}"} for i in range(n)]]}
+    out = _many(defs, 3, n, page)
+    assert len(out["rows"]) == n + 3 and out["meta"]["rejected"] == []
+    # With no page naming them, the same figures are blocks, and the ninth is refused.
+    out = _many(defs, 3, n, None)
+    assert len(out["rows"]) == n
+    assert all("not a report" in r["reason"] for r in out["meta"]["rejected"])
+
+
+def test_a_figure_placed_as_a_block_counts_again(defs):
+    n = int(req(defs, "composition.max_blocks"))
+    page = {"layout": "stack", "children": [
+        {"lede": "We took {f0}."}, {"block": "f0"}, *[{"block": f"t{i}"} for i in range(n)]]}
+    out = _many(defs, 1, n, page)
+    assert len(out["rows"]) == n
+    assert any("not a report" in r["reason"] for r in out["meta"]["rejected"])
+
+
+def test_the_figures_in_his_sentences_are_bounded_too(defs):
+    cap = int(req(defs, "composition.arrangement.refs.max_in_words"))
+    page = {"layout": "stack", "children": [
+        {"say": " ".join(f"{{f{i}}}" for i in range(cap + 1))}]}
+    out = _many(defs, cap + 1, 0, page)
+    assert len(out["rows"]) == cap
+    assert any("inside your sentences" in r["reason"] for r in out["meta"]["rejected"])
+
+
+def test_a_heading_does_not_spend_the_prose_budget(defs):
+    says = int(req(defs, "composition.arrangement.max_says"))
+    heads = int(req(defs, "composition.arrangement.max_heads"))
+    tree, coerced = _doc({"layout": "stack", "children": [
+        *[{"head": "A section"} for _ in range(heads + 1)],
+        *[{"say": "A paragraph of his."} for _ in range(says)]]}, defs)
+    kinds = [next(iter(c)) for c in tree["children"]]
+    assert kinds.count("head") == heads and kinds.count("say") == says
+    assert any("headings on one page" in c for c in coerced)
+
+
+def test_the_tool_schema_admits_the_page_the_validator_does(defs):
+    # A page the validator accepts and the schema refuses never arrives.
+    from agent import loop
+    schema = next(t for t in loop.build_tool_schemas() if t["name"] == loop.COMPOSE_TOOL)
+    assert schema["input_schema"]["properties"]["blocks"]["maxItems"] == int(
+        req(defs, "composition.max_blocks")) + int(
+        req(defs, "composition.arrangement.refs.max_in_words"))
+
+
+def test_his_caveat_is_placed_once_where_he_puts_it(defs):
+    # The owner: "still too much text on the left side". The caveat was the
+    # longest thing there; placed, it is the margin note of the section it
+    # qualifies and the left says only the answer.
+    tree, coerced = _doc({"layout": "stack", "children": [
+        {"head": "What moved on the shelf"}, {"caveat": True}, {"block": "shops"},
+        {"caveat": True}]}, defs)
+    assert sum(1 for c in tree["children"] if c.get("caveat")) == 1
+    assert tree["children"][1] == {"caveat": True}
+    assert any("caveat is already placed" in c for c in coerced)

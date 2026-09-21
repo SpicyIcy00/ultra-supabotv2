@@ -618,31 +618,67 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
         # would still be the same tree.
         voc = req(_load_defs(), "composition")
         page = voc.get("arrangement") or {}
-        layouts = list((voc.get("grammar") or {}).get("layouts") or {})
+        grammar_layouts = (voc.get("grammar") or {}).get("layouts") or {}
+        layouts = list(grammar_layouts) + list(page.get("extra_layouts") or [])
+
+        # THE PAGE IS A DOCUMENT (P7). Every leaf and every placement word is a
+        # property here so he can SEE them; none of them can carry a figure. A
+        # part is one object either way — a layout with `children`, or a leaf —
+        # and the validator (agent/compose._arrangement) names what it drops.
+        def line(leaf: str, what: str) -> dict:
+            return {"type": "string",
+                    "maxLength": int((page.get(leaf) or {}).get("max_length") or 360),
+                    "description": what}
+
+        by_ref = ("Figures by reference only — {key}, {key.change}, {key.was} of a `figure` "
+                  "block you put. No digits of your own.")
         return {
             "type": "object",
             "description": " ".join(str(page.get("about") or "").split()),
             "properties": {
                 "layout": {"type": "string", "enum": layouts,
                            "description": "how these parts sit: "
-                           + "; ".join(f"{k}: {v['about']}" for k, v in
-                                       ((voc.get("grammar") or {}).get("layouts") or {}).items())},
+                           + "; ".join(f"{k}: {v['about']}" for k, v in grammar_layouts.items())
+                           + "; tabs: one space, several views of the same question, switched "
+                             "by the person with no read and no turn — give `labels`"},
                 "cols": {"type": "integer", "minimum": 2,
                          "maximum": int((voc.get("grammar") or {}).get("max_cols") or 6),
                          "description": "a grid's columns"},
                 "heading": {"type": "string",
                             "description": "a panel's heading, in your words. No digits."},
+                "labels": {"type": "array", "items": {"type": "string"},
+                           "description": "for tabs: a plain label per view, in order. No digits."},
                 "children": {
                     "type": "array",
-                    "description": "the parts of this arrangement, in the order they are read. "
-                                   "Each is another arrangement, {\"block\": \"<a key you put "
-                                   "this turn>\"}, or {\"say\": \"<a line of yours>\"} — which "
-                                   "may go before a figure, beside it, after it, or nowhere. "
-                                   "A block you do not place is drawn after the page, never lost.",
-                    "items": {"$ref": "#"},
+                    "description": "the parts of this arrangement, in the order they are read: "
+                                   "each another arrangement or one leaf. A block you do not "
+                                   "place is drawn after the page, never lost.",
+                    # The arrangement itself, one level down: it lives at this
+                    # address in the tool's input schema.
+                    "items": {"$ref": "#/properties/arrangement"},
                 },
+                "lede": line("lede", "LEAF: the page's opening sentence, carrying the answer "
+                                     "with its figures inside it. " + by_ref),
+                "head": line("head", "LEAF: a section heading that states the section's finding. "
+                                     "No digits."),
+                "say": line("say", "LEAF: a paragraph of yours. " + by_ref),
+                "note": line("note", "LEAF: a margin note — what qualifies the page. " + by_ref),
+                "label": {"type": "string", "description": "a note's small label, in your words"},
+                "block": {"type": "string", "description": "LEAF: the key of a block you put"},
+                "beside": {"type": "boolean",
+                           "description": "on a block leaf: set it beside the words that follow it"},
+                "size": {"type": "string", "enum": list(page.get("sizes") or []),
+                         "description": "on a block leaf: the room it takes. Leave it out and the "
+                                        "page sizes it by what it draws"},
+                "control": {"type": "string",
+                            "description": "on a block leaf: the key of a `control` block to "
+                                           "carry above this drawing"},
+                "next": {"type": "boolean",
+                         "description": "LEAF: true places the plan — the reading's `next` — here"},
+                "caveat": {"type": "boolean",
+                           "description": "LEAF: true sets your reading's `caveat` here, as the "
+                                          "margin note of the section it qualifies"},
             },
-            "required": ["layout", "children"],
         }
 
     if pname == "blocks":
@@ -654,7 +690,10 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
         return {
             "type": "array",
             "minItems": 1,
-            "maxItems": int(voc["max_blocks"]),
+            # What is DRAWN is bounded by max_blocks; a figure that lives in a
+            # sentence of the page is not, and has its own bound (compose.validate).
+            "maxItems": int(voc["max_blocks"]) + int(
+                ((voc.get("arrangement") or {}).get("refs") or {}).get("max_in_words") or 0),
             "items": {
                 "type": "object",
                 "properties": {

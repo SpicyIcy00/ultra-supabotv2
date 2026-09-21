@@ -655,22 +655,47 @@ export function ControlTile(p: TileProps) {
   const current = String(
     (call?.arguments as Record<string, unknown> | undefined)?.[argument] ?? '',
   );
-  const options: (string | number)[] = argument === 'top_n' ? COUNTS : WINDOWS;
+  const listed: (string | number)[] = argument === 'top_n' ? COUNTS : WINDOWS;
+  // WHERE IT STANDS IS ONE OF ITS POSITIONS. The read's own window was not in
+  // the list when it was `last_7_days`, so the control showed nothing pressed
+  // — a switch with no position. Only a named window: a pair of dates is not
+  // a position anybody can return to by name.
+  const options = !current || listed.map(String).includes(current) || !/^[a-z0-9_]+$/.test(current)
+    ? listed : [current, ...listed];
 
   return (
     <Shell quiet landing={p.landing} delay={p.delay}>
       <p className="r-label">
         {argument === 'top_n' ? 'how many' : 'window'}
-        {p.o.tool ? ` · ${p.o.tool.replace(/^get_/, '')}` : ''}
+        {/* On the page the control rides on the figure it drives (P7), so the
+            tool's name beside it would be the machine talking. */}
+        {p.o.tool && !p.canvas ? ` · ${p.o.tool.replace(/^get_/, '')}` : ''}
       </p>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+      {/* A DROPDOWN WHERE THE FIGURE IS NARROW (P7). Five positions in a row
+          ran off the edge of a figure set beside its words; which of the two
+          is shown is the stylesheet's, by the room the control actually has
+          (`.r-doc-ctl-host`, a container) — the same positions, the same act. */}
+      {p.canvas && (
+        <select className="r-ctl-select" aria-label={argument === 'top_n' ? 'how many' : 'window'}
+                value={current} onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  const picked = options.find((option) => String(option) === e.target.value);
+                  if (picked !== undefined) p.on.retune?.(p.o.key, argument, picked);
+                }}>
+          {!options.map(String).includes(current) && <option value={current}>{current.replace(/_/g, ' ')}</option>}
+          {options.map((option) => (
+            <option key={String(option)} value={String(option)}>{String(option).replace(/_/g, ' ')}</option>
+          ))}
+        </select>
+      )}
+      <div className="r-ctl-options" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: p.canvas ? 0 : 10 }}>
         {options.map((option) => (
           <button
             key={String(option)}
             type="button"
             className="r-chip"
             aria-pressed={String(option) === current}
-            style={String(option) === current
+            style={String(option) === current && !p.canvas
               ? { borderColor: 'var(--edge-strong)', color: 'var(--ink)' }
               : undefined}
             onClick={() => p.on.retune?.(p.o.key, argument, option)}
