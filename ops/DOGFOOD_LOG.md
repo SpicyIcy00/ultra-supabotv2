@@ -3146,3 +3146,22 @@ is what replaced it on Y" costs a few minutes and keeps the history where the ne
 will find it. Deleting them would have left the reversal invisible.
 
 Frontend 1179. `verification/frames/p8/one-page.png`.
+
+### 2026-09-21 — the prompt worked, and the page still came out wrong
+
+The first turn after telling him he writes a page produced the best prose he has written and
+the worst page: nine figures composed, one placed, eight drawn after the plan.
+
+Two things worth keeping.
+
+**The instruction that lands is the one he reads BEFORE.** Everything that went wrong was
+already named on `coerced` — "'estate' was not placed", eight times — in the result of the
+last call of the turn, which he never reads. Feedback after the final compose is feedback for
+a turn that has ended. It belongs in the tool description, where he reads it while deciding.
+
+**Read the run record before believing the screenshot.** "All wrong" looked like a layout
+regression. The record showed the layout doing exactly what it was told, with a composition
+that had forgotten its figures — a different fix entirely, and one the screenshots alone
+would have sent me chasing.
+
+Frontend 1179, backend 2167. `verification/frames/p13/`.

@@ -616,8 +616,11 @@ def test_a_line_on_the_page_carries_no_digits(defs):
 def test_a_block_he_did_not_place_is_named_rather_than_lost(defs):
     tree, coerced, rows = _arranged({"layout": "stack", "children": [{"block": "a"}]}, defs)
     assert tree["children"] == [{"block": "a"}]
-    assert any("'b'" in c and "not placed" in c for c in coerced)
-    # It is still a block of the composition; the room draws it after the tree.
+    # Said as a COUNT since P13 (2026-09-21): his live page of 17:05 placed one
+    # of nine figures, and "'x' was not placed" read as a detail rather than as
+    # a page that had forgotten its figures.
+    assert any("'b'" in c and "NOT on the page" in c for c in coerced)
+    # It is still a block of the composition; the room draws it BEFORE the plan.
     assert [r["key"] for r in rows] == ["a", "b"]
 
 

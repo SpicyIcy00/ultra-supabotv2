@@ -613,10 +613,19 @@ def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
 
         if "block" in item:
             key = item.get("block")
-            if not isinstance(key, str) or key not in known:
+            if not isinstance(key, str) or not re.match(voc["key_pattern"], key):
                 coerced.append(f"{path}: {key!r} is not a block of this composition, "
                                f"so it was left out of the arrangement")
                 return None
+            if key not in known:
+                # A PLACE WAITS FOR ITS BLOCK (P13, 2026-09-21). You are told to
+                # give the page ONCE, when it is settled — and a page given
+                # before the last compose names keys that have not arrived yet.
+                # Dropping them silently cost his live page of 17:05 the figure
+                # it was written around. The place is kept; the room draws the
+                # block when it arrives and nothing until then.
+                coerced.append(f"{path}: {key!r} is not on the board yet — the page keeps its "
+                               f"place and draws it when you compose it")
             if key in placed:
                 # ONE READ IS ONE OBJECT (board.readIdentity). Drawn twice it
                 # would be the same figure under two headings.
@@ -701,11 +710,15 @@ def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
     # the tree, in his order — a figure that vanishes because an arrangement
     # forgot it is the one failure this may not have. A figure he pointed at
     # from a sentence IS placed: it is in the sentence.
-    left = [k for k in keys if k not in placed]
+    left = [k for k in keys if k not in placed and kinds.get(k) != "control"]
     if left:
-        coerced.append(f"arrangement: {', '.join(repr(k) for k in left)} "
-                       f"{'was' if len(left) == 1 else 'were'} not placed, so "
-                       f"{'it is' if len(left) == 1 else 'they are'} drawn after it")
+        # SAID AS A COUNT, BECAUSE ONE IS A SLIP AND EIGHT IS A PAGE THAT FORGOT
+        # ITS FIGURES (P13). His live page of 17:05 placed one of nine.
+        coerced.append(f"arrangement: {len(left)} of your blocks "
+                       f"{'is' if len(left) == 1 else 'are'} NOT on the page "
+                       f"({', '.join(repr(k) for k in left[:6])}"
+                       f"{', …' if len(left) > 6 else ''}) — drawn after it, in a place you did "
+                       f"not choose. Every block you compose belongs where its words are.")
     return built
 
 

@@ -720,7 +720,18 @@ export function Board(p: BoardProps) {
     // THE PLAN, WHERE HE PUT IT (P6.h). The same element the foot draws
     // when he leaves it out, so it is one thing in one place.
     if ('next' in node) {
-      return <div key={at} className="r-laid-next">{earlierLine}{p.foot}</div>;
+      // NOTHING FOLLOWS THE PLAN (P6.h, and P13 for the blocks he did not
+      // place). A figure he left off the page is still drawn — the one
+      // failure this may not have is a figure vanishing because an
+      // arrangement forgot it — but it is drawn BEFORE what to do, not
+      // after it. His live page of 17:05 placed one of nine figures and
+      // the other eight landed under the plan.
+      return (
+        <Fragment key={at}>
+          {leftovers()}
+          <div className="r-laid-next">{earlierLine}{p.foot}</div>
+        </Fragment>
+      );
     }
     if ('caveat' in node) {
       // WHAT QUALIFIES THESE FIGURES, BESIDE THEM. Whole, in his ink, where he
@@ -833,6 +844,24 @@ export function Board(p: BoardProps) {
   // THE PAGE, SECTION BY SECTION (P7). A `head` opens a section and the lede
   // stands alone above them; each section contains its own floats and balances
   // them. A tree with neither is one section — the arrangement it always was.
+  /**
+   * THE BLOCKS HIS PAGE DID NOT PLACE — in his order, drawn before the plan.
+   * The server names them on `coerced` so he learns; this keeps them on screen
+   * meanwhile, because a figure that vanishes because an arrangement forgot it
+   * is the one failure this may not have.
+   */
+  // A FUNCTION, NOT A VALUE: it draws with `drawFigure`, which is declared
+  // below it — read as a value here that is a ReferenceError, and the whole
+  // page renders blank (caught by the frame, 2026-09-21).
+  const leftovers = (): ReactNode => (
+    laidOut && items.some((it) => it.kind === 'fig' && !placedKeys.has(it.o.key))
+      ? (
+        <div className="r-laid r-laid--stack r-laid--rest">
+          {items.map((it, at) => (it.kind === 'fig' && !placedKeys.has(it.o.key)
+            ? <Fragment key={it.o.key}>{drawFigure(it, at, true)}</Fragment> : null))}
+        </div>
+      ) : null);
+
   const drawPage = (root: Arrangement): ReactNode => {
     if (!('children' in root) || root.layout !== 'stack' || !isDocument) return drawNode(root, 'root');
     const sections: Arrangement[][] = [[]];
@@ -1038,17 +1067,10 @@ export function Board(p: BoardProps) {
         ? (
           <>
             {drawPage(laidOut)}
-            {/* A BLOCK HE DID NOT PLACE IS STILL DRAWN, after his arrangement
-                and in his order. The server names it on `coerced`; this is the
-                half that keeps it on screen, because a figure that vanishes
-                because an arrangement forgot it is the one failure this may
-                not have. */}
-            {items.some((it) => it.kind === 'fig' && !placedKeys.has(it.o.key)) && (
-              <div className="r-laid r-laid--stack r-laid--rest">
-                {items.map((it, at) => (it.kind === 'fig' && !placedKeys.has(it.o.key)
-                  ? <Fragment key={it.o.key}>{drawFigure(it, at, true)}</Fragment> : null))}
-              </div>
-            )}
+            {/* Where he placed the plan himself, the leftovers were drawn
+                beside it, above (`drawNode`); this is the same thing for a
+                page that did not place one. */}
+            {!placedNext && leftovers()}
           </>
         )
         : (

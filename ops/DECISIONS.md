@@ -5512,3 +5512,41 @@ bound belongs on the tool it describes, read at the moment of choosing.
 
 **Held by.** `test_voice_contract.test_the_prompt_says_he_writes_a_page` — that the words are
 there, that the STEP sentence is not, and that the prompt names the parts a page has.
+
+## 2026-09-21 — P13: nothing follows the plan, and a place waits for its block
+
+**Decision.** Three rules, all out of one live turn.
+
+1. **Nothing follows the plan.** A block he composed and did not place is still drawn — a
+   figure that vanishes because an arrangement forgot it is the one failure this may not have
+   — but it is drawn BEFORE what to do. P6.h made this rule and it had only ever been applied
+   to a plan the ROOM placed; a plan he placed himself had the leftovers under it.
+2. **A place waits for its block.** A `{"block": "key"}` naming a key not on the board is KEPT
+   and drawn when the block arrives. Dropping it is right for a key that never exists and
+   wrong for the one case that happens: he is told to give the page ONCE when it is settled,
+   and a page given before the last compose names keys that have not arrived yet.
+3. **He is told before, not after.** The coercion naming unplaced blocks arrives in the result
+   of his last call, which he never reads. `composition.arrangement.about` now says EVERY
+   BLOCK YOU COMPOSE GOES ON THE PAGE, and the coercion says the count rather than the names:
+   one is a slip, eight is a page that forgot its figures.
+
+**Why.** The owner, of the first page written with the new prompt: *"wtf happened here its
+just all wrong"*. The run record says he wrote the best page he has written — a lede with its
+figures inside it, four headings, nine paragraphs carrying his own emphasis, his caveat placed,
+the plan last — and placed one of his nine figures on it. The room then drew the other eight
+under the plan, so the page read as an essay with a heap of charts after the conclusion.
+
+**And P8's plan splitter is reverted.** It looked inside a run-on plan for its steps, and on
+this turn it broke his sentence in half: *"Third, and this is the one that keeps costing us: a
+clean stock count. Until the negative counts are fixed…"* became a step called "a clean stock
+count." Requiring a capital only moved the error — "Walk it today." opens nothing either. A
+wall of text is his to fix and the tool asks him to (a blank line per step); a wrong split is
+the page asserting a structure he did not write, and that is worse than long.
+
+**Caught before it shipped.** The first cut of the leftovers read `drawFigure` as a value
+above its declaration — a ReferenceError that rendered the whole page blank. The frame caught
+it, and the frontend suite would have. It is a function now.
+
+**Held by.** `test_compose_coercion_contract` (the count, and a place kept for a block not yet
+composed), `plan.test.ts` (that his plan is never split where he did not split it, and that
+`planSteps(t).join(' ')` is still his text), and the scene `doc-live2` — his own 17:05 turn.
