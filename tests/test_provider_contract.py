@@ -143,3 +143,21 @@ def test_the_turn_records_the_model_that_answered():
     loop_src = (__import__("pathlib").Path(__file__).resolve().parents[1]
                 / "agent" / "loop.py").read_text(encoding="utf-8")
     assert 'kw["question"], kw.get("final_answer"), MODEL,' in loop_src
+
+
+def test_every_provider_is_priced_so_an_eval_reports_what_it_spent(monkeypatch):
+    """
+    2026-09-22: the eval harness priced DeepSeek turns at Opus's rates, ~20x
+    over. A run's reported cost is what decides how often evals run, so each
+    provider carries its own rates and the harness reads the one in force.
+    """
+    for name in provider.PROVIDERS:
+        monkeypatch.setenv("BOB_PROVIDER", name)
+        r = provider.rates()
+        assert set(r) == {"input", "output", "cache_read", "cache_creation"}, name
+        assert r["output"] > r["input"] > r["cache_read"] > 0, name
+        assert provider.rates_as_of()
+    monkeypatch.setenv("BOB_PROVIDER", "deepseek")
+    from tests.evals import harness
+    import importlib
+    assert importlib.reload(harness).RATES == provider.rates()

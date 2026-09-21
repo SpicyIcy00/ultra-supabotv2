@@ -41,8 +41,12 @@ NOW = ROOT / "ops" / "NOW.md"
 PLAN = ROOT / "ops" / "plan" / "plan.html"
 ARCHIVE = ROOT / "ops" / "archive"
 
-GATE_USD = 0.64      # measured at P1.g, 2026-09-13
-FULL_USD = 4.79      # MEASURED at P2S.✓, 2026-09-18 — verification/p2sclose-v2.json
+# ON DEEPSEEK since 2026-09-22: the capability test measured $0.76 for 21
+# turns, about $0.036 a turn. A card's own cases are about four turns; the full
+# suite fourteen. The Opus figures these replace were $0.64 and $4.79, and
+# $4.79 is what made "no live tests until the phase closes" a rule.
+GATE_USD = 0.15
+FULL_USD = 0.51
 
 WORDS = {0: "No", 1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six",
          7: "Seven", 8: "Eight", 9: "Nine", 10: "Ten", 11: "Eleven", 12: "Twelve",

@@ -5838,3 +5838,44 @@ payday/holiday calendar.
 
 **The plan:** NOW.md §3, cards B1–B13 in four phases; the page-speed cards of 09-21 are folded into
 B1, B2, B4, B6 and B12.
+
+## 2026-09-22 — the rules that were about Opus's price
+
+The owner, of the planning rules still binding this plan: *"what other things from the old way of
+planning are getting in our way? you can kinda forget them like if it says no eval tests we can have
+them now cause we using deepseek and its cheaper."*
+
+**What was found, and what it had been doing:**
+1. **The eval tooling was still Anthropic's.** `tests/evals/harness.py` skipped without
+   `ANTHROPIC_API_KEY` and priced every turn at Opus's rates; `ops/verify_integration.py model`
+   required that key; the judge read only it; `ops/cost_report.py` priced every recorded turn at
+   Opus's rates. On DeepSeek the suite would have skipped every case, and any cost read ~20x high —
+   the reading that made "no live tests" a rule in the first place. All four now read
+   `agent/provider.py` (`key_var()`, `rates()`); DeepSeek's rates are its published peak half,
+   re-read 2026-09-22. `cost_report.py` reports one provider's turns at a time, split by `model`.
+   Held by `test_every_provider_is_priced_so_an_eval_reports_what_it_spent`.
+2. **"No per-card test runs; live evals only at the phase close"** (2026-09-18, when a full run was
+   $4.79). Reversed: each card agent runs its own eval cases live, and the lead runs the whole suite
+   every wave. The plan's cost constants were re-based on DeepSeek's measured $0.036 a turn (the
+   capability test: $0.76 for 21 turns) — a card's cases $0.15, the full suite $0.51.
+3. **"Read a recorded eval, never re-run it."** Reversed for cost; kept for the part that was never
+   about cost — a run is never killed part-way.
+4. **Three runs to measure.** Now five: the same question has taken 90–325 s on DeepSeek.
+5. **The UI freeze of 2026-09-18.** Lifted for this plan; W1.1, W1.4 and W2.4 need it.
+6. **"Never push without the owner saying so in that session"** left four finished commits unpushed.
+   The rule stands and the wave prompt now carries the yes: *"… and push when every suite is
+   green."* A red suite is never pushed.
+7. **The 1,800-word prompt budget "has no room."** The budget stays as a guard; W1.1 owns
+   `SYSTEM_PROMPT` and frees room by deleting the board-era text its own decision retires.
+8. **Tests that hold a decision reversed today** (the page gate, the caveat in his words, scope
+   owned by the thread) are rewritten by the card that reverses them and named in its return —
+   not obeyed, and not deleted silently.
+9. **Not reversed, flagged:** there is still no way to rehearse a migration. A card that adds one
+   runs `alembic upgrade head --sql` offline, the lead reads it before the push, and the health
+   check is the proof.
+10. **Clarified:** rules 5 and 9 — no planner, no sub-agents — are about Bob's loop. The agents a
+    wave runs are how the work is done and never appear in Bob.
+
+Parallel agents share `george_ro`'s cap of 15 connections with production, so an agent's live runs
+set `GEORGE_MAX_CONNECTIONS=2`, and `captest.py`, which writes to live tables as one shared test
+user, stays the lead's.

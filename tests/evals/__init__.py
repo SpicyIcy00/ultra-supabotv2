@@ -15,7 +15,7 @@ Run with:
     export ENVIRONMENT=production GEORGE_EVALS=1
     pytest tests/evals -q -s
 
-Without GEORGE_EVALS=1, GEORGE_DATABASE_URL and ANTHROPIC_API_KEY the suite
-skips. GEORGE_EVAL_JUDGE=1 adds the rubric judge; GEORGE_EVAL_REPORT=<path>
+Without GEORGE_EVALS=1, GEORGE_DATABASE_URL and the answering provider's key
+(DEEPSEEK_API_KEY by default; see agent/provider.py) the suite skips. GEORGE_EVAL_JUDGE=1 adds the rubric judge; GEORGE_EVAL_REPORT=<path>
 writes the per-scenario record as JSON.
 """

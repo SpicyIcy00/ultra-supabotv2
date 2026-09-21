@@ -69,6 +69,19 @@ PROVIDERS: dict[str, dict[str, Any]] = {
     },
 }
 
+#: WHAT A MILLION TOKENS COSTS, in USD, for whatever answers (2026-09-22). The
+#: eval harness priced every turn at Opus's rates after Bob moved to DeepSeek,
+#: so a run would have reported ~20x what it cost — and it was the $4.79 Opus
+#: price of a full run that made "no live tests until the phase closes" a rule.
+#: DeepSeek at its PEAK (the worse) half, from api-docs.deepseek.com/quick_start/
+#: pricing, re-read 2026-09-22 (off-peak is half); no separate cache-write charge. Anthropic's at the
+#: figures ops/cost_report.py has always used (2026-06-24).
+RATES: dict[str, dict[str, float]] = {
+    "deepseek": {"input": 0.30, "output": 1.20, "cache_read": 0.006, "cache_creation": 0.0},
+    "anthropic": {"input": 5.00, "output": 25.00, "cache_read": 0.50, "cache_creation": 6.25},
+}
+RATES_AS_OF = {"deepseek": "2026-09-22 (peak)", "anthropic": "2026-06-24"}
+
 #: The owner's decision, 2026-09-21. Every measurement taken BEFORE that date
 #: was taken on Anthropic, so a number from an older run record is compared
 #: across providers only with `model` read off the row.
@@ -120,6 +133,15 @@ def max_tokens() -> int:
         return max(1, min(ceiling, int(said)))
     except ValueError:
         return ceiling
+
+
+def rates() -> dict[str, float]:
+    """USD per million tokens for the provider in force: input, output, cache_read, cache_creation."""
+    return dict(RATES[provider_name()])
+
+
+def rates_as_of() -> str:
+    return RATES_AS_OF[provider_name()]
 
 
 def key_var() -> str:

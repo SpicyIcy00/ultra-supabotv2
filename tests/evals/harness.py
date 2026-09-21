@@ -24,6 +24,7 @@ from typing import Any, Callable, Optional
 import pytest
 
 from agent import loop as bob_loop
+from agent import provider
 from agent.model_receipts import ModelReceipts
 from tests.evals import timing
 from tests.evals.checks import Turn
@@ -48,7 +49,10 @@ def required():
     """Skip unless the eval is opted in and both live dependencies are present."""
     if os.environ.get("GEORGE_EVALS") != "1":
         pytest.skip("behavioural evals are opt-in: set GEORGE_EVALS=1")
-    for k in ("GEORGE_DATABASE_URL", "ANTHROPIC_API_KEY"):
+    # The key of WHICHEVER model answers (2026-09-22): this still named
+    # Anthropic's after Bob moved to DeepSeek, so with only a DeepSeek key the
+    # suite skipped every case and looked like it had passed.
+    for k in ("GEORGE_DATABASE_URL", provider.key_var()):
         if not os.environ.get(k):
             pytest.skip(f"{k} is not set")
 
@@ -215,8 +219,10 @@ def evidence_summary(turn: Turn, max_rows: int = 15) -> str:
     return "\n".join(lines)
 
 
-RATES = {"input": 5.00, "output": 25.00, "cache_read": 0.50, "cache_creation": 6.25}
-RATES_AS_OF = "2026-06-24"
+# The rates of whichever model answers, from agent/provider.py (2026-09-22).
+# Fixed at Opus's, a DeepSeek run would have reported ~20x what it cost.
+RATES = provider.rates()
+RATES_AS_OF = f"{provider.provider_name()} {provider.rates_as_of()}"
 
 
 def turn_usd(turn) -> float:

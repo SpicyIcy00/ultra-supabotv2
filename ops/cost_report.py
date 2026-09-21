@@ -52,12 +52,28 @@ import sys
 from pathlib import Path
 from typing import Iterable, Optional
 
-# Claude Opus 5, US dollars per million tokens. Cache read is 0.1x input and
-# cache write 1.25x input at the default 5-minute TTL; a 1-hour TTL writes at
-# 2x. `--ttl 1h` prices writes at the longer rate.
-RATES = {"input": 5.00, "output": 25.00, "cache_read": 0.50, "cache_write": 6.25}
-CACHE_WRITE_1H = 10.00
-RATES_AS_OF = "2026-06-24 (claude-api skill model table)"
+# US dollars per million tokens, PER PROVIDER (2026-09-22). This priced every
+# turn at Opus 5's rates after Bob moved to DeepSeek, which reads ~20x high,
+# and a cost read that high is what made "no live tests" a rule. Each report
+# now covers ONE provider's turns (by `model`, since both are in the table)
+# at that provider's rates, from agent/provider.py. Anthropic's: cache read is
+# 0.1x input and write 1.25x at the 5-minute TTL; a 1-hour TTL writes at 2x.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from agent import provider as _provider  # noqa: E402  stdlib only
+
+CACHE_WRITE_1H = {"anthropic": 10.00, "deepseek": 0.0}
+
+
+def rates_for(name: str) -> dict[str, float]:
+    r = _provider.RATES[name]
+    return {"input": r["input"], "output": r["output"],
+            "cache_read": r["cache_read"], "cache_write": r["cache_creation"]}
+
+
+# Which rows are whose. Every model this project has run on Anthropic is named
+# claude-*; everything else in the table was served by DeepSeek.
+MODEL_FILTER = {"anthropic": "coalesce(model, 'claude') LIKE 'claude%%'",
+                "deepseek": "coalesce(model, 'claude') NOT LIKE 'claude%%'"}
 
 TOTALS = """
            count(*)                                      AS turns,
@@ -71,7 +87,7 @@ TOTALS = """
 QUERY = f"""
     SELECT {TOTALS}
     FROM george.conversations
-    WHERE asked_at >= now() - make_interval(days => %s)
+    WHERE asked_at >= now() - make_interval(days => %s) AND {{models}}
 """
 
 # The same totals from a fixed instant instead of a rolling window. This is how
@@ -82,7 +98,7 @@ QUERY = f"""
 QUERY_SINCE = f"""
     SELECT {TOTALS}
     FROM george.conversations
-    WHERE asked_at >= %s::timestamptz
+    WHERE asked_at >= %s::timestamptz AND {{models}}
 """
 
 
@@ -108,13 +124,15 @@ def connection_url(var: str) -> str:
     return url
 
 
-def report(row: dict, window: str, ttl: str) -> int:
+def report(row: dict, window: str, ttl: str, name: str = "anthropic") -> int:
+    RATES = rates_for(name)
+    RATES_AS_OF = f"{name} {_provider.RATES_AS_OF[name]}"
     turns = int(row["turns"] or 0)
     if not turns:
         print(f"\nNo turns recorded {window}.")
         return 0
 
-    write_rate = CACHE_WRITE_1H if ttl == "1h" else RATES["cache_write"]
+    write_rate = CACHE_WRITE_1H[name] if ttl == "1h" else RATES["cache_write"]
     tokens = {k: int(row[k] or 0) for k in ("input", "output", "cache_read", "cache_write")}
     rates = dict(RATES, cache_write=write_rate)
     costs = {k: tokens[k] / 1e6 * rates[k] for k in tokens}
@@ -171,6 +189,8 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     parser.add_argument("--ttl", choices=("5m", "1h"), default="5m",
                         help="price cache WRITES at this TTL's rate (1h writes at 2x). "
                              "Repricing only: it does NOT change the measured hit rate")
+    parser.add_argument("--provider", choices=sorted(_provider.PROVIDERS), default=None,
+                        help="whose turns, at whose rates (default: the one in force)")
     parser.add_argument("--url-env", default="DATABASE_URL",
                         help="NAME of the variable holding the connection string; "
                              "its value is never printed")
@@ -186,10 +206,12 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         query, params = QUERY, (args.days,)
         window = f"last {args.days} days"
 
+    name = args.provider or _provider.provider_name()
+    query = query.replace("{models}", MODEL_FILTER[name])
     with psycopg.connect(connection_url(args.url_env), connect_timeout=20,
                          row_factory=dict_row) as conn:
         row = conn.execute(query, params).fetchone()
-    return report(row, window, args.ttl)
+    return report(row, window, args.ttl, name)
 
 
 if __name__ == "__main__":

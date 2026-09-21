@@ -41,7 +41,10 @@ finding rather than naming a next check."""
 
 
 def enabled() -> bool:
-    return os.environ.get("GEORGE_EVAL_JUDGE") == "1" and bool(os.environ.get("ANTHROPIC_API_KEY"))
+    # Whichever provider answers also judges (2026-09-22): this read only
+    # ANTHROPIC_API_KEY, so on DeepSeek the judge was silently off.
+    from agent import provider
+    return os.environ.get("GEORGE_EVAL_JUDGE") == "1" and bool(os.environ.get(provider.key_var()))
 
 
 def judge(question: str, answer: str, evidence: str) -> Optional[dict[str, Any]]:
@@ -51,11 +54,12 @@ def judge(question: str, answer: str, evidence: str) -> Optional[dict[str, Any]]
     try:
         import anthropic
 
-        client = anthropic.Anthropic()
+        from agent import provider
+        client = anthropic.Anthropic(**provider.client_kwargs())
         # Thinking is on by default on this model and counts toward
         # max_tokens; 2,000 cut the JSON off mid-object on the first run.
         response = client.messages.create(
-            model=JUDGE_MODEL,
+            model=JUDGE_MODEL if provider.is_anthropic() else provider.model(),
             max_tokens=16000,
             system=RUBRIC,
             messages=[{

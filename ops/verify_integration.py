@@ -11,6 +11,8 @@ import sys
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from agent import provider  # noqa: E402  stdlib only; names the key of whichever model answers
 READ_DB = ['tests/golden.py', 'tests/test_brief_live.py', 'tests/test_pins_live.py',
            'tests/test_storehub_tools_live.py']
 APP_DB = ['tests/test_page_reader_live.py', 'tests/test_page_workshop_live.py',
@@ -36,7 +38,7 @@ def main():
         if args.suite == 'app-db':
             required.append('DATABASE_URL')
         if args.suite == 'model':
-            required.append('ANTHROPIC_API_KEY')
+            required.append(provider.key_var())
             if env.get('GEORGE_EVALS') != '1':
                 parser.error('model suite requires explicit GEORGE_EVALS=1 approval')
         if env.get('STAGING_DATABASE_VERIFIED') != '1':
@@ -49,6 +51,9 @@ def main():
         env['GEORGE_EVALS'] = '0'
         env['GEORGE_EVAL_JUDGE'] = '0'
         env['ANTHROPIC_API_KEY'] = ''
+        # Removed, not blanked: conftest then supplies a fake one, and no
+        # suite but `model` can reach the model that answers.
+        env.pop(provider.key_var(), None)
         env.pop('ANTHROPIC_AUTH_TOKEN', None)
     report = ROOT / 'verification' / (args.suite + '.xml')
     report.parent.mkdir(exist_ok=True)
