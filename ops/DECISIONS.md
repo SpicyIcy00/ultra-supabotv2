@@ -5737,3 +5737,56 @@ here, answered, before the second half is built.
 
 **Held by.** `headlineOnPage.test.ts` (both directions, from the two real turns) and the new block in
 `Reading.dom.test.tsx` (the headline goes, the notices do not).
+
+## 2026-09-21 — why a broad answer takes minutes, and the plan that follows
+
+The owner: *"its still taking too long on answers … did the page update really make that big of a
+differenece or are we just doing it wrong?"* — and then, *"can you search instead whats the most
+optimal way to get to our goal?"* Measured from `george.conversations`, then researched (three
+read-only agents: generative UI, reasoning-model latency, and a judgement-vs-mechanical map of the
+page code).
+
+**It was not the page.** Every broad Opus answer, in order: ~30 s on Sept 14–16 (4 reads, ~2,000
+output tokens, no round over 23 s); **~125 s from Sept 18** (still 7 reads, but 4× the tokens and one
+round of 65 s); the page arrived on the 21st. The window is 09-17 14:43 → 09-18 06:06, and in it
+`c6226ee` (a thought on every chart, asks under the headline) and `eeb7c7d` (six chart types become
+seventeen, with a rule for each). The compose tool: **11,705 → 15,028 → 27,413 chars; 11 → 15 → 19
+block fields** — with no bound, while the system prompt is held to 1,800 words by a test.
+
+**On DeepSeek, 75–91% of everything generated is thinking** (one turn: 148k chars of thinking, 18k
+for the whole page, 662 for his prose). It decodes at roughly 1,000 chars/s, so thinking is most of
+the wall-clock. The single page-building round is a median 59 s of a 130 s turn.
+
+**What did not work, and why each result reads as it does:**
+- *Effort.* On one prompt it scales cleanly (high 8.9 s → low 3.8 s). In the loop the first reading
+  was noise, and it was corrected by the research: **DeepSeek has no `medium`** (it maps to high),
+  so "medium 325 s vs high 211 s" was two runs of one setting. Re-read that way, top-level `low`
+  averaged **~152 s against ~241 s at high, with half the thinking and 3/3 good pages** — a lean
+  from three runs, not proof. And the loop lowers effort per turn only through a per-message
+  marker that DeepSeek's compatibility layer does not document, so **in production DeepSeek very
+  likely thinks at full strength on every question.**
+- *Thinking off.* 24–42 s, and wrong: one answer said the estate was "flat" when it fell 4.5%.
+  Thinking is load-bearing.
+- *Trimming the compose schema* (`spec`, `question`, `thought` removed for a test). Two of three
+  runs produced no page at all. Not shipped.
+
+**What the research changed.** Output and rounds are the levers, not input (OpenAI: halving output
+roughly halves latency; halving the prompt saves 1–5%, and ours is cached). A correction returned in
+a tool result still costs a round; only a code repair, or a format where the mistake cannot be made,
+is free. And the page is repeated work: the data syncs nightly and he asked the broad question seven
+times that day against identical data.
+
+**The plan, agreed by the owner** (NOW.md P17.0, P17.a, P17.b, and P3.b):
+1. **P17.a — `get_overview`:** one composite read, the Tableau Pulse pattern — code finds the facts
+   and writes each as one line with its row and receipts, and he reasons over those.
+2. **P3.b — the morning page,** answered at the owner's slot (born off, rule 7) and reused until the
+   data changes.
+3. **P17.b — sections:** he writes the findings; code derives kind, size, pairing and caveat
+   placement into the same arrangement the renderer draws.
+4. **P17.0 — the cheap fixes:** DeepSeek effort top-level; delete the self-contradicting text asking
+   for undrawn fields; the span that is always thrown away; settle a round on a page that carries
+   its answer.
+
+**Estimated, not measured:** a fresh broad question ~40–70 s; the morning and a same-day repeat ~0 s.
+The one open decision is the owner's: whether code may place an unsurfaced notice itself, saving the
+"rewrite your whole answer" round, which today is his deliberate trade (`agent/loop.py` 3859-3867).
