@@ -446,7 +446,8 @@ def was_said(answer: str, claim: Optional[str]) -> bool:
     return _flatten(claim) in _flatten(answer)
 
 
-def said_this_turn(answer: str, reading: Optional[Mapping[str, Any]]) -> str:
+def said_this_turn(answer: str, reading: Optional[Mapping[str, Any]],
+                   page: Any = None) -> str:
     """
     Everything Bob says this turn, wherever it lands on the page.
 
@@ -455,10 +456,34 @@ def said_this_turn(answer: str, reading: Optional[Mapping[str, Any]]) -> str:
     is drawn whole, above the figures — and a gate that read only the paragraph
     would have called it missing and forced a duplicate underneath. The claim is
     excluded: it is a span of the answer already.
+
+    AND A MARGIN NOTE IS PART OF "WHEREVER IT LANDS" (2026-09-21). When P7 grew
+    the page a `note` — the aside drawn beside the figure it qualifies — this
+    function was not told, so a qualification written exactly where UI rule 4
+    asks for it read as UNSAID and the loop appended the same notice verbatim
+    underneath. A wall of caveat in the slot passed; a placed note failed. One
+    live page carried "thousands sit below zero, so a line that looks empty may
+    only be unrecorded", which IS `negative_on_hand`, in his own words, in the
+    right place.
+
+    ONLY the notes, never the page's argument prose: see
+    `compose.notes_on_the_page` for why feeding a fingerprint 640 words would
+    silence real caveats rather than surface them.
+
+    `page` is the arrangement he laid out. Passing none keeps the old behaviour
+    exactly, for every caller that has no page.
     """
     parts = [answer or ""]
     for name in ("caveat", "next"):
         text = (reading or {}).get(name)
         if isinstance(text, str) and text.strip():
             parts.append(text)
+        elif isinstance(text, (list, tuple)):
+            # The plan is a list of steps since P14; its words still count.
+            parts.extend(str(step) for step in text if str(step).strip())
+    if page is not None:
+        from agent import compose as _compose
+        written = _compose.notes_on_the_page(page)
+        if written:
+            parts.append(written)
     return "\n\n".join(parts)

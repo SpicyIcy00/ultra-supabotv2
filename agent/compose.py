@@ -722,6 +722,51 @@ def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
     return built
 
 
+def notes_on_the_page(tree: Any) -> str:
+    """
+    The MARGIN NOTES he placed on the page, as one string.
+
+    THE NOTICE GATE HAS TO READ THESE (2026-09-21). `reading.said_this_turn`
+    read the answer, the caveat slot and the plan — and nothing of the page,
+    which is where P7 put `note`: the aside drawn beside the figure it
+    qualifies. So a qualification written exactly where UI rule 4 asks for it
+    counted as unsaid, and the loop appended the same notice verbatim
+    underneath. A wall of caveat in the slot passed the gate; a placed note
+    failed it. That is backwards.
+
+    ONLY `note`, AND DELIBERATELY NOT THE WHOLE PAGE. A fingerprint is "every
+    group matches, any alternative within a group suffices", so feeding it the
+    page's ~640 words of `lede`, `head` and `say` would let a notice be counted
+    as conveyed by prose that happens to contain the words — silencing a real
+    caveat. Trustworthiness about numbers is the floor, so this takes the one
+    leaf whose PURPOSE is to carry a qualification, and leaves the argument
+    prose out.
+
+    Bounded like every other walk of this tree, so a hostile one costs what an
+    honest one does.
+    """
+    said: list[str] = []
+    budget = [200]
+
+    def walk(node: Any, depth: int) -> None:
+        if budget[0] <= 0 or depth > 8:
+            return
+        budget[0] -= 1
+        if isinstance(node, (list, tuple)):
+            for kid in node:
+                walk(kid, depth + 1)
+            return
+        if not isinstance(node, Mapping):
+            return
+        text = node.get("note")
+        if isinstance(text, str) and text.strip():
+            said.append(text)
+        walk(node.get("children"), depth + 1)
+
+    walk(tree, 0)
+    return "\n\n".join(said)
+
+
 def _in_words(tree: Any, voc: Mapping[str, Any]) -> dict[str, str]:
     """
     The keys this page does NOT draw as a block, each with the kind it must be:

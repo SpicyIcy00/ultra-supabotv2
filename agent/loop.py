@@ -4251,7 +4251,9 @@ async def run(
                 # not less — and a gate reading the paragraph alone would call
                 # it missing and force a duplicate underneath it.
                 missing = _unsurfaced(
-                    pending, reading.said_this_turn(answer, reading_recorded), defs,
+                    pending,
+                    reading.said_this_turn(answer, reading_recorded, arrangement_recorded),
+                    defs,
                     on_screen=_drawn_on_the_board(_his(composition_recorded), charted),
                 )
 
