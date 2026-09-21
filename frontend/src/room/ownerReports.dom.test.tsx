@@ -120,15 +120,14 @@ describe('"this stays its not closeable"', () => {
 });
 
 describe('"down arrow should be in the center of the charts"', () => {
-  it('centres the arrows on the figures area', () => {
-    let decls: Record<string, string> | null = null;
-    CSS.walkRules((r) => {
-      if (decls === null && r.selectors.includes('.r-arr')) {
-        decls = {};
-        r.walkDecls((d) => { (decls as Record<string, string>)[d.prop] = d.value; });
-      }
-    });
-    expect(decls).toMatchObject({ left: '50%', transform: 'translateX(-50%)' });
-    expect((decls as unknown as Record<string, string>).right).toBeUndefined();
+  it('has no arrow to centre: the room scrolls as one page (P10)', () => {
+    // 2026-09-17 the arrow sat on the figures area's right edge, as the design
+    // drew it, and he asked for it in the middle. On 2026-09-21, of a document
+    // drawn inside that pane: *"it still feels like its trying to fill in
+    // columns not the one big page"* — so the pane went, and the arrows with
+    // it. What he asked for here is not regressed; it no longer exists.
+    let found = false;
+    CSS.walkRules((r) => { if (r.selectors.some((x) => x.includes('.r-arr'))) found = true; });
+    expect(found).toBe(false);
   });
 });

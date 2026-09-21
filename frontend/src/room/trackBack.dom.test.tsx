@@ -41,9 +41,12 @@ describe('"it stops too early"', () => {
   it('ends the room just above the line, not 150px above it', () => {
     const padding = declaration('.r-beside', 'padding') ?? '';
     const bottom = Number(/(\d+)px\s*$/.exec(padding)?.[1]);
-    // The line stands 20px off the bottom and is about 54px tall.
+    // The line stands 20px off the bottom and is about 54px tall. It was 86
+    // while the room was fixed and only the figures moved; since P10 the room
+    // SCROLLS UNDER the line, so the last thing on the page has to clear it
+    // rather than stop above it.
     expect(bottom).toBeGreaterThanOrEqual(74);
-    expect(bottom).toBeLessThanOrEqual(96);
+    expect(bottom).toBeLessThanOrEqual(140);
   });
 });
 
@@ -159,11 +162,15 @@ describe('"if its stating whats already stated or shown in the page … dont mak
 });
 
 describe('"add a indicatior … to let people know they can scroll down on it"', () => {
-  it('draws the figures\' own arrow at the foot of his words, only while there is more', () => {
-    expect(ROOM).toMatch(/className="r-arr r-arr--words"[\s\S]{0,200}hidden=\{!wordsMore\}/);
-    expect(ROOM).toMatch(/onClick=\{\(\) => scrollWords\(wordsRef\.current\)\}/);
-    expect(declaration('.r-arr--words', 'grid-area')).toBe('words');
-    expect(declaration('.r-arr--words', 'bottom')).toBe('0');
+  it('has nothing left to indicate: his words do not scroll on their own', () => {
+    // 2026-09-18: his words scrolled inside their own column and the foot was
+    // cut, so an arrow was drawn there and the foot faded. P10 made the room
+    // one page — his side is sticky and whole, and the page scrolls under it —
+    // so the column has no hidden foot and the arrow would point at nothing.
+    // The report is answered by the layout now instead of by a control.
+    expect(ROOM).not.toMatch(/r-arr--words/);
+    expect(ROOM).not.toMatch(/scrollWords/);
+    expect(declaration('.r-aside', 'position')).toBe('sticky');
   });
 });
 

@@ -3126,3 +3126,23 @@ not his. The fixture for this card is his own turn (`ops/frames_fixtures/doc-liv
 pulled from `george.posts`, and every future page card should start from one of those.
 
 Frontend 1180, backend 2162. `verification/frames/p8/`.
+
+### 2026-09-21 — "too many gaps … columns, not the one big page"
+
+Measuring beat guessing again. The empty bands in the render came to 419px of 3,100 — 13% —
+which is not "too many gaps" by itself, and chasing them would have been chasing a proxy. What
+the measurement DID show, once the page column was measured rather than assumed, is that the
+page was 703px wide where the artifact's is 900. That one number explains the bands: at 703 a
+floated figure leaves the prose 36 characters a line, so the balancer sent every figure to the
+full width, and full-width figures with a line of text between them are bands.
+
+The second cause was not in the pixels at all: the room is a fixed frame with a pane that
+scrolls inside it, and the artifact is a page. Both were decisions of his from 2026-09-17, so
+I stopped and asked instead of changing them. He said do both.
+
+Worth keeping: when a change reverses something the owner asked for, the tests that hold the
+old behaviour are the record of it. Rewriting them to say "this was asked for on X, and this
+is what replaced it on Y" costs a few minutes and keeps the history where the next session
+will find it. Deleting them would have left the reversal invisible.
+
+Frontend 1179. `verification/frames/p8/one-page.png`.

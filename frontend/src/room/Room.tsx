@@ -23,7 +23,7 @@ import { boardContext, buildBoard, folded, placesCaveat, shapedByReplay,
 import { keepLocal, restoreLocal } from './arrangement';
 import { callOf, rowsOf, subjectOf, type AnswerTurn, type Block } from './data';
 import { Board, turnNotices } from './render';
-import { FiguresArea, Wires, scrollToFigure, scrollWords, useMoreBelow } from './FiguresArea';
+import { FiguresArea, Wires, scrollToFigure } from './FiguresArea';
 import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
 import { bodyOf, caveatUnshown, claimAndStanding, thoughtsOf, unmark } from './beside';
@@ -164,7 +164,6 @@ export default function Room() {
   const areaRef = useRef<HTMLDivElement>(null);
   // WHETHER HIS WORDS RUN PAST THE BOTTOM OF THEIR COLUMN, so the column can
   // fade there instead of cutting a sentence (the log, 2026-09-17).
-  const wordsMore = useMoreBelow(wordsRef);
   // HOW THE FIGURES' ARRIVAL IS GOING, from the board (P2S.2(d)). The mark
   // stays `reading` while any are on their way, and pulses as each lands.
   const [landing, setLanding] = useState({ pending: 0, arrived: 0 });
@@ -820,12 +819,17 @@ export default function Room() {
           <Wires frameRef={frameRef} markRef={himRef} wordsRef={wordsRef} areaRef={areaRef}
                  version={`${answers.length}:${drawn.length}:${busy}`} />
 
+          {/* HIS SIDE, ONE COLUMN THAT TRAVELS WITH THE PAGE (P10). Him and
+              his words were two cells of the grid, each scrolling inside
+              itself; they are one sticky aside now, as the artifact's
+              `.words` is, and the room scrolls as one document. */}
+          <div className="r-aside">
           <div className="r-him" ref={himRef}>
             <AliveMark state={mark.state} failed={mark.failed} drawn={mark.reads}
                        pulses={mark.reads + landing.arrived} />
           </div>
 
-          <div className="r-words" ref={wordsRef} data-more-down={wordsMore ? 'yes' : 'no'}>
+          <div className="r-words" ref={wordsRef}>
             {/* WHAT YOU ASKED, SMALL, UNDER HIM, and the way back to what
                 you asked before (the log, 2026-09-18). */}
             <Asked question={questions[at] ?? null} at={at} count={allAnswers.length}
@@ -884,9 +888,7 @@ export default function Room() {
               people know they can scroll down on it"). The figures' own arrow,
               at the foot of his column, only while there is more; a tap moves
               it most of a screen, as the figures' does. */}
-          <button type="button" className="r-arr r-arr--words" title="more of what he said"
-                  aria-label="More of what he said" hidden={!wordsMore}
-                  onClick={() => scrollWords(wordsRef.current)}>↓</button>
+          </div>
 
           <div className="r-right">
             {/* NO HEADER OVER THE FIGURES (the log, 2026-09-17: "we also dont

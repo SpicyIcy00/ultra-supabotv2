@@ -5,9 +5,9 @@
  * lines from stage"*. The rules themselves are pure and held in
  * `beside.test.ts`; this holds that the components draw them.
  */
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, render } from '@testing-library/react';
 import { useRef } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { FiguresArea, Wires } from './FiguresArea';
 
 afterEach(cleanup);
@@ -17,45 +17,32 @@ function Area({ children }: { children?: React.ReactNode }) {
   return <FiguresArea areaRef={ref}>{children}</FiguresArea>;
 }
 
-function size(el: HTMLElement, clientHeight: number, scrollHeight: number) {
-  Object.defineProperty(el, 'clientHeight', { configurable: true, value: clientHeight });
-  Object.defineProperty(el, 'scrollHeight', { configurable: true, value: scrollHeight });
-}
+describe('the figures area is a plain wrapper now — P10', () => {
+  /**
+   * It drew an up and a down arrow over an inner scroller, which is what the
+   * owner asked for on 2026-09-17: *"i dont really ever want to see a scroll
+   * down on the charts ... maybe just up and down arrows"*, *"only charts area
+   * should be able to be scrolled"*. Looking at a document drawn inside that
+   * pane on 2026-09-21: *"it still feels like its trying to fill in columns
+   * not the one big page"* — and, asked whether the room should scroll as one
+   * document instead, *"ok do both"*. The room scrolls; this holds nothing.
+   */
+  it('draws no arrows', () => {
+    const { container } = render(<Area><p>many figures</p></Area>);
+    expect(container.querySelector('.r-arr')).toBeNull();
+  });
 
-describe('only when there is more — row 9', () => {
-  it('draws no arrow when everything fits', () => {
+  it('still carries the area its ref and the wires find it by', () => {
     const { container } = render(<Area><p>one figure</p></Area>);
-    expect((container.querySelector('.r-arr--up') as HTMLButtonElement).hidden).toBe(true);
-    expect((container.querySelector('.r-arr--dn') as HTMLButtonElement).hidden).toBe(true);
-  });
-
-  it('shows down at the top, both in the middle, up at the bottom', async () => {
-    const { container } = render(<Area><p>many figures</p></Area>);
     const area = container.querySelector('[data-figures-area]') as HTMLElement;
-    const up = () => (container.querySelector('.r-arr--up') as HTMLButtonElement).hidden;
-    const down = () => (container.querySelector('.r-arr--dn') as HTMLButtonElement).hidden;
-    size(area, 500, 1400);
-    area.scrollTop = 0;
-    await act(async () => { fireEvent.scroll(area); });
-    expect([up(), down()]).toEqual([true, false]);
-    area.scrollTop = 450;
-    await act(async () => { fireEvent.scroll(area); });
-    expect([up(), down()]).toEqual([false, false]);
-    area.scrollTop = 900;
-    await act(async () => { fireEvent.scroll(area); });
-    expect([up(), down()]).toEqual([false, true]);
-  });
-
-  it('moves 80% of the area per press, and never draws a scrollbar of its own', async () => {
-    const { container } = render(<Area><p>many figures</p></Area>);
-    const area = container.querySelector('[data-figures-area]') as HTMLElement;
-    size(area, 500, 1400);
-    const scrollBy = vi.fn();
-    area.scrollBy = scrollBy as unknown as typeof area.scrollBy;
-    await act(async () => { fireEvent.scroll(area); });
-    fireEvent.click(screen.getByRole('button', { name: 'More figures' }));
-    expect(scrollBy).toHaveBeenCalledWith(expect.objectContaining({ top: 400 }));
     expect(area.className).toBe('r-figs');
+    expect(area.textContent).toBe('one figure');
+  });
+
+  it('claims nothing about how much there is below', () => {
+    // `data-more-down` fed a fade at the foot of a pane that no longer exists.
+    const { container } = render(<Area><p>many figures</p></Area>);
+    expect(container.querySelector('[data-more-down]')).toBeNull();
   });
 });
 

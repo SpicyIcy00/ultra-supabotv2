@@ -104,10 +104,10 @@
 
   /* THE COMPOSITION (P2S.1(b)) — the artifact's beside room, in numbers. Two
      columns, 580 and 940, 40 between; the sidebar 232 on the left edge. */
-  --him-w: 580px;
-  --figs-w: 940px;
-  --comp-gap: 40px;
-  --comp-max: 1560px;
+  --him-w: 360px;
+  --page-w: 900px;
+  --comp-gap: 64px;
+  --comp-max: 1324px;        /* 360 + 64 + 900, the artifact's own room */
   --side-w: 232px;
 
   --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
@@ -529,34 +529,56 @@
  * THERE — `100vw - var(--side-w)` — so opening the sidebar moves it and never
  * narrows it (his row 4). `beside.composition` is the same arithmetic, tested.
  *
- * No page scrollbar: the room is fixed to the window and only the figures
- * area moves (row 9).
+ * ONE PAGE, NOT A PANE (P10, 2026-09-21). Until today the room was fixed to
+ * the window and only the figures area moved, with an up and a down arrow —
+ * which is what the owner asked for on 2026-09-17 (*"only charts area should
+ * be able to be scrolled"*). Looking at a document drawn inside it: *"it still
+ * feels like its trying to fill in columns not the one big page"*, and, asked
+ * whether the room should scroll as one document instead, *"ok do both"*. So
+ * the room scrolls, his side is sticky beside it, and the arrows are gone with
+ * the pane they moved. Recorded in ops/DECISIONS.md.
  */
 .r-main {
   position: fixed; top: 0; bottom: 0; right: 0; left: 0;
-  overflow: hidden;
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: none;
   transition: left 280ms var(--ease);
 }
+.r-main::-webkit-scrollbar { display: none; }
 :root[data-side="open"] .r-main { left: var(--side-w); }
 @media (prefers-reduced-motion: reduce) { .r-main { transition: none; } }
 
 .r-beside {
   position: relative;
   box-sizing: border-box;
-  height: 100%;
-  width: min(var(--comp-max), 100vw - var(--side-w) - 32px);
+  min-height: 100%;
+  /* THE ROOM IS WHAT IS THERE (P10). It was decided as though the sidebar were
+     always present, so opening it moved the composition and never narrowed it
+     — and 232px of every screen was held for something not on it. */
+  width: min(var(--comp-max), 100vw - 64px);
   margin-inline: auto;
   display: grid;
-  grid-template-columns: minmax(0, 29fr) minmax(0, 47fr);
-  grid-template-rows: auto minmax(0, 1fr);
-  grid-template-areas: "him right" "words right";
+  /* His side stops growing at 360; the page takes the rest (the artifact's
+     `.room`). It was 29fr:47fr of whatever there was, which gave the page 703
+     at 1440 — a measure prose cannot be read at once a figure floats into it. */
+  grid-template-columns: minmax(0, var(--him-w)) minmax(0, 1fr);
+  align-items: start;
   column-gap: var(--comp-gap);
   /* THE FOOT STOPS JUST ABOVE THE LINE (the log, 2026-09-18: "it stops too
      early. it should stop almost right before the text bar"). It was 150px;
      the line (.r-line-wrap) stands 20px off the bottom and is about 54px tall,
      so the words and the figures now run to 12px above it. */
-  padding: max(5vh, 64px) 0 86px;
-  align-items: start;
+  padding: max(5vh, 64px) 0 130px;
+}
+:root[data-side="open"] .r-beside { width: min(var(--comp-max), 100vw - var(--side-w) - 64px); }
+
+/* HIS SIDE, TRAVELLING WITH THE PAGE (the artifact's `.words`): him, what you
+   asked, the claim, what he said and the questions — one column, sticky, so
+   the page moves under it instead of beside it. */
+.r-aside {
+  position: sticky; top: max(5vh, 64px); align-self: start; z-index: 1;
+  display: flex; flex-direction: column; align-items: flex-end;
+  min-width: 0; max-height: calc(100vh - max(5vh, 64px) - 150px); overflow: visible;
 }
 
 /* THE LEADING LINES, over the whole composition (row 10). */
@@ -572,7 +594,7 @@
 
 /* HIM — top-left, big, the glow running past the column (rows 14, 24). */
 .r-him {
-  grid-area: him; position: relative; min-width: 0;
+  position: relative; min-width: 0; align-self: flex-end;
   display: flex; align-items: flex-start; justify-content: center;
   overflow: visible; pointer-events: none;
 }
@@ -593,14 +615,11 @@
    and fill the rest of the column above the composer, scrolling with no bar and
    fading at the foot when there is more. */
 .r-words {
-  grid-area: words; align-self: stretch; min-width: 0; min-height: 0; position: relative; z-index: 1;
+  align-self: stretch; min-width: 0; position: relative; z-index: 1;
   display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
   padding-right: 4px; padding-bottom: 12px; text-align: right; margin-top: 0;
-  overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain;
 }
-.r-words::-webkit-scrollbar { display: none; }
 .r-words > * { flex: none; }
-.r-words[data-more-down="yes"] { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); }
 
 /* THE QUESTIONS HE SUGGESTS, under the headline — his words, a tap each. No
    accent (UI rule 5): a suggestion is not something that needs you. */
@@ -665,45 +684,23 @@
 
 /* THE FIGURES — the right column, the whole height. */
 .r-right {
-  grid-area: right; position: relative; z-index: 1; min-width: 0; min-height: 0;
-  height: 100%; display: flex; flex-direction: column;
+  position: relative; z-index: 1; min-width: 0;
+  /* The page stops at 900 (the artifact's `.page`), whatever room is left. */
+  max-width: var(--page-w); display: flex; flex-direction: column;
 }
 .r-right-head { flex: none; }
-.r-right-figs { position: relative; flex: 1 1 auto; min-height: 0; }
+.r-right-figs { position: relative; }
 .r-figs {
-  height: 100%; min-height: 0;
-  overflow-y: auto; overflow-x: hidden;
   /* ROOM FOR WHAT SITS ON A FIGURE'S EDGE — a ringed dot, a dumbbell's end dot
      — so the area's own clip never takes a pixel of it (the log, 2026-09-17).
      The negative margin keeps the figures where they were. */
   padding-inline: 8px; margin-inline: -8px;
-  scrollbar-width: none;
-  overscroll-behavior: contain;
   padding-bottom: 8px;
 }
-.r-figs::-webkit-scrollbar { display: none; }
 
-/* ONLY WHEN THERE IS MORE (row 9). Each moves 80% of the area. */
-/* CENTRED ON THE FIGURES (the log, 2026-09-17: "down arrow should be in the
-   center of the charts"); it sat on the area's right edge, as the design drew it. */
-.r-arr {
-  position: absolute; left: 50%; transform: translateX(-50%); width: 30px; height: 30px; border-radius: 50%;
-  border: 0; cursor: pointer;
-  background: var(--ground); color: var(--ink-2);
-  box-shadow: 0 0 0 1px var(--edge-strong), 0 6px 20px rgba(0, 0, 0, 0.3);
-  font: 400 14px/30px var(--sans); text-align: center; z-index: 3;
-  transition: opacity 200ms;
-}
-.r-arr:hover { color: var(--ink); background: var(--sunk); }
-.r-arr--up { top: 0; }
-.r-arr--dn { bottom: 0; }
-.r-arr[hidden] { display: none; }
-/* THE SAME ARROW AT THE FOOT OF HIS WORDS (the owner, 2026-09-18: "add a
-   indicatior that matches the theme to the text under blob to let people know
-   they can scroll down on it"). A child of the grid placed in the words' own
-   area, so it stays put while the words scroll under it, centred in the column
-   as the figures' is in theirs. */
-.r-arr--words { grid-area: words; top: auto; bottom: 0; }
+/* THE ARROWS WENT WITH THE PANE THEY MOVED (P10). `.r-arr` was the up and the
+   down over the figures area, and `.r-arr--words` the one at the foot of his
+   column; the room scrolls as one page now and neither has anything to move. */
 
 /* THE FLOW (row 6, 7). One grid; each figure told its column and spanning its
    own height in 1px rows, so a figure changing column never remounts. */
@@ -725,6 +722,13 @@
 /* 34 → 18 (P6.b): a step's air, not a tile's. FIGURE_GAP fell with it. */
 .r-fig-body { padding-bottom: 18px; max-width: 760px; }
 .r-fig[data-span="yes"] .r-fig-body { max-width: none; }
+/* ON A DOCUMENT THE FIGURE'S OWN BOX IS ALREADY THE ANSWER (P10). The cap
+   above is the packed board's: one column gave every chart 940px whether it
+   wanted it or not. On a page the width was chosen for this figure — `size`,
+   `beside`, or the balance against its words — so capping it again at 760
+   left a strip of nothing to the right of a chart that had just been told to
+   take the width. */
+.r-doc-fig .r-fig-body { max-width: none; }
 /* HIS WORDS ON A CHART — including, on the chart the headline rests on, what no
    chart took (the owner, 2026-09-18: "that should be with those charts"). His
    line breaks stay line breaks; a gap between his paragraphs. */
@@ -829,7 +833,6 @@
 /* A CHART IS NOT CUT AT THE AREA'S EDGE, IT FADES (the log, 2026-09-17: "some
    charts are still getting cut"): where there is more above or below, the
    figures area dissolves over its last 48px instead of slicing a figure. */
-.r-figs[data-more-down="yes"] { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); }
 .r-figs[data-more-up="yes"] { -webkit-mask-image: linear-gradient(to top, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to top, #000 calc(100% - 48px), transparent); }
 .r-figs[data-more-up="yes"][data-more-down="yes"] { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 48px, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to bottom, transparent, #000 48px, #000 calc(100% - 48px), transparent); }
 
@@ -857,9 +860,9 @@
   .r-words .r-caveats { border-right: 0; border-left: 2px solid var(--edge-strong); padding: 0 0 0 12px; }
   .r-words .r-foot-offers { justify-content: flex-start; }
   .r-next { border-right: 0 !important; border-left: 3px solid var(--ink); padding: 0 0 0 14px !important; }
-  .r-right { margin-top: 26px; height: auto; }
+  .r-aside { position: static; max-height: none; align-items: flex-start; }
+  .r-right { margin-top: 26px; height: auto; max-width: none; }
   .r-figs { height: auto; overflow: visible; }
-  .r-arr { display: none; }
   .r-flow { display: block; }
   .r-fig { grid-column: auto !important; grid-row: auto !important; }
   /* The gathering still reads on a phone — it is one column everywhere, so the
@@ -2541,7 +2544,12 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 .r-board--laid .r-mk-contributors .r-mk-bar--split::before { display: none; }
 .r-board--laid .r-mk-contributors .r-mk-fig b { font: 500 11.5px/1.35 var(--mono); }
 /* THE LIST (`.need ul`): two columns of name and where, no rules. */
-.r-board--laid .r-mk-list { margin-top: 8px; }
+/* A LIST FILLS THE PAGE (P10). `.r-mk` is a grid, and `columns: 2` does
+   nothing to a grid container — so a seventeen-row list drew as one narrow
+   column with the right half of the page empty beside it. As a block its rows
+   take the width and the figure sits at the right edge, which is also what
+   lets a run's label (`data-opens`) sit across the top of its run. */
+.r-board--laid .r-mk-list { display: block; columns: auto; margin-top: 8px; }
 /* NAMES ALONE RUN IN TWO COLUMNS (the design's `.need ul`): nothing is being
    compared down the rows, so a single column is a tall strip of white. */
 /* `display: block`, because every mark is a grid (`.r-mk`) and a grid has no

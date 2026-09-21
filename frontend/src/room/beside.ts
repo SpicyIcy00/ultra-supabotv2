@@ -277,10 +277,24 @@ export function unmark(raw: string): { plain: string; bold: [number, number][] }
 /* ------------------------------------------------------------ the frame */
 
 /** The artifact's own dimensions (`.bs-view`, `.side`), mirrored in room.css. */
-export const HIM_W = 580;
-export const FIGS_W = 940;
-export const COMP_GAP = 40;
-export const COMP_MAX = HIM_W + COMP_GAP + FIGS_W; // 1560
+/**
+ * HIS COLUMN IS BOUNDED AND THE PAGE TAKES THE REST (P10, 2026-09-21).
+ *
+ * It was 580:940 of whatever there was — the beside design's own two columns.
+ * At 1440 that gave the page 703px, and a page of 703 with a figure floated
+ * into it leaves 36 characters a line, which is not a measure anyone reads
+ * prose at: every figure ended up at the full width and the page read as
+ * bands. The owner: *"it still feels like its trying to fill in columns not
+ * the one big page"*, then *"ok do both"*.
+ *
+ * These are the artifact's own numbers (ops/ideal/the-page-bob-writes.html
+ * `.room` and `.page`): his side stops growing at 360, the gap is 64, the page
+ * takes the rest and stops at 900.
+ */
+export const HIM_W = 360;
+export const COMP_GAP = 64;
+export const PAGE_W = 900;
+export const COMP_MAX = HIM_W + COMP_GAP + PAGE_W; // 1324
 export const SIDE_W = 232;
 /** The artifact's inline padding on the composition, 16px each side. */
 export const COMP_PAD = 16;
@@ -321,9 +335,14 @@ export interface Composition {
  */
 export function composition(viewport: number, sideOpen: boolean): Composition {
   const roomLeft = sideOpen ? SIDE_W : 0;
-  const width = Math.max(0, Math.min(COMP_MAX, viewport - SIDE_W - 2 * COMP_PAD));
+  // THE ROOM IS WHAT IS THERE (P10). The width used to be decided as though
+  // the sidebar were always present, so that opening it moved the composition
+  // without resizing it — and the cost was 232px of every screen held for
+  // something not on it. It is reclaimed while the sidebar is closed; opening
+  // it now narrows the room, which is the trade the owner took.
+  const width = Math.max(0, Math.min(COMP_MAX, viewport - roomLeft - 2 * COMP_PAD));
   const inner = Math.max(0, width - COMP_GAP);
-  const him = inner * (HIM_W / (HIM_W + FIGS_W));
+  const him = Math.min(HIM_W, inner * 0.36);
   const left = roomLeft + (viewport - roomLeft - width) / 2;
   return {
     roomLeft,
@@ -470,19 +489,7 @@ export function revealAt(index: number, reducedMotion: boolean): number {
   return reducedMotion ? 0 : REVEAL_FIRST + index * REVEAL_EVERY;
 }
 
-/** The arrows: up hidden within 2px of the top, down within 2px of the bottom. */
-export function arrowsFor(scrollTop: number, clientHeight: number, scrollHeight: number):
-  { up: boolean; down: boolean } {
-  return {
-    up: scrollTop > 2,
-    down: scrollTop + clientHeight < scrollHeight - 2,
-  };
-}
-
-/** How far one arrow press moves the figures: 80% of the area's height. */
-export function arrowStep(clientHeight: number): number {
-  return clientHeight * 0.8;
-}
+/* `arrowsFor` and `arrowStep` went with the figures' own scroller (P10). */
 
 /* -------------------------------------------------------------- the wires */
 

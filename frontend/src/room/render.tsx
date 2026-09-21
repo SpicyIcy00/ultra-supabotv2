@@ -777,11 +777,14 @@ export function Board(p: BoardProps) {
       // the section balances it against them, and sets it under them if it
       // cannot (doc.tsx, Section). A block with no words after it takes the
       // width, exactly as every arrangement before this drew it.
-      // Beside NOTHING it is a float with a hole where its words would be, so
-      // it sits beside words only where words follow it.
+      // A SIZE IS WHAT IT LEAVES FOR THE WORDS (P10). It was honoured whether
+      // or not any words followed, so a `wide` list with nothing beside it
+      // drew at 56% with four hundred pixels of nothing to its right. A size
+      // only means something when something shares the line with it; alone, a
+      // figure takes the page.
       const wordsFollow = Boolean(after && 'say' in after);
-      const room = node.size ?? (wordsFollow && node.beside !== false ? roomFor(it.o) : 'full');
-      const beside = room !== 'full' && wordsFollow && node.beside !== false;
+      const beside = wordsFollow && node.beside !== false && node.size !== 'full';
+      const room = beside ? node.size ?? roomFor(it.o) : 'full';
       const control = node.control ? byKey.get(node.control) : undefined;
       return (
         <div key={at} className="r-doc-fig" data-size={room} data-beside={beside ? 'yes' : undefined}>

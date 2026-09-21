@@ -5434,3 +5434,52 @@ does NOT decide which of his sentences is the finding — that would be the room
 (the run-on plan, and that no word changes), `canvas.dom.test.tsx` (the list's measure, unit
 and runs). The scene `doc-live` is his own turn, from the run record, and is what the room is
 now measured against.
+
+## 2026-09-21 — P10: the room is one page, and the page takes the room
+
+**Decision, and it reverses two of the owner's own.** Asked which of the two structural
+causes of *"it still feels like its trying to fill in columns not the one big page"* he
+wanted fixed, he said *"ok do both"*.
+
+1. **The page takes the room.** His side stops growing at 360px and the page takes the rest,
+   capped at 900 — the artifact's `.room` (`minmax(260px, 360px) minmax(0, 1fr)`, gap 64) and
+   `.page` (`max-width: 900px`). It was `29fr:47fr`, the beside design's 580:940
+   (P2S.1(b)), of whatever was left after subtracting the sidebar's width **whether or not
+   the sidebar was open** — so at 1440 the page had 703px. A 703px page with a figure floated
+   into it leaves 36 characters a line, which is not a measure prose is read at, so the
+   balance sent every figure to the full width and the page came out as bands. The
+   reservation is also gone: opening the sidebar narrows the room now, where before it slid a
+   composition that had always been sized for it (*"it SLIDES when the sidebar opens and
+   never shrinks"*, his row 4). That property is what cost 232px of every screen.
+
+2. **One page, not a pane.** The room scrolls as one document and his side is `position:
+   sticky` beside it. The figures had their own scroller with an up and a down arrow, and his
+   words another with a fade at the foot — both asked for directly: *"i dont really ever want
+   to see a scroll down on the charts … maybe just up and down arrows"* and *"only charts
+   area should be able to be scrolled"* (2026-09-17), then *"add a indicatior … to let people
+   know they can scroll down on it"* (2026-09-18). The arrows, `arrowsFor`, `arrowStep`,
+   `scrollWords` and `useMoreBelow` are gone with the panes they served. The two owner
+   reports they answered are not regressed — they are answered by the layout instead, and
+   their tests say so rather than being deleted.
+
+**Why this was the room's half of the complaint.** The page he was looking at was one Bob
+wrote, and most of what made it bands is what he wrote (P8's recipe change targets that, and
+only a live turn tests it). But two things were the room's: a page too narrow for prose to
+sit beside a figure, and a document presented as a pane inside a frame, which is the shape of
+an app and not of a page.
+
+**Four smaller things the same render exposed.**
+- A `size` was honoured whether or not any words followed, so a `wide` list alone drew at 56%
+  with four hundred pixels of nothing beside it. A size is what a figure leaves for the words;
+  alone, a figure takes the page.
+- `.r-fig-body`'s 760px cap is the packed board's rule (P3.k) and does not belong on a page,
+  where the width was already chosen for that figure.
+- `.r-mk` is a grid, and `columns: 2` does nothing to a grid container, so a seventeen-row
+  list drew as one narrow column with half the page empty beside it.
+- The pair that measures a figure against its words has `display: contents`, so the float
+  belongs to the section and everything after it wraps up the left side (P9).
+
+**Held by.** `beside.test.ts` (the widths, the formula, that nothing inside scrolls),
+`layout.test.ts`, `figuresArea.dom.test.tsx`, `ownerReports.dom.test.tsx` and
+`trackBack.dom.test.tsx` — each rewritten to say what the room does now and what it used to,
+so the reversal is on the record where the original decision was.

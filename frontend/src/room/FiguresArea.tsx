@@ -1,10 +1,10 @@
 /**
  * THE TWO PIECES OF THE BESIDE ROOM THAT ARE BEHAVIOUR, NOT LAYOUT (P2S.1).
  *
- * `FiguresArea` is the one thing in the room that moves: the figures, by an up
- * and a down arrow that appear only when there is more (his row 9: *"i dont
- * really ever want to see a scroll down on the charts … maybe just up and down
- * arrows"*, then *"only charts area should be able to be scrolled"*).
+ * `FiguresArea` was the one thing in the room that moved: the figures, by an
+ * up and a down arrow (his row 9). The room scrolls as one page since P10 and
+ * it is a plain wrapper now — the area keeps its ref, because `scrollToFigure`
+ * and the wires find the figures through it.
  *
  * `Wires` is the leading lines (row 10, *"add those like leading lines from
  * stage"*): dashed, from his mark to the claim and to every figure, redrawn
@@ -14,103 +14,40 @@
  * which is where the rules are tested.
  */
 import {
-  useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject,
+  useCallback, useEffect, useRef, useState, type ReactNode, type RefObject,
 } from 'react';
-import { arrowStep, arrowsFor, wireEnds, type Box, type Wire } from './beside';
+import { wireEnds, type Box, type Wire } from './beside';
 import { reducedMotion } from './render';
 
 export function FiguresArea({ children, areaRef }: {
   children: ReactNode;
   areaRef: RefObject<HTMLDivElement | null>;
 }) {
-  const [arrows, setArrows] = useState({ up: false, down: false });
-
-  const measure = useCallback(() => {
-    const el = areaRef.current;
-    if (!el) return;
-    const next = arrowsFor(el.scrollTop, el.clientHeight, el.scrollHeight);
-    setArrows((was) => (was.up === next.up && was.down === next.down ? was : next));
-  }, [areaRef]);
-
-  useLayoutEffect(() => {
-    const el = areaRef.current;
-    if (!el) return undefined;
-    measure();
-    el.addEventListener('scroll', measure, { passive: true });
-    window.addEventListener('resize', measure);
-    // What is inside changes height as figures land and draw; that is "more"
-    // arriving, and the arrows have to know.
-    const grew = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
-    if (grew) {
-      grew.observe(el);
-      for (const child of Array.from(el.children)) grew.observe(child);
-    }
-    const changed = new MutationObserver(measure);
-    changed.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-arrived'] });
-    return () => {
-      el.removeEventListener('scroll', measure);
-      window.removeEventListener('resize', measure);
-      grew?.disconnect();
-      changed.disconnect();
-    };
-  }, [areaRef, measure]);
-
-  const move = (by: 1 | -1) => {
-    const el = areaRef.current;
-    if (!el) return;
-    el.scrollBy({ top: by * arrowStep(el.clientHeight), behavior: reducedMotion() ? 'auto' : 'smooth' });
-  };
-
+  // THE PAGE SCROLLS, NOT THE PANE (P10, 2026-09-21). This was the one thing
+  // in the room that moved: an inner scroller with an up and a down arrow,
+  // because the owner asked for exactly that on 2026-09-17 (*"i dont really
+  // ever want to see a scroll down on the charts ... maybe just up and down
+  // arrows"*, *"only charts area should be able to be scrolled"*). Asked a
+  // year of screens later whether the room should scroll as one document
+  // instead, he said *"ok do both"* — so the arrows are gone with the pane
+  // they moved, and what is left is the area itself, which `scrollToFigure`
+  // and the wires still find by its ref.
   return (
     <div className="r-right-figs">
-      <div className="r-figs" ref={areaRef} data-figures-area=""
-           data-more-up={arrows.up ? 'yes' : 'no'} data-more-down={arrows.down ? 'yes' : 'no'}>
+      <div className="r-figs" ref={areaRef} data-figures-area="">
         {children}
       </div>
-      <button type="button" className="r-arr r-arr--up" title="earlier figures"
-              aria-label="Earlier figures" hidden={!arrows.up} onClick={() => move(-1)}>↑</button>
-      <button type="button" className="r-arr r-arr--dn" title="more figures"
-              aria-label="More figures" hidden={!arrows.down} onClick={() => move(1)}>↓</button>
     </div>
   );
 }
 
-/** A column with more below moves most of a screen, as the figures' arrow does. */
-export function scrollWords(el: HTMLElement | null): void {
-  el?.scrollBy({ top: arrowStep(el.clientHeight), behavior: reducedMotion() ? 'auto' : 'smooth' });
-}
+/* `scrollWords` and `useMoreBelow` went with the panes they measured (P10):
+   one page scrolls, so nothing here has a foot to fade or a step to move. */
 
 /**
- * WHETHER AN ELEMENT HAS MORE BELOW WHAT IT SHOWS — for a column that scrolls
- * with no bar, so its foot can fade rather than cut (the words, 2026-09-17).
- */
-export function useMoreBelow(ref: RefObject<HTMLElement | null>): boolean {
-  const [more, setMore] = useState(false);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return undefined;
-    const measure = () => setMore(arrowsFor(el.scrollTop, el.clientHeight, el.scrollHeight).down);
-    measure();
-    el.addEventListener('scroll', measure, { passive: true });
-    window.addEventListener('resize', measure);
-    const grew = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
-    grew?.observe(el);
-    const changed = new MutationObserver(measure);
-    changed.observe(el, { childList: true, subtree: true, characterData: true });
-    return () => {
-      el.removeEventListener('scroll', measure);
-      window.removeEventListener('resize', measure);
-      grew?.disconnect();
-      changed.disconnect();
-    };
-  }, [ref]);
-  return more;
-}
-
-/**
- * A FIGURE IN HIS WORDS WAS TAPPED: scroll the figures area to the figure that
- * read came out of and light its READ label for a moment. The door it used to
- * open was Behind it, which went on 2026-09-17 at the owner's word.
+ * A FIGURE IN HIS WORDS WAS TAPPED: bring the figure that read came out of
+ * into view and light its READ label for a moment. The door it used to open
+ * was Behind it, which went on 2026-09-17 at the owner's word.
  */
 export function scrollToFigure(area: HTMLElement | null, turn: number, seq: number) {
   const el = area?.querySelector<HTMLElement>(

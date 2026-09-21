@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  COMP_GAP, COMP_MAX, FIGS_W, HIM_W, SIDE_W, arrowStep, arrowsFor, claimAndStanding,
+  COMP_GAP, COMP_MAX, HIM_W, PAGE_W, SIDE_W, claimAndStanding,
   columnsFor, composition, markGeometry, needsWidth, placeFigures, revealAt, wireEnds, type Box,
 } from './beside';
 
@@ -23,14 +23,22 @@ function px(token: string): number {
   return Number(m![1]);
 }
 
-describe('the composition is the design\'s, and it stays centred', () => {
-  it('declares the design\'s own widths in the stylesheet', () => {
+describe('his side is bounded and the page takes the room', () => {
+  /**
+   * P10, 2026-09-21. It was 580:940 of whatever there was, decided as though
+   * the sidebar were always present. That gave the page 703px at 1440 — 36
+   * characters a line once a figure floats into it — and the owner, looking at
+   * a document drawn in it: *"it still feels like its trying to fill in columns
+   * not the one big page"*, then *"ok do both"*. These are the artifact's own
+   * numbers (ops/ideal/the-page-bob-writes.html `.room`, `.page`).
+   */
+  it('declares the artifact\'s own widths in the stylesheet', () => {
     expect(px('him-w')).toBe(HIM_W);
-    expect(px('figs-w')).toBe(FIGS_W);
+    expect(px('page-w')).toBe(PAGE_W);
     expect(px('comp-gap')).toBe(COMP_GAP);
     expect(px('comp-max')).toBe(COMP_MAX);
     expect(px('side-w')).toBe(SIDE_W);
-    expect(HIM_W + COMP_GAP + FIGS_W).toBe(1560);
+    expect(HIM_W + COMP_GAP + PAGE_W).toBe(1324);
   });
 
   it.each([1440, 1920])('centres it in the room at %ipx, sidebar open and closed', (vw) => {
@@ -43,33 +51,42 @@ describe('the composition is the design\'s, and it stays centred', () => {
     }
   });
 
-  it('SLIDES when the sidebar opens and never shrinks — his row 4', () => {
-    for (const vw of [1100, 1440, 1663, 1863, 1920, 2560]) {
-      const open = composition(vw, true);
-      const closed = composition(vw, false);
-      expect(open.width, `${vw}px`).toBe(closed.width);
-      expect(open.him).toBe(closed.him);
-      expect(open.figures).toBe(closed.figures);
-      expect(open.left - closed.left).toBeCloseTo(SIDE_W / 2, 5);
+  it('gives the page every pixel the sidebar is not using', () => {
+    // It used to be held back by SIDE_W whether or not the sidebar was there.
+    // Where the room is wider than the composition both cap at --comp-max,
+    // so the pixels are only reclaimed while the cap is not binding.
+    for (const vw of [1100, 1280, 1440]) {
+      expect(composition(vw, false).width).toBeGreaterThan(composition(vw, true).width);
+      expect(composition(vw, false).figures).toBeGreaterThan(composition(vw, true).figures);
     }
   });
 
-  it('is exactly 580 and 940 at 1920, which is room for the whole design', () => {
-    const c = composition(1920, true);
-    expect(c.width).toBe(1560);
-    expect(c.him).toBeCloseTo(580, 5);
-    expect(c.figures).toBeCloseTo(940, 5);
+  it('is his 360 and the page 900 wherever there is room for both', () => {
+    for (const vw of [1440, 1920, 2560]) {
+      const c = composition(vw, false);
+      expect(c.him, `${vw}px`).toBeCloseTo(360, 5);
+      expect(c.figures, `${vw}px`).toBeCloseTo(900, 5);
+    }
   });
 
-  it('keeps the design\'s proportion at 1440 rather than squeezing one column', () => {
-    const c = composition(1440, true);
-    expect(c.him / c.figures).toBeCloseTo(580 / 940, 5);
+  it('shrinks his side before the page where there is not', () => {
+    const c = composition(1000, false);
+    expect(c.him).toBeLessThan(HIM_W);
+    expect(c.him / (c.him + c.figures)).toBeCloseTo(0.36, 2);
   });
 
   it('uses the same formula in the stylesheet', () => {
-    // The width is decided as though the sidebar were always there.
-    expect(CSS).toMatch(/width:\s*min\(var\(--comp-max\),\s*100vw - var\(--side-w\) - 32px\)/);
-    expect(CSS).toMatch(/grid-template-columns:\s*minmax\(0,\s*29fr\)\s*minmax\(0,\s*47fr\)/);
+    expect(CSS).toMatch(/width:\s*min\(var\(--comp-max\),\s*100vw - 64px\)/);
+    expect(CSS).toMatch(/\[data-side="open"\] \.r-beside \{ width: min\(var\(--comp-max\), 100vw - var\(--side-w\) - 64px\)/);
+    expect(CSS).toMatch(/grid-template-columns:\s*minmax\(0,\s*var\(--him-w\)\)\s*minmax\(0,\s*1fr\)/);
+  });
+
+  it('scrolls as one page, with his side travelling beside it', () => {
+    // The arrows and the two inner scrollers went with the pane (P10).
+    expect(CSS).not.toMatch(/\.r-arr\s*\{/);
+    expect(CSS).toMatch(/\.r-main \{[^}]*overflow-y: auto/);
+    expect(CSS).toMatch(/\.r-aside \{[^}]*position: sticky/);
+    expect(CSS).not.toMatch(/\.r-figs \{[^}]*overflow-y: auto/);
   });
 });
 
@@ -171,21 +188,6 @@ describe('the figures arrive, and are not narrated — his row 13', () => {
   });
 });
 
-describe('only the figures move, by arrows — his row 9', () => {
-  it('hides up at the top and down at the bottom, within 2px', () => {
-    expect(arrowsFor(0, 500, 1400)).toEqual({ up: false, down: true });
-    expect(arrowsFor(2, 500, 1400)).toEqual({ up: false, down: true });
-    expect(arrowsFor(450, 500, 1400)).toEqual({ up: true, down: true });
-    expect(arrowsFor(898, 500, 1400)).toEqual({ up: true, down: false });
-    // Nothing more to see: no arrows at all.
-    expect(arrowsFor(0, 500, 500)).toEqual({ up: false, down: false });
-  });
-
-  it('moves 80% of the area per press', () => {
-    expect(arrowStep(500)).toBe(400);
-  });
-});
-
 function box(left: number, top: number, width: number, height: number): Box {
   return { left, top, width, height, right: left + width, bottom: top + height };
 }
@@ -238,12 +240,14 @@ describe('the mark is big — his rows 14 and 24', () => {
     expect(CSS).toMatch(/\.r-him canvas \{[^}]*aspect-ratio:\s*680\s*\/\s*420/);
   });
 
-  it('starts the words where he stops moving, and lets them scroll (the log, 2026-09-17)', () => {
+  it('starts the words where he stops moving (the log, 2026-09-17)', () => {
     // Row 12 was "almost directly under the blob"; alive, the blob reaches the
     // canvas's foot, and -10vh put a caveat on top of him.
     expect(CSS).toMatch(/\.r-words \{[^}]*margin-top:\s*0;/);
-    expect(CSS).toMatch(/\.r-words \{[^}]*overflow-y:\s*auto/);
     expect(CSS).toMatch(/\.r-him canvas \{[^}]*margin:\s*-5vh -11% 0/);
+    // They scrolled inside themselves until P10; his whole side travels with
+    // the page now, so there is nothing for them to scroll inside.
+    expect(CSS).not.toMatch(/\.r-words \{[^}]*overflow-y:\s*auto/);
   });
 });
 

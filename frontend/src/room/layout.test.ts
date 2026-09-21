@@ -50,18 +50,25 @@ describe('the page is a composition, not a measure', () => {
     expect(CSS).not.toMatch(/data-rest|r-board-lead|r-board-rest/);
   });
 
-  it('fixes the room to the window and slides it with the sidebar', () => {
+  it('fills the window and SCROLLS AS ONE PAGE, sliding with the sidebar', () => {
+    // It was `overflow: hidden` until P10 (2026-09-21), with the figures
+    // moving inside it — *"only charts area should be able to be scrolled"*,
+    // 2026-09-17. The owner, of a document drawn in that pane: *"it still
+    // feels like its trying to fill in columns not the one big page"*.
     const main = base('.r-main');
     expect(main.position).toBe('fixed');
-    expect(main.overflow).toBe('hidden');
+    expect(main['overflow-y']).toBe('auto');
     expect(base(':root[data-side="open"] .r-main').left).toBe('var(--side-w)');
   });
 
-  it('lays out him, his words and the figures as the design does', () => {
+  it('lays out his side and the page as the artifact does', () => {
+    // Two areas — "him right" / "words right" — until P10; his side is one
+    // sticky column now and the page is the other (the-page-bob-writes.html).
     const b = base('.r-beside');
-    expect(b['grid-template-areas']).toBe('"him right" "words right"');
+    expect(b['grid-template-columns']).toBe('minmax(0, var(--him-w)) minmax(0, 1fr)');
     expect(b['column-gap']).toBe('var(--comp-gap)');
     expect(b['margin-inline']).toBe('auto');
+    expect(base('.r-aside').position).toBe('sticky');
   });
 
   it('draws the lines as the design does: 1px, dashed 2 5, the wire grey', () => {
@@ -74,8 +81,9 @@ describe('the page is a composition, not a measure', () => {
     const phone = rules().filter((r) => r.media?.includes('max-width: 900px'));
     const at = (sel: string) => phone.find((r) => r.selector === sel)?.decls ?? {};
     expect(at('.r-wires').display).toBe('none');
-    expect(at('.r-arr').display).toBe('none');
     expect(at('.r-flow').display).toBe('block');
+    // The arrows went with the pane (P10); there is nothing to hide here.
+    expect(CSS).not.toMatch(/\.r-arr\s*\{/);
     expect(at('.r-main').position).toBe('static');
   });
 });
@@ -136,9 +144,13 @@ describe('nothing is cut, and nothing shows a scrollbar — rows 8 and 9', () =>
     }
   });
 
-  it('moves only the figures, by arrows that appear only when there is more', () => {
-    expect(base('.r-figs')['overflow-y']).toBe('auto');
-    expect(base('.r-arr[hidden]').display).toBe('none');
+  it('moves as one page — no pane inside it scrolls of its own (P10)', () => {
+    // *"only charts area should be able to be scrolled"* (2026-09-17) held
+    // until the page became a document. `.r-figs` and `.r-words` were the two
+    // inner scrollers; the room itself is the only one now.
+    expect(base('.r-figs')['overflow-y']).toBeUndefined();
+    expect(base('.r-words')['overflow-y']).toBeUndefined();
+    expect(base('.r-main')['overflow-y']).toBe('auto');
   });
 });
 
