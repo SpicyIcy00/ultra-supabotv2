@@ -7823,10 +7823,15 @@ surface:
     # dump data, but don't artificially squeeze real understanding into one
     # paragraph". What stays forbidden is walking the rows (the restatement
     # gate); how long the understanding takes is the situation's.
+    # AND THE PAGE CARRIES THE REASONING (P12, 2026-09-21). This said the
+    # BOARD carries the figures and the words carry the understanding "as long
+    # as that takes" — true of the board era, and two things wrong now: the
+    # left is bounded at `voice.body.max_words`, and the reasoning is on the
+    # page, in the paragraphs beside the figures they read.
     words_carry: >
-      THE BOARD CARRIES THE FIGURES; YOUR WORDS CARRY THE UNDERSTANDING — what
-      they mean together, what you ruled out, what is still unknown — as long
-      as that takes and no longer
+      THE PAGE CARRIES THE FIGURES AND THE REASONING — what they mean together,
+      what you ruled out, what is still unknown; YOUR WORDS LEFT ARE THE
+      CONCLUSION
     # Words that must never reach a reader. The loop scans the answer for
     # these and records a gap; the prompt (rule 17 and SURFACE) forbids them.
     # Whole-word, case-insensitive. Not a licence to be vague: the caveat is

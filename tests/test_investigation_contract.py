@@ -485,9 +485,11 @@ def test_the_answer_is_as_long_as_the_understanding_takes():
     # "The slots are places, not a length." left the prompt on 2026-09-20
     # when the BODY gained a length (voice.body) — the slots are still
     # places, and the thing the sentence guarded against is now held by
-    # the sentence that replaced it: the steps carry the reasoning, the
-    # prose is the conclusion and never the steps retold.
-    assert "never the steps retold" in prompt
+    # the sentence that replaced it: the PAGE carries the reasoning, the
+    # prose is the conclusion and never the page retold. ("the steps
+    # retold" until P12, 2026-09-21, when the right of the screen stopped
+    # being a stack of steps and became a page he writes.)
+    assert "never the page retold" in prompt
     assert " ".join(req(DEFS, "surface.prose.words_carry").split()) in prompt
 
 

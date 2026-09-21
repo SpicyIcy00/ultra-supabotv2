@@ -5483,3 +5483,32 @@ an app and not of a page.
 `layout.test.ts`, `figuresArea.dom.test.tsx`, `ownerReports.dom.test.tsx` and
 `trackBack.dom.test.tsx` — each rewritten to say what the room does now and what it used to,
 so the reversal is on the record where the original decision was.
+
+## 2026-09-21 — P12: what he is told he is making is what he makes
+
+**Decision.** The system prompt says the right of the screen is A PAGE HE WRITES, and what a
+page is made of. `surface.prose.words_carry` says the PAGE carries the figures and the
+reasoning, and that his words on the left are the conclusion.
+
+**Why.** The owner, after two rounds of layout work: *"the way it answers it still doesnt know
+it can generate pages."* He was reading it off the answers and he was right. The prompt still
+said *"The right of the screen is your reasoning: each block you compose is a STEP — the
+question it answered, your claim answering it, the figure"* and *"THE BOARD CARRIES THE
+FIGURES; YOUR WORDS CARRY THE UNDERSTANDING"* — the board era, described to him as his own
+output. Everything about the page lived in the `compose` tool's description, which he reads at
+the moment he composes: after the reads are chosen, after the shape of the answer is settled.
+
+**The general lesson, and it is the second time today.** P8 found the same thing one layer
+down: the recipe on the tool was still telling him to caption blocks. A surface can be rebuilt
+twice over and the model will keep producing the old one while the words describing it are the
+old one's. When the surface changes, the sentences that tell him what he is making change with
+it — and they are in three places, not one: the prompt (what he is making), the tool
+description (how), and the field descriptions (what each part is).
+
+**Within the budget.** `voice.budget.max_words` is 1,800 and the prompt was at it. The new
+passage is shorter than the one it replaced because "a block carries a claim and nothing else"
+went to the tool, which is what the budget rule asks for: what the prompt would teach past its
+bound belongs on the tool it describes, read at the moment of choosing.
+
+**Held by.** `test_voice_contract.test_the_prompt_says_he_writes_a_page` — that the words are
+there, that the STEP sentence is not, and that the prompt names the parts a page has.

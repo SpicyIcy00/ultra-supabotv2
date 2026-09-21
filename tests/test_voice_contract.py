@@ -545,3 +545,26 @@ def test_no_tool_notice_speaks_in_the_instrument_s_words() -> None:
     assert not offenders, (
         "a notice is drawn to the person above the answer (UI rule 4), so it is held to "
         "voice.plain like everything else he says:\n  " + "\n  ".join(offenders))
+
+
+def test_the_prompt_says_he_writes_a_page() -> None:
+    """
+    P12, 2026-09-21. The owner, reading the answers: *"the way it answers it
+    still doesnt know it can generate pages."*
+
+    It did not. Every word in the prompt about the surface was the board
+    era's — *"The right of the screen is your reasoning: each block you
+    compose is a STEP — the question it answered, your claim answering it,
+    the figure"* — and the page existed only in the `compose` tool's
+    description, which he reads at the moment he composes, long after he has
+    decided what to read and what to say. What a model is told it is making
+    is what it makes.
+    """
+    assert "A PAGE YOU WRITE" in SYSTEM_PROMPT
+    assert "each block you compose is a STEP" not in SYSTEM_PROMPT
+    # And WHAT a page is, in the parts the room actually draws.
+    for part in ("opening sentence", "headings", "paragraphs", "beside"):
+        assert part in SYSTEM_PROMPT, f"the prompt does not say a page has {part}"
+    # The reasoning is on the page; the left is the conclusion and bounded.
+    assert " ".join(req(DEFS, "surface.prose.words_carry").split()) in SYSTEM_PROMPT
+    assert "THE PAGE CARRIES THE FIGURES AND THE REASONING" in SYSTEM_PROMPT
