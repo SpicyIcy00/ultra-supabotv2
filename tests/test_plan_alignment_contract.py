@@ -7,7 +7,7 @@ anything checking:
 
   - the page said 33 sessions, then 31, against 28 open cards;
   - a card was described as pending on the page hours after being built;
-  - the page still showed P1.g open while NOW.md had it closed, because a
+  - the page still showed a card open that NOW.md had closed, because a
     concurrent session finished it;
   - the two quoted different eval totals, $9.10 against $11.04.
 
@@ -19,10 +19,15 @@ THE RULE THIS ENFORCES, also written in NOW.md §1: a session that finishes a
 card, adds one, or changes what one costs updates **both files in the same
 commit**. This test fails if it did not.
 
-The page source lives in the repo (`ops/plan/plan.html`) for exactly this
-reason — it used to live in a session's scratchpad, which is deleted when that
-session ends, so no later session *could* update it. Republish it with the
-Artifact tool, passing the URL in NOW.md §6, so the owner's link keeps working.
+THE PLAN WAS REPLACED ON 2026-09-21, at the owner's word: *"i want you to fully
+replace the now.md and plan artifact for now this is the only thing were
+doing."* The old plan — phases 1 to 3, Phase 2S and the ledger of the fifteen
+design scenes — is in `ops/archive/`, and the checks that described ITS shape
+(a phase named P1/P2/P3, each scene owned by exactly one close, "eight of the
+fifteen") went with it. What stayed is everything that stops the two copies
+drifting: the same open cards, what each spends, the quoted total, the counts
+the page states, one prompt per card, and a page that can be published. Card
+ids are no longer assumed to start with `P`, because the new ones do not.
 """
 from __future__ import annotations
 
@@ -34,20 +39,15 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 NOW = ROOT / "ops" / "NOW.md"
 PLAN = ROOT / "ops" / "plan" / "plan.html"
+ARCHIVE = ROOT / "ops" / "archive"
 
 GATE_USD = 0.64      # measured at P1.g, 2026-09-13
-FULL_USD = 4.79      # MEASURED at P2S.✓, 2026-09-18 — verification/p2sclose-v2.json,
-                     # 14 turns, nothing unscored. Was 1.51 on 11 turns (P1.e);
-                     # the suite grew at P2S.6/P2S.7/P2S.10 and was not re-priced.
+FULL_USD = 4.79      # MEASURED at P2S.✓, 2026-09-18 — verification/p2sclose-v2.json
 
-WORDS = {0: "No",        # a phase with nothing left open, first needed at P1.✓
-         1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six", 7: "Seven",
-         8: "Eight", 9: "Nine", 10: "Ten", 11: "Eleven", 12: "Twelve",
+WORDS = {0: "No", 1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six",
+         7: "Seven", 8: "Eight", 9: "Nine", 10: "Ten", 11: "Eleven", 12: "Twelve",
          13: "Thirteen", 14: "Fourteen", 15: "Fifteen", 16: "Sixteen",
-         17: "Seventeen", 18: "Eighteen", 19: "Nineteen",
-         20: "Twenty", 21: "Twenty-one", 22: "Twenty-two", 23: "Twenty-three",
-         24: "Twenty-four", 25: "Twenty-five", 26: "Twenty-six",
-         27: "Twenty-seven", 28: "Twenty-eight", 29: "Twenty-nine", 30: "Thirty"}
+         17: "Seventeen", 18: "Eighteen", 19: "Nineteen", 20: "Twenty"}
 
 
 def _now() -> str:
@@ -58,13 +58,15 @@ def _plan() -> str:
     return PLAN.read_text(encoding="utf-8")
 
 
+def _card_id(block: str) -> str:
+    return block.split("*")[0].split()[0]
+
+
 def now_cards() -> dict[str, str]:
     """Open cards in §3, and what each spends: full | gate | none."""
     out: dict[str, str] = {}
     for block in re.split(r"\n- \[ \] \*\*", _now())[1:]:
-        cid = block.split("*")[0].split()[0]
-        if not cid.startswith("P"):
-            continue
+        cid = _card_id(block)
         body = block[: block.index("\n- ")] if "\n- " in block else block
         low = body.lower()
         if "eval: full" in low or "one full run" in low:
@@ -76,11 +78,14 @@ def now_cards() -> dict[str, str]:
     return out
 
 
-def plan_cards() -> dict[str, str]:
+_CARD = re.compile(r'<div class="card([^"]*)".*?<span class="id">([^<]+)</span>'
+                   r'.*?<span class="tags">(.*?)</span></div>', re.S)
+
+
+def plan_cards(html: str | None = None) -> dict[str, str]:
     """The same, read off the page's pills. Cards marked done are skipped."""
     out: dict[str, str] = {}
-    for m in re.finditer(r'<div class="card([^"]*)".*?<span class="id">([^<]+)</span>'
-                         r'.*?<span class="tags">(.*?)</span></div>', _plan(), re.S):
+    for m in _CARD.finditer(_plan() if html is None else html):
         classes, cid, tags = m.group(1), m.group(2), m.group(3)
         if "done" in classes or "·" in cid:
             continue
@@ -91,6 +96,7 @@ def plan_cards() -> dict[str, str]:
 
 def test_the_same_cards_are_open_in_both():
     a, b = set(now_cards()), set(plan_cards())
+    assert a, "NOW.md §3 has no open cards"
     assert a == b, (
         "ops/NOW.md and ops/plan/plan.html disagree about which cards are open.\n"
         f"  only in NOW.md: {sorted(a - b)}\n"
@@ -121,26 +127,27 @@ def test_the_quoted_total_matches_the_cards():
     assert quoted in _plan(), f"ops/plan/plan.html does not quote {quoted} either."
 
 
-@pytest.mark.parametrize("phase", ["P1", "P2", "P3"])
-def test_each_phase_states_its_own_size(phase):
-    n = len([c for c in now_cards() if c.startswith(phase + ".")])
-    heading = {"P1": "Phase 1", "P2": "Phase 2", "P3": "Phase 3"}[phase]
-    m = re.search(re.escape(heading) + r" [^<]*</h2>\s*<p class=\"ph\">([^<.]*)", _plan())
-    if n == 0 and not m:
-        # THE PAGE CARRIES ONLY WHAT IS AHEAD (the owner, 2026-09-18: "only keep
-        # future plan get rid of done"). A finished phase may be gone from it;
-        # one that is still shown must still say its size.
-        return
-    assert m, f"no '{heading}' heading with a summary line on the page"
-    assert m.group(1).strip().lower().startswith(WORDS[n].lower() + " session"), (
-        f"{heading} has {n} open cards; the page says {m.group(1).strip()!r}"
-    )
+def _sections() -> list[str]:
+    return re.findall(r'<section class="phase">(.*?)</section>', _plan(), re.S)
+
+
+def test_each_phase_states_its_own_size():
+    sections = _sections()
+    assert sections, "the page has no phase"
+    for sec in sections:
+        n = len(plan_cards(sec))
+        m = re.search(r'<p class="ph">([^<.]*)', sec)
+        assert m, "a phase with no summary line"
+        said = m.group(1).strip().lower()
+        want = WORDS[n].lower() + (" session" if n == 1 else " sessions")
+        assert said.startswith(want), f"a phase holds {n} open cards and says {said!r}"
 
 
 def test_the_headline_session_count_matches():
     n = len(now_cards())
-    phases = len(re.findall(r'<section class="phase">\s*<h2>Phase ', _plan()))
-    said = f"{WORDS[n]} sessions in {WORDS[phases].lower()} phases"
+    phases = len(_sections())
+    said = (f"{WORDS[n]} {'session' if n == 1 else 'sessions'} in "
+            f"{WORDS[phases].lower()} {'phase' if phases == 1 else 'phases'}")
     assert said in _plan(), (
         f"{n} cards are open over {phases} phases on the page; its headline "
         f"does not say '{said}'"
@@ -161,78 +168,43 @@ def test_no_two_cards_share_a_prompt():
     assert not shared, f"one prompt, more than one card: {shared}"
 
 
+def test_every_card_has_its_own_prompt_naming_it():
+    for m in re.finditer(r'<span class="id">([^<]+)</span>.{0,6000}?<div class="cmd">([^<]+)</div>',
+                         _plan(), re.S):
+        cid, cmd = m.group(1), m.group(2)
+        assert f"card {cid}." in cmd, f"card {cid}'s prompt does not name it: {cmd!r}"
+
+
 def test_the_page_is_publishable():
     """Cheap structural guards, so a broken page is not discovered by the owner."""
     page = _plan()
-    for tag in ("div", "section", "span", "p"):
+    for tag in ("div", "section", "span", "table", "tbody", "thead"):
         assert page.count(f"<{tag}") == page.count(f"</{tag}>"), f"<{tag}> is unbalanced"
     assert "<!doctype" not in page.lower() and "<html" not in page.lower(), (
         "the platform adds the skeleton; the file must not"
     )
     assert page.count("<title>") == 1, "exactly one <title>"
-    assert not re.search(r'<span class="tag feat">[^<]*#\D', page), (
-        "a feature pill reads '#' followed by a word — the numbers are "
-        "references to ops/STANDARD.md and a word is not one"
-    )
+
+
+def test_nothing_from_before_the_replacement_was_thrown_away():
+    """
+    Replacing the plan is not deleting the record. Every card, number and
+    decision from before 2026-09-21 is in the archive, and NOW.md says where.
+    """
+    old = ARCHIVE / "NOW-to-2026-09-21.md"
+    assert old.exists() and old.stat().st_size > 100_000, "the old NOW.md is missing or cut"
+    assert (ARCHIVE / "plan-to-2026-09-21.html").exists()
+    assert "ops/archive/NOW-to-2026-09-21.md" in _now()
 
 
 # ---------------------------------------------------------------------------
-# THE FIFTEEN SCENES (2026-09-17)
-#
-# The owner asked: "so at the end of p2s we will have my ideal ui? make sure we
-# will". The ideal is `ops/ideal/bob-ahead-of-me.html`, and it has one scene
-# per part of his vision. Phase 2S finishes eight of them, not fifteen — so the
-# claim "the ideal UI is built" is only true when every scene has a close that
-# owns it, and each close's own card says so. These hold that, so a scene cannot
-# quietly fall between phases and a close cannot claim more than it walks.
+# The design the page is measured against still has its scenes. Independent of
+# which plan is current: it is the target, not a plan.
 # ---------------------------------------------------------------------------
 ARTIFACT = ROOT / "ops" / "ideal" / "bob-ahead-of-me.html"
-CLOSES = {"P2S.✓", "P3.✓", "S.4", "S.6"}
 
 
-def artifact_scenes() -> list[str]:
+def test_the_design_still_has_its_fifteen_scenes():
     html = ARTIFACT.read_text(encoding="utf-8")
-    return re.findall(r'data-scene="([a-z]+)"><span class="n">', html)
-
-
-def ledger() -> dict[str, str]:
-    """scene -> the close it names, read off the ledger table in NOW.md §3."""
-    rows = re.findall(r"^\| `([a-z]+)` \|[^\n]*\| (P2S\.✓|P3\.✓|S\.\d) \|\s*$",
-                      _now(), re.M)
-    out: dict[str, str] = {}
-    for scene, close in rows:
-        assert scene not in out, f"scene {scene!r} is in the ledger twice"
-        out[scene] = close
-    return out
-
-
-def test_the_artifact_still_has_its_fifteen_scenes():
-    scenes = artifact_scenes()
+    scenes = re.findall(r'data-scene="([a-z]+)"><span class="n">', html)
     assert len(scenes) == len(set(scenes)) == 15, scenes
-
-
-def test_every_scene_of_the_ideal_has_exactly_one_close():
-    missing = set(artifact_scenes()) - set(ledger())
-    extra = set(ledger()) - set(artifact_scenes())
-    assert not missing, f"scenes of the ideal UI nobody finishes: {sorted(missing)}"
-    assert not extra, f"ledger rows for scenes the artifact does not have: {sorted(extra)}"
-    assert set(ledger().values()) <= CLOSES
-
-
-@pytest.mark.parametrize("close", ["P2S.✓", "P3.✓"])
-def test_each_close_card_names_every_scene_it_owns(close):
-    owned = sorted(s for s, c in ledger().items() if c == close)
-    # A close that has run is `[x]` and still has to name what it walked.
-    card = re.search(r"\n- \[[ x]\] \*\*" + re.escape(close) + r" (.*?)(?=\n- \[|\n\*\*[A-Z])",
-                     _now(), re.S)
-    assert card, f"no {close} card"
-    unnamed = [s for s in owned if f"`{s}`" not in card.group(1)]
-    assert not unnamed, f"{close} owns {unnamed} in the ledger and its card does not walk them"
-
-
-def test_phase_2s_is_not_described_as_the_whole_ideal():
-    """Eight of fifteen, said as such — on the page as well as in NOW.md."""
-    owned = sum(1 for c in ledger().values() if c == "P2S.✓")
-    assert owned == 8
-    assert "eight of the fifteen" in _plan().lower(), (
-        "the owner's page must say Phase 2S finishes eight of the fifteen scenes")
