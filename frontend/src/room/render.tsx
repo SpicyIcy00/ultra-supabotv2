@@ -584,6 +584,26 @@ export function Board(p: BoardProps) {
       </button>
     </p>
   );
+  // THE ORDER THE PAGE IS READ IN: his tree where there is one, the flow
+  // otherwise — so "the window changed" means changed from the block above.
+  const readOrder: string[] = [];
+  (function walk(node: Arrangement | null) {
+    if (!node) { readOrder.push(...objects.map((o) => o.key)); return; }
+    if ('block' in node) { readOrder.push(node.block); return; }
+    if ('say' in node || 'next' in node) return;
+    (node.children ?? []).forEach(walk);
+  })(laidOut);
+  for (const o of objects) if (!readOrder.includes(o.key)) readOrder.push(o.key);
+  const saysPeriod = new Set<string>();
+  {
+    const byKeyPeriod = new Map(objects.map((o) => [o.key, periodOf(o)] as const));
+    let above: string | null = null;
+    for (const key of readOrder) {
+      const per = byKeyPeriod.get(key) ?? null;
+      if (per && per !== above) saysPeriod.add(key);
+      if (per) above = per;
+    }
+  }
   const drawNode = (node: Arrangement, at: string): ReactNode => {
     // THE PLAN, WHERE HE PUT IT (P6.h). The same element the foot draws
     // when he leaves it out, so it is one thing in one place.
@@ -697,7 +717,15 @@ export function Board(p: BoardProps) {
                 gridRowEnd: `span ${Math.max(1, h + (it.under ? CHILD_GAP : FIGURE_GAP))}` }}
         >
           <div className="r-fig-body">
-            {manyPeriods && periodOf(o) && (
+            {/* WHERE THE WINDOW CHANGES, NOT ON EVERY BLOCK (P6.k). Six
+                blocks of one answer all read `last 7 days`, so the label
+                stopped saying anything and started being chrome — the
+                "LAST 7 DAYS" over every section of the page the owner
+                reopened. It is drawn on the first block and wherever the
+                window is no longer the one above it, which is the only
+                place it tells you something. UI rule 6 is unaffected: the
+                read time is on every source line, as it always was. */}
+            {manyPeriods && saysPeriod.has(o.key) && periodOf(o) && (
               <p className="r-fig-when">{periodOf(o)}</p>
             )}
             {(() => {
