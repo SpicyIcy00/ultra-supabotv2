@@ -864,6 +864,20 @@ export interface PostFrame {
   stored: boolean;
 }
 
+/**
+ * THE MORNING, ASKED AGAIN THE SAME DAY (W2.1). The server did not ask the
+ * model: today's answer to the morning question still stands — nothing has
+ * landed since it was read that its reads cover — so the room opens that
+ * thread, stamped with when it was answered and read.
+ */
+export interface ReusedFrame {
+  thread_id: string;
+  question: string;
+  answered_at: string | null;
+  read_at: string | null;
+  checked_at: string | null;
+}
+
 export interface DoneFrame {
   conversation_id: string;
   /** The chat this turn belongs to. Send it back on the next question. */

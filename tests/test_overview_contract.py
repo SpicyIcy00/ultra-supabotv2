@@ -33,6 +33,9 @@ DEFS = load_defs()
 SPEC = req(DEFS, "overview")
 SHOPS = [s["display_name"] for s in req(DEFS, "stores.active_retail")]
 MOST = float(req(DEFS, "overview.concentration.most_means_more_than"))
+USUAL = req(DEFS, "comparisons.usual_weekday")
+USUAL_OFFSET = int(req(DEFS, USUAL["offset_days"]))
+USUAL_SPAN = USUAL_OFFSET * int(USUAL["weeks"]) + 1
 
 
 # ---------------------------------------------------------------------------
@@ -75,6 +78,11 @@ class Reads:
         if tool == "get_stock_history":
             return "stockouts"
         g = a.get("group_by")
+        # The usual-weekday series (W2.1): a day series over the usual span.
+        if g in (["day"], ["store", "day"]) and isinstance(a.get("date_range"), list):
+            start, end = (date.fromisoformat(d) for d in a["date_range"])
+            if (end - start).days == USUAL_SPAN:
+                return "usual_estate_days" if g == ["day"] else "usual_shop_days"
         if a.get("rank_by") == "biggest_drop":
             return "fell"
         if a.get("rank_by") == "biggest_gain":
@@ -123,6 +131,21 @@ class Reads:
                     # The window's Wednesday carries the whole of each shop's change.
                     moved = c if (d >= start + timedelta(days=7) and d.weekday() == 2) else 0
                     out.append({"store": s, "day": d.isoformat(), "value": 10_000.0 + moved})
+                d += timedelta(days=1)
+            return out
+        if part in ("usual_estate_days", "usual_shop_days"):
+            # Every day 10,000 a shop, except the last day (yesterday), which
+            # carries the shop's change — so each shop's usual weekday is
+            # 10,000 and its yesterday is 10,000 + its change.
+            start, end = (date.fromisoformat(d) for d in a["date_range"])
+            last = end - timedelta(days=1)
+            out, d = [], start
+            while d < end:
+                day = [(s, 10_000.0 + (c if d == last else 0)) for s, c in self.shop_change.items()]
+                if part == "usual_estate_days":
+                    out.append({"day": d.isoformat(), "value": sum(v for _, v in day)})
+                else:
+                    out.extend({"store": s, "day": d.isoformat(), "value": v} for s, v in day)
                 d += timedelta(days=1)
             return out
         if part == "fell":
@@ -424,3 +447,92 @@ def test_the_parts_carry_the_window_the_findings_read_is_asked_for():
 def test_a_window_in_progress_is_refused_once_for_the_whole_call():
     with pytest.raises(ValueError):
         loop.one_call.get_overview("this_week")
+
+
+# ---------------------------------------------------------------------------
+# W2.1 (2026-09-22): yesterday against the USUAL weekday — the mean of the same
+# weekday over the closed weeks before it (comparisons.usual_weekday), picked
+# out of one read series by code; and an attention line with no internal id.
+# ---------------------------------------------------------------------------
+
+def test_the_usual_weekday_is_a_definition_and_not_a_sales_mode():
+    assert USUAL["applies_to"] == ["get_overview"]
+    assert USUAL["partial_window_policy"] == "refuse"
+    assert int(USUAL["min_weeks"]) <= int(USUAL["weeks"])
+    schema = next(s for s in loop.build_tool_schemas() if s["name"] == "get_sales")
+    assert "usual_weekday" not in schema["input_schema"]["properties"]["compare_to"]["enum"]
+
+
+def test_the_usual_series_is_one_read_over_the_weeks_it_needs(reads):
+    fake = reads(_shops(-6_000, -1_000, -1_000, 500, 0, 0, 0))
+    overview.get_overview_findings()
+    by = dict(fake.calls)
+    for part in ("usual_estate_days", "usual_shop_days"):
+        start, end = (date.fromisoformat(d) for d in by[part]["date_range"])
+        assert (end - start).days == USUAL_SPAN
+        assert "compare_to" not in by[part]  # a series; the mean is taken in code
+        assert by[part]["metric"] == "net_sales"
+
+
+def test_yesterday_is_set_against_the_mean_of_the_same_weekdays(reads):
+    change = _shops(-6_000, -1_000, -1_000, 500, 0, 0, 0)
+    reads(change)
+    rows = [r for r in overview.get_overview_findings()["rows"] if r["finding"] == "usual_day"]
+    assert rows[0]["subject"] == "the estate"
+    estate = rows[0]
+    assert estate["baseline"] == 10_000.0 * len(change)
+    assert estate["change"] == sum(change.values())
+    weekdays = [date.fromisoformat(d) for d in estate["detail"]["weekdays"]]
+    day = date.fromisoformat(estate["detail"]["day"])
+    assert len(weekdays) == int(USUAL["weeks"])
+    assert all((day - d).days % USUAL_OFFSET == 0 and d.weekday() == day.weekday() for d in weekdays)
+    assert f"usual {day.strftime('%A')}" in estate["fact"]
+    shops = rows[1:]
+    assert len(shops) == int(SPEC["top_n"]["usual_shops"])
+    assert shops[0]["subject"] == SHOPS[0]  # the furthest from its usual day first
+    assert [abs(r["change"]) for r in shops] == sorted((abs(r["change"]) for r in shops), reverse=True)
+
+
+def test_too_few_weekdays_is_no_usual_figure_said_not_filled():
+    day = date(2026, 9, 21)
+    series = [{"day": day.isoformat(), "value": 900.0},
+              {"day": (day - timedelta(days=7)).isoformat(), "value": 1000.0}]
+    row = overview.usual_weekday(series, day, USUAL_OFFSET, int(USUAL["weeks"]), USUAL)
+    assert row["baseline_status"] == "no_baseline"
+    assert row["baseline"] is None and row["change"] is None and row["change_pct"] is None
+    assert row["weeks_counted"] == 1
+
+
+def test_a_missing_weekday_is_left_out_of_the_mean_and_counted():
+    day = date(2026, 9, 21)
+    series = [{"day": day.isoformat(), "value": 900.0}] + [
+        {"day": (day - timedelta(days=7 * k)).isoformat(), "value": v}
+        for k, v in ((1, 1000.0), (2, 1200.0), (4, 800.0))]
+    row = overview.usual_weekday(series, day, 7, 4, USUAL)
+    assert row["weeks_counted"] == 3 and row["baseline"] == 1000.0
+    assert row["change"] == -100.0 and row["change_pct"] == -10.0
+    assert row["baseline_status"] == "ok"
+    none = overview.usual_weekday(series[1:], day, 7, 4, USUAL)
+    assert none["baseline_status"] == "no_current" and none["change"] is None
+
+
+def test_the_attention_line_carries_no_internal_id(reads, monkeypatch):
+    fake = reads(_shops(-6_000, -1_000, -1_000, 500, 0, 0, 0))
+    real = fake.rows
+
+    def rows(part, a):
+        if part != "attention":
+            return real(part, a)
+        return [{"source": "stock_running_out", "section": "stock_running_out",
+                 "subject": "Aji Mix", "store": SHOPS[0], "rank": 1, "cover_days": 0.2,
+                 "window_days": 7, "on_hand": 1.0, "units_per_day": 5.0,
+                 "identity": f"stock_running_out|Aji Mix|{SHOPS[0]}"},
+                {"source": "some_new_source", "section": "some_new_source",
+                 "subject": "Aji Kiamoy", "rank": 2}]
+    monkeypatch.setattr(fake, "rows", rows)
+    lines = [r["fact"] for r in overview.get_overview_findings()["rows"] if r["finding"] == "attention"]
+    assert lines, "no attention line"
+    for line in lines:
+        assert not re.search(r"\b[a-z]+_[a-z_]+\b", line), line
+        assert "|" not in line, line
+    assert "0.2 days of cover" in lines[0] and "7-day window" in lines[0]

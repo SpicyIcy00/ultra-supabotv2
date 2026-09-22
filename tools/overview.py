@@ -32,6 +32,9 @@ three combinations made here are each declared there:
   day_moved      a shop's day against the same weekday of the baseline, both
                  read in one series (overview.day_moved); the difference is
                  computed here and put on the row, never left to prose.
+  usual_day      yesterday against the usual weekday (W2.1): the day's figure
+                 and the mean of the same weekday over the closed weeks before
+                 it, picked out of one series (comparisons.usual_weekday).
   shop           a shop's three figures on one line: the three reads share one
                  window and one comparison, and are joined on the shop the
                  rows themselves name.
@@ -172,6 +175,21 @@ def _windows(date_range: Any, defs: dict) -> tuple[Any, dict, tuple[date, date],
     return asked, described, current, base
 
 
+def _usual_span(defs: dict) -> tuple[date, date, int, int]:
+    """
+    comparisons.usual_weekday's day and the series it is read from: the newest
+    closed Manila day, and [that day - weeks x offset, that day + 1). Returns
+    (day, series_start, offset_days, weeks).
+    """
+    rule = req(defs, "comparisons.usual_weekday")
+    if rule.get("day") != "last_closed_day":
+        raise ValueError("metrics.yaml comparisons.usual_weekday.day: only last_closed_day is built")
+    offset = int(req(defs, str(rule["offset_days"])))
+    weeks = int(rule["weeks"])
+    day = datetime.now(MANILA).date() - timedelta(days=1)
+    return day, day - timedelta(days=offset * weeks), offset, weeks
+
+
 def _calls(spec: dict, asked: Any, current: tuple[date, date],
            base: tuple[date, date]) -> dict[str, dict]:
     """Every read the definitions list, with the window and scope filled in."""
@@ -189,6 +207,9 @@ def _calls(spec: dict, asked: Any, current: tuple[date, date],
         elif where == "window_days":
             args["start"] = current[0].isoformat()
             args["end"] = (current[1] - timedelta(days=1)).isoformat()
+        elif where == "usual_weekday":
+            day, start, _offset, _weeks = _usual_span(load_defs())
+            args["date_range"] = [start.isoformat(), (day + timedelta(days=1)).isoformat()]
         elif where != "none":
             raise ValueError(f"metrics.yaml overview.reads.{part}: unknown window {where!r}")
         if read.get("top_n"):
@@ -408,6 +429,99 @@ def _days_moved(results: dict, spec: dict, defs: dict, current: tuple[date, date
     return out
 
 
+def usual_weekday(series: list[dict], day: date, offset: int, weeks: int,
+                  rule: dict) -> dict:
+    """
+    One subject's day against its usual weekday (comparisons.usual_weekday),
+    from ONE read series of {day, value}: the day's figure, and the mean of
+    the same weekday over the `weeks` before it — each a figure on the series,
+    the mean taken here, in code, and put on the row. A weekday with no figure
+    is left out and counted; fewer than `min_weeks` is no baseline, said.
+    """
+    by_day: dict[date, float] = {}
+    for r in series:
+        try:
+            d = date.fromisoformat(str(r.get("day"))[:10])
+        except (TypeError, ValueError):
+            continue
+        v = _num(r.get("value"))
+        if v is not None:
+            by_day[d] = v
+    wanted = [day - timedelta(days=offset * k) for k in range(1, weeks + 1)]
+    had = [(d, by_day[d]) for d in wanted if d in by_day]
+    value = by_day.get(day)
+    row: dict[str, Any] = {"day": day.isoformat(), "value": value,
+                           "weeks_counted": len(had),
+                           "weekdays": [d.isoformat() for d, _ in had]}
+    places = int(rule["change_decimal_places"])
+    if len(had) < int(rule["min_weeks"]):
+        row.update(baseline=None, change=None, change_pct=None, direction=None,
+                   baseline_status="no_baseline")
+        return row
+    baseline = round(sum(v for _, v in had) / len(had), places)
+    row["baseline"] = baseline
+    if value is None:
+        row.update(change=None, change_pct=None, direction=None, baseline_status="no_current")
+        return row
+    change = round(value - baseline, places)
+    row["change"] = change
+    row["direction"] = "up" if change > 0 else "down" if change < 0 else "flat"
+    if baseline == 0:
+        row.update(change_pct=None, baseline_status="zero_baseline")
+        return row
+    row["change_pct"] = round(change / abs(baseline) * 100,
+                              int(rule["change_pct_decimal_places"]))
+    row["baseline_status"] = "ok"
+    return row
+
+
+def _usual_day(results: dict, spec: dict, defs: dict) -> list[dict]:
+    """
+    Yesterday against the usual weekday: the estate, then the shops furthest
+    from theirs (overview.top_n.usual_shops), each one line written by code.
+    """
+    rule = req(defs, "comparisons.usual_weekday")
+    day, _start, offset, weeks = _usual_span(defs)
+    weekday = day.strftime("%A")
+    unit = ((results["usual_estate_days"]["meta"] or {}).get("metric_unit")
+            or (results["usual_shop_days"]["meta"] or {}).get("metric_unit"))
+    facts = spec["facts"]
+
+    def line(subject: str, row: dict) -> str:
+        if row["baseline_status"] == "ok":
+            return _say(facts["usual_day"], subject=subject, day=_day(day), weekday=weekday,
+                        value=_amount(row["value"], unit, defs), dir=_dir(row),
+                        change_pct=_pct(row.get("change_pct")),
+                        baseline=_amount(row["baseline"], unit, defs), weeks=row["weeks_counted"])
+        return _say(facts["usual_no_baseline"], subject=subject, day=_day(day), weekday=weekday,
+                    value=_amount(row.get("value"), unit, defs),
+                    baseline_status=row["baseline_status"])
+
+    def detail(row: dict) -> dict:
+        return {k: row[k] for k in ("day", "weeks_counted", "weekdays", "baseline_status")}
+
+    out: list[dict] = []
+    estate_rows = results["usual_estate_days"]["rows"]
+    if estate_rows:
+        row = {**usual_weekday(estate_rows, day, offset, weeks, rule), "unit": unit}
+        out.append(_finding("usual_day", line("Across the shops", row), "usual_estate_days",
+                            subject="the estate", metric="net_sales", row=row,
+                            order_within=float("-inf"), detail=detail(row)))
+    series: dict[str, list[dict]] = {}
+    for r in results["usual_shop_days"]["rows"]:
+        if r.get("store"):
+            series.setdefault(str(r["store"]), []).append(r)
+    shops = [(shop, {**usual_weekday(rows, day, offset, weeks, rule), "unit": unit})
+             for shop, rows in series.items()]
+    shops.sort(key=lambda sr: (-abs(_num(sr[1].get("change")) or 0.0), sr[0]))
+    for shop, row in shops[: int(spec["top_n"]["usual_shops"])]:
+        out.append(_finding("usual_day", line(shop, row), "usual_shop_days", subject=shop,
+                            metric="net_sales", row=row,
+                            order_within=-abs(_num(row.get("change")) or 0.0),
+                            detail=detail(row)))
+    return out
+
+
 def _products(results: dict, spec: dict, defs: dict) -> list[dict]:
     out: list[dict] = []
     words = spec["measure_words"]
@@ -456,10 +570,15 @@ def _attention(results: dict, spec: dict, defs: dict) -> list[dict]:
             "was_day": _day(compared[0]) if compared[0] else "",
             "now_day": _day(compared[-1]) if compared[-1] else "",
             "last_sold": _day(r.get("last_sold")) if r.get("last_sold") else "",
+            "cover_days": (f"{_num(r.get('cover_days')):g}"
+                           if _num(r.get("cover_days")) is not None else ""),
+            "window_days": r.get("window_days"),
         }
         fact = _say(lines.get(source) or lines["other"], **fields)
         keep = {k: r.get(k) for k in ("source", "identity", "was", "now", "quantity_on_hand",
-                                      "last_sold", "sku", "threshold_applied") if r.get(k) is not None}
+                                      "last_sold", "sku", "threshold_applied", "cover_days",
+                                      "window_days", "on_hand", "units_per_day")
+                if r.get(k) is not None}
         if source == "sales_vs_same_weekday" and (shop_tx or shop_basket):
             keep["transactions"] = {k: (shop_tx or {}).get(k) for k in ("value", "baseline", "change_pct")}
             keep["basket"] = {k: (shop_basket or {}).get(k) for k in ("value", "baseline", "change_pct")}
@@ -593,6 +712,7 @@ def get_overview_findings(date_range: Any = None, *, decisions: Any = None) -> d
     findings += _concentration(results, spec, defs, "products")
     findings += _shops(results, spec, defs, win)
     findings += _days_moved(results, spec, defs, current, base)
+    findings += _usual_day(results, spec, defs)
     findings += _products(results, spec, defs)
     findings += _attention(results, spec, defs)
     findings += _stockouts(results, spec)

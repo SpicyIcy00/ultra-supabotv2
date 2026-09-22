@@ -37,6 +37,7 @@ import { IdentityContext } from './swatch';
 import { ExplainsOnlyContext, drawnOnly, explainsOnlyFrom } from './noticeDrawing';
 import { asSelection, subjectOnBoard } from './subjects';
 import type { TileActions } from './tiles';
+import { reusedWords } from './MorningLine';
 
 /** The thread as question-and-answer pairs, oldest first. */
 export function pairsOf(turns: BobTurn[]): { question: string; answer: AnswerTurn | null }[] {
@@ -111,6 +112,19 @@ export default function HerePanel({ label, onClose, onAsk }: {
                 )}
               </section>
             ))}
+            {/* TODAY'S MORNING, SHOWN AGAIN (W2.1): asked from this page, the
+                question cost no turn — the answer is the morning's page, one
+                tap away, stamped with when it was read. */}
+            {bob.reused && (
+              <section className="r-here-turn">
+                <p className="r-here-q">{bob.reused.question}</p>
+                <p className="r-label r-morning" data-state="reused">
+                  {reusedWords(bob.reused)}{' '}
+                  <button type="button" className="r-act"
+                          onClick={() => navigate(`/w/${bob.reused?.thread_id}`)}>open it</button>
+                </p>
+              </section>
+            )}
           </div>
         </aside>
       </ExplainsOnlyContext.Provider>

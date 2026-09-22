@@ -65,6 +65,7 @@ import type {
   PageChangedFrame,
   PinnedFrame,
   PostFrame,
+  ReusedFrame,
   SavedFrame,
   ToolCall,
   ToolMeta,
@@ -185,6 +186,10 @@ export function useBobStream() {
   const [pageScope, setPageScope] = useState<PageScope | null>(null);
   // Where the open thread was asked from (`here.whereOf`), or null.
   const [where, setWhereState] = useState<string | null>(null);
+  // THE MORNING SHOWN AGAIN (W2.1): the last question answered by today's
+  // morning page instead of a model turn, or null. The room follows it to
+  // that thread and stamps it; the next question or a reset clears it.
+  const [reused, setReused] = useState<ReusedFrame | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const qc = useQueryClient();
 
@@ -284,6 +289,7 @@ export function useBobStream() {
     setStoredThread(null);
     setScope(null);
     setWhere(null);
+    setReused(null);
   }, [cancel, setThread, setStoredThread, setScope, setWhere]);
 
   /**
@@ -337,6 +343,11 @@ export function useBobStream() {
       // Captured BEFORE this turn is appended, so it is the conversation up to
       // but not including the question being asked.
       const history = toHistory(turnsRef.current);
+      // What was on screen before this question — put back as it was if the
+      // server answers with today's morning instead of a turn (W2.1).
+      const before = turnsRef.current;
+      let reusedHere = false;
+      setReused(null);
       const thread = threadRef.current;
       const scope = plan.scope;
       if (!thread) { setScope(scope); setWhere(plan.where); }
@@ -425,6 +436,9 @@ export function useBobStream() {
 
             switch (ev.event) {
               case 'start':
+                // A reused morning names ITS thread, which the room opens from
+                // the record; it is not the thread this question continues.
+                if (data.reused) break;
                 // The first turn of a new thread names it; later turns echo
                 // the one we sent. Either way this is the id to continue.
                 if (typeof data.thread_id === 'string' && data.thread_id) {
@@ -717,8 +731,28 @@ export function useBobStream() {
                 setState('error');
                 break;
 
+              case 'reused':
+                // TODAY'S MORNING, SHOWN AGAIN (W2.1): no model turn was spent.
+                // The question and its empty answer come off the screen — the
+                // answer is the stored thread, which the room now opens.
+                if (typeof data.thread_id !== 'string' || !data.thread_id) break;
+                reusedHere = true;
+                turnsRef.current = before;
+                setTurns(before);
+                setReused({
+                  thread_id: data.thread_id,
+                  question: String(data.question ?? question),
+                  answered_at: typeof data.answered_at === 'string' ? data.answered_at : null,
+                  read_at: typeof data.read_at === 'string' ? data.read_at : null,
+                  checked_at: typeof data.checked_at === 'string' ? data.checked_at : null,
+                });
+                break;
+
               case 'done':
-                patchLast((t) => {
+                // A reused morning's `done` lands on no turn (W2.1): its
+                // answer is the stored thread the room opens, not the last
+                // turn on screen.
+                if (!reusedHere) patchLast((t) => {
                   t.done = data as unknown as DoneFrame;
                   // A rewrite that never arrived is not the answer. `answer` was
                   // reset on the server too, so the stored post holds the
@@ -736,6 +770,8 @@ export function useBobStream() {
                 qc.invalidateQueries({ queryKey: ['thread'] });
                 qc.invalidateQueries({ queryKey: ['chats'] });
                 qc.invalidateQueries({ queryKey: ['bob-status'] });
+                // Today's morning may be this answer (W2.1).
+                qc.invalidateQueries({ queryKey: ['morning'] });
                 break;
             }
           },
@@ -780,6 +816,8 @@ export function useBobStream() {
     threadId,
     /** The thread id once its posts exist. What a router may follow. */
     storedThreadId,
+    /** Today's morning shown again instead of a turn (W2.1), or null. */
+    reused,
     open,
     reset,
   };

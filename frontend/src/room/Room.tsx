@@ -53,10 +53,12 @@ import { pathFor, refusalForPerson, resolveFragment, retunedKey, tokensFor,
 import type { ToolCall } from '../types/bob';
 import { Noticed } from './Noticed';
 import { Doing } from './Working';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNeedsYou } from '../hooks/useNeedsYou';
 import { Rail } from './Rail';
 import { dismissStanding, useStandingOpening } from './useStandingOpening';
+import { MorningLine } from './MorningLine';
+import { openMorning, switchMorning, type Morning } from '../services/standingApi';
 import { decisionFor, leftBehind } from './decisions';
 import { recordDecision, type Outcome } from '../services/decisionsApi';
 import { forgetBelief } from '../services/beliefsApi';
@@ -410,6 +412,37 @@ export default function Room() {
     const back = lastThread();
     if (back) navigate(`/w/${back}`, { replace: true });
   }, [nothingInHand, standing.found, standing.settled, navigate]);
+
+  // THE MORNING (W2.1). Opening the room makes sure the person has it — a
+  // standing question at the slot the definitions name, born OFF (rule 7) —
+  // and says whether it is on and which thread is today's. Read once a few
+  // minutes; the room is opened far more often than the morning changes.
+  const qc = useQueryClient();
+  const morning = useQuery({
+    queryKey: ['morning'],
+    queryFn: openMorning,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const [switching, setSwitching] = useState(false);
+  const switchOn = useCallback((on: boolean) => {
+    setSwitching(true);
+    void switchMorning(on)
+      .then((m) => qc.setQueryData<Morning>(['morning'], (was) => ({ ...m,
+        today: was?.today ?? m.today ?? null })))
+      .catch(() => { /* the line stays as it was: the switch did not move */ })
+      .finally(() => setSwitching(false));
+  }, [qc]);
+  // ASKED AGAIN THE SAME DAY: the server answered with today's morning
+  // instead of a turn, so the room goes to that thread — opened from the
+  // record like any stored thread — once per reuse.
+  const followed = useRef<unknown>(null);
+  useEffect(() => {
+    const r = bob.reused;
+    if (!r || followed.current === r) return;
+    followed.current = r;
+    if (r.thread_id !== threadId) navigate(`/w/${r.thread_id}`);
+  }, [bob.reused, threadId, navigate]);
 
   // WHEN YOU LAST LOOKED AT THIS THREAD — read once, as it opens, so that
   // what arrived since can land with the glow and be counted. Once you ask
@@ -863,6 +896,13 @@ export default function Room() {
                 you asked before (the log, 2026-09-18). */}
             <Asked question={questions[at] ?? null} at={at} count={allAnswers.length}
                    busy={busy} onStep={(to) => { setFocused(null); setView(to); }} />
+            {/* THE MORNING'S LINE (W2.1): shown again rather than asked
+                again, and when it was read; or that it is switched off. */}
+            {!busy && (
+              <MorningLine threadId={threadId} reused={bob.reused ?? null}
+                           morning={morning.isSuccess ? morning.data : undefined}
+                           onSwitch={switchOn} switching={switching} />
+            )}
             {/* WHILE HE WORKS, A LINE UNDER HIM (the log, 2026-09-17). */}
             <Doing turn={latest} live={busy} answering={Boolean((latest?.text ?? '').trim())} />
             <Narration said={(latest as { narration?: string } | null)?.narration} live={busy}
