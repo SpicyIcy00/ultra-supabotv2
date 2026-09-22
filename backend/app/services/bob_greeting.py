@@ -53,6 +53,7 @@ from tools._common import load_defs as _load_defs, req as _req  # noqa: E402
 SECTION_NOUN = {
     "sales_vs_same_weekday": "sales",
     "stock_crossed_out": "stock",
+    "stock_running_out": "what is running out",
     "newly_dead": "dead stock",
 }
 
@@ -161,6 +162,16 @@ def _sentence(row: dict, meta: dict) -> str:
             f"on {_day(row.get('last_sold'))}."
         )
 
+    if section == "stock_running_out":
+        # W1.5: BOTH numbers, the cover and the window, off the row itself.
+        sku = f" ({row['sku']})" if row.get("sku") else ""
+        return (
+            f"{row['subject']}{sku} at {row['store']} runs out in "
+            f"{float(row['cover_days']):,.1f} days at {float(row['units_per_day']):,.1f} a day "
+            f"— under the {row['window_days']}-day window, with "
+            f"{float(row['on_hand']):,.0f} on hand."
+        )
+
     # A section added to the brief without being added here. Say what is known
     # rather than inventing a shape for it.
     return f"{row.get('subject', 'Something')} is the most notable thing in this morning's brief."
@@ -239,6 +250,15 @@ def _follow_up(row: dict, meta: dict) -> Optional[dict[str, str]]:
             "label": f"On order? {named}",
             # The question a stockout actually raises: is more coming.
             "question": f"Is {subject} on order{where}?",
+        }
+
+    if section == "stock_running_out":
+        store = row.get("store")
+        where = f" for {store}" if store else ""
+        return {
+            "label": f"Where from? {named}",
+            # The question a warning raises: where the stock can come from.
+            "question": f"Where can I get {subject}{where} before it runs out?",
         }
 
     if section == "newly_dead":

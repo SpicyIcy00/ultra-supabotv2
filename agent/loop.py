@@ -73,6 +73,7 @@ from tools import (
     replenishment,
     sales,
     stock_history,
+    stock_cover,
     vending,
 )
 from tools._common import load_defs as _load_defs, req
@@ -181,6 +182,9 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     "get_purchasing": purchasing.get_purchasing,
     "get_replenishment": replenishment.get_replenishment,
     "get_purchase_plan": purchase_plan.get_purchase_plan,
+    # What runs out at each shop, and the moves and order that would restock
+    # it (tools/stock_cover.py, metrics.yaml stock_cover).
+    "get_stock_cover": stock_cover.get_stock_cover,
     "get_cost_history": cost_history.get_cost_history,
     "get_brief": brief.get_brief,
     # What deserves attention today: the judgement over the brief — every
@@ -322,10 +326,13 @@ def _enum_sources(defs: dict) -> dict[tuple[str, str], list]:
         ("get_stock_history", "store"): retail + warehouse,
         ("get_stock_history", "view"): list(req(defs, "inventory.history.views")),
         ("get_stock_history", "rank_by"): list(req(defs, "inventory.history.rank_modes")),
-        ("get_replenishment", "store"): retail,
+        ("get_replenishment", "store"): retail + warehouse,
         ("get_replenishment", "view"): list(req(defs, "replenishment.views")),
         ("get_replenishment", "rank_by"): list(req(defs, "replenishment.rank_modes")),
         ("get_purchase_plan", "rank_by"): ["running_out", "most_needed", "fastest_moving"],
+        ("get_stock_cover", "store"): retail + warehouse,
+        ("get_stock_cover", "view"): list(req(defs, "stock_cover.views")),
+        ("get_stock_cover", "state"): [s["name"] for s in req(defs, "stock_cover.states")],
         # Wider than get_stock's: a closed warehouse has no current stock but a
         # thousand recorded transfers.
         ("get_movement", "store"): historical_locations,
