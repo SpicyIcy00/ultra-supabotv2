@@ -58,6 +58,7 @@ PAGE_OPERATIONS = (
     "move",          # a pin left this page for another page
     "place",         # a pin changed position within the page
     "draw",          # a pin's call was redrawn as another shape (P2S.3(g))
+    "change",        # a pin's calls were changed in place, same id and place (W1.2)
     "delete",        # the page row was deleted; its pins went to Ungrouped
 )
 

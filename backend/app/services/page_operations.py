@@ -63,8 +63,39 @@ MAX_ADDS_PER_EDIT = 6
 # The closed set of things edit_page can do. Mirrored in the tool schema.
 EDIT_OPERATIONS = (
     "rename", "set_purpose", "add", "add_existing", "remove", "move_to_page", "place",
-    "draw",
+    "draw", "change",
 )
+
+
+# ---------------------------------------------------------------------------
+# A change changes it (metrics.yaml action_words.change_in_place, W1.2)
+# ---------------------------------------------------------------------------
+
+def _variant_arguments() -> frozenset[str]:
+    from tools._common import load_defs, req
+    return frozenset(str(a) for a in
+                     req(load_defs(), "action_words.change_in_place.variant_arguments"))
+
+
+def _subject(call: dict, variant: frozenset[str]) -> str:
+    """A call with the arguments that only vary HOW it reads taken off."""
+    args = {k: v for k, v in (call.get("arguments") or {}).items() if k not in variant}
+    return str(call.get("tool")) + "|" + json.dumps(args, sort_keys=True, default=str)
+
+
+def same_subject(calls: list[dict], existing: list[dict],
+                 variant: Optional[frozenset[str]] = None) -> bool:
+    """
+    True when a new analysis reads what an existing one already reads: the
+    same tool over the same subject, differing only in window, ranking, size
+    or cover. "Use 30-day velocity" on a purchase plan is then a CHANGE to
+    the plan on the page, never a second plan beside it — the capability test
+    of 2026-09-22 added a tile for every change. Pure.
+    """
+    variant = _variant_arguments() if variant is None else variant
+    new = {_subject(c, variant) for c in calls}
+    old = {_subject(c, variant) for c in existing}
+    return bool(new) and bool(new & old)
 
 
 # ---------------------------------------------------------------------------
@@ -287,6 +318,16 @@ async def _resolve_destination(
     return await page_writer.get_page(db, owner, pid)
 
 
+def change_instead(i: int, pin: Any) -> str:
+    """The refusal of an add that is really a change, naming the analysis it changes."""
+    return (
+        f"operations[{i}] (add) reads what {pin.title!r} already reads (pin_id "
+        f"{pin.id}), so it is a change to that analysis, not a new one beside it: "
+        f'give it as {{"op": "change", "pin_id": "{pin.id}", "tool_calls": [...]}}. '
+        f"Add it beside only when they asked for both, with beside: true."
+    )
+
+
 async def plan_edit(
     db: AsyncSession, *, owner: str, page_id: uuid.UUID, operations: Any,
 ) -> _Plan:
@@ -342,9 +383,26 @@ async def plan_edit(
             calls = pin_writer.validate_pin_calls(op.get("tool_calls") or [])
             _unique_calls(calls, seen_calls)
             title = _normalize_analysis_title(op.get("title"), calls)
+            if not op.get("beside"):
+                for pin in await page_writer.page_pins(db, owner, page.id):
+                    if same_subject(calls, list(pin.tool_calls or [])):
+                        raise PageValidationError(change_instead(i, pin))
             on_page += 1
             new_pins += 1
             plan.steps.append({"op": kind, "title": title, "calls": calls})
+
+        elif kind == "change":
+            # THE SAME ANALYSIS, SAME PLACE, NEW CALLS. Its id, its position
+            # and its page stay; only what it reads moves. Validated exactly
+            # as an add's calls are.
+            pin = await _resolve_target_pin(db, owner, op, within=page.id)
+            if pin.page_id != page.id:
+                raise PageNotFound(f"{pin.title!r} is not on {page.title!r}.")
+            calls = pin_writer.validate_pin_calls(op.get("tool_calls") or [])
+            new_title = op.get("new_title")
+            plan.steps.append({"op": kind, "pin": pin, "calls": calls,
+                               "title": (_normalize_analysis_title(new_title, calls)
+                                         if new_title else None)})
 
         elif kind == "add_existing":
             adds += 1
@@ -447,7 +505,7 @@ async def _preflight_order(db: AsyncSession, owner: str, plan: _Plan) -> None:
 
     for step in plan.steps:
         kind = step["op"]
-        if kind in ("rename", "set_purpose", "draw"):
+        if kind in ("rename", "set_purpose", "draw", "change"):
             continue
         if kind == "add":
             pin = BobPin(id=uuid.uuid4())
@@ -572,6 +630,23 @@ async def apply_edit(
                                     before=before, after=shape, call=which)
             ops.append({"op": kind, "pin_id": str(pin.id), "title": pin.title,
                         "call": which, "from": before, "to": shape})
+
+        elif kind == "change":
+            pin = step["pin"]
+            before = {"title": pin.title,
+                      "tool_calls": [dict(c) for c in (pin.tool_calls or [])]}
+            # A NEW LIST, as draw does: a JSONB column changed in place is not
+            # seen by the unit of work.
+            pin.tool_calls = [dict(c) for c in step["calls"]]
+            if step.get("title"):
+                pin.title = step["title"]
+            page_writer.record_change(db, owner=owner, actor=actor, page=page, pin=pin,
+                                      before=before,
+                                      after={"title": pin.title, "tool_calls": pin.tool_calls})
+            ops.append({"op": kind, "pin_id": str(pin.id), "title": pin.title,
+                        "position": pin.position,
+                        "from": [c.get("tool") for c in before["tool_calls"]],
+                        "to": [c.get("tool") for c in pin.tool_calls]})
 
     await db.flush()
     pins = await page_writer.page_pins(db, owner, page.id)

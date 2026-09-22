@@ -5340,6 +5340,9 @@ pages:
       remove: [removed it from, removed from the page, taken it off the page, took it off the page, "i'll remove it", let me remove it]
       place: [moved it to, moved it above, moved it below, moved it up, moved it down, moved it to the top, moved it to the bottom, moved the analysis, reordered the page, reordered the analyses, "i'll move it", let me move it, "i'll reorder"]
       set_purpose: [set the purpose, purpose is now]
+      # An analysis changed in place (W1.2): the page "now has" the new
+      # reading where the old one stood.
+      change: [page now has, now on the page]
     intents:
       - i'll create the page
       - i will create the page
@@ -5584,7 +5587,102 @@ workflows:
     # delivery layer is how "notices always surface" (UI rule 4) stops being a
     # guarantee: the first person to tidy the layout deletes the caveats.
     # Same argument as ops/n8n/README.md.
-    delivery: [telegram]
+    #
+    # THE ROOM IS A DELIVERY (W1.2, 2026-09-22). Every scheduled run was
+    # already posted to the river (workflow_scheduler._post_run), yet a
+    # schedule with no Telegram chat was refused — "A schedule needs
+    # somewhere to deliver to" — so "every Monday" on a workflow never
+    # attached (the capability test, 2026-09-22). `room` is that post, made
+    # the delivery of record: always made, needing nothing configured.
+    # Telegram is added when chat ids are given. A schedule is still born OFF.
+    delivery: [room, telegram]
+    # What a schedule with no chat ids is delivered to, named in the tool's
+    # confirmation so "delivered where?" has an answer.
+    room_delivery_label: "your room"
+
+
+# =============================================================================
+# ACTION WORDS — each phrase does exactly one thing (W1.2, 2026-09-22)
+#
+# The capability test (ops/captest.py, 2026-09-22) said the owner's action
+# words in his own phrases and watched what Bob wrote. "Keep this." recorded
+# three beliefs and pinned nothing; "I want this every Monday." moved the
+# watch instead of scheduling the report; "What do you remember about
+# Rockwell?" read memory AND recorded a new view; every change to a built
+# plan ("Use 30-day velocity") added a tile beside it instead of changing it.
+#
+# A sentence of instruction had been on the tools already, so the phrases
+# are ENFORCED where the wrong write is made: the write tool a phrase does
+# NOT mean refuses it, and the refusal names the tool it does mean. Nothing
+# here makes a write happen — the refusal is a route, the model still
+# chooses — and nothing here is a business definition. A phrase matches on
+# whole words, case and punctuation ignored.
+# =============================================================================
+action_words:
+  # "Keep this." is a PIN — the calls behind the answer on screen, as a live
+  # tile. It is not a view to hold: record_belief refuses any view resting on
+  # data when the question is one of these, and says to pin.
+  keep:
+    means: pin_answer
+    phrases: ["keep this", "keep that", "keep it", "keep these", "save this", "save that",
+              "pin this", "pin that", "pin it", "pin these"]
+    # A long sentence that merely contains "keep it" is not the gesture
+    # ("keep it in mind that Rockwell…"). Counted in words.
+    max_words: 6
+    refuses: [record_belief]
+
+  # "What do you remember…" READS memory and writes nothing: view_memory, and
+  # the answer from it. record_belief refuses on it — a question about what he
+  # holds is not an occasion to hold something new.
+  recall:
+    means: view_memory
+    phrases: ["what do you remember", "what do you know about", "what have you learned",
+              "what have you learnt", "what do you believe about", "what do you think you know"]
+    refuses: [record_belief]
+
+  # "I want this every Monday" is the ANSWER on a schedule — a standing
+  # question asking what produced it — not a watch. A watch is a condition
+  # ("tell me if", "watch"), and set_watch refuses a question that asks for
+  # "this" on a schedule without naming one.
+  schedule_the_answer:
+    means: set_standing_question
+    phrases: ["every monday", "every tuesday", "every wednesday", "every thursday",
+              "every friday", "every saturday", "every sunday", "every week", "every morning",
+              "every day", "each week", "each morning", "each monday", "weekly", "daily",
+              "every month", "monthly"]
+    # What makes it about the answer on screen, not a new question.
+    referents: ["this", "that", "it", "these", "the report", "the answer"]
+    # A question naming a condition is a watch after all.
+    unless: ["watch", "tell me if", "tell me when", "let me know", "keep an eye", "alert me",
+             "warn me"]
+    refuses: [set_watch]
+
+  # "Build it" / "build me a weekly …" is a SYSTEM — a workflow, with its
+  # schedule born off — not a page of tiles. create_page refuses it unless
+  # the person asked for a page or a dashboard in the same breath.
+  build:
+    means: save_workflow
+    phrases: ["build it", "build this", "build that", "build me", "build us", "build a",
+              "build the", "set it up", "set up a", "make it a system"]
+    unless: ["page", "dashboard"]
+    refuses: [create_page]
+
+  # A CHANGE TO A THING ALREADY BUILT CHANGES IT. On a page: edit_page `add`
+  # refuses an analysis that reads the same subject as one already there —
+  # the same tool, and every argument equal except these — and names the
+  # `change` op, which replaces that analysis's calls where it stands. On a
+  # workflow: a new VERSION under the same name. `beside: true` on the add
+  # is the person asking for both side by side.
+  change_in_place:
+    variant_arguments: [date_range, window, lookback_days, cover_days, top_n, rank_by,
+                        direction, compare_to, selling_only, days, start, end, as_of]
+
+  # When they say a day and no time ("every Monday"), the slot is this hour,
+  # Manila time — a delivery convention, not a business rule, and the
+  # confirmation says the hour so it can be moved in one sentence.
+  default_slot:
+    hour: 7
+    minute: 0
 
 
 # =============================================================================

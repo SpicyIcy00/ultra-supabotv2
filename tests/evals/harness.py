@@ -81,7 +81,7 @@ def _parse(frames: list[tuple[str, float]]) -> list[tuple[str, dict, float]]:
 def run_turn(monkeypatch, question: str, *, history: Optional[list[dict]] = None,
              inject: Optional[Inject] = None, page_reader=None,
              page_scope: Optional[dict] = None, page_writer=None,
-             page_references: Optional[list[dict]] = None) -> Turn:
+             page_references: Optional[list[dict]] = None, **injected) -> Turn:
     """
     One live turn, as a Turn.
 
@@ -109,6 +109,9 @@ def run_turn(monkeypatch, question: str, *, history: Optional[list[dict]] = None
             question, history=history, page_reader=page_reader, page_scope=page_scope,
             page_writer=page_writer,
             page_references=page_references,
+            # The other injected writers and readers (W1.2's fakes), passed
+            # through untouched: nothing reaches george.* from an eval.
+            **injected,
         ):
             out.append((f, (time.perf_counter() - started) * 1000))
         return out

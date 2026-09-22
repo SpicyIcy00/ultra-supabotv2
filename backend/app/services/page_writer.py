@@ -704,6 +704,19 @@ def record_draw(db: AsyncSession, *, owner: str, actor: Actor, page: BobPage,
            before={"call": call, "drawn_as": before}, after={"call": call, "drawn_as": after})
 
 
+def record_change(db: AsyncSession, *, owner: str, actor: Actor, page: BobPage,
+                  pin: BobPin, before: Any, after: Any) -> None:
+    """
+    An analysis whose calls were changed in place (W1.2: "use 30-day
+    velocity" changes the plan, it does not add a second one) is audited like
+    every structural write: `change`, before and after. The calls are the
+    analysis's definition, never replayed rows.
+    """
+    _touch(page)
+    _event(db, owner=owner, actor=actor, operation="change", page_id=page.id, pin_id=pin.id,
+           before=before, after=after)
+
+
 async def append_new_pin(
     db: AsyncSession, *, owner: str, pin: BobPin, to_page: Optional[BobPage],
     actor: Actor = USER,

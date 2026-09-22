@@ -513,6 +513,66 @@ def _unrun(calls: list[dict], executed: dict[str, dict]) -> list[dict]:
     return [c for c in calls if call_key(c["tool"], c["arguments"]) not in executed]
 
 
+# ---------------------------------------------------------------------------
+# Action words (metrics.yaml `action_words`, W1.2)
+# ---------------------------------------------------------------------------
+
+def _words(text: Optional[str]) -> str:
+    """The question as lowercase words, punctuation gone, one space between."""
+    import re
+    return " " + " ".join(re.findall(r"[a-z0-9₱']+", str(text or "").lower())) + " "
+
+
+def _has(words: str, phrases: Any) -> Optional[str]:
+    """The first phrase present as whole words, or None."""
+    for p in phrases or []:
+        if _words(p) in words:
+            return str(p)
+    return None
+
+
+def action_word(question: Optional[str], defs: Optional[dict] = None) -> Optional[dict]:
+    """
+    Which action family the person's words name, if any: {family, phrase,
+    means}. Pure, from metrics.yaml `action_words`; nothing is written here.
+    The write tool a family does NOT mean refuses it (`refuses`), so each
+    phrase does exactly one thing.
+    """
+    if defs is None:
+        from tools._common import load_defs
+        defs = load_defs()
+    spec = defs.get("action_words") or {}
+    words = _words(question)
+    count = len(words.split())
+    for family in ("keep", "recall", "build", "schedule_the_answer"):
+        f = spec.get(family) or {}
+        phrase = _has(words, f.get("phrases"))
+        if not phrase:
+            continue
+        if f.get("max_words") and count > int(f["max_words"]):
+            continue
+        if f.get("referents") and not _has(words, f["referents"]):
+            continue
+        if _has(words, f.get("unless")):
+            continue
+        return {"family": family, "phrase": phrase, "means": f.get("means"),
+                "refuses": list(f.get("refuses") or [])}
+    return None
+
+
+def _refused_by_words(tool: str, ctx: "WriteContext") -> Optional[dict]:
+    """The action family whose words this tool may not answer, if the question has one."""
+    found = action_word(ctx.question)
+    return found if found and tool in found["refuses"] else None
+
+
+def default_slot() -> dict:
+    """The hour a schedule gets when they named a day and no time (action_words.default_slot)."""
+    from tools._common import load_defs, req
+    slot = req(load_defs(), "action_words.default_slot")
+    return {"hour": int(slot["hour"]), "minute": int(slot.get("minute") or 0)}
+
+
 async def pin_answer(
     tool_calls: list[dict],
     title: str,
@@ -525,6 +585,12 @@ async def pin_answer(
     Pin an answer: turn the tool calls behind it into a live tile that re-runs.
     A pin stores the CALLS, never the numbers, so the tile shows current figures
     rather than a sentence written against last month's data.
+
+    "KEEP THIS", "keep that", "save this", "pin it" MEAN THIS TOOL, and only
+    this: one call, with the calls behind the answer they are looking at (the
+    ones listed after it, copied exactly), and a one-line confirmation naming
+    the tile. Read nothing again, record no view, compose nothing — the tile
+    is the answer. A view is not a keep: record_belief refuses these words.
 
     Args:
         tool_calls: The calls to pin, as [{"tool": ..., "arguments": {...}}].
@@ -667,6 +733,17 @@ async def save_workflow(
     choice. Saving a name that already exists appends a new VERSION rather than
     replacing anything, so nothing is ever overwritten.
 
+    "BUILD IT", "build me a weekly …", "set up a …" MEAN THIS TOOL: a system
+    is a workflow — its steps the reads that answer it, run first — with its
+    schedule if they named one; not a page of tiles (create_page refuses
+    those words). A CHANGE TO IT CHANGES IT: "add lead time", "use 30-day
+    velocity" is the adjusted step run, then saved under the SAME name with a
+    change_note — the next version — never a second workflow, a pin or a
+    tile beside it. If the change needs a figure no read gives, say so and
+    save nothing. "Every Monday" on a workflow is this tool again, same name
+    and steps, with `schedule`: identical steps keep their version. Confirm in
+    one line: the name, the version, and that the schedule is off.
+
     Args:
         name: What the workflow is called, e.g. "PO Maker". This is how it is
             run later ("run PO Maker"), so it must be unique — a name that
@@ -687,10 +764,11 @@ async def save_workflow(
         intent: Why this workflow exists, in the user's words.
         change_note: When saving over an existing name, what changed and why.
         schedule: An optional slot, as {"kind": "daily"|"weekly"|"monthly",
-            "hour": 6, "minute": 0, "days_of_week": [0], "day_of_month": null,
-            "telegram_chat_ids": [...]}. It is created switched OFF and fires
-            nothing until an administrator has backtested and promoted the
-            version. Say so when you use it.
+            "hour": 7, "minute": 0, "days_of_week": [0], "day_of_month": null}.
+            Leave out `hour` when they named no time. It is delivered to their
+            room; add "telegram_chat_ids" only when they name a chat. It is
+            created switched OFF and fires nothing until an administrator has
+            backtested and promoted the version. Say so when you use it.
 
     Returns:
         {rows, meta} like every other tool. rows holds one row describing the
@@ -727,6 +805,17 @@ async def save_workflow(
             f"first, read the results, then save. Tools run so far: {ran}."
         )
 
+    # A DAY AND NO TIME ("every Monday") takes the default slot, and says so
+    # in the row, rather than a refusal the conversation has to go round.
+    slot = dict(schedule) if isinstance(schedule, dict) else None
+    hour_defaulted = False
+    if slot is not None:
+        if slot.get("hour") is None:
+            slot.update(default_slot())
+            hour_defaulted = True
+        if not slot.get("kind"):
+            slot["kind"] = "weekly" if slot.get("days_of_week") else "daily"
+
     stored = await ctx.workflow_writer.save(
         WorkflowSpec(
             name=name.strip(),
@@ -734,7 +823,7 @@ async def save_workflow(
             parameters=params,
             intent=(intent or None),
             change_note=(change_note or None),
-            schedule=schedule if isinstance(schedule, dict) else None,
+            schedule=slot,
             question=ctx.question,
             conversation_id=ctx.conversation_id,
         )
@@ -749,6 +838,10 @@ async def save_workflow(
             "parameters": [p.get("name") for p in params],
             "scheduled": stored.get("schedule") or None,
             "awaiting_promotion": stored.get("awaiting_promotion", True),
+            # The same steps saved again (to attach a schedule) keep their
+            # version: nothing about the rule changed.
+            "new_version": stored.get("new_version", True),
+            "hour_defaulted": hour_defaulted,
         }],
         # Architecture rule 2 has no exception for writes. What was written,
         # which version it became, and when.
@@ -792,7 +885,7 @@ def _page_bounds() -> dict:
 # (app/services/page_operations.EDIT_OPERATIONS) and held equal by a test.
 PAGE_EDIT_OPERATIONS = (
     "rename", "set_purpose", "add", "add_existing", "remove", "move_to_page", "place",
-    "draw",
+    "draw", "change",
 )
 
 
@@ -897,7 +990,9 @@ async def create_page(
     open, and that you can read later with view_page. A page may start empty.
     Each analysis you add is stored as its CALLS, never its numbers, so it
     re-runs every time the page opens. The page is created with all of its
-    analyses in one transaction, or not at all.
+    analyses in one transaction, or not at all. A page is for LOOKING ("make
+    this a page"); "build it" is a system, saved with save_workflow, and is
+    refused here.
 
     Args:
         title: The page's name, e.g. "Rockwell Weekly". At most 100 characters;
@@ -925,6 +1020,14 @@ async def create_page(
         )
     if not isinstance(title, str) or not title.strip():
         raise PageRefused("A page needs a title.")
+    words = _refused_by_words("create_page", ctx)
+    if words:
+        raise PageRefused(
+            f"They said \"{words['phrase']}\": that is a SYSTEM, not a page of tiles. "
+            f"Save it with save_workflow — its steps the reads you ran for it, its "
+            f"schedule if they named one (born off) — so that every change they ask "
+            f"for next is a new version of the same thing. A page is made only when "
+            f"they ask for a page.")
     bounds = _page_bounds()
     normalized = _normalize_analyses(analyses, ctx, bounds["max_analyses"])
     if purpose is not None and not isinstance(purpose, str):
@@ -945,15 +1048,24 @@ async def edit_page(
 ) -> dict:
     """
     Change one of the user's pages: rename it, set its purpose, add analyses,
-    take one off, move one to another page, or reorder. All the operations in
-    one call are applied together, in order, or none of them are. Nothing is
-    re-run; a page's analyses keep their calls.
+    change one in place, take one off, move one to another page, or reorder.
+    All the operations in one call are applied together, in order, or none of
+    them are. Nothing is re-run; a page's analyses keep their calls.
+
+    A CHANGE TO AN ANALYSIS CHANGES IT. "Use 30-day velocity", "only the top
+    ten", "last month instead" on something already on the page is `change`
+    — the adjusted call run first, then put where the old one stood — never
+    an `add` beside it: an add reading the same subject as an analysis already
+    there is refused and names that analysis. Confirm in one line.
 
     Args:
         operations: At most 10, each {"op": ..., ...} with op one of:
             rename {title};  set_purpose {purpose} (null clears it);
-            add {title, tool_calls} — a new analysis from calls you have run
-            in this conversation, at the bottom (at most 6 adds per call);
+            add {title, tool_calls, beside?} — a new analysis from calls you
+            have run in this conversation, at the bottom (at most 6 adds per
+            call); `beside: true` only when they asked for both side by side;
+            change {pin_id | title, tool_calls, new_title?} — the same
+            analysis, same place, now reading these calls (run them first);
             add_existing {pin_id | title, place?} — an analysis the user
             already has, from Ungrouped or another page;
             remove {pin_id | title} — off this page and KEPT in Ungrouped;
@@ -1027,6 +1139,23 @@ async def edit_page(
             coerced: list[str] = []
             entry["tool_calls"] = _shaped(calls, ctx, coerced)
             entry["title"] = title.strip()
+            entry["beside"] = bool(op.get("beside"))
+        if kind == "change":
+            try:
+                calls = _normalize_calls(op.get("tool_calls"))
+            except PinRefused as exc:
+                raise PageRefused(f"operations[{i}] (change): {exc}") from exc
+            if op.get("pin_id") is None and not op.get("title"):
+                raise PageRefused(f"operations[{i}] (change): name the analysis by pin_id or title.")
+            _refuse_unrun(calls, ctx, f"operations[{i}] (change)")
+            coerced = []
+            entry = {"op": "change", "tool_calls": _shaped(calls, ctx, coerced),
+                     **{k: op[k] for k in ("pin_id", "title") if op.get(k) is not None}}
+            new_title = op.get("new_title")
+            if new_title is not None:
+                if not isinstance(new_title, str) or not new_title.strip():
+                    raise PageRefused(f"operations[{i}] (change): new_title must be text.")
+                entry["new_title"] = new_title.strip()
         if kind == "draw":
             from agent import vocabulary
             from tools._common import load_defs
@@ -1081,6 +1210,10 @@ async def record_belief(beliefs: list[dict], *, ctx: WriteContext) -> dict:
     again" supersedes that view with a `means` view in their words, which
     lifts it. Only a category can be left out.
 
+    NOT FOR "keep this" (a pin — pin_answer) or "what do you remember" (a
+    read — view_memory): both are refused here. "Remember that …" is ONE
+    `means` view, their words in `told`, and nothing read for it.
+
     Args:
         beliefs: The views to keep, as a list of objects:
             subject_kind — one of store, warehouse, supplier, product, category,
@@ -1121,6 +1254,23 @@ async def record_belief(beliefs: list[dict], *, ctx: WriteContext) -> dict:
         )
     from tools._common import load_defs   # local: agent/ imports tools/ lazily here
     defs = load_defs()
+
+    # EACH PHRASE DOES ONE THING (action_words). "Keep this." is a pin and
+    # "what do you remember" is a read; neither is an occasion to hold a new
+    # view. What they TOLD you (a `told` view) is still theirs to keep.
+    words = _refused_by_words("record_belief", ctx)
+    if words:
+        items = beliefs if isinstance(beliefs, list) else [beliefs]
+        if any(not (isinstance(b, dict) and b.get("told")) for b in items):
+            if words["family"] == "keep":
+                raise PinRefused(
+                    f"They said \"{words['phrase']}\": that is a pin, not a view. Call "
+                    f"pin_answer with the calls behind the answer they are looking at, "
+                    f"and confirm the tile in one line. Nothing else is written.")
+            raise PinRefused(
+                f"They asked \"{words['phrase']}\": that is a READ of what you hold. "
+                f"Answer from view_memory and write nothing — no view is recorded "
+                f"on a question about what you remember.")
 
     def is_executed(call: dict) -> bool:
         return call_key(call["tool"], call["arguments"]) in ctx.executed
@@ -1232,6 +1382,12 @@ async def set_standing_question(
     "stop sending me that one". Do not use it for a one-off question; just
     answer that.
 
+    "I WANT THIS EVERY MONDAY" IS THIS TOOL: the ANSWER on a schedule — create,
+    `question` the one that produced the answer they mean, in their words
+    from the conversation ("how did Rockwell do last week?"), `days` [0]. It
+    is not a watch, even if a watch was just set: set_watch refuses those
+    words. Read nothing for it and confirm in one line — what, when, off.
+
     A NEW QUESTION IS CREATED SWITCHED OFF, and you must say so. They turn it
     on, which is one more sentence and the sentence that matters — nothing
     starts running unattended because a conversation drifted that way.
@@ -1255,7 +1411,8 @@ async def set_standing_question(
                 are not touched.
         question: What to ask, in their words, on one line. For create and
             rewrite.
-        hour: The hour, 0–23, Manila time.
+        hour: The hour, 0–23, Manila time. Leave it out when they named no
+            time: it is asked at the default hour the row reports.
         minute: The minute, 0–59. Defaults to 0.
         days: Weekdays for a weekly question, 0=Monday … 6=Sunday. Leave it out
             for every day.
@@ -1284,6 +1441,13 @@ async def set_standing_question(
             f"{action!r} is not something that can be done to a standing "
             f"question. It is one of: {', '.join(STANDING_ACTIONS)}."
         )
+
+    # A DAY AND NO TIME takes the default slot (action_words.default_slot)
+    # rather than a refusal the conversation has to go round; the row says
+    # the hour, so it is said.
+    if action == "create" and hour is None:
+        slot = default_slot()
+        hour, minute = slot["hour"], slot["minute"] if minute is None else minute
 
     fields = {
         "question": question,
@@ -1331,7 +1495,9 @@ async def set_watch(
     A watch is how somebody hears about a thing they did not ask about that
     morning. Use it when they say "tell me when", "let me know if", "keep an
     eye on" — not when they are asking what is true now, which is a question
-    you answer.
+    you answer. "I want this every Monday" is NOT a watch — it is the answer
+    on a schedule (set_standing_question), and this tool refuses those words;
+    a watch is rescheduled only when they name the watch.
 
     SILENCE IS THE POINT, and say so when you set one up. A watch posts only
     when the answer CHANGES: a shop down five mornings running is one message,
@@ -1403,6 +1569,14 @@ async def set_watch(
             f"{action!r} is not something that can be done to a watch. It is "
             f"one of: {', '.join(WATCH_ACTIONS)}."
         )
+    words = _refused_by_words(WATCH_TOOL, ctx)
+    if words and action in ("create", "reschedule", "rescope"):
+        raise WatchRefused(
+            f"They said \"{words['phrase']}\" about the answer, not about a condition: "
+            f"that is the REPORT on a schedule. Call set_standing_question create with "
+            f"the question that produced the answer they mean, in their words, and the "
+            f"days they said; no watch changes. A watch is set or moved only when they "
+            f"name one (\"the watch\", \"tell me if\").")
 
     return await ctx.watch_writer.apply(action, {
         "condition": condition,
