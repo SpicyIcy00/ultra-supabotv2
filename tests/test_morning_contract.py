@@ -268,6 +268,49 @@ def test_a_reply_to_a_post_is_never_a_repeat():
     assert source.index("_morning_reuse") < source.index("_safe_stream(")
 
 
+def _opening(monkeypatch, *, standing, today):
+    from app.api.v1.routes import bob as route
+
+    async def latest(db, owner):
+        return standing
+
+    async def found_today(db, owner, **k):
+        return today
+
+    async def find(db, owner, spec=None):
+        return None
+
+    monkeypatch.setattr(route.standing_questions, "latest_answer", latest)
+    monkeypatch.setattr(route.morning_service, "today", found_today)
+    monkeypatch.setattr(route.morning_service, "find", find)
+
+    class User:
+        username = "joy"
+    return asyncio.run(route.latest_standing(db=None, user=User()))
+
+
+def test_the_room_opens_on_todays_morning_with_its_read_time(monkeypatch):
+    today = {"thread_id": "m-1", "question": "How are we doing?", "answered_at": NOW,
+             "read_at": NOW - timedelta(minutes=2)}
+    older = {"thread_id": "s-9", "question": "Remind me", "answered_at": NOW - timedelta(hours=3),
+             "standing_question_id": "s-9"}
+    got = _opening(monkeypatch, standing=older, today=today)
+    assert got.thread_id == "m-1" and got.morning is True
+    assert got.read_at == NOW - timedelta(minutes=2)
+    got = _opening(monkeypatch, standing=None, today=today)
+    assert got.thread_id == "m-1"
+
+
+def test_a_newer_standing_answer_still_opens_first_and_none_is_none(monkeypatch):
+    today = {"thread_id": "m-1", "question": "How are we doing?",
+             "answered_at": NOW - timedelta(hours=3), "read_at": None}
+    newer = {"thread_id": "s-9", "question": "Remind me", "answered_at": NOW,
+             "standing_question_id": "s-9"}
+    got = _opening(monkeypatch, standing=newer, today=today)
+    assert got.thread_id == "s-9" and got.morning is False
+    assert _opening(monkeypatch, standing=None, today=None) is None
+
+
 # ---------------------------------------------------------------------------
 # 5. "Data changed", as definitions
 # ---------------------------------------------------------------------------
