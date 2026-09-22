@@ -1651,6 +1651,51 @@ comparisons:
     # Explains how the figure was measured — surface.desk.notices.explains_only.
     scope_notice_kind: same_store_scope
 
+  # ---------------------------------------------------------------------------
+  # THE USUAL WEEKDAY, added 2026-09-22 (W2.1, the morning). One closed day
+  # against what that weekday USUALLY is: the mean of the same weekday over the
+  # `weeks` closed weeks before it. "Down 40% on last Monday" can be last
+  # Monday's fault — a holiday, a sale, a closed till — and the morning
+  # compares against one week only (brief.sales_vs_same_weekday). Several
+  # weeks say whether yesterday was unusual, which is the question the morning
+  # asks (STANDARD §3: "what is unusual").
+  #
+  # NOT A get_sales MODE. The baseline is several days, not one window, so it
+  # is read as ONE ordinary series — get_sales by day over [the day minus
+  # weeks x offset_days, the day + 1) — and code picks the same weekdays out
+  # of that series and takes their mean (tools/overview.py _usual_day). No
+  # SQL is written for it and no figure is left to prose. `applies_to` names
+  # the read that makes it, so it is never offered as a get_sales compare_to.
+  # ---------------------------------------------------------------------------
+  usual_weekday:
+    display_name: "vs the usual weekday"
+    introduced: "2026-09-22"
+    applies_to: [get_overview]
+    # Which day: the newest CLOSED day — yesterday in Manila. A day in
+    # progress against whole days is a fall by construction (the partial
+    # window policy every comparison here keeps).
+    day: last_closed_day
+    partial_window_policy: refuse
+    # The same weekday, stepped back by the offset the brief measured — read
+    # from there, never typed twice.
+    offset_days: brief.sales_vs_same_weekday.baseline_offset_days
+    weeks: 4
+    statistic: mean
+    # A weekday with no figure (a shop closed, a feed down) is left out of the
+    # mean and counted on the row as `weeks_counted`; fewer than this and the
+    # row has no baseline and says so — never a mean of one or two days
+    # passed off as "usual".
+    min_weeks: 3
+    row_fields: [value, baseline, change, change_pct, direction, unit, baseline_status, weeks_counted, weekdays]
+    change_decimal_places: 2
+    change_pct_decimal_places: 1
+    change_pct_formula: "change / abs(baseline) * 100"
+    baseline_statuses:
+      ok:            "the day has a figure and at least min_weeks of the same weekdays do"
+      no_baseline:   "fewer than min_weeks of the same weekdays have a figure — nothing usual to compare against"
+      zero_baseline: "the usual figure is exactly zero, so a percentage is undefined"
+      no_current:    "the day itself has no figure; the usual figure is reported alone"
+
   not_supported:
     # to_date_same_elapsed was listed here until 2026-09-12; it is now a mode.
     full_period_extrapolation:
@@ -6971,6 +7016,7 @@ overview:
     stockouts: 10
     attention: 8
     shop_days: 2        # the shops whose days are read out: the largest movers in the estate's direction
+    usual_shops: 3      # the shops furthest from their usual weekday yesterday (W2.1)
   # Reads run at once. tools/_common.connect() gates connections per process;
   # four is what tools/objects.py uses for the same reason.
   max_parallel: 4
@@ -7008,6 +7054,11 @@ overview:
     # its day arrives with whether it lost visits or basket.
     day_transactions:    {tool: get_sales, arguments: {metric: transaction_count, group_by: store, date_range: yesterday, compare_to: same_weekday_last_week}, window: none}
     day_basket:          {tool: get_sales, arguments: {metric: average_transaction_value, group_by: store, date_range: yesterday, compare_to: same_weekday_last_week}, window: none}
+    # YESTERDAY AGAINST THE USUAL WEEKDAY (W2.1, 2026-09-22): the estate's and
+    # each shop's net sales by day over [yesterday - weeks x offset, yesterday
+    # + 1), one series each — comparisons.usual_weekday is how code reads them.
+    usual_estate_days:   {tool: get_sales, arguments: {metric: net_sales, group_by: [day]}, window: usual_weekday}
+    usual_shop_days:     {tool: get_sales, arguments: {metric: net_sales, group_by: [store, day]}, window: usual_weekday}
 
   # WHAT "CARRIED MOST OF IT" MEANS. The subject whose change, in the same
   # direction as the whole's, is compared with the whole's change of the SAME
@@ -7037,7 +7088,7 @@ overview:
   # The order findings are read in, most important first — the primary fact,
   # then what carried it, then the rest. Within a kind, largest absolute
   # change (money) first; ties by subject.
-  order: [unread, estate, concentration, drivers, shop, day_moved, product_fell, product_rose, attention, stockout]
+  order: [unread, estate, concentration, drivers, usual_day, shop, day_moved, product_fell, product_rose, attention, stockout]
 
   # EACH FINDING'S LINE. Filled by code from the row's own figures, formatted
   # by currency (money) and as the tools give percentages. {dir} is "up" or
@@ -7052,6 +7103,10 @@ overview:
     carried_most: "{subject} carried most of the estate's {movement} in {measure}: {subject} {dir} {change}, the estate {dir} {whole_change}."
     spread: "No one {noun} carried most of the {movement} in {measure}; the largest was {subject}, {dir} {change}, against the estate's {whole_change}."
     day_moved: "{subject}'s biggest {movement} was {day}: {value} against {baseline} on {baseline_day}."
+    # Yesterday against the usual weekday (comparisons.usual_weekday). The
+    # usual figure is the mean code took; the weekdays behind it are on the row.
+    usual_day: "{subject} on {day}: net sales {value}, {dir} {change_pct} from a usual {weekday} of {baseline} (the mean of the {weeks} {weekday}s before)."
+    usual_no_baseline: "{subject} on {day}: net sales {value}; too few of the {weekday}s before have a figure to say what a usual {weekday} is ({baseline_status})."
     product_fell: "{subject} fell {change} in {measure}, to {value} from {baseline}."
     product_rose: "{subject} rose {change} in {measure}, to {value} from {baseline}."
     # The warning list's rows, one line per source it ranks (attention.order).
@@ -7061,7 +7116,11 @@ overview:
       sales_vs_same_weekday: "{subject}'s net sales on {day} were {value}, {dir} {change_pct} from {baseline} the same weekday a week before; transactions {tx}, basket {basket}."
       stock_crossed_out: "{subject} at {where} ran out between {was_day} and {now_day}."
       newly_dead: "{subject} at {where} has not sold since {last_sold}."
-      other: "{subject} is on the warning list ({source})."
+      stock_running_out: "{subject} at {where} has {cover_days} days of cover left against a {window_days}-day window."
+      # NO INTERNAL ID IN THE LINE (W2.1, 2026-09-22): this said "({source})",
+      # which put `stock_running_out` in a sentence he quotes. A source with no
+      # line of its own names its subject and nothing internal.
+      other: "{subject} is on the warning list."
     stockout: "{subject} at {where} was out of stock {days_out} of {observed_days} days observed."
     unread: "The {part} could not be read: {reason}"
   # How each measure is said, from the metric a read returned.
@@ -7086,6 +7145,93 @@ overview:
     attention: warning list
     day_transactions: shops' transactions on the warning list's day
     day_basket: shops' basket on the warning list's day
+    usual_estate_days: estate's days against the usual weekday
+    usual_shop_days: shops' days against the usual weekday
+
+# =============================================================================
+# THE MORNING — answered before you ask (W2.1, 2026-09-22).
+#
+# NOT A BRIEFING OBJECT. The morning is a STANDING QUESTION ("how are we
+# doing?") that the ordinary loop answers — a broad question, so on
+# get_overview alone (composition.size.kinds.broad.answered_by) — and the room
+# opens on the newest answer to it. What this key holds is only what makes it
+# the morning: what is asked, when, and when an answer already given today may
+# be shown again instead of asked again.
+#
+# THE PEOPLE (Isaiah, 2026-09-22): Joy is the boss and reads the morning;
+# Isaiah is the builder. A standing question is one person's, so the morning
+# is made for whoever opens the room, switched OFF (rule 7) — each person
+# switches their own on. Nothing here names a user.
+# =============================================================================
+morning:
+  introduced: "2026-09-22"
+  # Asked exactly as a person would type it, so the answer is the one a typed
+  # question gets.
+  question: "How are we doing?"
+  # Carried as the question's standing instructions (standing_questions):
+  # preferences about ATTENTION, never definitions or evidence.
+  instructions:
+    - "Lead with yesterday against the usual weekday (the overview's usual_day findings), then what needs attention today."
+  # The owner, 2026-09-22: "8am". Manila, like every slot (app.services.slots).
+  at: {hour: 8, minute: 0}
+  kind: daily
+  # RULE 7: a standing question is born switched off. The owner switches it
+  # on — one sentence to Bob ("switch the morning on") or the room's switch.
+  born_enabled: false
+
+  # WHAT COUNTS AS ASKING IT AGAIN. A typed question is the morning question
+  # when, lower-cased with everything but letters, digits and spaces removed
+  # and spaces collapsed, it is one of these. Exact, not fuzzy: a question
+  # that only resembles it ("how did Rockwell do?") is a different question
+  # and gets a fresh answer.
+  asks:
+    - how are we doing
+    - how are we doing today
+    - hows business
+    - how is business
+    - how is the business doing
+    - how are things going
+
+  # THE SAME DAY'S ANSWER IS REUSED UNTIL THE DATA CHANGES — a repeat costs no
+  # model turn. Only an answer given today (Manila) to one of `asks`, by this
+  # person, whose turn finished well.
+  reuse:
+    same_day: true
+    # ITS READ TIME is the EARLIEST snapshot_timestamp any of its reads carries
+    # (an answer is as old as its oldest read — the overview's own rule,
+    # overview meta.snapshot_timestamp_is), found on the answer post's receipts
+    # and the calls stored with it. No read time found, no reuse.
+    read_time: earliest_snapshot_timestamp
+    # DATA CHANGED means something LANDED after that read time which the
+    # answer's reads cover. The overview reads closed days only — last week,
+    # the week before, yesterday against the usual weekday (the widest: weeks x
+    # offset_days + 1 = 29 days) — and the stock counts; so a sale rung up
+    # this morning changes nothing it said, and a late import of Sunday's
+    # sales does. `covers_days` bounds the look-back to the widest read, with
+    # room: [today - covers_days, today) in Manila.
+    covers_days: 35
+    # Each source is one vetted, parameterized statement (rule 1), run on the
+    # read-only role by tools/morning.py. A row with `landed` not null is a
+    # change, and `says` is how the room words it.
+    #   read_at      the answer's read time (timestamptz)
+    #   read_day     its Manila date
+    #   covers_from  today - covers_days, Manila midnight (timestamptz)
+    #   today        today's Manila midnight (timestamptz)
+    sources:
+      transactions:
+        says: sales for a closed day arrived
+        # created_at is when the row landed (the hourly sync writes it).
+        sql: >-
+          SELECT MAX(created_at) AS landed FROM new_transactions
+          WHERE transaction_time >= %(covers_from)s AND transaction_time < %(today)s
+            AND created_at > %(read_at)s
+      stock_count:
+        says: a new stock count arrived
+        # One count a day, dated; a date on or after the read's own day is a
+        # count the answer did not see (the nightly count lands ~23:00 Manila).
+        sql: >-
+          SELECT MAX(snapshot_date) AS landed FROM inventory_snapshots
+          WHERE snapshot_date >= %(read_day)s
 
 watches:
 
