@@ -48,9 +48,10 @@ from __future__ import annotations
 import asyncio
 import functools
 import json
+import re
 import sys
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, AsyncIterator, List, Literal, Mapping, Optional
 
@@ -379,6 +380,95 @@ class DeskContext(BaseModel):
                          f"expected one of {', '.join(_DESK_ESTATE)}")
 
 
+class ScreenWindow(BaseModel):
+    """The dates a screen is showing, as the screen's own date control holds them."""
+
+    start: date
+    end: date
+
+
+# A subject that is nothing but a number, or carries a currency or percent
+# sign, is a FIGURE, and a screen tells Bob what it is and what it shows —
+# never what the figures on it are (W1.4). Refused at the edge.
+_FIGURE_LIKE = re.compile(r"^[\s\d.,:+\-/()]*$|[₱$%]")
+
+# How many subjects a screen may name to Bob: the bound the desk's drawn
+# subjects already carry (surface.desk.context.max_drawn_subjects).
+_SCREEN_NAMED = 6
+
+
+class ScreenFrame(BaseModel):
+    """
+    THE SCREEN A QUESTION IS ASKED FROM, as that screen registered itself (W1.4,
+    2026-09-22: "alive on every page").
+
+    Bob is on every page and receives that page as context (UI rule 1). Until
+    this a BI screen sent its access key and nothing else — "warehouse" — so a
+    question asked about what was on screen had no referent. Each screen now
+    says what it IS (its key and name, the tab it is on) and what it SHOWS (the
+    subjects it is drawn for, by name, and its window) — never a figure: Bob
+    cannot see the screen's numbers and reads every one from a tool.
+
+    It becomes the `page_context` sentence the loop already reads out; a kept
+    page binds `page_scope`, which is an identity, and this is not one.
+    """
+
+    key: str = Field(..., min_length=1, max_length=40, pattern=r"^[a-z0-9_\-]+$")
+    label: str = Field(..., min_length=1, max_length=60)
+    view: Optional[str] = Field(None, max_length=60)
+    subjects: List[str] = Field(default_factory=list, max_length=_DESK_MAX_DRAWN)
+    window: Optional[ScreenWindow] = None
+
+    @field_validator("subjects")
+    @classmethod
+    def _names_not_figures(cls, value: List[str]) -> List[str]:
+        out: List[str] = []
+        for name in value:
+            said = " ".join(str(name).split())
+            if not said or len(said) > 80:
+                raise ValueError("a subject is a name of 1 to 80 characters")
+            if _FIGURE_LIKE.search(said):
+                raise ValueError(f"{said!r} is a figure, not a name; a screen names what it shows")
+            out.append(said)
+        return out
+
+    @field_validator("window")
+    @classmethod
+    def _window_runs_forward(cls, value: Optional[ScreenWindow]) -> Optional[ScreenWindow]:
+        if value is not None and value.end < value.start:
+            raise ValueError("a window ends on or after it starts")
+        return value
+
+
+def _listed(names: List[str]) -> str:
+    """'A', 'A and B', 'A, B and C', and past the bound 'A, … and 3 more'."""
+    shown = names[:_SCREEN_NAMED]
+    rest = len(names) - len(shown)
+    if rest:
+        return f"{', '.join(shown)} and {rest} more"
+    if len(shown) == 1:
+        return shown[0]
+    return f"{', '.join(shown[:-1])} and {shown[-1]}"
+
+
+def screen_context(screen: ScreenFrame) -> str:
+    """
+    The screen as the one line the loop reads out: `[The user is on the
+    <this> page.]`. Its name, then in brackets the tab, the subjects by name
+    and the window — so "why is this one down?" on /warehouse has a referent.
+    No figure, because none travels.
+    """
+    parts: List[str] = []
+    if screen.view:
+        parts.append(f"the {screen.view} tab")
+    if screen.subjects:
+        parts.append(f"showing {_listed(screen.subjects)}")
+    if screen.window is not None:
+        start, end = screen.window.start.isoformat(), screen.window.end.isoformat()
+        parts.append(f"for {start}" if start == end else f"for {start} to {end}")
+    return screen.label + (f" ({', '.join(parts)})" if parts else "")
+
+
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     # What the person has selected on the workspace, and the window they moved
@@ -398,6 +488,10 @@ class AskRequest(BaseModel):
     # tool is not in his schema. Legacy callers (the Operations chrome) send
     # page_context alone and are unaffected.
     page_scope: Optional[PageScope] = None
+    # The screen asked from, as it registered itself (W1.4): what it is and
+    # what it shows, never a figure. When present it is what the loop is told
+    # in place of `page_context`, which stays for callers that send a name.
+    screen: Optional[ScreenFrame] = None
     # The conversation so far. The loop is stateless per request, so without
     # this every question stands alone and "pin that" has nothing to refer to.
     history: List[HistoryTurn] = Field(default_factory=list, max_length=20)
@@ -2559,7 +2653,10 @@ async def ask(
         _safe_stream(
             request.question,
             user_id=user.username,
-            page_context=request.page_context,
+            # The screen's own account of itself where it gave one (W1.4);
+            # otherwise the name a legacy caller sent.
+            page_context=(screen_context(request.screen) if request.screen is not None
+                          else request.page_context),
             pin_writer=_pin_writer(user.username),
             history=history,
             workflow_writer=(_WorkflowWriter(user.username, user.role)
