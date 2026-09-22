@@ -44,7 +44,7 @@ import { estateFor, scopeChip } from './estate';
 import { readDeskDefinitions, replayStoredCall, type DeskAlternative } from '../services/deskApi';
 import { Tokens } from './Tokens';
 import { Composer, type NamedReference } from './Composer';
-import { pageScopeFor } from '../components/bob/pageScope';
+import { pageScopeFor, threadScope } from '../components/bob/pageScope';
 import type { Bound } from './mentions';
 import { asSelection, maxSubjects, subjectOnBoard,
          toggleSubject, type Subject } from './subjects';
@@ -174,14 +174,26 @@ export default function Room() {
 
   // A stored thread opens once, with its rows and compositions restored from
   // the posts — so the board a reload rebuilds is the board that was there.
+  //
+  // WITH ITS OWN PAGE SCOPE (W1.4 — the bug at this line): `threadScope` read
+  // the page a thread's answers had read and nothing passed it, so a thread
+  // reopened here lost its page and its next question could not see it.
+  //
+  // AND NOT OVER ITSELF: a thread the stream is already holding — "Open in
+  // Bob" from beside a page, perhaps mid-answer — is already on screen, and
+  // re-opening it from the record would stop the answer being written.
+  const ownPages = usePagesForGhosts();
   useEffect(() => {
-    if (!threadId || !thread.ready || opened.current === threadId) return;
+    if (!threadId || opened.current === threadId) return;
+    if (bob.threadId === threadId) { opened.current = threadId; return; }
+    if (!thread.ready) return;
     opened.current = threadId;
     bob.open(
       restoreFromPosts(threadHistory(thread.posts, thread.chat, threadId), thread.posts),
       threadId,
+      threadScope(thread.posts, ownPages),
     );
-  }, [threadId, thread.ready, thread.posts, thread.chat, bob]);
+  }, [threadId, thread.ready, thread.posts, thread.chat, bob, ownPages]);
 
   useEffect(() => {
     if (!threadId && bob.storedThreadId) navigate(`/w/${bob.storedThreadId}`, { replace: true });
@@ -246,7 +258,6 @@ export default function Room() {
   // cached read of things that exist, no SQL on the path and no model on it;
   // the ghost uses only the ones whose title NAMES something on the board, so
   // this is a completion and never a menu of every page.
-  const ownPages = usePagesForGhosts();
   const boardSubjects = useMemo(() => {
     const names: string[] = [];
     const seen = new Set<string>();

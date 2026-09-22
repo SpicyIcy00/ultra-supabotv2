@@ -1,5 +1,5 @@
 /**
- * A thread has one page scope, decided when it starts.
+ * A thread's page scope, and the page the conversation follows (W1.4).
  *
  * The event source is a stub that records every request body and answers
  * with a `start` and a `done` frame, so what is under test is the hook's
@@ -17,6 +17,8 @@ interface Sent {
   page_context: string | null;
   page_scope: { page_id: string | null } | null;
   thread_id: string | null;
+  history: unknown[];
+  screen?: unknown;
 }
 
 const sent: Sent[] = [];
@@ -86,13 +88,48 @@ describe('page scope on the stream', () => {
     expect(sent[1].page_context).toBeNull();
   });
 
-  it('ignores a different scope offered inside a thread', async () => {
+  // REWRITTEN 2026-09-22 (W1.4). This held "a different scope offered inside a
+  // thread is ignored" for every caller — scope belonged to the thread. It now
+  // holds only for a question that names no page (an @page in the room); a
+  // question asked from ANOTHER PAGE starts a new thread there, below.
+  it('ignores a different scope offered inside a thread by a question from no page', async () => {
     const { result } = mount();
     await act(() => result.current.ask('q', { pageScope: { page_id: 'a', title: 'A' } }));
     await waitFor(() => expect(result.current.threadId).toBe('thread-1'));
     await act(() => result.current.ask('q2', { pageScope: { page_id: 'b', title: 'B' } }));
     expect(sent[1].page_scope).toEqual({ page_id: 'a' });
     expect(result.current.pageScope).toEqual({ page_id: 'a', title: 'A' });
+  });
+
+  it('follows the page: the same page continues the thread, another page starts a new one', async () => {
+    const { result } = mount();
+    await act(() => result.current.ask('what is on here?', {
+      where: 'page:a', pageContext: 'Pages / A', pageScope: { page_id: 'a', title: 'A' },
+    }));
+    await waitFor(() => expect(result.current.threadId).toBe('thread-1'));
+    expect(result.current.where).toBe('page:a');
+
+    await act(() => result.current.ask('add date filters to this', {
+      where: 'page:a', pageContext: 'Pages / A', pageScope: { page_id: 'a', title: 'A' },
+    }));
+    expect(sent[1].thread_id).toBe('thread-1');
+    expect(sent[1].page_scope).toEqual({ page_id: 'a' });
+    expect(sent[1].history.length).toBeGreaterThan(0);
+
+    // On the warehouse now: a new thread, no page scope, nothing of the old one.
+    await act(() => result.current.ask('which shops are short?', {
+      where: 'screen:warehouse', pageContext: 'Warehouse',
+      screen: { key: 'warehouse', label: 'Warehouse' },
+    }));
+    expect(sent[2].thread_id).toBeNull();
+    expect(sent[2].page_scope).toBeNull();
+    expect(sent[2].history).toEqual([]);
+    expect(sent[2].screen).toEqual({ key: 'warehouse', label: 'Warehouse' });
+    await waitFor(() => expect(result.current.threadId).toBe('thread-3'));
+    expect(result.current.where).toBe('screen:warehouse');
+    expect(result.current.pageScope).toBeNull();
+    // Only the new thread's own question is on screen.
+    expect(result.current.turns.filter((t) => t.role === 'user')).toHaveLength(1);
   });
 
   it('has no scope on a fresh Ask, and reset clears it', async () => {

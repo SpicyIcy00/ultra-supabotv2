@@ -13,13 +13,19 @@
  * identity. `pageContextFor` (pageShape.ts) makes the display string Bob
  * reads out, and it is never parsed back.
  *
- * SCOPE BELONGS TO THE THREAD. The first page-aware question binds the
- * thread to that page; every follow-up in it carries the same scope whether
- * or not the person is still standing on the page; a fresh Ask has none;
- * and a thread reopened after a reload gets its scope back from what Bob
- * recorded on its answers, not from anything guessed. A rename changes the
- * title on the indicator and nothing else: the thread stays bound to the
- * same id, and so do view_page and edit_page.
+ * THE CONVERSATION FOLLOWS THE PAGE (W1.4, 2026-09-22 — reverses
+ * 2026-09-08's "scope belongs to the thread"). A question asked from a page
+ * binds the thread it starts to that page. A follow-up from the SAME page
+ * continues it under the same scope; a question asked from ANOTHER page starts
+ * a new thread there, bound to that page, because Bob now answers beside the
+ * page you are on and an answer about the Reorder page drawn beside the
+ * warehouse would be about the wrong thing. A question that names no page (the
+ * room's own line, where you are standing in the conversation itself) keeps
+ * the thread and its scope. A fresh Ask has none; a thread reopened after a
+ * reload gets its scope back from what Bob recorded on its answers, not from
+ * anything guessed. A rename changes the title on the indicator and nothing
+ * else: the thread stays bound to the same id, and so do view_page and
+ * edit_page.
  *
  * A PRE-2026-09-08 THREAD stored only a title. It is resolved against the
  * caller's CURRENT pages by exact title when the thread is opened; a title
@@ -52,19 +58,36 @@ export function retitled(scope: PageScope | null, pageId: string, title: string)
   return { page_id: scope.page_id, title };
 }
 
+/** The thread a question is asked into, and the page it was asked from. */
+export interface OpenThread {
+  thread: string | null;
+  scope: PageScope | null;
+  /** `here.whereOf` of the page the thread was asked from; null for none. */
+  where: string | null;
+}
+
 /**
- * The scope a question is sent with.
+ * THE THREAD AND SCOPE A QUESTION IS SENT WITH.
  *
- * Inside a thread it is the thread's, whatever the caller asked for — scope
- * is immutable once a thread has begun. Outside one it is what was asked
- * for, and that is what the new thread is bound to.
+ * `asked.where` is the page the person is standing on (`here.whereOf`), sent
+ * by the line that is on every page; the room's own composer sends none.
+ *
+ *   no thread open            a new one, bound to what was asked for
+ *   asked from another page   a NEW thread, bound to that page (fresh)
+ *   asked from the same page  the thread's own scope
+ *   asked from no page        the thread's own scope — a scope offered
+ *                             mid-thread without a page (an @page in the
+ *                             room) still binds nothing
  */
-export function scopeForAsk(
-  openThread: string | null,
-  bound: PageScope | null,
-  requested: PageScope | null | undefined,
-): PageScope | null {
-  return openThread ? bound : (requested ?? null);
+export function askPlan(
+  open: OpenThread,
+  asked: { scope?: PageScope | null; where?: string | null },
+): { fresh: boolean; scope: PageScope | null; where: string | null } {
+  const fresh = open.thread !== null && asked.where != null && asked.where !== open.where;
+  if (open.thread === null || fresh) {
+    return { fresh, scope: asked.scope ?? null, where: asked.where ?? null };
+  }
+  return { fresh: false, scope: open.scope, where: open.where };
 }
 
 /** The scope as the server takes it: the identity, and nothing else. */

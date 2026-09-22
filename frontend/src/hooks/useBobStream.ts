@@ -31,20 +31,24 @@
  * `cancelled`; whether the server went on to finish and store it is unknown
  * from here, and the UI says exactly that.
  *
- * A THREAD HAS ONE PAGE SCOPE, DECIDED WHEN IT STARTS. A question asked from
- * a page binds the new thread to that page; every follow-up sends the same
- * scope whether or not the person is still standing on the page, and a
- * scope offered mid-thread is ignored. `reset` clears it; `open` sets it to
- * the reopened thread's own (recovered from what Bob recorded on its
- * answers) or to nothing. It lives here, on the one stream the shell owns,
- * and not in route state — which is lost on the first navigation and was
- * why the page context used to survive exactly one turn (pageScope.ts).
+ * THE CONVERSATION FOLLOWS THE PAGE (W1.4, 2026-09-22 — reverses "a thread
+ * has one page scope, decided when it starts"). A question asked from a page
+ * binds the new thread to that page and remembers WHERE it was asked
+ * (`where`); a follow-up from the same page continues it, and a question from
+ * another page starts a new thread there (pageScope.askPlan). A question from
+ * no page — the room's own composer — continues the thread under its scope.
+ * `reset` clears both; `open` sets the scope to the reopened thread's own
+ * (recovered from what Bob recorded on its answers) or to nothing. It lives
+ * here, on the one stream the shell owns, and not in route state — which is
+ * lost on the first navigation and was why the page context used to survive
+ * exactly one turn (pageScope.ts).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { useQueryClient } from '@tanstack/react-query';
 import { authenticatedFetch } from '../services/httpAuth';
-import { retitled, scopeForAsk, scopeForRequest } from '../components/bob/pageScope';
+import { askPlan, retitled, scopeForRequest } from '../components/bob/pageScope';
+import type { ScreenFrame } from '../components/bob/here';
 import type {
   ActionOffer,
   AskHistoryTurn,
@@ -137,6 +141,18 @@ export interface AskOptions {
    */
   pageScope?: PageScope | null;
   /**
+   * WHERE THE PERSON IS STANDING (`here.whereOf`), sent by the line that is
+   * on every page (W1.4). A thread asked from one page and continued from
+   * another is two conversations: a different `where` starts a new thread.
+   * Absent — the room's own composer — continues whatever thread is open.
+   */
+  where?: string | null;
+  /**
+   * The screen's account of itself (W1.4): key, tab, subjects by name,
+   * window. Never a figure. The server reads it out in place of pageContext.
+   */
+  screen?: ScreenFrame | null;
+  /**
    * The post this question replies to, inside the current thread. Only
    * meaningful when a thread is open; the server validates it is in the thread.
    */
@@ -167,6 +183,8 @@ export function useBobStream() {
    */
   const [storedThreadId, setStoredThreadId] = useState<string | null>(null);
   const [pageScope, setPageScope] = useState<PageScope | null>(null);
+  // Where the open thread was asked from (`here.whereOf`), or null.
+  const [where, setWhereState] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const qc = useQueryClient();
 
@@ -209,6 +227,13 @@ export function useBobStream() {
   const setScope = useCallback((scope: PageScope | null) => {
     scopeRef.current = scope;
     setPageScope(scope);
+  }, []);
+
+  // And where the thread was asked from, likewise.
+  const whereRef = useRef<string | null>(null);
+  const setWhere = useCallback((at: string | null) => {
+    whereRef.current = at;
+    setWhereState(at);
   }, []);
 
   /** Mutate the in-flight bob turn (always the last one). */
@@ -258,7 +283,8 @@ export function useBobStream() {
     setThread(null);
     setStoredThread(null);
     setScope(null);
-  }, [cancel, setThread, setStoredThread, setScope]);
+    setWhere(null);
+  }, [cancel, setThread, setStoredThread, setScope, setWhere]);
 
   /**
    * Load stored turns. They take the place of whatever was on screen, and the
@@ -269,7 +295,8 @@ export function useBobStream() {
    * care which, and must not, so that one `ask` continues both.
    */
   const open = useCallback(
-    (loaded: BobTurn[], thread: string | null, scope: PageScope | null = null) => {
+    (loaded: BobTurn[], thread: string | null, scope: PageScope | null = null,
+     at: string | null = null) => {
       cancel();
       turnsRef.current = loaded;
       setTurns(loaded);
@@ -280,8 +307,9 @@ export function useBobStream() {
       // The reopened thread's own scope, or none. Never the previous
       // thread's: opening B after A must not carry A's page into B.
       setScope(scope);
+      setWhere(at);
     },
-    [cancel, setThread, setStoredThread, setScope],
+    [cancel, setThread, setStoredThread, setScope, setWhere],
   );
 
   const ask = useCallback(
@@ -293,14 +321,25 @@ export function useBobStream() {
       const ctrl = new AbortController();
       abortRef.current = ctrl;
 
+      // THE CONVERSATION FOLLOWS THE PAGE (W1.4): asked from another page
+      // than the open thread was, this is a new thread there, and nothing of
+      // the old one travels with it — not its turns, not its scope.
+      const plan = askPlan(
+        { thread: threadRef.current, scope: scopeRef.current, where: whereRef.current },
+        { scope: options.pageScope, where: options.where },
+      );
+      if (plan.fresh) {
+        turnsRef.current = [];
+        setTurns([]);
+        setThread(null);
+        setStoredThread(null);
+      }
       // Captured BEFORE this turn is appended, so it is the conversation up to
       // but not including the question being asked.
       const history = toHistory(turnsRef.current);
       const thread = threadRef.current;
-      // The thread's scope if one is open; otherwise what was asked for,
-      // which the thread about to start is bound to.
-      const scope = scopeForAsk(thread, scopeRef.current, options.pageScope);
-      if (!thread) setScope(scope);
+      const scope = plan.scope;
+      if (!thread) { setScope(scope); setWhere(plan.where); }
 
       const now = new Date().toISOString();
       setTurns((prev) => [
@@ -341,6 +380,7 @@ export function useBobStream() {
             question,
             page_context: options.pageContext ?? null,
             page_scope: scopeForRequest(scope),
+            screen: options.screen ?? null,
             history,
             thread_id: thread,
             parent_id: thread ? (options.parentId ?? null) : null,
@@ -715,7 +755,7 @@ export function useBobStream() {
         setState((s) => (s === 'error' || s === 'complete' ? s : 'idle'));
       }
     },
-    [cancel, patchLast, qc, setThread, setStoredThread, setScope],
+    [cancel, patchLast, qc, setThread, setStoredThread, setScope, setWhere],
   );
 
   return {
@@ -725,6 +765,8 @@ export function useBobStream() {
     cancel,
     /** The page the open thread is scoped to, or null. */
     pageScope,
+    /** Where the open thread was asked from (`here.whereOf`), or null. */
+    where,
     // `complete` is NOT busy: the answer is finished and the composer must
     // take the next question immediately, whatever the mark is still doing.
     busy: state !== 'idle' && state !== 'error' && state !== 'complete',

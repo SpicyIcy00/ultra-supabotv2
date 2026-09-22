@@ -1,0 +1,93 @@
+/*
+ * THE LINE ON EVERY PAGE, AND HIS ANSWER BESIDE IT (W1.4).
+ *
+ * The wrapper wears `.room` for the room's tokens and type, and nothing else
+ * of it: everything inside is fixed, so it takes no height and paints no
+ * ground over the page it sits on.
+ *
+ * MOBILE-FIRST (UI rule 7): the sheet over the bottom of the screen is the
+ * real layout; from 900px it is a panel down the right, beside the page, and
+ * the page makes room for it rather than being covered.
+ */
+.room.r-here {
+  min-height: 0;
+  background: none;
+  transition: none;
+}
+
+/* On the BI app's phone layout the tab bar owns the bottom 64px; the line
+   stands above it, in the same place relative to the page. */
+@media (max-width: 767px) {
+  .r-here[data-chrome='legacy'] .r-here-line {
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* On a desktop the BI app's sidebar holds the left 256px; the line centres in
+   the page beside it, as the room's line centres beside the rail. */
+@media (min-width: 1024px) {
+  .r-here[data-chrome='legacy'] .r-here-line { left: 256px; }
+}
+
+/* The line is as wide as the design's (840) or the room it is given, whichever is less. */
+.r-here .r-compose { width: min(840px, 100%); }
+
+.r-here-reopen { flex: none; white-space: nowrap; }
+
+.r-here-panel {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: 74px;
+  max-height: 62dvh;
+  display: flex; flex-direction: column;
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 16px 16px 0 0;
+  box-shadow: var(--shadow-2), 0 0 0 1px var(--edge);
+  z-index: 16;
+  overflow: hidden;
+}
+@media (max-width: 767px) {
+  .r-here[data-chrome='legacy'] .r-here-panel {
+    bottom: calc(138px + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (min-width: 900px) {
+  .r-here-panel {
+    left: auto; right: 16px; top: 16px; bottom: 96px;
+    width: 420px; max-height: none;
+    border-radius: var(--radius);
+  }
+  /* THE PAGE MAKES ROOM (beside, not over). */
+  :root[data-here='open'] .r-here-beside { padding-right: 452px; }
+  /* and the line stays under the page, not under the panel */
+  :root[data-here='open'] .r-here .r-here-line { right: 452px; }
+}
+
+.r-here-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px 10px 14px;
+  border-bottom: 1px solid var(--edge);
+  flex: none;
+}
+.r-here-mark { flex: none; display: grid; place-items: center; width: 40px; height: 26px; overflow: hidden; }
+.r-here-mark canvas { width: 40px; height: auto; }
+.r-here-title { flex: 1; min-width: 0; font: 500 13.5px/1.3 var(--sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.r-here-on { color: var(--ink-3); font-weight: 400; }
+.r-here-close {
+  flex: none; width: 30px; height: 30px; border-radius: 50%; border: 0;
+  background: var(--sunk); color: var(--ink-2); cursor: pointer; font-size: 16px; line-height: 1;
+}
+.r-here-close:hover { background: var(--raise); color: var(--ink); }
+
+.r-here-body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 12px 16px 18px;
+  overscroll-behavior: contain;
+}
+.r-here-turn + .r-here-turn { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--edge); }
+.r-here-q { margin: 0 0 8px; color: var(--ink-3); font: 400 13px/1.45 var(--sans); }
+.r-here-answer .r-say--claim { font-size: 19px; line-height: 1.35; }
+/* The figures in a column the width of a phone, which is what they are drawn for. */
+.r-here-figures { margin-top: 12px; }
+.r-here-figures .r-beside, .r-here-figures .r-area { width: auto; max-width: 100%; }

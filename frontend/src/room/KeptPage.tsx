@@ -12,7 +12,9 @@
  *
  * THE PAGE'S CONTROLS SURVIVE, as room controls: rename, purpose and delete
  * for the page; refresh, move up, move down, move, remove from page and delete
- * for each analysis; and a line at the foot to ask Bob about the page. Two
+ * for each analysis; and the page registers itself (W1.4) so the one line at
+ * the foot of every screen asks Bob about THIS page, by its id, and he
+ * answers beside it — reading and editing it without leaving it. Two
  * acts keep two words — "Remove from page" keeps the analysis in Ungrouped,
  * "Delete" deletes it — for the reason PinnedPage gave when it split them.
  *
@@ -33,8 +35,9 @@ import {
 import { readDeskDefinitions } from '../services/deskApi';
 import { readStoreAppearance } from '../services/storesApi';
 import { choiceBody, choiceFor, movesPin, type PageChoice } from '../components/bob/pageChoice';
-import { pageScopeFor } from '../components/bob/pageScope';
-import { pageContextFor, UNGROUPED_NAME } from '../components/bob/pageShape';
+import { UNGROUPED_NAME } from '../components/bob/pageShape';
+import { askFrom, hereForKeptPage } from '../components/bob/here';
+import { useRegisterHere } from '../hooks/useHere';
 import { buildBoard } from './board';
 import { Board } from './render';
 import { identitiesFrom } from './identity';
@@ -104,6 +107,10 @@ export function KeptPage({ pageId, onBack }: {
 
   const title = pageId === null ? UNGROUPED_NAME : page.data?.title;
   const list = pins.data ?? [];
+  // WHAT THIS PAGE IS, for the line (W1.4): its id, so view_page and
+  // edit_page bind to it, and its title for the words. Registered from the
+  // first paint — the id is known before the title is.
+  useRegisterHere(hereForKeptPage(pageId, pageId === null ? null : page.data?.title));
 
   return (
     <IdentityContext.Provider value={identities}>
@@ -190,7 +197,6 @@ export function KeptPage({ pageId, onBack }: {
             />
           ))}
 
-          <PageAsk pageId={pageId} title={title ?? null} />
         </div>
       </ExplainsOnlyContext.Provider>
     </IdentityContext.Provider>
@@ -209,7 +215,6 @@ export function KeptPin({ pin, pageId, title, actions }: {
 }) {
   const qc = useQueryClient();
   const bob = useBob();
-  const navigate = useNavigate();
   const run = useMutation<PinRun, unknown, void>({
     mutationFn: () => runPin(pin.id),
     onSuccess: () => { void qc.invalidateQueries({ queryKey: ['pins'] }); },
@@ -224,22 +229,21 @@ export function KeptPin({ pin, pageId, title, actions }: {
   const empty = (data?.results ?? []).filter((r) => r.status === 'ok' && !r.rows?.length);
 
   // A TAP ON A ROW ASKS BOB ABOUT IT, from this page — the room's `why`,
-  // with the id the row carried and the page as scope. Nothing here is a
-  // control that does nothing.
+  // with the id the row carried and the page as scope — and he answers
+  // BESIDE the page (W1.4), in the thread this page's questions share, rather
+  // than taking you to /bob. Nothing here is a control that does nothing.
   const on: TileActions = useMemo(() => {
     const about = (label: string, dimension: Parameters<TileActions['why']>[1]) => {
+      if (bob.busy) return;
       const subject = subjectOnBoard({ answers, board, retuned: {}, defs: null }, label, dimension ?? 'store');
       const selection = asSelection([subject]);
-      bob.reset();
       void bob.ask('why?', {
         ...(selection ? { desk: { selection } } : {}),
-        pageContext: pageContextFor(pageId === null ? null : title),
-        pageScope: pageScopeFor(pageId, title),
+        ...askFrom(hereForKeptPage(pageId, title)),
       });
-      navigate('/bob');
     };
     return { open: () => {}, patch: () => {}, pick: about, why: about };
-  }, [answers, board, bob, navigate, pageId, title]);
+  }, [answers, board, bob, pageId, title]);
 
   return (
     <section className="r-kept-pin" data-pin={pin.id}>
@@ -436,33 +440,5 @@ function MoveControl({ pin, onMoved }: { pin: Pin; onMoved: () => void }) {
       )}
       {error && <span className="r-note">{error}</span>}
     </span>
-  );
-}
-
-/**
- * ASK BOB ABOUT THIS PAGE. Sent, not drafted: the question goes now, bound
- * to this page's identity as its scope, and the room is where the answer
- * arrives. Nothing on the page travels with it but the page itself.
- */
-function PageAsk({ pageId, title }: { pageId: string | null; title: string | null }) {
-  const bob = useBob();
-  const navigate = useNavigate();
-  const [q, setQ] = useState('');
-  return (
-    <form className="r-kept-ask" onSubmit={(e) => {
-      e.preventDefault();
-      const text = q.trim();
-      if (!text || bob.busy) return;
-      bob.reset();
-      void bob.ask(text, {
-        pageContext: pageContextFor(pageId === null ? null : title),
-        pageScope: pageScopeFor(pageId, title),
-      });
-      navigate('/bob');
-    }}>
-      <input type="text" className="r-field" value={q} onChange={(e) => setQ(e.target.value)}
-             placeholder="Ask Bob about this page…" aria-label="Ask Bob about this page" />
-      <button type="submit" className="r-act" disabled={!q.trim() || bob.busy}>Ask</button>
-    </form>
   );
 }

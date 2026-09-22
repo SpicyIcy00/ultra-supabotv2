@@ -3,6 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { PullToRefresh } from '../components/mobile/PullToRefresh';
 import { StoresDashboard } from '../components/dashboard/StoresDashboard';
 import { VendingDashboard } from '../components/dashboard/VendingDashboard';
+import { useDashboardStore } from '../stores/dashboardStore';
+import { useRegisterHere } from '../hooks/useHere';
+import { storeNames, windowOf } from '../components/bob/here';
 
 type TabType = 'stores' | 'vending';
 
@@ -23,6 +26,16 @@ export const Dashboard: React.FC = () => {
 
   // Stores is the default: anything that isn't /vending shows it.
   const activeTab: TabType = location.pathname === TAB_PATHS.vending ? 'vending' : 'stores';
+
+  // WHAT THIS PAGE SHOWS, for Bob's line (W1.4): the tab, the stores it is
+  // drawn for by name and its window. Never a figure — he reads those himself.
+  const selected = useDashboardStore((s) => s.selectedStores);
+  const stores = useDashboardStore((s) => s.stores);
+  const current = useDashboardStore((s) => s.dateRanges.current);
+  useRegisterHere(activeTab === 'vending'
+    ? { key: 'vending', label: 'Dashboard', view: 'Vending' }
+    : { key: 'dashboard', label: 'Dashboard', view: 'Stores',
+        subjects: storeNames(selected, stores), window: windowOf(current) });
 
   return (
     <PullToRefresh>

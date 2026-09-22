@@ -13,7 +13,10 @@
  * own five regions and wears no rail. BobShell remains the chrome for the
  * rooms, and Layout is the existing application on dark, every route at its
  * own path. The stream provider sits above all of it, so an answer keeps
- * arriving whichever surface the person is on.
+ * arriving whichever surface the person is on — and since W1.4 (2026-09-22)
+ * so does ONE ask line, `BobHere`, mounted once beside the routes: every page
+ * in either chrome has it, and he answers beside the page instead of taking
+ * you to /bob.
  */
 import React, { Suspense } from 'react';
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom';
@@ -26,6 +29,7 @@ import { RequirePage, NoAccessPage } from './components/RequirePage';
 import { LandingRedirect } from './components/LandingRedirect';
 import { BobStreamProvider } from './components/bob/BobStreamProvider';
 import { RoomShell } from './room/RoomShell';
+import { BobHere } from './room/BobHere';
 
 // Bob. One surface: the room he composes, at "/" and at a thread's own
 // address. It replaced the desk and the parallel /w2 board on 2026-09-11 —
@@ -155,6 +159,9 @@ function App() {
                 <Route path="*" element={<ChromeRoutes />} />
               </Routes>
             </Suspense>
+            {/* THE ONE LINE, ABOVE BOTH CHROMES (W1.4): on every page but
+                the room, whose composer it is, and the print sheet. */}
+            <BobHere />
           </BobStreamProvider>
         </SessionGuard>
       </BrowserRouter>

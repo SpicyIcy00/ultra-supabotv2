@@ -12,6 +12,7 @@ import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ReplenishmentReports from './ReportingPage';
 import BarcodeGenerator from './BarcodePage';
+import { useRegisterHere } from '../hooks/useHere';
 
 type WarehouseTab = 'replenishment' | 'barcodes';
 
@@ -23,6 +24,12 @@ const TABS: { key: WarehouseTab; label: string }[] = [
 const WarehousePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab: WarehouseTab = searchParams.get('tab') === 'barcodes' ? 'barcodes' : 'replenishment';
+
+  // WHAT THIS PAGE IS, for Bob's line (W1.4): the warehouse, on this tab.
+  useRegisterHere({
+    key: 'warehouse', label: 'Warehouse',
+    view: TABS.find((t) => t.key === activeTab)?.label ?? null,
+  });
 
   const selectTab = (tab: WarehouseTab) => {
     // Keep the default tab clean of query noise
