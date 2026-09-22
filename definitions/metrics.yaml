@@ -7169,9 +7169,13 @@ morning:
   # question gets.
   question: "How are we doing?"
   # Carried as the question's standing instructions (standing_questions):
-  # preferences about ATTENTION, never definitions or evidence.
+  # preferences about ATTENTION, never definitions or evidence. Worded so it
+  # asks for no window: the first draft said "lead with yesterday" and he read
+  # the overview over `yesterday` — day against day, which
+  # brief.sales_vs_same_weekday measured as the wrong comparison — when the
+  # usual_day findings are in the overview over its default window already.
   instructions:
-    - "Lead with yesterday against the usual weekday (the overview's usual_day findings), then what needs attention today."
+    - "Ask the overview for its default window. Lead with its usual_day findings (how the last day compared with a usual day for that weekday), then the week, then what needs attention today."
   # The owner, 2026-09-22: "8am". Manila, like every slot (app.services.slots).
   at: {hour: 8, minute: 0}
   kind: daily
