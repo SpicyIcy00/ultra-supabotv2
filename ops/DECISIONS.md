@@ -5971,3 +5971,39 @@ for a chart. Per round: reads ~11 s, drill-downs into a flagged shop (`get_chang
 The broad target is now the writing round's, not the reads'. (The same run re-measured the fact
 question at 6.8 s median and the narrow one at 32.1 s, inside 20–40 — against 53.9 s in the
 wave's own set, so the narrow figure is not settled.)
+
+## 2026-09-22 — wave 1 completed: what closed each miss
+
+The owner, when wave 1 closed with three targets missed: *"We don't stop until its fully
+completed."* Four changes, each measured live (five runs a question) and live at `ec1a18d`.
+
+1. **A question of a size is answered by one call, then composed**
+   (`composition.size.kinds.<size>.answered_by`: broad `get_overview`, focused `get_change`).
+   Once it has run, code refuses any further read with `composition.size.answered_refused`; the
+   drill-down is the next step he offers. Measured before: 4 of 5 broad turns drilled into a
+   flagged shop (19–46 s); every narrow run that read past `get_change` took 41–95 s. A forced
+   `tool_choice` was tried first and refused: DeepSeek rejects a named tool with thinking on, and
+   thinking off breaks the answer (DECISIONS 2026-09-21).
+2. **A round that names its claim settles on it**, with or without words beside it; the claim is
+   his words and code puts it where the answer goes (`rounds.settle`). This reverses the P6.j
+   reminder round ("write the answer NOW") — three tests held it and were rewritten. And `size`
+   left `composition.refused_fields`: W1.1 gave compose its own `size`, and a block carrying it
+   is that word misplaced, dropped like any unknown field.
+3. **A condition to watch is its own effort kind, `automate`** ("tell me if", "let me know
+   when", "alert me", …), level high and told no size. At the close, "Tell me if any shop's
+   sales drop more than they usually do" had become `fresh` → a LOOKUP and was answered as one
+   fact, not set up as a watch — found by the capability test, fixed, re-run: watch created and
+   backtested.
+4. **A kept page carries its own date window** (W1.4; migration `a2b3c4d5e6f7`, nullable
+   `george.pages.date_window` JSONB with an is-object check). `edit_page` gained `set_window` and
+   `remove_window`, audited in `page_events`. The window is substituted into each pin's own
+   stored call on the server — the stored calls are never rewritten — so every figure is still
+   the pin's own read; a read that takes no date range says so (from the yaml). With the filter
+   on and nothing picked, each analysis reads what it was kept with. Options are
+   `sales_day.presets`, via `pages.window.options_from`.
+
+**Measured at the close:** fact 6.5 s; narrow 35.8 s median (32.7 s over ten, 8 of 10 inside
+20–40; the misses are one long thinking round, not reads); broad one read and two rounds in 5 of
+5, 111.2 s median; date filter 6 of 6; capability test median 13.0 s. Evals 27 passed / 19
+failed, every failure also failing (or failing at the same rate) on `6e19473`. The broad answer's
+remaining time is the writing round (80–124 s), which W2.4 inherits.

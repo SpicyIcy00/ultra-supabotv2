@@ -8161,7 +8161,7 @@ composition:
     remember_when_effort_kind: [remember]
     # A surface act over work already done — pin it, keep it, name it — has
     # no answer to size, so the question is not told one.
-    not_said_on_effort_kind: [label_only]
+    not_said_on_effort_kind: [label_only, automate]
     ceiling_default: focused
     order: [remember, lookup, focused, broad]
     kinds:
@@ -9879,7 +9879,29 @@ effort:
         - "keep in mind"
         - "note that"
         - "for future reference"
-    # ---- high ------------------------------------------------------------
+    # ---- high, and before the ladder: a condition to watch is not a question
+    # (2026-09-22, finishing wave 1). "Tell me if any shop's sales drop more
+    # than they usually do" fell through to `fresh`, whose size is a LOOKUP,
+    # and was answered as one fact instead of set up as a watch — the
+    # capability test's one step backwards. The same phrases action_words
+    # reads as naming a watch. Told no size (composition.size.
+    # not_said_on_effort_kind): there is no answer to size, only a thing to
+    # set up and backtest, which is why it thinks at high.
+    automate:
+      level: high
+      means: >
+        the person is asking Bob to watch for a condition and tell them — a
+        watch to set up and backtest, not a question to answer now.
+      phrases:
+        - "tell me if"
+        - "tell me when"
+        - "let me know if"
+        - "let me know when"
+        - "alert me"
+        - "warn me"
+        - "keep an eye on"
+        - "watch for"
+        - "watch this"
     ladder:
       level: high
       means: >

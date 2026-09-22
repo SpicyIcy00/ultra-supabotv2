@@ -430,3 +430,18 @@ def test_after_get_change_a_focused_answer_reads_nothing_more(monkeypatch):
     refused = [r for r in frames_of(frames, "tool_result") if r["error"]]
     assert refused and all("get_change already read" in r["error"] for r in refused)
     assert req(DEFS, "composition.size.kinds.focused.answered_by") == ["get_change"]
+
+
+def test_a_condition_to_watch_is_not_sized_as_a_lookup():
+    """
+    2026-09-22, the capability test's one step backwards: "Tell me if any
+    shop's sales drop more than they usually do" read as `fresh`, was told it
+    was a LOOKUP, and answered one fact instead of setting up a watch. A
+    condition to watch is the `automate` kind and is told no size.
+    """
+    q = "Tell me if any shop's sales drop more than they usually do."
+    _level, kind = bob_loop.turn_effort(q, None, DEFS)
+    assert kind == "automate"
+    assert kind in req(DEFS, "composition.size.not_said_on_effort_kind")
+    # A why that happens to name a weekday is still a why.
+    assert bob_loop.turn_effort("why do sales drop every monday", None, DEFS)[1] == "ladder"
