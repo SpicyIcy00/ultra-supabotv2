@@ -6007,3 +6007,53 @@ completed."* Four changes, each measured live (five runs a question) and live at
 5, 111.2 s median; date filter 6 of 6; capability test median 13.0 s. Evals 27 passed / 19
 failed, every failure also failing (or failing at the same rate) on `6e19473`. The broad answer's
 remaining time is the writing round (80–124 s), which W2.4 inherits.
+
+## 2026-09-22 — wave 2, ahead of you and running things with you: what each card decided
+
+Four agents in worktrees, merged W2.2, W2.1, W2.3, W2.4 with every suite after each (one import
+conflict in `Room.tsx`, both sides kept). Live at `ce8fed4`, migration `b3c4d5e6f7a8`.
+
+**W2.2 — authority is its own table, and the line is a versioned setting.** `george.people`
+(joy approver, isaiah builder, daniel and elijah requesters), seeded by the migration with no
+login; `app_users.role` still means page access, and an administrator links a login with PUT
+/bob/authority/people/{key}. *Recorded assumption, held by tests, for the owner to correct:
+Joy approves and sets the line; Isaiah builds and cannot.* The line (`metrics.yaml
+authority.line`, a declared setting, rule 6) lives only in `george.authority_versions`, one
+immutable row per change with the words said; modes over_line / every_draft (default) / never;
+"above ₱20,000" puts exactly ₱20,000 in the list. A draft's value is quantity × `products.cost`
+in code; moves buy nothing; any unpriced line makes it a decision. Drafts come only from
+`get_stock_cover view=draft` or `get_purchase_plan` with cover days, re-run by the service.
+"Change" writes a new approved row that `replaces` the old. Level five holds: nothing is sent; an
+approved draft is keyed into StoreHub by a person. A decision wears the accent (Needs you, rail
+count, mark); the list never does. The standing runner injects no authority writer.
+
+**W2.1 — the morning is a standing question, reused the same day.** `metrics.yaml morning`:
+"How are we doing?", 08:00 Manila, `born_enabled: false` (the service refuses true). The room
+creates it, off, for whoever opens it (POST /bob/morning); the owner switches it on. A repeat is
+reused only if it exactly matches `morning.asks`, is today's, by this person, status ok, and
+nothing the overview reads has landed since the answer's earliest `snapshot_timestamp` (late
+imports for closed days count; today's hourly sync does not). `usual_weekday` = the mean of the
+same weekday over the 4 closed weeks before (min 3), averaged in code, read only by the overview.
+An instruction that said "lead with yesterday" steered the window to one day — instructions must
+not pick windows; it now asks for the default.
+
+**W2.3 — a dismissal is a belief a person told, never Bob's.** Stances set_aside_known,
+set_aside_not_important, said_wrong — outside `judgment.stances`, so `record_belief` refuses them;
+the only writer is POST /bob/dismissals. "That kind" is exactly (kind, subject) read off the row.
+Known / not important leave the row out and say so (`meta.quieted`, a filters_applied receipt),
+bound as a declared setting (`dismissal.setting`) the model cannot send. **"Wrong" never hides**:
+the row stays, carries `disputed`, and a `disputed_by_a_person` notice (data_may_be_wrong, always
+drawn) until Undo in the memory view.
+
+**W2.4 — a broad answer is a page of a known type.** `composition.page_types` (week, finding,
+comparison) replaces `composition.page_first`; compose takes `page`, and `compose.page_tree`
+builds the tree to the design before the unchanged `_arrangement` checks (rule 9 as before).
+**"Dashboard" is its own effort kind** (reverses W1.1's reading that it is a broad phrase): it
+builds a kept page with `create_page` from 3–6 reads and the room opens it; no report page.
+
+**Measured after the merge:** fact 6.8 s, narrow 34.9 s, broad 141.9 s median over five each (one
+read and two rounds 5 of 5 — **30 s slower than wave 1's 111.2 s**, the page type is more to
+write). Evals 35 passed / 22 failed of 61; each of the five that failed and passed at wave 1's
+close was re-run three times, and on `f580241` where it was not the new cards' own: none is a
+regression. `w24_week_page` misses 1 in 3 (no figure named in a section). The capability test was
+not run: the session's permission classifier refused it (live writes), left for the owner.

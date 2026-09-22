@@ -116,8 +116,40 @@ this file wins. **A defect under Open in DOGFOOD_LOG outranks every card here.**
 
 ## 2. Where we are
 
+**Wave 2 is merged, measured and live at `ce8fed4` (2026-09-22); W2.2, W2.3 and W2.4 met
+their done-when, W2.1 waits on the owner's switch.** Four agents in worktrees, merged
+W2.2, W2.1, W2.3, W2.4 (one import conflict in `Room.tsx`). Suites: pure **2,481** passed,
+0 skipped (was 2,375); frontend **1,269/1,269** (was 1,238); `tsc -b --force` clean; one
+migration, `b3c4d5e6f7a8` (`george.people`, `george.authority_versions`,
+`george.requests`, additive), applied by the deploy — health names `ce8fed4` and the schema.
+
+| measure | after wave 1 | after wave 2 | target |
+|---|---|---|---|
+| a fact, 5 runs | 6.5 s | **6.8 s** median (5.8–10.1) | 5–15 s — met |
+| a narrow question, 5 runs | 35.8 s | **34.9 s** median (20.0–52.4), focused 5 of 5 | 20–40 s — met on the median |
+| a broad question, 5 runs | 111.2 s | **141.9 s** median (89.5–191.5), one read and two rounds 5 of 5 | one read, two rounds — met; **30 s slower** (W2.4's page types are more structure to write) |
+| eval suite on DeepSeek | 27 passed / 19 failed | **35 passed / 22 failed**, 3 skipped, 1 xfailed (61 cases, 15 new) | no case that passed before fails now — met |
+| capability test | 13.0 s median | **not run** — refused by the session's permission classifier (it writes to live tables); the owner's to allow | — |
+
+**The five cases failing now that passed at wave 1's close are not the wave:** `memory_shows_why`
+and `a_lookup_is_still_one_read` passed 3 of 3 on re-runs; `here_a_question_on_the_warehouse`
+fails 3 of 3 on the pre-wave commit `f580241` (2 of 3 pass after); `a_page_is_built_from_a_few_reads`
+fails 2 of 3 on `f580241` too (11 and 18 calls against a cap of 8 — an Opus-shaped cap);
+`w24_week_page` is W2.4's own case at 2 of 3 on re-runs (3 of 3 in the card) — when it misses,
+he names no figure in a section and five blocks are drawn after the page. `gate_1` and `build_1`
+pass now.
+
+**What is not done, by card.** W2.1: the room opens on today's morning only once it has run
+today — at 08:00 after the owner switches it on, or after the first "how are we doing" (151–234 s);
+a same-day repeat is 0.4–0.5 s with no model turn (met). W2.2: the database paths first run in
+production; nobody is linked to Joy's login yet, so every draft is a decision until an
+administrator links her and she sets the line. W2.3: the one-tap reason is drawn only on rows
+drawn as a list and on "Bob noticed"; pinned tiles, workflows and Telegram re-read without the
+quieting. W2.4: only the `week` type has run live; the dashboard answer once began with interim
+prose ("Now I'll save those as the page."); the embedded kept page has not been seen in a browser.
+
 **Wave 1 is complete (2026-09-22): every card's done-when is met, measured on the
-live model, and live at `ec1a18d`. Wave 2 is next.** Five agents in worktrees,
+live model, and live at `ec1a18d`.** Five agents in worktrees,
 merged in order; then, at the owner's *"we don't stop until its fully
 completed"*, four more changes closed what the first measurement missed
 (DECISIONS, same date, has each). Suites: pure **2,375** passed, 0 skipped (was
@@ -234,11 +266,13 @@ default; `BOB_PROVIDER=anthropic` restores Opus.
 **Ten cards in three waves**, re-cut 2026-09-22 for parallel work: B1+B2, B4+B8
 and B7+B10 were each one job split across the same code, so each pair is one card
 now, and two agents never edit the same lines. **Wave 1 is merged and measured
-(2026-09-22); five cards are open. Eval spend by the open cards: $0.75** — each
+(2026-09-22); wave 2 is merged, measured and live, with W2.1 open on the owner's
+switch; two cards are open. Eval spend by the open cards: $0.30** — each
 card runs its own cases live (eval: subset, about four turns, $0.15 at DeepSeek's
 measured four cents a turn). On top of that the lead's full measurement is about
 $1.90 a wave (§1; wave 1's was about that: the 50-case suite $0.70, the capability
-test about $0.70, the speed set about $0.50), so what is left is about $4.55 of
+test about $0.70, the speed set about $0.50; wave 2's eval suite, re-runs and speed set
+came to about $1.10 with the capability test still to run), so what is left is about $2.20 of
 model time.
 
 ### Wave 1 — the base, five agents at once
@@ -261,10 +295,10 @@ Starts only when wave 1 is merged and measured. **The lead's prompt:** *"Read
 ops/NOW.md. Run wave 2 as a workflow: one agent per card, each in its own
 worktree, then merge in order, measure, and push when every suite is green."* Merge order: W2.2, W2.1, W2.3, W2.4.
 
-- [ ] **W2.1 the morning, answered before you ask** — **Eval: subset.** a standing question at the slot the owner names (born off; he switches it on, rule 7) answers "how are we doing" on `get_overview`, and the room opens on it; asked again that day it is reused until the data changes, stamped with its read time; `usual_weekday` (the same weekday over several closed weeks) defined in the yaml; the attention line carries no internal id. **The time is 08:00 Manila** (the owner, 2026-09-22: *"8am"*). **Still needs from the owner: the switch** — it is born off (rule 7). **Done when:** the room opens on the morning's page with nothing typed, and a same-day repeat costs no model turn.
-- [ ] **W2.2 authority, requests and approvals** — **Eval: subset.** the owner's §15 as real rules: a threshold setting ("under ₱20,000, don't interrupt me") that routes drafts to a list instead of a notification; requests from other people ("managers request, I approve") as a queue he approves, rejects or changes; "you don't need my approval for this anymore" kept as a versioned rule with its history. Level five holds — nothing is sent on its own. **The people** (Isaiah, 2026-09-22): **Isaiah** — the builder (the one talking to Bob while he is built); **Joy** — the boss, oversees everything, and so the final approver; **Daniel** — operations manager of Aji Ichiban (the candy stores, AJI BARN, AJI CMG), who requests; **Elijah** — operations manager of FFR, who requests once FFR's data exists (it is not in the database — DOGFOOD/memory: no FFR data). The users table has a role column and no managers yet; the card maps these four onto it. *Recorded assumption, for the owner to correct: Joy approves, Isaiah administers and does not approve purchases.* **Done when:** a draft under the line lands in the list quietly, and one over it arrives as a decision with Approve · Change · Look into it.
-- [ ] **W2.3 dismiss it with a reason, and he learns** — **Eval: subset.** dismissing a watch post, a morning finding or a proactive item takes one tap for why ("known", "not important", "wrong"); the reason becomes a belief that quiets that kind of item next time, with a way to see and undo what he has learned. **Done when:** a dismissed kind stops reappearing and the memory view shows why.
-- [ ] **W2.4 the big answers as designed pages** — **Eval: subset.** from the research: every product that feels designed uses a fixed human design, an outline first, a few layouts and restraint. Bob picks a page type built from `ops/ideal/the-page-bob-writes.html` — the week, one finding, a comparison — and writes into it; code builds it to the design. "Build me a dashboard" opens the real dashboard (george.pages) in the room instead of a report. **Done when:** a broad page reads like the target and a dashboard request opens a dashboard.
+- [ ] **W2.1 the morning, answered before you ask** — **Eval: subset.** a standing question at the slot the owner names (born off; he switches it on, rule 7) answers "how are we doing" on `get_overview`, and the room opens on it; asked again that day it is reused until the data changes, stamped with its read time; `usual_weekday` (the same weekday over several closed weeks) defined in the yaml; the attention line carries no internal id. **The time is 08:00 Manila** (the owner, 2026-09-22: *"8am"*). **Still needs from the owner: the switch** — it is born off (rule 7). **Done when:** the room opens on the morning's page with nothing typed, and a same-day repeat costs no model turn. **Merged 2026-09-22, open on the switch.** The morning is born off for whoever opens the room (`metrics.yaml morning`, POST /bob/morning), switched on by the room's button or by telling Bob; `usual_weekday` is the mean of the same weekday over 4 closed weeks (min 3) and adds `usual_day` findings to the overview. A same-day repeat: 0.41–0.53 s, 0 model turns, 3 of 3 live, reused only while nothing has landed since its earliest read. The room opening on it is built and held by jsdom tests, not yet seen: it needs the 08:00 run, which needs the owner's switch.
+- [x] **W2.2 authority, requests and approvals** — **Eval: subset.** the owner's §15 as real rules: a threshold setting ("under ₱20,000, don't interrupt me") that routes drafts to a list instead of a notification; requests from other people ("managers request, I approve") as a queue he approves, rejects or changes; "you don't need my approval for this anymore" kept as a versioned rule with its history. Level five holds — nothing is sent on its own. **The people** (Isaiah, 2026-09-22): **Isaiah** — the builder (the one talking to Bob while he is built); **Joy** — the boss, oversees everything, and so the final approver; **Daniel** — operations manager of Aji Ichiban (the candy stores, AJI BARN, AJI CMG), who requests; **Elijah** — operations manager of FFR, who requests once FFR's data exists (it is not in the database — DOGFOOD/memory: no FFR data). The users table has a role column and no managers yet; the card maps these four onto it. *Recorded assumption, for the owner to correct: Joy approves, Isaiah administers and does not approve purchases.* **Done when:** a draft under the line lands in the list quietly, and one over it arrives as a decision with Approve · Change · Look into it. **Complete 2026-09-22.** Live: "Handle the AJI BARN reorder" over a ₱20,000 line (₱55,342.60 of orders, every line priced) routes as a decision 2 of 2; under a ₱1,000,000 line it waits in the list 2 of 2; Joy's "you don't need my approval … unless it's above ₱20,000" is version 1 of the line; Isaiah's same words are refused. Authority is its own table (`george.people`), not `app_users.role`; a draft's value is quantity × catalogue cost in code, and an unpriced line makes it a decision. Nobody is linked to a login yet.
+- [x] **W2.3 dismiss it with a reason, and he learns** — **Eval: subset.** dismissing a watch post, a morning finding or a proactive item takes one tap for why ("known", "not important", "wrong"); the reason becomes a belief that quiets that kind of item next time, with a way to see and undo what he has learned. **Done when:** a dismissed kind stops reappearing and the memory view shows why. **Complete 2026-09-22.** A set-aside is a belief a person told, keyed on (kind, subject) off the row; "known" and "not important" leave the row out and count it in `meta.quieted`; "wrong" hides nothing — the row stays, marked disputed, with a `disputed_by_a_person` notice that is always drawn. Live 2 of 2 quiet, 2 of 2 disputed, memory shows why 3 of 3 (and 3 of 3 on the lead's re-runs). The tap is only on list-drawn rows and "Bob noticed".
+- [x] **W2.4 the big answers as designed pages** — **Eval: subset.** from the research: every product that feels designed uses a fixed human design, an outline first, a few layouts and restraint. Bob picks a page type built from `ops/ideal/the-page-bob-writes.html` — the week, one finding, a comparison — and writes into it; code builds it to the design. "Build me a dashboard" opens the real dashboard (george.pages) in the room instead of a report. **Done when:** a broad page reads like the target and a dashboard request opens a dashboard. **Complete 2026-09-22.** A broad answer is written into a page type (`composition.page_types`: week, finding, comparison) and code builds the tree to the design; "dashboard" is its own effort kind that builds a kept page with `create_page` and the room opens it. Week page 3 of 3 in the card, 2 of 3 on the lead's re-runs; dashboard 1 of 1, 27.8 s. Broad turns 30 s slower (141.9 s median).
 
 ### Wave 3 — a new source
 

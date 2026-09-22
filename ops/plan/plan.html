@@ -259,7 +259,7 @@
 <header>
   <p class="kick">plan · <b>Bob, ready for anything</b> · 22 Sep 2026</p>
   <h1>Ready for anything</h1>
-  <p class="lede">Five cards in two waves are left, each wave run at once by one agent per card; wave 1 is complete &mdash; every card met its target, measured and live. <em>Back to the base</em>: Bob understands the business, builds things with you, and runs them &mdash; not a chat that draws pages. The base comes first, because everything else sits on it. Earlier plans are kept in <span class="arch">ops/archive/</span>; this page is the readable copy of ops/NOW.md.</p>
+  <p class="lede">Two cards in two waves are left, each wave run at once by one agent per card; wave 1 is complete, and wave 2 is live &mdash; three of its cards met their targets and the morning page waits for you to switch it on. <em>Back to the base</em>: Bob understands the business, builds things with you, and runs them &mdash; not a chat that draws pages. The base comes first, because everything else sits on it. Earlier plans are kept in <span class="arch">ops/archive/</span>; this page is the readable copy of ops/NOW.md.</p>
 </header>
 
 <section class="why">
@@ -306,7 +306,7 @@
 
 <section class="phase wave-done">
   <h2>Wave 1 &mdash; the base <span style="font-weight:400;color:var(--ink-3)">&middot; done 22 Sep</span></h2>
-  <p class="ph">Complete: every card met its own target on the live model, and it is live. What is left to spend on the open cards&rsquo; own tests: <b>$0.75</b> &mdash; each card tests itself on live answers, about four turns at four cents each. The full check after each wave is about $1.90 more, so about $4.55 is left in all.</p>
+  <p class="ph">Complete: every card met its own target on the live model, and it is live. What is left to spend on the open cards&rsquo; own tests: <b>$0.30</b> &mdash; each card tests itself on live answers, about four turns at four cents each. The full check after wave 3 is about $1.90 more, so about $2.20 is left in all.</p>
   <p class="gate"><b>How it runs.</b> Each agent works in its own copy of the code, so none can collide. The lead session merges them one at a time, runs every test after each, then runs the whole live test suite, the full capability test, and a speed check of three kinds of question, five times each. When every test passes, it pushes the update live. <b>Done when</b> a fact comes back in about ten seconds, a narrow question in well under a minute, and every action phrase that failed the test passes in the same words.</p>
   <p class="pl" style="margin:14px 0 4px">the one prompt that runs this wave, with an agent per card</p><div class="cmd">Read ops/NOW.md. Run wave 1 as a workflow: one agent per card, each in its own worktree, then merge in order, measure, and push when every suite is green.</div>
   <div style="height:18px"></div>
@@ -345,7 +345,7 @@
 
 <section class="phase">
   <h2>Wave 2 &mdash; ahead of you, and running things with you</h2>
-  <p class="ph">Four cards, run at once by four agents, once wave 1 is merged and measured.</p>
+  <p class="ph">One card still open, waiting on your switch; the other three are done and live (22 Sep). A fact still answers in about 7 seconds and a narrow question in about 35; the big &ldquo;how are we doing&rdquo; page now takes about 2&frac13; minutes, 30 seconds slower, because it is written into a designed page.</p>
   <p class="gate"><b>What you gave for this wave:</b> the morning page at <b>8 am</b>; and the people &mdash; Joy approves and oversees everything, Daniel (Aji Ichiban) and Elijah (FFR, once its data is in) request, Isaiah builds. <b>Still yours:</b> switching the morning page on once it is built.</p>
   <p class="pl" style="margin:14px 0 4px">the one prompt that runs this wave, with an agent per card</p><div class="cmd">Read ops/NOW.md. Run wave 2 as a workflow: one agent per card, each in its own worktree, then merge in order, measure, and push when every suite is green.</div>
   <div style="height:18px"></div>
@@ -353,21 +353,25 @@
   <div class="card"><div class="ch"><span class="id">W2.1</span><h3>The morning, answered before you ask</h3><span class="tags"><span class="tag feat">8 am &middot; needs your yes</span><span class="tag eval">eval: subset</span></span></div>
     <p class="does">At the time you choose, Bob answers &ldquo;how are we doing&rdquo; on his own, so the page is waiting when you open the app. Asked again that day, it is reused until the data changes. It starts switched off &mdash; you switch it on.</p>
     <p class="done-when"><b>Done when:</b> the app opens on the morning&rsquo;s page with nothing typed.</p>
+    <p class="done-when"><b>Result so far:</b> built and live. Asking again the same day answers in half a second with no new work (3 of 3). It compares each day with a <b>usual</b> day of that weekday, not just last week. The page waiting at 8 am can&rsquo;t be seen until you switch it on &mdash; the room has a &ldquo;switch it on&rdquo; button.</p>
     <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W2.1.</div></div>
 
-  <div class="card"><div class="ch"><span class="id">W2.2</span><h3>Authority, requests and approvals</h3><span class="tags"><span class="tag feat">Joy approves &middot; Daniel, Elijah request</span><span class="tag eval">eval: subset</span></span></div>
+  <div class="card done"><div class="ch"><span class="id">W2.2</span><h3>Authority, requests and approvals</h3><span class="tags"><span class="tag feat">Joy approves &middot; Daniel, Elijah request</span><span class="tag eval">eval: subset</span></span></div>
     <p class="does">&ldquo;Don&rsquo;t ask me under &#8369;20,000&rdquo; becomes a real rule &mdash; those drafts go to a list instead of interrupting you. &ldquo;Managers request, I approve&rdquo; becomes a queue you approve, reject or change. Nothing is ever sent on its own.</p>
     <p class="done-when"><b>Done when:</b> a draft under your line lands in the list quietly, and one over it arrives as a decision &mdash; Approve, Change, or Look into it.</p>
+    <p class="done-when"><b>Result:</b> A draft over your line arrives as a decision with Approve, Change, Look into it; one under it waits quietly in a list (both 2 of 2, live). Joy sets the line; Isaiah can&rsquo;t. <b>Met.</b> Nobody is linked to Joy&rsquo;s login yet, so until an administrator links her every draft arrives as a decision.</p>
     <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W2.2.</div></div>
 
-  <div class="card"><div class="ch"><span class="id">W2.3</span><h3>Dismiss it with a reason, and he learns</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
+  <div class="card done"><div class="ch"><span class="id">W2.3</span><h3>Dismiss it with a reason, and he learns</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
     <p class="does">When you wave something off, one tap says why, and that kind of alert gets quieter next time. You can see what he has learned and undo it.</p>
     <p class="done-when"><b>Done when:</b> something you dismissed stops coming back, and his memory shows why.</p>
+    <p class="done-when"><b>Result:</b> One tap &mdash; known, not important, wrong &mdash; and that kind of item stays quiet; &ldquo;wrong&rdquo; hides nothing but marks the figure as questioned. His memory shows each one with Undo. <b>Met.</b> The tap is only on list rows for now.</p>
     <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W2.3.</div></div>
 
-  <div class="card"><div class="ch"><span class="id">W2.4</span><h3>The big answers as designed pages</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
+  <div class="card done"><div class="ch"><span class="id">W2.4</span><h3>The big answers as designed pages</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
     <p class="does">Bob picks one of a few page designs made from your target page and writes into it, while code lays it out. &ldquo;Build me a dashboard&rdquo; opens a real dashboard instead of a report.</p>
     <p class="done-when"><b>Done when:</b> a broad page reads like your target, and asking for a dashboard opens one.</p>
+    <p class="done-when"><b>Result:</b> The big answer is written into a designed page &mdash; the week, one finding, a comparison &mdash; laid out by code (2 or 3 of 3 runs). &ldquo;Build me a dashboard&rdquo; builds a saved dashboard page and opens it. <b>Met</b>, but the big page is 30 seconds slower.</p>
     <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W2.4.</div></div>
 
 </section>
