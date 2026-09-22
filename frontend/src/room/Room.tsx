@@ -54,7 +54,7 @@ import type { ToolCall } from '../types/bob';
 import { Noticed } from './Noticed';
 import { Doing } from './Working';
 import { useQuery } from '@tanstack/react-query';
-import { listApprovals } from '../services/workflowsApi';
+import { useNeedsYou } from '../hooks/useNeedsYou';
 import { Rail } from './Rail';
 import { dismissStanding, useStandingOpening } from './useStandingOpening';
 import { decisionFor, leftBehind } from './decisions';
@@ -150,12 +150,9 @@ export default function Room() {
   // (UI rule 8). `undefined` until then, which draws nothing at all — this is
   // the exact failure that rule was written from, where a rail said the queue
   // was empty while a version sat in it waiting for somebody.
-  const approvals = useQuery({
-    queryKey: ['approvals'],
-    queryFn: listApprovals,
-    staleTime: 60_000,
-    retry: false,
-  });
+  // W2.2: versions waiting on promotion AND drafts that arrived as decisions
+  // for this person, from both loaded results (hooks/useNeedsYou).
+  const needsYou = useNeedsYou();
   const [draft, setDraft] = useState('');
   const opened = useRef<string | null>(null);
   // THE FOUR ELEMENTS THE LEADING LINES ARE MEASURED BETWEEN (P2S.1(c)).
@@ -388,7 +385,7 @@ export default function Room() {
     busy,
     turn: latest,
     landing: landing.pending,
-    needsYou: approvals.data?.length,
+    needsYou,
   });
 
   // THE COLD OPEN. Arriving with nothing in hand, the room opens on the
@@ -832,7 +829,7 @@ export default function Room() {
     <IdentityContext.Provider value={identities}>
     <ExplainsOnlyContext.Provider value={explainsOnly}>
     <div className="room">
-      <Rail busy={busy} needsYou={approvals.data?.length} onNew={clear}
+      <Rail busy={busy} needsYou={needsYou} onNew={clear}
             estate={(
               // WHICH BUSINESS (P2.g) — at the top of the sidebar, as the
               // design draws it. Set before the question, about the next thing

@@ -477,6 +477,13 @@ export function useBobStream() {
                     };
                   }
                 });
+                // W2.2: a draft put through the line, or the line moved — the
+                // queue and the needs-you count have to learn it.
+                if (!data.error && (data.source_table === 'george.requests'
+                    || data.source_table === 'george.authority_versions')) {
+                  qc.invalidateQueries({ queryKey: ['authority-requests'] });
+                  qc.invalidateQueries({ queryKey: ['authority'] });
+                }
                 break;
 
               case 'notice':
