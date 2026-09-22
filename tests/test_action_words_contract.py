@@ -422,6 +422,21 @@ def test_an_ordinary_read_is_itself():
     assert write_tools.as_reads(SALES) == [SALES]
 
 
+def test_a_metric_set_is_kept_as_one_read_per_metric():
+    """The second keep run: "sales_headline" refused three times the same way."""
+    sets = req(load_defs(), "metric_sets")
+    name = next(n for n, s in sets.items()
+                if (s.get("asked_as_one_call") or {}).get("tool") == "get_sales")
+    asked = {"tool": "get_sales", "arguments": {**SALES["arguments"], "metric": name}}
+    reads = write_tools.as_reads(asked)
+    assert [r["arguments"]["metric"] for r in reads] == [str(m) for m in sets[name]["metrics"]]
+    wf = _WF()
+    _run(write_tools.save_workflow(
+        "Rockwell Weekly", [{"name": "The week", "tool": "get_sales", "arguments": asked["arguments"]}],
+        ctx=_ctx("Turn this into a workflow.", *reads, workflow_writer=wf)))
+    assert len(wf.spec.steps) == len(reads)
+
+
 # ---------------------------------------------------------------------------
 # 7. The service: a change is made where the analysis stands
 # ---------------------------------------------------------------------------

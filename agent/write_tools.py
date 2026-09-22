@@ -526,20 +526,18 @@ def as_reads(call: dict) -> list[dict]:
     turn took 291 s re-reading what it already had. Expanded here by the
     loop's own expander, so the reads saved are exactly the reads that ran.
     """
-    from agent import one_call
-    if call.get("tool") not in one_call.FUNCTIONS:
-        return [call]
     from types import SimpleNamespace
 
     from agent import loop
+    asked = SimpleNamespace(id="w", name=call.get("tool"), input=dict(call.get("arguments") or {}))
     try:
-        members = loop._expand_sets(
-            [SimpleNamespace(id="w", name=call["tool"], input=dict(call.get("arguments") or {}))],
-            loop._load_defs())
-    except (ValueError, TypeError):
+        members = loop._expand_sets([asked], loop._load_defs())
+    except (ValueError, TypeError, KeyError):
         return [call]
     if any(not hasattr(m, "set_name") for m in members):
-        return [call]   # it refused as a whole; the refusal is the tool's own
+        # An ordinary read, or one that refused as a whole — its refusal is
+        # the tool's own.
+        return [call]
     return [{"tool": m.name, "arguments": dict(m.input),
              "part": m.part or m.input.get("metric") or m.name} for m in members]
 
