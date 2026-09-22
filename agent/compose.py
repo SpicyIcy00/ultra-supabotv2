@@ -1592,7 +1592,7 @@ def page_tree(page: Any, defs: Mapping[str, Any], reading: Any,
 
     He picks the type and writes the words and names the figures; the ORDER
     of the sections, where each figure sits against its words, where his
-    caveat goes and the plan's heading are the type's (composition.page_types),
+    caveat goes and the plan's place are the type's (composition.page_types),
     so every broad page of one type reads like every other and like the
     target. What comes out is an ordinary arrangement tree, and it goes
     through `_arrangement` like any other — so a digit of his, a reference to
@@ -1627,6 +1627,16 @@ def page_tree(page: Any, defs: Mapping[str, Any], reading: Any,
     caveat_in = page.get("caveat_in") if page.get("caveat_in") in slots else design.get("caveat_in")
     has_caveat = bool(str(said.get("caveat") or "").strip())
 
+    # A FIGURE HE PUT INSIDE A SENTENCE IS ALREADY ON THE PAGE — in the
+    # sentence. Named again as a section's figure it would be dropped as placed
+    # twice and take the section's drawing with it (his first live week page:
+    # the estate's total in the lede, then first in the shops' section).
+    in_words = {m.group(1) for text in [page.get("lede")] + [
+        s for sec in given.values() if isinstance(sec, Mapping)
+        for s in ((sec.get("says") if isinstance(sec.get("says"), (list, tuple))
+                   else [sec.get("says")]) or [])]
+        if isinstance(text, str) for m in _REF.finditer(text)}
+
     tree: list[Any] = []
     if isinstance(page.get("lede"), str) and page["lede"].strip():
         tree.append({"lede": page["lede"]})
@@ -1655,6 +1665,12 @@ def page_tree(page: Any, defs: Mapping[str, Any], reading: Any,
         if isinstance(figures, str):
             figures = [figures]
         figures = [f for f in (figures or []) if isinstance(f, str) and f.strip()]
+        worded = [f for f in figures if f in in_words]
+        if worded:
+            coerced.append(f"page: {', '.join(repr(k) for k in worded)} in the {name!r} section "
+                           f"is already on the page, inside your sentence, so the section "
+                           f"draws its other figures")
+            figures = [f for f in figures if f not in in_words]
         room = int(rule.get("figures") or 1)
         extra = figures[room:]
         figures = figures[:room]
@@ -1689,9 +1705,7 @@ def page_tree(page: Any, defs: Mapping[str, Any], reading: Any,
     if has_caveat and caveat_in is None:
         tree.append({"caveat": True})
     if said.get("next"):
-        head = str(spec.get("plan_head") or "").strip()
-        if head:
-            tree.append({"head": head})
+        # Last; the room draws the plan under its own heading.
         tree.append({"next": True})
     if not tree:
         return None, None
@@ -1780,7 +1794,7 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: 
         reading: what you are about to say, in three slots — {"claim": the few words that ARE the point, said again word for word in your answer; "caveat": what qualifies these figures, drawn whole above them; "next": one sentence, drawn last — what you would do, or what no read can settle, never a read you could have made} — and "asks": two or three short questions they might ask you next, drawn under your headline to tap — to steer, challenge, decide or act, never one this answer already settles. Optional; a confirmation needs none.
         actions: what to do about ONE ROW, offered where that row is drawn — [{"act": what the surface does, "seq": the read, "target": the row's own value, "reason": why this one, in your words}]. Optional. You never say what it costs: that is derived from the act.
         size: how large this answer is — lookup, focused or broad (remember, for a thing to keep) — at or under the size the question arrived with. A lookup is a sentence and one figure; focused, a short answer and two or three figures, the page offered; broad, the page.
-        page: THE PAGE A BROAD ANSWER IS — {"type": one of the page types, "lede": your opening, "sections": {name: {"head", "figures", "says", "control"?}}}. You fill the slots; the order, where each figure sits, the caveat's place and the plan's heading are the type's. Only for a broad answer, and it replaces `arrangement`.
+        page: THE PAGE A BROAD ANSWER IS — {"type": one of the page types, "lede": your opening, "sections": {name: {"head", "figures", "says", "control"?}}}. You fill the slots; the order, where each figure sits, the caveat's place and the plan's place are the type's. Only for a broad answer, and it replaces `arrangement`.
         arrangement: only for a broad page NO page type fits — how the right-hand side is LAID OUT for this answer — one arrangement of the blocks you just put, so the space is used the way this answer needs rather than packed for you. LAY IT OUT ONCE: the arrangement you give STANDS for the rest of the turn, exactly as a block you do not mention stays where it is. A later call in the same turn sends this again only to CHANGE the layout — otherwise send the blocks that moved and leave this out. Optional; left out with none given yet, it is packed.
 
     Returns:

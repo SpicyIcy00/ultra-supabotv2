@@ -7,7 +7,7 @@ design, an outline first, a few layouts and restraint. Until now Bob laid out
 every broad page himself on `arrangement`, and no two read alike. Now he PICKS
 a page type (composition.page_types) and writes into its slots; code builds the
 tree to the design — the section order, where a figure sits against its words,
-the caveat's place and the plan's heading — and that tree is checked exactly as
+the caveat's place and the plan's — and that tree is checked exactly as
 any arrangement is, so no digit of his and no figure but by {key} reaches it.
 
 And "build me a dashboard" was a broad question answered as a report. It is its
@@ -99,9 +99,8 @@ def test_a_week_page_is_built_in_the_types_order_whatever_order_he_wrote():
     assert tree["type"] == "week"
     kids = _leaves(tree)
     heads = [k["head"] for k in kids if "head" in k]
-    plan = str(TYPES["plan_head"])
     assert heads == ["Most of the gap is one day", "Three shops carry it",
-                     "What moved on the shelf", plan]
+                     "What moved on the shelf"]
     assert "lede" in kids[0]
     # A FIGURE COMES BEFORE ITS WORDS, so the room sets it beside them.
     at = next(i for i, k in enumerate(kids) if k.get("block") == "days")
@@ -112,14 +111,30 @@ def test_a_week_page_is_built_in_the_types_order_whatever_order_he_wrote():
     # HIS CAVEAT is the margin note of the section the type says it qualifies.
     moved = next(i for i, k in enumerate(kids) if k.get("head") == "What moved on the shelf")
     assert kids[moved + 1] == {"caveat": True}
-    # THE PLAN LAST, under the design's own heading.
-    assert kids[-1] == {"next": True} and kids[-2] == {"head": plan}
+    # THE PLAN LAST; the room draws its heading, so the tree adds none.
+    assert kids[-1] == {"next": True} and "head" not in kids[-2]
 
 
 def test_every_block_is_on_the_page_and_the_figure_in_the_lede_is_a_reference():
     meta = _compose(WEEK)
     assert not [c for c in meta["coerced"] if "NOT on the page" in c]
     assert "{net}" in meta["arrangement"]["children"][0]["lede"]
+
+
+def test_a_figure_already_in_his_sentence_does_not_take_the_sections_drawing():
+    # His first live week page named the estate's total in the lede AND first
+    # among the shops' section figures: placed twice, it was dropped, and the
+    # shops' dumbbell went after the words as an extra.
+    page = {**WEEK, "sections": {**WEEK["sections"],
+                                 "where": {"head": "Three shops carry it",
+                                           "figures": ["net", "shops"],
+                                           "says": ["Greenhills gave back the most."]}}}
+    meta = _compose(page)
+    kids = meta["arrangement"]["children"]
+    at = next(i for i, k in enumerate(kids) if k.get("head") == "Three shops carry it")
+    assert kids[at + 1] == {"block": "shops"}
+    assert kids[at + 2] == {"say": "Greenhills gave back the most."}
+    assert not [c for c in meta["coerced"] if "already placed" in c]
 
 
 def test_a_digit_of_his_is_caught_exactly_as_on_any_page():
@@ -175,7 +190,6 @@ def test_no_caveat_places_no_margin_note_and_no_next_places_no_plan():
     meta = _compose(WEEK, reading={"claim": "We are down on the week"})
     kids = meta["arrangement"]["children"]
     assert {"caveat": True} not in kids and {"next": True} not in kids
-    assert str(TYPES["plan_head"]) not in [k.get("head") for k in kids]
 
 
 # ------------------------------------------------------ he is told what he makes

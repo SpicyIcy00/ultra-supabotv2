@@ -8254,7 +8254,7 @@ composition:
   # type a head, the figure(s) it rests on by key, and two or three
   # paragraphs. CODE lays the page out to the design (agent/compose.page_tree):
   # the order of the sections, where a figure sits against its words, where
-  # the caveat goes and the plan's own heading are the type's, never his. The
+  # the caveat goes and the plan's place are the type's, never his. The
   # tree it builds goes through exactly the checks `arrangement` does — no
   # digit of his, a figure only by {key} reference — so nothing here can
   # reach a value. `arrangement` stays, for the page no type fits.
@@ -8269,15 +8269,16 @@ composition:
       `says` — two or three short paragraphs about exactly those figures. The
       page is laid out FOR you, to the design: the order of the sections, each
       figure set beside its words, your caveat as the margin note of the
-      section it qualifies, and your `next` last under its own heading. Write
+      section it qualifies, and your `next` last. Write
       every section the type marks required; leave out a section you have
       nothing for. EVERY BLOCK YOU PUT BELONGS IN A SECTION.
     # A page type is a broad answer's (composition.size.kinds.broad.page); a
     # lookup or a focused answer has none, and a focused answer's OFFER, taken,
     # is a broad question.
     applies_to_sizes: [broad]
-    # The design's own heading over the plan. Fixed words, no digit.
-    plan_head: "What I'd do"
+    # NO HEADING OVER THE PLAN FROM HERE: the room draws the plan under its own
+    # "what I'd do next" (Reading.tsx ReadingNext), and a second heading above
+    # it drew the design's words twice on his first live week page.
     max_says_per_section: 3
     types:
       week:
