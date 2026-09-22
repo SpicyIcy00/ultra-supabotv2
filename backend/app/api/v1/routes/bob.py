@@ -1005,6 +1005,75 @@ async def forget_belief(
     )
 
 
+class DismissalIn(BaseModel):
+    """
+    One tap for why on something Bob raised (W2.3) — see services/dismissals.py.
+
+    A watch post or a stuck item is named by `post_id` and its key is read from
+    the stored post. A row of the warning list or the morning's findings sends
+    back the `dismiss` key the row itself carried (`kind`, `subject`), which
+    the definitions check before anything is kept.
+    """
+    item: str = Field(max_length=20)
+    reason: str = Field(max_length=40)
+    post_id: Optional[str] = Field(default=None, max_length=200)
+    kind: Optional[str] = Field(default=None, max_length=120)
+    subject: Optional[str] = Field(default=None, max_length=300)
+    thread_id: Optional[str] = Field(default=None, max_length=100)
+
+
+class DismissalOut(BaseModel):
+    """What was kept, one per subject, so the surface says it by name."""
+    item: str
+    kind: str
+    reason: str
+    #: Whether it quiets the kind, or only marks it (a "wrong" never hides).
+    quiets: bool
+    kept: List[dict]
+
+
+@router.post("/dismissals", response_model=DismissalOut, status_code=status.HTTP_201_CREATED)
+async def dismiss_item(
+    body: DismissalIn,
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_bob_user),
+) -> DismissalOut:
+    """
+    Set a thing aside with a reason, at a person's word (W2.3).
+
+    A GESTURE, NOT A TOOL, like Forget: bound to the signed-in person, with
+    no argument for whose. The reason becomes a view they told him
+    (george.beliefs), so it reaches the next question, quiets that exact kind
+    and subject in the reads that apply it, and is undone with Forget on the
+    memory view. "wrong" quiets nothing: the item stays, marked disputed.
+    """
+    from app.services import dismissals as dismissals_service
+    from tools.dismissal import reason_quiets
+
+    defs = _load_defs()
+    try:
+        if body.item == "watch":
+            key = await dismissals_service.watch_key(db, body.post_id or "", defs,
+                                                     me=user.username)
+        elif body.item == "stuck":
+            key = dismissals_service.stuck_key(body.post_id or "", defs)
+        elif body.item in ("attention", "finding"):
+            key = {"item": body.item, "kind": body.kind or "",
+                   "subjects": [body.subject or ""]}
+        else:
+            raise dismissals_service.NotAnItem(
+                f"'{body.item}' is not something that can be set aside.")
+        kept = await beliefs_service.dismiss(
+            db, kind=key["kind"] or "", subjects=key["subjects"], reason=body.reason,
+            by=user.username, defs=defs, conversation_id=body.thread_id)
+    except dismissals_service.NotAnItem as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except beliefs_service.DismissalRefused as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+    return DismissalOut(item=key["item"], kind=str(key["kind"]), reason=body.reason,
+                        quiets=reason_quiets(body.reason, defs), kept=kept)
+
+
 @router.get("/standing", response_model=List[StandingQuestionOut])
 async def list_standing(
     db: AsyncSession = Depends(get_db),
@@ -1197,6 +1266,9 @@ class NoticedItem(BaseModel):
     #: True when the read behind it travelled with the post, which is what
     #: makes "look into it" re-run a fact rather than work from the sentence.
     has_calls: bool = False
+    #: Someone called this kind of item about this subject wrong (W2.3): it is
+    #: still listed, and this says who and when, drawn above it as a notice.
+    disputed: Optional[str] = None
 
 
 async def _stuck(db: AsyncSession, username: str) -> List["NoticedItem"]:
@@ -1351,7 +1423,58 @@ async def read_noticed(
 
     # WHAT BROKE COMES FIRST. A watch reporting the business is news; a system
     # that has stopped reporting is a thing you believe is running and is not.
-    return await _stuck(db, user.username) + items
+    return await _set_aside(db, await _stuck(db, user.username) + items, rows)
+
+
+async def _set_aside(db: AsyncSession, items: List[NoticedItem],
+                     rows: list) -> List[NoticedItem]:
+    """
+    What a person set aside, applied to what Bob noticed (W2.3).
+
+    An item whose kind and every subject were set aside as known or not
+    important is left off; one whose kind and subject were called wrong stays,
+    carrying who said so. Keys are read from the stored posts, never from the
+    client. A register that cannot be read leaves the list exactly as it was:
+    showing too much is the safe failure of a quieting.
+    """
+    from app.services import dismissals as dismissals_service
+
+    defs = _load_defs()
+    try:
+        quieted = beliefs_service.quieted(await beliefs_service.current(db), defs)
+        if not quieted:
+            return items
+        ids = [str((r["payload"] or {}).get("watch_id")) for r in rows
+               if (r["payload"] or {}).get("watch_id")]
+        conditions = {}
+        if ids:
+            conditions = {str(c["id"]): str(c["condition"]) for c in (await db.execute(
+                text("SELECT id::text AS id, condition FROM george.watches "
+                     "WHERE id::text = ANY(:ids)"), {"ids": ids})).mappings().all()}
+        payloads = {str(r["id"]): (r["payload"] or {}) for r in rows}
+    except SQLAlchemyError:
+        return items
+
+    out: List[NoticedItem] = []
+    for item in items:
+        try:
+            if item.kind == "stuck":
+                key = dismissals_service.stuck_key(item.post_id, defs)
+            elif item.watch_id and item.watch_id in conditions:
+                key = dismissals_service.key_from_watch_post(payloads.get(item.post_id) or {},
+                                                    conditions[item.watch_id], defs)
+            else:
+                key = None
+        except dismissals_service.NotAnItem:
+            key = None
+        if key is None:
+            out.append(item)
+            continue
+        hidden, disputed = dismissals_service.judge(key["kind"], key["subjects"], quieted, defs)
+        if hidden:
+            continue
+        out.append(item.model_copy(update={"disputed": disputed}) if disputed else item)
+    return out
 
 
 @router.get("/status", response_model=StatusBand)

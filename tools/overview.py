@@ -52,7 +52,7 @@ from datetime import date, datetime, timedelta
 from typing import Any, Callable, Optional
 from zoneinfo import ZoneInfo
 
-from tools import windows
+from tools import dismissal, windows
 from tools._common import load_defs, req
 from tools.attention import get_attention
 from tools.sales import get_sales
@@ -197,13 +197,15 @@ def _calls(spec: dict, asked: Any, current: tuple[date, date],
     return out
 
 
-def _run(part: str, call: dict, decisions: Any) -> tuple[str, dict]:
+def _run(part: str, call: dict, decisions: Any, quieted: Any = None) -> tuple[str, dict]:
     """
     One read, and what became of it. A refusal (ValueError) is a tool
     declining to mislead and is kept apart from a fault, as tools/objects.py
     keeps them: "the warehouse records no sales" is not "the database is down".
     """
     extra = {"decisions": decisions} if call["tool"] == "get_attention" and decisions is not None else {}
+    if call["tool"] == "get_attention" and quieted:
+        extra["quieted"] = quieted
     try:
         out = FUNCTIONS[call["tool"]](**call["arguments"], **extra)
     except ValueError as exc:
@@ -561,7 +563,8 @@ def drawn_calls(date_range: Any = None) -> list[dict]:
             for part in spec["drawn"]]
 
 
-def get_overview_findings(date_range: Any = None, *, decisions: Any = None) -> dict:
+def get_overview_findings(date_range: Any = None, *, decisions: Any = None,
+                          quieted: Any = None) -> dict:
     """
     The overview's FINDINGS alone: ranked, each one line of fact written by
     code with its figures on the row, its read named in `part` and that read's
@@ -575,6 +578,11 @@ def get_overview_findings(date_range: Any = None, *, decisions: Any = None) -> d
         date_range: a CLOSED preset or an explicit [start, end) pair; default
                last_week, against the week before. A window still in progress
                is refused, as a comparison on one is.
+
+    `quieted` is supplied by the loop, never the model: what a person set aside
+    with a reason (metrics.yaml dismissal.setting). A finding set aside as
+    known or not important is left out and counted in meta.quieted; one called
+    wrong stays, marked `disputed`, with a notice.
     """
     defs = load_defs()
     spec = req(defs, "overview")
@@ -582,7 +590,7 @@ def get_overview_findings(date_range: Any = None, *, decisions: Any = None) -> d
     calls = _calls(spec, asked, current, base)
     parallel = max(1, int(spec["max_parallel"]))
     with ThreadPoolExecutor(max_workers=parallel) as pool:
-        done = dict(pool.map(lambda pc: _run(pc[0], pc[1], decisions), calls.items()))
+        done = dict(pool.map(lambda pc: _run(pc[0], pc[1], decisions, quieted), calls.items()))
     results = {part: done[part] for part in calls}
 
     win = {"window": _span(*current), "baseline_window": _span(*base)}
@@ -597,6 +605,13 @@ def get_overview_findings(date_range: Any = None, *, decisions: Any = None) -> d
     findings += _attention(results, spec, defs)
     findings += _stockouts(results, spec)
     rows = _rank(findings, list(spec["order"]))
+    # What a person set aside with a reason (W2.3). The warning list already
+    # left its own out (get_attention took `quieted`); the rest is done here,
+    # on the findings' own kind and subject, and re-ranked.
+    rows, left_out, disputed = dismissal.apply(rows, "finding", quieted, defs)
+    for n, r in enumerate(rows, 1):
+        r["rank"] = n
+    left_out = list((results["attention"]["meta"] or {}).get("quieted") or []) + left_out
 
     parts = {part: _part_receipt(calls[part], results[part]) for part in calls}
     stamps = sorted(str(p["snapshot_timestamp"]) for p in parts.values() if p.get("snapshot_timestamp"))
@@ -614,7 +629,7 @@ def get_overview_findings(date_range: Any = None, *, decisions: Any = None) -> d
             "every read with its own filters: meta.parts   # metrics.yaml: overview.reads",
             "findings in the order overview.order declares; within a kind, largest change first"
             "   # metrics.yaml: overview.order",
-        ],
+        ] + [line for line in [dismissal.filters_line(left_out, defs)] if line],
         # THE EARLIEST read time of any part — the overview is as old as its
         # oldest read, so the freshest one never vouches for the rest. Each
         # part carries its own in meta.parts.
@@ -631,6 +646,7 @@ def get_overview_findings(date_range: Any = None, *, decisions: Any = None) -> d
         "findings": counts,
         "unread": [p for p, r in results.items() if r["state"] in ("refused", "failed")],
         "parts": parts,
+        **dismissal.meta_for(left_out, disputed),
         "definitions": "definitions/metrics.yaml: overview",
         "note": (
             "Each finding's line was written by code from the figures on its row; "
@@ -642,4 +658,5 @@ def get_overview_findings(date_range: Any = None, *, decisions: Any = None) -> d
     notice = _notices(results)
     if notice is not None:
         meta["notice"] = notice
+    dismissal.merge_notice(meta, dismissal.notice(disputed, defs))
     return {"rows": rows, "meta": meta}

@@ -31,6 +31,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Optional
 
+from tools import dismissal
 from tools._common import load_defs, req
 from tools.brief import get_brief
 
@@ -228,7 +229,8 @@ def learn(rows: list[dict], decisions: Any, ldefs: dict, order: list[str],
                  "window_days": window, "adjusted": adjusted, "rules": list(rules)}
 
 
-def get_attention(as_of: Optional[date | str] = None, *, decisions: Any = None) -> dict:
+def get_attention(as_of: Optional[date | str] = None, *, decisions: Any = None,
+                  quieted: Any = None) -> dict:
     """
     What deserves attention today, ranked — and silent when nothing does.
 
@@ -255,7 +257,13 @@ def get_attention(as_of: Optional[date | str] = None, *, decisions: Any = None) 
         something to say. `meta.senses` lists every source with whether it
         could notice today and why not: name a blind sense rather than
         letting its silence read as calm. A non-empty `meta.notice` MUST be
-        surfaced.
+        surfaced. A row a person set aside as known or not important is left
+        out and counted in `meta.quieted` — do not raise it; a row they called
+        wrong stays, marked `disputed`: say it was doubted beside it.
+
+    `quieted` is supplied by the loop, never the model: what a person set aside
+    with a reason (metrics.yaml dismissal.setting), bound from the views that
+    stand.
     """
     defs = load_defs()
     adefs = req(defs, "attention")
@@ -269,6 +277,12 @@ def get_attention(as_of: Optional[date | str] = None, *, decisions: Any = None) 
     # (agent/loop.py INJECTED_READS). Adjusts the order by the declared rules
     # and writes the reason on every row it moved.
     rows, learning_meta = learn(rows, decisions, req(adefs, "learning"), order)
+    # What a person set aside with a reason (W2.3): known or not important is
+    # left out and counted; wrong stays, marked. Every item row carries its
+    # own key as `dismiss`, so the room sends back what the row said.
+    rows, left_out, disputed = dismissal.apply(rows, "attention", quieted, defs)
+    for n, r in enumerate(rows, 1):
+        r["rank"] = n
     meta: dict[str, Any] = {
         "source_table": SOURCE_TABLE,
         "filters_applied": list(bmeta.get("filters_applied") or []) + [
@@ -276,17 +290,19 @@ def get_attention(as_of: Optional[date | str] = None, *, decisions: Any = None) 
             f"desc, then by subject   # metrics.yaml: attention.order, attention.sources.*.measure",
             "adjusted by recorded decisions only — kept, set aside, opened, asked, left; "
             "nothing inferred from silence   # metrics.yaml: attention.learning",
-        ],
+        ] + [line for line in [dismissal.filters_line(left_out, defs)] if line],
         "snapshot_timestamp": bmeta.get("snapshot_timestamp"),
         "as_of": bmeta.get("as_of"),
         "silent": len(rows) == 0,
         "ranked_by": order,
         "senses": senses(bmeta, adefs),
         "learning": learning_meta,
+        **dismissal.meta_for(left_out, disputed),
         "sections": bmeta.get("sections"),
         "row_count": len(rows),
         "definitions_version": bmeta.get("definitions_version"),
     }
     if bmeta.get("notice"):
         meta["notice"] = bmeta["notice"]
+    dismissal.merge_notice(meta, dismissal.notice(disputed, defs))
     return {"rows": rows, "meta": meta}

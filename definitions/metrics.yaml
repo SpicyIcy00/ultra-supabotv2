@@ -5315,6 +5315,14 @@ notices:
       - [promot, "approval queue", newer, older, differ, "not the same",
          "pinned to"]
 
+  # A person said this may be wrong (W2.3, dismissal). The row keeps its place
+  # and this rides it until the doubt is re-checked or undone; the reader must
+  # be told that someone doubted it, and who.
+  disputed_by_a_person:
+    must_convey:
+      - [wrong, doubt, disputed, "not right", "may not be"]
+      - [said, flagged, marked, called, told, "you ", someone]
+
   # The definitions moved under a saved rule's feet. The workflow still runs
   # against the LIVE metrics.yaml, as every tool does; what changed is that the
   # reasoning recorded with the version was written against an older one.
@@ -7361,6 +7369,142 @@ judgment:
   subject_kinds: [store, warehouse, supplier, product, category, estate]
 
 # =============================================================================
+# DISMISSAL — set it aside with a reason, and he learns (W2.3, 2026-09-22)
+#
+# A watch post, a morning finding or something Bob noticed is set aside with
+# ONE tap for why: known, not important, or wrong. The reason is kept as a
+# BELIEF (george.beliefs, the same memory record_belief and view_memory use),
+# told by the person, so it is seen and undone where every other view is: on
+# the memory view, with Forget. Nothing new stores it.
+#
+# A PERSON'S GESTURE, NEVER BOB'S. There is no tool for it. The room writes
+# through POST /bob/dismissals on the signed-in person's authority; the
+# stances below are not in judgment.stances, so record_belief refuses them.
+#
+# "THAT KIND OF ITEM" IS KEYED OFF THE ROW, never a label the model inferred:
+# the item's kind and subject are read by code from the row's own fields
+# (`items` below) and written on the row as `dismiss`, which is what the room
+# sends back. The next read of that kind about that subject leaves the row
+# out and says so in its receipts (meta.quieted and filters_applied): it is
+# quieter, not silent about being quieter.
+#
+# "WRONG" QUIETS NOTHING (decided 2026-09-22 for this card). Calling a figure
+# wrong is a claim that it may be wrong, and hiding data because someone
+# doubted it would make the doubt invisible to everyone else. So a row whose
+# kind and subject were called wrong keeps appearing, marked `disputed`, with a
+# notice that is always drawn above it (surface.desk.notices.data_may_be_wrong)
+# naming who said so and when, until someone undoes it on the memory view.
+#
+# LEVEL OF AUTOMATION: analysis only. No threshold is invented — a dismissal
+# is an exact (kind, subject) the person pointed at, never "things like it".
+# =============================================================================
+dismissal:
+  introduced: "2026-09-22"
+  reasons:
+    known:
+      said: "known"
+      stance: set_aside_known
+      told: "I already know about this"
+      stance_said: "Set aside: known"
+      claim: "Already known to them, so {kind_said} about this is not raised again"
+      quiets: true
+    not_important:
+      said: "not important"
+      stance: set_aside_not_important
+      told: "This is not important to me"
+      stance_said: "Set aside: not important"
+      claim: "Not important to them, so {kind_said} about this is not raised again"
+      quiets: true
+    wrong:
+      said: "wrong"
+      stance: said_wrong
+      told: "I think this is wrong"
+      stance_said: "Said may be wrong"
+      claim: "They said {kind_said} about this may be wrong; it stays shown, marked, until it is re-checked or undone"
+      quiets: false
+  # The order the three are offered in, one tap each.
+  order: [known, not_important, wrong]
+  # What each surface's rows are, and which of their fields make the key.
+  # `kind` is a pattern over the row's own fields; `subject` names the fields
+  # joined by `subject_joiner`, empty ones skipped.
+  items:
+    attention:
+      read: get_attention
+      kind: "attention.{source}"
+      subject: [subject, store]
+    finding:
+      read: get_overview_findings
+      # A warning-list finding IS the warning-list row, so it has that row's
+      # kind: a stockout set aside from the morning page stays set aside on
+      # the warning list, and the other way round.
+      kind: "overview.{finding}"
+      kind_when_attention: "attention.{metric}"
+      subject: [subject, where]
+      # The findings that may be set aside. The estate's line, what carried
+      # it, a shop's week and an unread part are the frame of the picture,
+      # not items in it, and are never quieted.
+      kinds: [attention, stockout, product_fell, product_rose, day_moved]
+    watch:
+      read: george.posts (kind watch), GET /bob/noticed
+      kind: "watch.{condition}"
+      subject: [subject, store]
+    stuck:
+      read: GET /bob/noticed
+      kind: "stuck.{what}"
+      subject: [name]
+      # What can be stuck, as GET /bob/noticed names it: a rule that failed on
+      # its schedule, a question that could not be asked, a watch that stopped.
+      what: [workflow, question, watch]
+  subject_joiner: " at "
+  # How a kind is said in a claim ({kind_said}). An unlisted kind is said by
+  # the default, never by its key.
+  kind_words:
+    attention.sales_vs_same_weekday: "a shop's day against the same weekday"
+    attention.stock_crossed_out: "a line running out"
+    attention.stock_running_out: "a line about to run out"
+    attention.newly_dead: "a line that stopped selling"
+    overview.stockout: "a stockout"
+    overview.product_fell: "a product that fell"
+    overview.product_rose: "a product that rose"
+    overview.day_moved: "the day a shop moved most"
+    watch.sales_moved: "a watch on sales"
+    watch.stock_crossed_out: "a watch on lines running out"
+    watch.stock_running_out: "a watch on lines about to run out"
+    watch.newly_dead: "a watch on lines that stopped selling"
+    stuck.workflow: "a rule that failed on its schedule"
+    stuck.question: "a question that could not be asked"
+    stuck.watch: "a watch that stopped"
+    default: "this kind of item"
+  # A watch post can name several shops; one tap sets aside each it named,
+  # this many at most.
+  max_subjects_per_item: 6
+  # How many dismissals reach the prompt, their own list beside what a person
+  # told him and his own views, so a month of taps never pushes a told view out.
+  in_prompt: 12
+  # DECLARED AS A SETTING IS (architecture rule 6): a person binds it, every
+  # read that applies it records it, and the model never sets it — the loop
+  # drops a `quieted` argument he sends, as it does every declared argument.
+  setting:
+    name: quieted_items
+    meaning: >
+      The items a person set aside with a reason, each an exact kind and
+      subject read off a row. The reads below leave out the ones set aside as
+      known or not important, and mark the ones called wrong.
+    type: list of {kind, subject, reason, on, by, id}
+    bounds:
+      values: "a kind `items` declares, about a subject a row carried"
+      max_items: 60
+    default: []
+    argument: quieted
+    participates_in:
+      get_attention: "each row whose kind and subject were set aside"
+      get_overview_findings: "each finding of a kind in items.finding.kinds, and the warning list it reads"
+    receipt: "left out at your word: {n} set aside ({reasons})"
+  # A row called wrong keeps its place and carries this notice.
+  disputed_notice_kind: disputed_by_a_person
+  disputed_message: "{who} said {subject} may be wrong ({kind_said}, {date}). It is still shown, marked, until it is re-checked or undone on the memory view."
+
+# =============================================================================
 # COMPOSITION — Bob composes the workspace; the system draws it.
 #
 # Added 2026-09-10. Until now the screen was a pure function of rows: a
@@ -8828,6 +8972,8 @@ surface:
         - supplier_coverage
         - supplier_map_not_approved
         - supplier_ambiguous
+        # Someone called this row wrong (W2.3): it stays, and says so.
+        - disputed_by_a_person
         - ambiguous_sku
         - sku_not_found
         - unresolved_location
