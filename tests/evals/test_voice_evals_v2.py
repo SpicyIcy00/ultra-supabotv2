@@ -167,7 +167,7 @@ def _voice(name: str, turn: checks.Turn, *, extra_results: list | None = None,
     f["ungrounded_numerals"] = [x.text for x in checks.ungrounded_numerals(drawn, results)]
     f["grounded_numerals"] = [x.text for x in checks.grounded_numerals(drawn, results)]
     f["internal_vocabulary"] = checks.internal_vocabulary(turn.answer)
-    f["limitation"] = checks.limitation_statement(turn.answer)
+    f["limitation"] = checks.limitation_statement(drawn)
     f["attribution"] = checks.attribution_claims(turn.answer, results)
     f["refused_calls"] = [c.get("tool") for c in turn.calls if c.get("error")]
     # P2S.7's rows, read off the turn at no cost: a refusal that was not about
@@ -209,7 +209,7 @@ def _voice(name: str, turn: checks.Turn, *, extra_results: list | None = None,
             f"{turn.answer[:400]!r}")
 
     if expect_refusal:
-        low = turn.answer.lower()
+        low = drawn.lower()   # every slot the room draws, as the numeral checks read
         said_no = any(ph.lower() in low for ph in req(DEFS, "pushback.refusal"))
         assert f["refused_calls"] or f["limitation"] or said_no, "he should have said what he cannot tell"
 
