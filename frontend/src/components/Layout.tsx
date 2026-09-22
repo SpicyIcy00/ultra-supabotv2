@@ -261,7 +261,8 @@ export function Layout({ children }: LayoutProps) {
       )}
 
       {/* Main Content — push right on desktop when sidebar open, full-width otherwise */}
-      <div className={`transition-all duration-300 ${!isPhone && !isMobile && sidebarOpen ? 'lg:ml-64' : 'ml-0'}`}>
+      {/* r-here-beside: the page makes room for Bob's answer beside it (W1.4). */}
+      <div className={`r-here-beside transition-all duration-300 ${!isPhone && !isMobile && sidebarOpen ? 'lg:ml-64' : 'ml-0'}`}>
         {/* Header */}
         <header className="sticky top-0 z-20 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800">
           <div className="px-4 py-3 md:px-6 md:py-4">
@@ -293,8 +294,9 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </header>
 
-        {/* Page Content — extra bottom padding on phone for bottom nav */}
-        <main className="p-3 sm:p-4 lg:p-6 pb-20 md:pb-6">{children}</main>
+        {/* Page Content — bottom padding for Bob's line (W1.4), and on phone
+            for the bottom nav under it as well. */}
+        <main className="p-3 sm:p-4 lg:p-6 pb-40 md:pb-24">{children}</main>
       </div>
 
       {/* Mobile Bottom Tab Navigation — phone only */}

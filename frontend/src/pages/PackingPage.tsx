@@ -10,6 +10,7 @@
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useRegisterHere } from '../hooks/useHere';
 import { ProductPicker } from '../components/packing/ProductPicker';
 import { PackingListTable } from '../components/packing/PackingListTable';
 import { PrintableSheet, PRINT_STYLES } from '../components/packing/PrintableSheet';
@@ -572,6 +573,11 @@ const PackingPage: React.FC = () => {
     tabParam === 'history' ? 'history' : tabParam === 'weights' ? 'weights' : 'build';
   const [list, setList] = useState<ListDetail | null>(null);
   const [historyCloseSignal, setHistoryCloseSignal] = useState(0);
+  // WHAT THIS PAGE IS, for Bob's line (W1.4): packing, on this tab.
+  useRegisterHere({
+    key: 'packing', label: 'Packing',
+    view: TABS.find((t) => t.key === activeTab)?.label ?? null,
+  });
 
   const selectTab = (tab: PackingTab) => {
     setSearchParams(tab === 'build' ? {} : { tab }, { replace: true });

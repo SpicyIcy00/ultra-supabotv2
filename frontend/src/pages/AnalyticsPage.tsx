@@ -11,6 +11,8 @@ import {
   useSalesAnomalies,
 } from '../hooks/useDashboardData';
 import { useDashboardStore } from '../stores/dashboardStore';
+import { useRegisterHere } from '../hooks/useHere';
+import { storeNames, windowOf } from '../components/bob/here';
 
 type TabType = 'store-comparison' | 'day-patterns' | 'product-combos' | 'anomalies';
 
@@ -18,6 +20,8 @@ export const AnalyticsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('store-comparison');
 
   const dateRanges = useDashboardStore((state) => state.dateRanges);
+  const selectedStores = useDashboardStore((state) => state.selectedStores);
+  const allStores = useDashboardStore((state) => state.stores);
 
   const dayOfWeekPatterns = useDayOfWeekPatterns(dateRanges.current.start, dateRanges.current.end);
   const productCombos = useProductCombos(dateRanges.current.start, dateRanges.current.end);
@@ -45,6 +49,15 @@ export const AnalyticsPage: React.FC = () => {
       description: 'Detect unusual sales patterns',
     },
   ];
+
+  // WHAT THIS PAGE SHOWS, for Bob's line (W1.4): the tab, the stores by
+  // name, the window. Never a figure.
+  useRegisterHere({
+    key: 'analytics', label: 'Analytics',
+    view: tabs.find((t) => t.id === activeTab)?.label ?? null,
+    subjects: storeNames(selectedStores, allStores),
+    window: windowOf(dateRanges.current),
+  });
 
   const getLoadingState = () => {
     switch (activeTab) {

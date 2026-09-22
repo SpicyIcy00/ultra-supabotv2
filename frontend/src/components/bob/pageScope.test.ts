@@ -4,7 +4,7 @@ import {
   pageScopeFor,
   retitled,
   sameScope,
-  scopeForAsk,
+  askPlan,
   scopeForRequest,
   scopeLabel,
   storedPageContext,
@@ -84,26 +84,51 @@ describe('a rename', () => {
   });
 });
 
+// REWRITTEN 2026-09-22 (W1.4): this block held "scope belongs to the thread" —
+// a different scope offered inside a thread was ignored, and a thread never
+// acquired a page mid-way. The conversation now follows the page: a question
+// asked from another page starts a new thread there. What survives is the
+// half that was never about which page: a question from no page (the room's
+// own line) keeps the thread's scope, and a fresh Ask has none.
 describe('the scope a question is sent with', () => {
   const A = { page_id: 'a', title: 'A' };
   const B = { page_id: 'b', title: 'B' };
   const U = { page_id: null, title: null };
+  const none = { thread: null, scope: null, where: null };
 
-  it('binds a new thread to what was asked for', () => {
-    expect(scopeForAsk(null, null, A)).toEqual(A);
-    expect(scopeForAsk(null, null, U)).toEqual(U);
+  it('binds a new thread to what was asked for, and to where it was asked', () => {
+    expect(askPlan(none, { scope: A, where: 'page:a' })).toEqual({ fresh: false, scope: A, where: 'page:a' });
+    expect(askPlan(none, { scope: U, where: 'page:ungrouped' }).scope).toEqual(U);
+    expect(askPlan(none, { where: 'screen:warehouse' })).toEqual(
+      { fresh: false, scope: null, where: 'screen:warehouse' });
   });
 
   it('is nothing on a fresh Ask that asked for nothing', () => {
-    expect(scopeForAsk(null, null, undefined)).toBeNull();
-    expect(scopeForAsk(null, null, null)).toBeNull();
+    expect(askPlan(none, {}).scope).toBeNull();
+    expect(askPlan(none, { scope: null }).scope).toBeNull();
   });
 
-  it('is the thread’s inside a thread, whatever was asked for', () => {
-    expect(scopeForAsk('t1', A, undefined)).toEqual(A);
-    expect(scopeForAsk('t1', A, B)).toEqual(A);
-    // A thread that never had a page does not acquire one mid-way.
-    expect(scopeForAsk('t1', null, B)).toBeNull();
+  it('continues the thread under its own scope from the same page', () => {
+    const open = { thread: 't1', scope: A, where: 'page:a' };
+    expect(askPlan(open, { scope: A, where: 'page:a' })).toEqual({ fresh: false, scope: A, where: 'page:a' });
+  });
+
+  it('starts a NEW thread when the question comes from another page — the conversation follows the page', () => {
+    const open = { thread: 't1', scope: A, where: 'page:a' };
+    expect(askPlan(open, { scope: B, where: 'page:b' })).toEqual({ fresh: true, scope: B, where: 'page:b' });
+    // From a kept page to the warehouse: a new thread, and no page scope.
+    expect(askPlan(open, { where: 'screen:warehouse' })).toEqual(
+      { fresh: true, scope: null, where: 'screen:warehouse' });
+    // A thread opened in the room (asked from no page) is left for any page.
+    expect(askPlan({ thread: 't2', scope: null, where: null }, { scope: B, where: 'page:b' }).fresh).toBe(true);
+  });
+
+  it('keeps the thread’s scope for a question from no page, whatever it offers', () => {
+    const open = { thread: 't1', scope: A, where: 'page:a' };
+    expect(askPlan(open, {})).toEqual({ fresh: false, scope: A, where: 'page:a' });
+    // An @page in the room, mid-thread, binds nothing: it is not where you are.
+    expect(askPlan(open, { scope: B })).toEqual({ fresh: false, scope: A, where: 'page:a' });
+    expect(askPlan({ thread: 't1', scope: null, where: null }, { scope: B }).scope).toBeNull();
   });
 });
 

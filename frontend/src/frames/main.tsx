@@ -24,6 +24,9 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { BobCtx, type BobContext } from '../components/bob/bobContext';
 import { useAuthStore } from '../stores/authStore';
 import Room from '../room/Room';
+import { BobHere } from '../room/BobHere';
+import { Layout } from '../components/Layout';
+import { useRegisterHere } from '../hooks/useHere';
 import scenes from './scenes.json';
 import '../index.css';
 
@@ -54,7 +57,8 @@ try {
 } catch { /* the frame still draws */ }
 
 useAuthStore.setState({
-  user: { id: 'frames', username: 'owner', display_name: 'You', role: 'owner', allowed_pages: ['bob'] },
+  user: { id: 'frames', username: 'owner', display_name: 'You', role: 'owner',
+          allowed_pages: ['bob', 'dashboard', 'analytics', 'warehouse', 'packing'] },
 });
 
 const desk = (scenes as { desk: unknown }).desk;
@@ -91,8 +95,13 @@ const turns = [
 ];
 
 const noop = () => {};
+// ?here=warehouse (W1.4): the scene's turn as an answer asked FROM a BI page,
+// drawn beside it by the one line — the BI chrome, a stand-in page body, and
+// BobHere, at whatever width the frame is shot.
+const here = params.get('here');
 const bob = {
-  turns, busy: false, threadId: null, storedThreadId: null,
+  turns, busy: false, threadId: here ? 't-here' : null, storedThreadId: here ? 't-here' : null,
+  where: here ? `screen:${here}` : null, pageScope: null,
   open: noop, ask: async () => {}, reset: noop, cancel: noop, setComposer: noop,
   presence: 'idle', live: null, composer: null,
 } as unknown as BobContext;
@@ -120,15 +129,37 @@ if (params.get('voice') === 'listening') {
 
 const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
+/** A BI page as it registers itself; its body is a stand-in, the chrome is real. */
+function HerePage({ name }: { name: string }) {
+  const label = name.charAt(0).toUpperCase() + name.slice(1);
+  useRegisterHere({ key: name, label, view: name === 'warehouse' ? 'Replenishment Reports' : null });
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-white mb-2">{label}</h1>
+      <p className="text-gray-400 mb-6">The page as it was, with Bob answering beside it.</p>
+      {Array.from({ length: 8 }, (_, i) => (
+        <div key={i} className="h-16 mb-3 rounded-lg bg-gray-800/60 border border-gray-700" />
+      ))}
+    </div>
+  );
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={client}>
       <BobCtx.Provider value={bob}>
-        <MemoryRouter initialEntries={['/bob']}>
-          <Routes>
-            <Route path="*" element={<Room />} />
-          </Routes>
-        </MemoryRouter>
+        {here ? (
+          <MemoryRouter initialEntries={[`/${here}`]}>
+            <Layout><HerePage name={here} /></Layout>
+            <BobHere />
+          </MemoryRouter>
+        ) : (
+          <MemoryRouter initialEntries={['/bob']}>
+            <Routes>
+              <Route path="*" element={<Room />} />
+            </Routes>
+          </MemoryRouter>
+        )}
       </BobCtx.Provider>
     </QueryClientProvider>
   </React.StrictMode>,
