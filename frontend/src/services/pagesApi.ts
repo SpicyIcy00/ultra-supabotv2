@@ -43,6 +43,22 @@ export const updatePage = async (id: string, body: UpdatePageRequest): Promise<P
   return data;
 };
 
+/**
+ * Pick the page's date window (W1.4): a preset from the page's own options,
+ * or null for each analysis as it was kept. Every analysis re-runs over it —
+ * on the server, through its own read; the client only changes the choice.
+ */
+export const setPageWindow = async (id: string, preset: string | null): Promise<Page> => {
+  const { data } = await axios.put<Page>(`${API_BASE}/${id}/window`, { preset });
+  return data;
+};
+
+/** Take the page's date window off. */
+export const removePageWindow = async (id: string): Promise<Page> => {
+  const { data } = await axios.delete<Page>(`${API_BASE}/${id}/window`);
+  return data;
+};
+
 /** Delete the page row. Its pins move to Ungrouped; none is deleted. */
 export const deletePage = async (id: string): Promise<PageDeleted> => {
   const { data } = await axios.delete<PageDeleted>(`${API_BASE}/${id}`);

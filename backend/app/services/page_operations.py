@@ -64,6 +64,8 @@ MAX_ADDS_PER_EDIT = 6
 EDIT_OPERATIONS = (
     "rename", "set_purpose", "add", "add_existing", "remove", "move_to_page", "place",
     "draw", "change",
+    # W1.4: the page's date window, which re-runs every analysis over it.
+    "set_window", "remove_window",
 )
 
 
@@ -122,6 +124,8 @@ def page_summary(page: BobPage, pins: list[BobPin]) -> dict[str, Any]:
         "updated_at": page.updated_at.isoformat() if page.updated_at else None,
         "analyses": [_analysis_row(p) for p in pins],
         "analysis_count": len(pins),
+        # The page's date window (W1.4): None when it has none.
+        "window": page.date_window,
     }
 
 
@@ -374,6 +378,19 @@ async def plan_edit(
         elif kind == "set_purpose":
             plan.steps.append({"op": kind, "purpose": normalize_purpose(op.get("purpose"))})
 
+        elif kind == "set_window":
+            # "ADD DATE FILTERS TO THIS" (W1.4). One window for the page, a
+            # sales-day preset or None (the control, nothing picked yet).
+            from app.services import page_window
+            try:
+                preset = page_window.check(op.get("window"))
+            except page_window.WindowRefused as exc:
+                raise PageValidationError(f"operations[{i}] (set_window): {exc}") from exc
+            plan.steps.append({"op": kind, "window": preset})
+
+        elif kind == "remove_window":
+            plan.steps.append({"op": kind})
+
         elif kind == "add":
             adds += 1
             if adds > MAX_ADDS_PER_EDIT:
@@ -505,7 +522,7 @@ async def _preflight_order(db: AsyncSession, owner: str, plan: _Plan) -> None:
 
     for step in plan.steps:
         kind = step["op"]
-        if kind in ("rename", "set_purpose", "draw", "change"):
+        if kind in ("rename", "set_purpose", "draw", "change", "set_window", "remove_window"):
             continue
         if kind == "add":
             pin = BobPin(id=uuid.uuid4())
@@ -576,6 +593,29 @@ async def apply_edit(
             await page_writer.set_purpose(db, owner=owner, page_id=page.id,
                                           purpose=step["purpose"], actor=actor)
             ops.append({"op": kind, "from": before, "to": page.purpose})
+
+        elif kind in ("set_window", "remove_window"):
+            from app.services import page_window
+            before = page_window.current(page.date_window)
+            if kind == "set_window":
+                await page_writer.set_window(db, owner=owner, page_id=page.id,
+                                             preset=step["window"], actor=actor)
+            else:
+                await page_writer.remove_window(db, owner=owner, page_id=page.id, actor=actor)
+            # WHICH ANALYSES THE WINDOW MOVES, said now rather than discovered
+            # on the page: one whose read takes no date range is named.
+            probe = step.get("window") or page_window.presets()[0]
+            takes, ignores = [], []
+            for pin in await page_writer.page_pins(db, owner, page.id):
+                calls = list(pin.tool_calls or [])
+                moved = any(page_window.takes_window(str(c.get("tool")), probe) for c in calls)
+                (takes if moved else ignores).append(pin.title)
+            ops.append({"op": kind, "from": before,
+                        "to": step.get("window") if kind == "set_window" else None,
+                        "on": page.date_window is not None,
+                        "label": page_window.label(step.get("window")) if kind == "set_window" else None,
+                        "options": [o["value"] for o in page_window.options()[1:]],
+                        "moves": takes, "reads_no_window": ignores})
 
         elif kind == "add":
             created = await pin_writer.create_pin(

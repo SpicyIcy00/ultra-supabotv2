@@ -900,6 +900,10 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                              "enum": [k for k, v in req(_load_defs(), "composition.widgets").items()
                                       if v.get("rows")]},
                     "call": {"type": "integer", "minimum": 0},
+                    # set_window (W1.4): the page's date filter, a preset or null.
+                    "window": {"type": ["string", "null"],
+                               "enum": [*req(_load_defs(), str(req(
+                                   _load_defs(), "pages.window.options_from"))), None]},
                     "field": {"type": "string"},
                     "against": {"type": "string"},
                     "place": {

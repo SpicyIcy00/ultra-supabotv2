@@ -26,9 +26,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import type { AnswerTurn } from './data';
-import type { Page, Pin, PinRun, SimilarPageConflict } from '../types/pins';
+import type { Page, PageWindow, Pin, PinRun, SimilarPageConflict } from '../types/pins';
 import { useBob } from '../hooks/useBob';
-import { deletePage, getPage, updatePage } from '../services/pagesApi';
+import { deletePage, getPage, removePageWindow, setPageWindow, updatePage } from '../services/pagesApi';
 import {
   deletePin, errorMessage, listPinPages, listPins, runPin, similarPageConflict, updatePin,
 } from '../services/pinsApi';
@@ -140,6 +140,7 @@ export function KeptPage({ pageId, onBack }: {
             />
           )}
           {page.data && <PurposeControl page={page.data} onDone={invalidate} />}
+          {page.data && <WindowControl page={page.data} onDone={invalidate} />}
 
           {pins.isPending && <p className="r-note">Reading…</p>}
           {pins.isError && <p className="r-say">Could not load this page.</p>}
@@ -160,6 +161,7 @@ export function KeptPage({ pageId, onBack }: {
               pin={pin}
               pageId={pageId}
               title={title ?? null}
+              window={page.data?.window ?? null}
               actions={
                 <>
                   {pageId !== null && (
@@ -210,8 +212,11 @@ export function KeptPage({ pageId, onBack }: {
  * drawn by the board. No polling: the receipt under each figure carries its
  * read time, which is the honest alternative to churning the warehouse.
  */
-export function KeptPin({ pin, pageId, title, actions }: {
-  pin: Pin; pageId: string | null; title: string | null; actions?: React.ReactNode;
+export function KeptPin({ pin, pageId, title, window: pageWindow = null, actions }: {
+  pin: Pin; pageId: string | null; title: string | null;
+  /** The page's date window (W1.4): a change re-runs this analysis over it. */
+  window?: PageWindow | null;
+  actions?: React.ReactNode;
 }) {
   const qc = useQueryClient();
   const bob = useBob();
@@ -220,12 +225,17 @@ export function KeptPin({ pin, pageId, title, actions }: {
     onSuccess: () => { void qc.invalidateQueries({ queryKey: ['pins'] }); },
   });
   const { mutate } = run;
-  useEffect(() => { mutate(); }, [mutate]);
+  // RE-RUN WHEN THE PAGE'S WINDOW MOVES. The server reads the window off the
+  // page and runs this pin's own calls over it; nothing is computed here.
+  const windowKey = pageWindow?.preset ?? null;
+  useEffect(() => { mutate(); }, [mutate, windowKey]);
   const data = run.data;
 
   const answers = useMemo(() => (data ? [turnFromRun(data)] : []), [data]);
   const board = useMemo(() => buildBoard(answers), [answers]);
   const missing = (data?.results ?? []).filter((r) => r.status !== 'ok');
+  // A read the page's window could not move says so, in the definitions' words.
+  const unmoved = (data?.results ?? []).flatMap((r) => (r.window && r.window.applied === null && r.window.says ? [r.window.says] : []));
   const empty = (data?.results ?? []).filter((r) => r.status === 'ok' && !r.rows?.length);
 
   // A TAP ON A ROW ASKS BOB ABOUT IT, from this page — the room's `why`,
@@ -268,6 +278,14 @@ export function KeptPin({ pin, pageId, title, actions }: {
       {data && (
         <>
           <Caveats notices={data.notices} />
+          {data.window && (
+            <p className="r-src" data-window={data.window.preset}>
+              Read over {data.window.label} · {ago(data.ran_at)}
+            </p>
+          )}
+          {[...new Set(unmoved)].map((says) => (
+            <p key={says} className="r-src" data-window-unmoved="true">{says}</p>
+          ))}
           {missing.length > 0 && (
             <div className="r-caveats" data-missing={missing.length} role="note">
               <p className="r-caveat">
@@ -365,6 +383,64 @@ function PurposeControl({ page, onDone }: { page: Page; onDone: () => void }) {
       <button type="button" className="r-act" onClick={cancel}>Cancel</button>
       {error && <p className="r-note">{error}</p>}
     </form>
+  );
+}
+
+/**
+ * THE PAGE'S DATE WINDOW (W1.4) — "add date filters to this". One control for
+ * the whole page; picking a window stores it on the page (audited) and every
+ * analysis re-runs over it through its own read. The options are the page's
+ * own, served from the definitions (sales_day.presets); none is held here.
+ * A page with no window offers to add one; adding it moves nothing until a
+ * window is picked.
+ */
+export function WindowControl({ page, onDone }: { page: Page; onDone: () => void }) {
+  const qc = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+  const done = (next: Page) => {
+    setError(null);
+    qc.setQueryData(['page', page.id], next);
+    onDone();
+  };
+  const pick = useMutation({
+    mutationFn: (preset: string | null) => setPageWindow(page.id, preset),
+    onSuccess: done, onError: (err) => setError(errorMessage(err)),
+  });
+  const off = useMutation({
+    mutationFn: () => removePageWindow(page.id),
+    onSuccess: done, onError: (err) => setError(errorMessage(err)),
+  });
+  const busy = pick.isPending || off.isPending;
+  const w = page.window ?? null;
+  if (!w) {
+    return (
+      <p className="r-note r-kept-window">
+        <button type="button" className="r-act" disabled={busy} onClick={() => pick.mutate(null)}>
+          {pick.isPending ? 'Adding…' : 'Add date filter'}
+        </button>
+        {error && <span className="r-note" data-state="failed"> {error}</span>}
+      </p>
+    );
+  }
+  return (
+    <p className="r-note r-kept-window" data-window={w.preset ?? ''}>
+      <label>
+        Dates{' '}
+        <select className="r-field" aria-label="Dates for every analysis on this page"
+                value={w.preset ?? ''} disabled={busy}
+                onChange={(e) => pick.mutate(e.target.value === '' ? null : e.target.value)}>
+          {w.options.map((o) => (
+            <option key={o.value ?? ''} value={o.value ?? ''}>{o.label}</option>
+          ))}
+        </select>
+      </label>{' '}
+      <button type="button" className="r-act" disabled={busy} onClick={() => off.mutate()}>
+        {off.isPending ? 'Removing…' : 'Remove date filter'}
+      </button>{' '}
+      {busy ? <span className="r-src">Changing…</span>
+        : w.set_at && <span className="r-src">set {ago(w.set_at)}{w.set_by === 'bob' ? ' by Bob' : ''}</span>}
+      {error && <span className="r-note" data-state="failed"> {error}</span>}
+    </p>
   );
 }
 

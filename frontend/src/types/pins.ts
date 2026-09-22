@@ -61,6 +61,36 @@ export interface Page {
   updated_at: string;
   /** How many pins sit on it. Zero is a real state. */
   pins: number;
+  /**
+   * THE PAGE'S DATE WINDOW (W1.4). Absent or null: the page has no date
+   * filter. Otherwise the preset picked (null: each analysis as it was kept),
+   * who set it and when, and the options — served from the definitions.
+   */
+  window?: PageWindow | null;
+}
+
+/** One window a page may be set to (metrics.yaml pages.window.options_from). */
+export interface PageWindowOption {
+  value: string | null;
+  label: string;
+  includes_partial_day: boolean;
+}
+
+export interface PageWindow {
+  preset: string | null;
+  label: string;
+  set_at: string | null;
+  set_by: 'user' | 'bob' | null;
+  options: PageWindowOption[];
+}
+
+/** What the page's window did to one call: set it, or say the read takes none. */
+export interface PinCallWindow {
+  applied: string | null;
+  argument?: string;
+  was?: unknown;
+  preset?: string;
+  says?: string;
 }
 
 /** The legacy listing: a page's title and id, or `page: null` for Ungrouped. */
@@ -80,6 +110,8 @@ export interface PinCallResult {
   meta: ToolMeta;
   notices: BobNotice[];
   error?: string;
+  /** Present when the pin's page has a window picked (W1.4). */
+  window?: PinCallWindow | null;
 }
 
 export interface PinRun {
@@ -97,6 +129,8 @@ export interface PinRun {
    * rows, each call's `seq` its index in `results`.
    */
   blocks: import('./bob').CompositionBlock[];
+  /** The page window this run was read over, or null (W1.4). */
+  window?: { preset: string; label: string } | null;
 }
 
 export interface CreatePinRequest {

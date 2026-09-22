@@ -951,7 +951,7 @@ def _page_bounds() -> dict:
 # (app/services/page_operations.EDIT_OPERATIONS) and held equal by a test.
 PAGE_EDIT_OPERATIONS = (
     "rename", "set_purpose", "add", "add_existing", "remove", "move_to_page", "place",
-    "draw", "change",
+    "draw", "change", "set_window", "remove_window",
 )
 
 
@@ -1114,9 +1114,17 @@ async def edit_page(
 ) -> dict:
     """
     Change one of the user's pages: rename it, set its purpose, add analyses,
-    change one in place, take one off, move one to another page, or reorder.
-    All the operations in one call are applied together, in order, or none of
-    them are. Nothing is re-run; a page's analyses keep their calls.
+    change one in place, take one off, move one to another page, reorder, or
+    give the page a date filter. All the operations in one call are applied
+    together, in order, or none of them are. Nothing is re-run; a page's
+    analyses keep their calls.
+
+    A DATE FILTER IS THE PAGE'S OWN. "Add date filters to this", "let me pick
+    the dates", "show this page for last month", asked from a page, is
+    `set_window` on THAT page — never a control on your answer. It puts one
+    window control on the page; picking a window there re-runs every analysis
+    on it over that window, and one whose read takes no date range says so.
+    Nothing needs reading first. Confirm in one line.
 
     A CHANGE TO AN ANALYSIS CHANGES IT. "Use 30-day velocity", "only the top
     ten", "last month instead" on something already on the page is `change`
@@ -1144,6 +1152,9 @@ async def edit_page(
             draw {pin_id | title, kind, call?, field?, against?} — redraw an
             analysis as another shape ("make that one a pie"); `call` is which
             of its calls, needed only when it has several.
+            set_window {window} — the page's date filter: `window` a date
+            preset ("last_month") when they named one, null when they did not
+            (the control goes on and they pick); remove_window {} takes it off.
             Name an analysis by pin_id (from view_page or an earlier result);
             a title is accepted when exactly one analysis has it, and a title
             two analyses share is refused with both ids — never guess between
@@ -1222,6 +1233,19 @@ async def edit_page(
                 if not isinstance(new_title, str) or not new_title.strip():
                     raise PageRefused(f"operations[{i}] (change): new_title must be text.")
                 entry["new_title"] = new_title.strip()
+        if kind == "set_window":
+            from tools._common import load_defs, req
+
+            defs = load_defs()
+            names = list(req(defs, str(req(defs, "pages.window.options_from"))))
+            window = op.get("window")
+            if window is not None and window not in names:
+                raise PageRefused(
+                    f"operations[{i}] (set_window): {window!r} is not a date window. One of: "
+                    f"{', '.join(names)} — or null to put the filter on and let them pick.")
+            entry = {"op": "set_window", "window": window}
+        if kind == "remove_window":
+            entry = {"op": "remove_window"}
         if kind == "draw":
             from agent import vocabulary
             from tools._common import load_defs

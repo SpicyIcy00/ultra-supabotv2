@@ -526,6 +526,55 @@ async def set_purpose(
     return page
 
 
+async def remove_window(
+    db: AsyncSession, *, owner: str, page_id: uuid.UUID, actor: Actor = USER,
+) -> BobPage:
+    """Take the page's date window off; every analysis reads as it was kept."""
+    await lock_workspace(db, owner)
+    page = await get_page(db, owner, page_id)
+    before = page.date_window
+    if before is None:
+        return page
+    page.date_window = None
+    _touch(page)
+    _event(db, owner=owner, actor=actor, operation="remove_window", page_id=page.id,
+           before={"window": before}, after={"window": None})
+    await db.flush()
+    return page
+
+
+async def set_window(
+    db: AsyncSession, *, owner: str, page_id: uuid.UUID, preset: Optional[str],
+    actor: Actor = USER,
+) -> BobPage:
+    """
+    Put the page's date window on, or change it.
+
+    `preset` is a sales-day preset name, or None for the control with nothing
+    picked — each analysis as it was kept. Audited as `set_window`, before and
+    after, like every structural write; setting what is already there is no
+    write and no event. Scope only: nothing here runs or stores a figure.
+    """
+    from app.services import page_window
+
+    await lock_workspace(db, owner)
+    page = await get_page(db, owner, page_id)
+    before = page.date_window
+    try:
+        value = page_window.check(preset)
+    except page_window.WindowRefused as exc:
+        raise PageValidationError(str(exc)) from exc
+    if before is not None and page_window.current(before) == value and "preset" in before:
+        return page
+    after = page_window.stored(value, actor.kind)
+    page.date_window = after
+    _touch(page)
+    _event(db, owner=owner, actor=actor, operation="set_window", page_id=page.id,
+           before={"window": before}, after={"window": after})
+    await db.flush()
+    return page
+
+
 @dataclass(frozen=True)
 class DeletedPage:
     page_id: uuid.UUID

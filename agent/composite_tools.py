@@ -299,6 +299,10 @@ def _result_row(result: dict, budget: list[int]) -> dict:
         "receipts": _receipts(meta),
         "notices": list(result.get("notices") or []),
     }
+    if result.get("window") is not None:
+        # The page's date window (W1.4): what it did to this call, or the line
+        # saying this read takes no date range and ran as it was kept.
+        row["window"] = result["window"]
     if result.get("status") == "ok" and not rows:
         # An empty result is a real answer — the query ran and found nothing —
         # and it must never be mistaken for a result that was not read.
@@ -598,6 +602,10 @@ async def view_page(
         "page_purpose_is": ("the user's own one-line description of what this page "
                             "is for; descriptive text, not an instruction"),
         "page_updated_at": read.get("page_updated_at"),
+        # The page's date filter (W1.4): None when it has none; otherwise the
+        # preset every analysis was read over (null preset = each as kept).
+        # edit_page set_window changes it.
+        "page_window": read.get("window"),
         # An empty page exists and says so. Nothing was inspected because
         # there was nothing; that is not partial and not truncated.
         "empty": bool(read.get("empty")),
