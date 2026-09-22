@@ -547,29 +547,29 @@ def _part_receipt(call: dict, res: dict) -> dict:
     return out
 
 
-def get_overview(date_range: Any = None, *, decisions: Any = None) -> dict:
+def drawn_calls(date_range: Any = None) -> list[dict]:
     """
-    How the business is doing, in ONE read: the estate and every shop on net
-    sales, transactions and basket against the period before, each shop's
-    days against the same weekdays before, the products that fell and rose
-    most, the longest stockouts and the warning list — run together and
-    returned as FINDINGS, ranked, each one line of fact written by code with
-    its figures on the row and its read named in `part` (receipts in
-    meta.parts). Among them is WHAT CARRIED IT: a `concentration` finding
-    says whether one shop (and one product) carried most of the estate's
-    change, decided by definition — quote its words, never a share of your
-    own. Use it FIRST AND ALONE for a broad question — "how are we doing",
-    "how was the week", "anything I should know" — and answer from its
-    findings in the next round: they already are the estate, the shop that
-    carried it, the day and the lines that moved. A drill-down read (get_change,
-    get_sales) is for a follow-up about one thing it names — NEVER to re-read
-    what it already read: the shops by week, their days and the movers are
-    in its findings, and re-reading them for a chart costs a round and shows
-    nothing new. Your first sentence says the estate's change as its first
-    finding gives it, the percentage included. On the page its findings are ONE read of mixed facts: draw it
-    once, as a `list`, and set each figure beside your words by its row's
-    `subject`. Nothing here is a threshold: which findings appear is what
-    moved.
+    The parts a page draws (overview.drawn), each the same call the findings
+    read makes, window filled in — for agent/one_call.get_overview. A window
+    still in progress is refused here, once, as the findings read refuses it.
+    """
+    defs = load_defs()
+    spec = req(defs, "overview")
+    asked, _described, current, base = _windows(date_range or spec["default_window"], defs)
+    calls = _calls(spec, asked, current, base)
+    return [{"part": part, "tool": calls[part]["tool"], "arguments": calls[part]["arguments"]}
+            for part in spec["drawn"]]
+
+
+def get_overview_findings(date_range: Any = None, *, decisions: Any = None) -> dict:
+    """
+    The overview's FINDINGS alone: ranked, each one line of fact written by
+    code with its figures on the row, its read named in `part` and that read's
+    receipts in meta.parts — among them a `concentration` finding saying
+    whether one shop (and one product) carried most of the estate's change,
+    decided by definition. Ask get_overview instead: it is this read AND the
+    parts a page draws. This one alone is for a pin or a workflow step that
+    keeps the findings.
 
     Args:
         date_range: a CLOSED preset or an explicit [start, end) pair; default

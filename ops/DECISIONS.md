@@ -5955,3 +5955,19 @@ that adds a date filter.
 
 **Found, not fixed:** told "you don't need my approval under ₱20,000", Bob said *"I key orders
 under his line myself"* — an action he cannot take, said in the third person. W2.2's.
+
+## 2026-09-22 — the overview is drawable, and the broad answer's time is in the writing
+
+After wave 1, at the owner's "ok go". `get_overview` returned one read of mixed findings that no
+chart can draw, so four broad turns in five re-read its parts to chart them. It is now a call
+asked as one (`agent/one_call.py`, like `get_change`): the findings read, renamed
+`get_overview_findings` (registered, pinnable, a backtest classification and the injected
+decisions reader move with it), plus the parts `overview.drawn` names — the findings read's own
+calls from `overview.reads`, never a second list — each an ordinary drawable read.
+
+**Measured, five broad runs:** median 136.0 s (129–159) against 148.8 s before; no part re-read
+for a chart. Per round: reads ~11 s, drill-downs into a flagged shop (`get_change`, 4 of 5 runs)
+19–46 s, and **the writing round 84–117 s in every run**. One read and two rounds held in 1 of 5.
+The broad target is now the writing round's, not the reads'. (The same run re-measured the fact
+question at 6.8 s median and the narrow one at 32.1 s, inside 20–40 — against 53.9 s in the
+wave's own set, so the narrow figure is not settled.)

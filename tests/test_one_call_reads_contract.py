@@ -293,7 +293,9 @@ def test_every_listed_read_is_an_existing_read_its_tool_accepts():
     variants = {"get_change": ({}, {"store": shop}, {"category": "tradsnax"},
                                {"store": shop, "date_range": "yesterday",
                                 "compare_to": "same_weekday_last_week"}),
-                "get_stock_health": ({}, {"store": shop})}
+                "get_stock_health": ({}, {"store": shop}),
+                # 2026-09-22, after wave 1: the overview, drawable.
+                "get_overview": ({}, {"date_range": "last_7_days"})}
     assert set(variants) == set(one_call.FUNCTIONS)
     for name, fn in one_call.FUNCTIONS.items():
         for kw in variants[name]:

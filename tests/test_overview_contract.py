@@ -195,7 +195,11 @@ def test_no_store_is_named_in_the_code():
 # ---------------------------------------------------------------------------
 
 def test_it_is_registered_as_a_read_and_offered_with_the_presets():
-    assert loop.TOOL_FUNCTIONS["get_overview"] is overview.get_overview
+    # DRAWABLE SINCE 2026-09-22 (after wave 1): what Bob asks for, get_overview,
+    # is a call asked as one (agent/one_call.py) — the findings read plus the
+    # parts a page draws. The findings read is the registered, pinnable one.
+    assert loop.TOOL_FUNCTIONS["get_overview_findings"] is overview.get_overview_findings
+    assert "get_overview" in loop.one_call.FUNCTIONS and "get_overview" not in loop.TOOL_FUNCTIONS
     schema = next(s for s in loop.build_tool_schemas() if s["name"] == "get_overview")
     offered = schema["input_schema"]["properties"]["date_range"]["oneOf"][0]["enum"]
     assert offered == sorted(req(DEFS, "sales_day.presets"))
@@ -206,13 +210,13 @@ def test_it_is_registered_as_a_read_and_offered_with_the_presets():
 
 def test_a_backtest_knows_what_it_reproduces():
     bt = req(DEFS, "workflows.backtest")
-    assert bt["window_arguments"]["get_overview"] == "date_range"
-    assert "get_overview" in bt["partially_reproducible"]
+    assert bt["window_arguments"]["get_overview_findings"] == "date_range"
+    assert "get_overview_findings" in bt["partially_reproducible"]
 
 
 def test_it_returns_rows_and_the_three_receipts(reads):
     reads(_shops(-6_000, -1_000, -1_000, 500, 0, 0, 0))
-    out = overview.get_overview()
+    out = overview.get_overview_findings()
     assert isinstance(out["rows"], list) and out["rows"]
     meta = out["meta"]
     for key in ("source_table", "filters_applied", "snapshot_timestamp"):
@@ -226,12 +230,12 @@ def test_it_returns_rows_and_the_three_receipts(reads):
 def test_a_window_still_in_progress_is_refused(reads):
     reads(_shops(-1, -1, -1, -1, -1, -1, -1))
     with pytest.raises(ValueError, match="in progress"):
-        overview.get_overview("this_week")
+        overview.get_overview_findings("this_week")
 
 
 def test_the_calls_carry_the_window_and_the_comparison(reads):
     fake = reads(_shops(-6_000, -1_000, -1_000, 500, 0, 0, 0))
-    overview.get_overview()
+    overview.get_overview_findings()
     by = dict(fake.calls)
     assert by["estate_sales"]["compare_to"] == SPEC["compare_to"]
     assert by["estate_sales"]["date_range"] == SPEC["default_window"]
@@ -247,7 +251,7 @@ def test_the_calls_carry_the_window_and_the_comparison(reads):
 
 def test_findings_follow_the_declared_order(reads):
     reads(_shops(-6_000, -1_000, -1_000, 500, 0, 0, 0))
-    rows = overview.get_overview()["rows"]
+    rows = overview.get_overview_findings()["rows"]
     order = SPEC["order"]
     places = [order.index(r["finding"]) for r in rows]
     assert places == sorted(places)
@@ -276,7 +280,7 @@ def _numbers(node) -> set[float]:
 def test_every_figure_in_a_fact_is_a_number_on_its_row(reads):
     """Rule 9: code writes every digit, and the digit it writes is a row's figure."""
     reads(_shops(-6_000, -1_000, -1_000, 500, 0, 0, 0))
-    out = overview.get_overview()
+    out = overview.get_overview_findings()
     for row in out["rows"]:
         allowed = _numbers(row)
         fact = re.sub(r"\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d{1,2} [A-Z][a-z]{2}\b", "", row["fact"])
@@ -288,7 +292,7 @@ def test_every_figure_in_a_fact_is_a_number_on_its_row(reads):
 def test_no_row_carries_a_share_of_a_change(reads):
     """Rule 10: the ratio decides a word, and is never a figure anyone can quote."""
     reads(_shops(-6_000, -1_000, -1_000, 500, 0, 0, 0))
-    for row in overview.get_overview()["rows"]:
+    for row in overview.get_overview_findings()["rows"]:
         keys = set(row) | set(row.get("detail") or {})
         assert not keys & {"share", "ratio", "share_of_change", "share_pct", "contribution"}, row
         assert "%" not in row["fact"] or row["finding"] not in ("concentration",), row["fact"]
@@ -304,7 +308,7 @@ def _shop_concentration(rows):
 
 def test_one_shop_that_carried_most_of_the_fall_is_named_from_its_row(reads):
     reads(_shops(-6_000, -1_000, -1_000, 500, 0, 0, 0))  # estate -7,500; the first shop -6,000
-    row = _shop_concentration(overview.get_overview()["rows"])
+    row = _shop_concentration(overview.get_overview_findings()["rows"])
     assert row["detail"]["outcome"] == "carried_most"
     assert row["subject"] == SHOPS[0] and row["change"] == -6_000
     assert "carried most" in row["fact"] and SHOPS[0] in row["fact"]
@@ -313,14 +317,14 @@ def test_one_shop_that_carried_most_of_the_fall_is_named_from_its_row(reads):
 
 def test_a_shop_that_fell_more_than_the_estate_carried_all_of_it(reads):
     reads(_shops(-6_000, 2_000, 1_000, 0, 0, 0, 0))  # estate -3,000
-    row = _shop_concentration(overview.get_overview()["rows"])
+    row = _shop_concentration(overview.get_overview_findings()["rows"])
     assert row["detail"]["outcome"] == "carried_all"
     assert "moved the other way" in row["fact"]
 
 
 def test_a_fall_spread_across_shops_names_no_carrier(reads):
     reads(_shops(-1_000, -1_000, -1_000, -1_000, -900, 0, 0))
-    row = _shop_concentration(overview.get_overview()["rows"])
+    row = _shop_concentration(overview.get_overview_findings()["rows"])
     assert row["detail"]["outcome"] == "spread"
     assert row["fact"].startswith("No one shop carried most")
 
@@ -328,27 +332,27 @@ def test_a_fall_spread_across_shops_names_no_carrier(reads):
 def test_most_means_what_the_yaml_says(reads, monkeypatch):
     """The threshold is read, not written: move it and the word moves."""
     reads(_shops(-6_000, -1_000, -1_000, 500, 0, 0, 0))  # the first shop is 0.8 of the fall
-    assert _shop_concentration(overview.get_overview()["rows"])["detail"]["outcome"] == "carried_most"
+    assert _shop_concentration(overview.get_overview_findings()["rows"])["detail"]["outcome"] == "carried_most"
     defs = load_defs()
     monkeypatch.setitem(defs["overview"]["concentration"], "most_means_more_than", 0.9)
-    assert _shop_concentration(overview.get_overview()["rows"])["detail"]["outcome"] == "spread"
+    assert _shop_concentration(overview.get_overview_findings()["rows"])["detail"]["outcome"] == "spread"
 
 
 def test_a_rise_is_carried_by_a_shop_that_rose(reads):
     reads(_shops(6_000, 1_000, -500, 0, 0, 0, 0))
-    row = _shop_concentration(overview.get_overview()["rows"])
+    row = _shop_concentration(overview.get_overview_findings()["rows"])
     assert row["change"] > 0 and "rise" in row["fact"]
 
 
 def test_a_flat_estate_has_nothing_carried(reads):
     reads(_shops(1_000, -1_000, 0, 0, 0, 0, 0))
-    rows = overview.get_overview()["rows"]
+    rows = overview.get_overview_findings()["rows"]
     assert not [r for r in rows if r["finding"] == "concentration" and r["detail"]["of"] == "shops"]
 
 
 def test_the_day_that_moved_is_set_against_the_same_weekday(reads):
     reads(_shops(-6_000, -1_000, -1_000, 500, 0, 0, 0))
-    days = [r for r in overview.get_overview()["rows"] if r["finding"] == "day_moved"]
+    days = [r for r in overview.get_overview_findings()["rows"] if r["finding"] == "day_moved"]
     assert len(days) == SPEC["top_n"]["shop_days"]
     first = days[0]
     assert first["subject"] == SHOPS[0] and first["change"] == -6_000
@@ -359,7 +363,7 @@ def test_the_day_that_moved_is_set_against_the_same_weekday(reads):
 def test_a_shop_flagged_for_its_day_arrives_with_its_drivers(reads):
     """Anything shown that moved is investigated before it is shown."""
     reads(_shops(-6_000, -1_000, -1_000, 500, 0, 0, 0))
-    row = next(r for r in overview.get_overview()["rows"] if r["finding"] == "attention")
+    row = next(r for r in overview.get_overview_findings()["rows"] if r["finding"] == "attention")
     assert row["subject"] == SHOPS[1]
     assert "transactions down 50%" in row["fact"] and "basket down 23.1%" in row["fact"]
     assert row["detail"]["transactions"]["change_pct"] == -50.0
@@ -371,7 +375,7 @@ def test_a_shop_flagged_for_its_day_arrives_with_its_drivers(reads):
 
 def test_a_read_that_fails_is_a_finding_first_and_the_rest_stand(reads):
     reads(_shops(-6_000, -1_000, -1_000, 500, 0, 0, 0), fail={"stockouts"})
-    out = overview.get_overview()
+    out = overview.get_overview_findings()
     assert out["rows"][0]["finding"] == "unread"
     assert "stockouts" in out["rows"][0]["fact"] and "connection reset" in out["rows"][0]["fact"]
     assert out["meta"]["unread"] == ["stockouts"]
@@ -385,9 +389,38 @@ def test_every_reads_notice_reaches_the_overview(reads):
     n2 = {"kind": "comparison_incomplete", "message": "some rows not compared"}
     reads(_shops(-6_000, -1_000, -1_000, 500, 0, 0, 0),
           notices={"stockouts": n1, "fell": n2, "rose": n2})
-    notice = overview.get_overview()["meta"]["notice"]
+    notice = overview.get_overview_findings()["meta"]["notice"]
     assert notice["kind"] == "multiple"
     assert [n["kind"] for n in notice["items"]] == ["comparison_incomplete", "negative_on_hand"] or \
         sorted(n["kind"] for n in notice["items"]) == ["comparison_incomplete", "negative_on_hand"]
     assert len(notice["items"]) == 2  # the same notice twice is said once
     assert [n["kind"] for n in loop._notices_from({"meta": {"notice": notice}})]
+
+
+# ---------------------------------------------------------------------------
+# Drawable (2026-09-22, after wave 1): asked as one call, it is the findings
+# read and the parts a page draws — the findings read's own calls, never a
+# second list — so a broad page draws its charts without re-reading.
+# ---------------------------------------------------------------------------
+
+def test_asked_as_one_it_is_the_findings_and_the_parts_a_page_draws():
+    reads = loop.one_call.get_overview()
+    assert reads[0] == {"part": "findings", "tool": "get_overview_findings", "arguments": {}}
+    drawn = req(DEFS, "overview.drawn")
+    assert [r["part"] for r in reads[1:]] == list(drawn)
+    spec = req(DEFS, "overview")
+    for r in reads[1:]:
+        assert r["tool"] == spec["reads"][r["part"]]["tool"]
+        assert r["tool"] in loop.TOOL_FUNCTIONS
+        assert loop._unfit_arguments(r["tool"], loop.TOOL_FUNCTIONS[r["tool"]], r["arguments"]) is None
+
+
+def test_the_parts_carry_the_window_the_findings_read_is_asked_for():
+    reads = loop.one_call.get_overview("last_7_days")
+    assert reads[0]["arguments"] == {"date_range": "last_7_days"}
+    assert next(r for r in reads if r["part"] == "shop_sales")["arguments"]["date_range"] == "last_7_days"
+
+
+def test_a_window_in_progress_is_refused_once_for_the_whole_call():
+    with pytest.raises(ValueError):
+        loop.one_call.get_overview("this_week")

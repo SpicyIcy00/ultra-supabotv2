@@ -1225,6 +1225,12 @@ one_call_reads:
           compared: true
           window: date_range
           scope: filters
+    # The overview, drawable (2026-09-22): its findings read, then the parts
+    # overview.drawn names, with the window the findings read is asked for.
+    # Its list lives under `overview`, where the findings read's own does.
+    get_overview:
+      asks: how is the business doing — the findings, and the reads a page draws them from
+      reads_from: overview.drawn
     get_stock_health:
       asks: a shop's stock health — what is out, what the plan wants shipped, and the broken counts
       stores: [stores.active_retail, stores.warehouse]
@@ -5741,7 +5747,7 @@ workflows:
       get_object: date_range
       # The overview's sales, days and stockouts take its window; see
       # partially_reproducible for the warning list, which does not.
-      get_overview: date_range
+      get_overview_findings: date_range
 
     # The window rebinds, but one side of the answer is still read live. Real
     # and useful, and it must say so — reporting it as fully reproduced would
@@ -5767,7 +5773,7 @@ workflows:
         sales beside today's shelf, and each section's own receipts say which
         is which — one timestamp over the view would be exactly the lie this
         classification exists to prevent.
-      get_overview: >
+      get_overview_findings: >
         The sales reads, the shops' days and the stockouts rebind with
         date_range; the warning list is get_attention read for TODAY, so a
         backtested overview shows a past week's findings beside today's
@@ -6939,6 +6945,13 @@ overview:
   # Reads run at once. tools/_common.connect() gates connections per process;
   # four is what tools/objects.py uses for the same reason.
   max_parallel: 4
+  # THE PARTS A PAGE DRAWS (2026-09-22, after wave 1). Asked for, get_overview
+  # is its findings read plus these, each an ordinary read with its own
+  # call_seq, board object and receipts (agent/one_call.py) — the same calls
+  # the findings read makes, named from `reads` below, not a second list.
+  # Before this the findings were one read of mixed rows that no chart can
+  # draw, so four broad turns in five re-read these to chart them.
+  drawn: [estate_sales, estate_transactions, estate_basket, shop_sales, shop_days, fell, rose, stockouts]
 
   # Every read the overview makes. Each is an existing tool with the call's
   # window filled in; `window` says how, exactly as one_call_reads does:

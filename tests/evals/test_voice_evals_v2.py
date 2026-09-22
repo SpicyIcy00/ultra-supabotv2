@@ -286,7 +286,10 @@ def _broad(turn: checks.Turn, f: dict) -> None:
     # findings localize and that the answer names what carried the change
     # from the overview's own row; the reads and rounds are recorded as the
     # card's measure, never asserted — one run is a sample.
-    overview = [r for r in turn.results if r["tool"] == "get_overview" and not r["error"]]
+    # Asked as one call since 2026-09-22 (after wave 1): its findings arrive as
+    # the get_overview_findings read, beside the parts a page draws.
+    overview = [r for r in turn.results
+                if r["tool"] in ("get_overview", "get_overview_findings") and not r["error"]]
     if overview:
         rows = [row for r in overview for row in (r["result"] or {}).get("rows") or []]
         f["overview_asked_reads"] = checks.asked_reads(turn.calls)

@@ -201,7 +201,7 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     # returned as ranked findings, each a line of fact code wrote, with what
     # carried the change decided by definition (tools/overview.py,
     # metrics.yaml overview). Writes no SQL — it calls the reads above.
-    "get_overview": overview.get_overview,
+    "get_overview_findings": overview.get_overview_findings,
 }
 
 # The one tool that reads nothing. It says what the person SEES — which reads,
@@ -316,6 +316,7 @@ def _enum_sources(defs: dict) -> dict[tuple[str, str], list]:
         ("get_stock_health", "store"): _one_call_stores("get_stock_health"),
         ("get_object", "date_range"): presets,
         ("get_overview", "date_range"): presets,
+        ("get_overview_findings", "date_range"): presets,
         ("get_purchasing", "measure"): purch_measures,
         ("get_purchasing", "group_by"): purch_groups,
         ("get_purchasing", "date_range"): presets,
@@ -1829,7 +1830,7 @@ def _notices_from(result: dict) -> list[dict]:
 # "no log" and "could not read the log" stay distinguishable on the result.
 INJECTED_READS: dict[str, tuple[str, str]] = {
     "get_attention": ("decisions", "decisions_reader"),
-    "get_overview": ("decisions", "decisions_reader"),
+    "get_overview_findings": ("decisions", "decisions_reader"),
 }
 
 

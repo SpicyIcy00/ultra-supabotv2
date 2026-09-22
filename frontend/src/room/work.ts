@@ -51,6 +51,7 @@ export const WORDS: Record<string, [string, string]> = {
   get_product: ['looking up a product', 'looked up a product'],
   get_object: ['opening it up', 'opened it up'],
   get_overview: ['reading the whole business', 'read the whole business'],
+  get_overview_findings: ['finding what moved', 'found what moved'],
   get_movement: ['reading transfers', 'read transfers'],
   get_vending: ['reading vending', 'read vending'],
   get_vending_stock: ['reading vending stock', 'read vending stock'],

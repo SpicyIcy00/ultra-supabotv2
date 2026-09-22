@@ -1,5 +1,6 @@
 """
-Reads asked as one call (P2S.10, 2026-09-18): get_change and get_stock_health.
+Reads asked as one call (P2S.10, 2026-09-18): get_change, get_stock_health
+and, since wave 1 (2026-09-22), get_overview.
 
 THIS FILE READS NOTHING AND COMPUTES NO FIGURE. Each function below turns one
 call Bob makes into the reads metrics.yaml `one_call_reads` lists — the
@@ -204,7 +205,41 @@ def get_stock_health(store: Optional[str] = None) -> list[dict]:
     return _reads("get_stock_health", store=store)
 
 
+def get_overview(date_range: Any = None) -> list[dict]:
+    """
+    How the business is doing, in ONE call — use it FIRST AND ALONE for a
+    broad question ("how are we doing", "how was the week", "anything I
+    should know"). It is the overview's FINDINGS read and the reads a page
+    draws them from, each its own result with its own call_seq and receipts:
+    the estate's net sales, transactions and basket against the week before,
+    net sales by shop, each shop's days against the same weekdays before,
+    the products that fell and rose most, and the longest stockouts. The
+    findings are ranked, each one line of fact written by code; among them
+    is WHAT CARRIED IT, a `concentration` finding that says whether one shop
+    (and one product) carried most of the estate's change — quote its words,
+    never a share of your own. Answer from the findings and draw from the
+    parts by their own call_seq: a chart of shops is the shop read, the days
+    are the days read, the movers are the fell and rose reads. NEVER re-read
+    any of these for a chart — they are already here. A drill-down read
+    (get_change, get_sales) is only for a follow-up about one thing a
+    finding names. Your first sentence says the estate's change as its
+    first finding gives it, the percentage included.
+
+    Args:
+        date_range: a CLOSED preset or an explicit [start, end) pair; default
+               last_week, against the week before. A window still in
+               progress is refused, as a comparison on one is.
+    """
+    from tools import overview  # the overview owns its list (overview.drawn)
+
+    findings_args: dict[str, Any] = {} if date_range is None else {"date_range": date_range}
+    parts = overview.drawn_calls(date_range)  # refuses a window in progress, once
+    return [{"part": "findings", "tool": "get_overview_findings", "arguments": findings_args},
+            *parts]
+
+
 FUNCTIONS: dict[str, Callable[..., list[dict]]] = {
     "get_change": get_change,
     "get_stock_health": get_stock_health,
+    "get_overview": get_overview,
 }
