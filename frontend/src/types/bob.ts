@@ -540,7 +540,10 @@ export type Arrangement =
       labels?: string[];
       /** For `fold`: what is inside it, so a person knows what they are opening
        *  (P15.a). Closed at rest; never a digit — a count is the drawing's. */
-      label?: string }
+      label?: string;
+      /** On the root: the page type he wrote into — week, finding, comparison
+       *  (W2.4, composition.page_types). The tree is the type's, built by code. */
+      type?: string }
   /** A block of his. `beside`: set beside the words that follow it; `size`: the
    *  room it takes; `control`: a control block carried above its drawing (P7). */
   | { block: string; beside?: boolean; size?: 'small' | 'medium' | 'wide' | 'full'; control?: string }

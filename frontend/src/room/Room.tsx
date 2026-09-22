@@ -52,6 +52,8 @@ import { pathFor, refusalForPerson, resolveFragment, retunedKey, tokensFor,
          type DrawnToken } from './tokenShape';
 import type { ToolCall } from '../types/bob';
 import { Noticed } from './Noticed';
+import { KeptPage } from './KeptPage';
+import { pageOpened } from './pageOpened';
 import { Doing } from './Working';
 import { useQuery } from '@tanstack/react-query';
 import { listApprovals } from '../services/workflowsApi';
@@ -223,6 +225,9 @@ export default function Room() {
   const board = useMemo(() => buildBoard(answers), [answers]);
   const busy = bob.busy;
   const latest = answers[answers.length - 1] ?? null;
+  // A DASHBOARD IS OPENED, NOT WRITTEN UP (W2.4): the kept page this answer
+  // built or changed, from the committed write — drawn where the board would be.
+  const dashboard = busy ? null : pageOpened(latest);
   // WHAT CAME BEFORE THIS FINDING FOLDS TO A LINE (P1.d). Clearing handles a
   // question that shares nothing with the board; this handles the one that
   // does, so a fourth follow-up is still one finding and not nine tiles. The
@@ -934,7 +939,14 @@ export default function Room() {
             })} />
 
             <FiguresArea areaRef={areaRef}>
-              {empty ? null : (
+              {/* THE REAL DASHBOARD (W2.4, 2026-09-22). "Build me a dashboard"
+                  built a kept page — live analyses that re-run on opening —
+                  so the room opens that page here, the same page /pages
+                  draws, instead of a report about the business. */}
+              {dashboard ? (
+                <KeptPage pageId={dashboard} embedded
+                          onBack={() => navigate(`/pages/${dashboard}`)} />
+              ) : empty ? null : (
                 <>
                   {/* THREE RENDERINGS, NEVER TWO (UI rule 8). While he is
                       reading and nothing of this turn has landed, the figures
