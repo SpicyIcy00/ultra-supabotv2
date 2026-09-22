@@ -29,6 +29,11 @@ export interface NoticedItem {
   watch_id?: string | null;
   /** True when the read behind it travelled with the post. */
   has_calls: boolean;
+  /**
+   * Someone called this kind of item about this subject wrong (W2.3): who and
+   * when, in the notice's words. It is still listed, and this is drawn above it.
+   */
+  disputed?: string | null;
 }
 
 export async function listNoticed(): Promise<NoticedItem[]> {

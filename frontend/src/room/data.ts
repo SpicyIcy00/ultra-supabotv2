@@ -263,6 +263,9 @@ const NOT_A_COLUMN = [
   // identity string it keys on — and the owner was shown a table of it:
   // "what does this report mean i dont understand is there something wrong?"
   'identity', 'section', 'floor', 'measure', 'source', 'threshold_applied',
+  // A row's key for setting it aside, and the doubt someone put on it (W2.3):
+  // a control and a notice, drawn as those, never as cells.
+  'dismiss', 'disputed',
 ];
 
 /** Subject first, then the figure, then what it moved against. */

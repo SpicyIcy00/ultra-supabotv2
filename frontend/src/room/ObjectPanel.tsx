@@ -54,7 +54,7 @@ export function useObject(kind: string | null, name: string | null, enabled: boo
 }
 
 /** Columns worth showing, in a fixed order, capped so a section stays a glance. */
-const HIDE = /(_id$|^section$|^unit$|^direction$|^baseline_status$|^receipts$)/;
+const HIDE = /(_id$|^section$|^unit$|^direction$|^baseline_status$|^receipts$|^dismiss$|^disputed$)/;
 
 function columns(rows: Record<string, unknown>[]): string[] {
   const keys = Object.keys(rows[0] ?? {}).filter((k) => !HIDE.test(k));

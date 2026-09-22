@@ -34,6 +34,8 @@ import { MissingRow, isLit, type TileProps } from './tiles';
 import {
   COOL, RowName, beat, emphasised, moved, paint, told, wash, type Meta, type Offering, type Row,
 } from './markParts';
+import { keyOf } from '../services/dismissalsApi';
+import { SetAside } from './SetAside';
 
 type O = TileProps['o'];
 interface ShapeProps extends Offering {
@@ -763,7 +765,7 @@ export const SHAPES: Mark[] = ['bar', 'multiples', 'area', 'stacked', 'pie', 'sc
  * one figure if it carries one. No shape, because there is nothing to read
  * in the shape; the offers the block carries are drawn under it as always.
  */
-function List({ rows, meta, o, onPick, picked }: ShapeProps) {
+function List({ rows, meta, o, onPick, picked, onDismiss }: ShapeProps) {
   // WHAT A ROW IS, before WHERE IT IS: a line that hit zero is the line, at a
   // shop. `nameKeyOf` prefers the shop, which is the open defect of 2026-09-17
   // (a product chart naming every row after its shop); a list of things to do
@@ -822,6 +824,18 @@ function List({ rows, meta, o, onPick, picked }: ShapeProps) {
             {where && <span className="r-mk-list-where">{where}</span>}
             {shown && (
               <span className="r-mk-list-fig">{fmt(shown.key, shown.value, unitOfRow(r))}</span>
+            )}
+            {/* SOMEONE CALLED THIS ONE WRONG (W2.3). The notice above the
+                block says who and when; this points at the row it means, in
+                words, never the accent. */}
+            {r.disputed != null && (
+              <span className="r-label r-mk-list-doubted" data-disputed="yes">said may be wrong</span>
+            )}
+            {/* ONE TAP FOR WHY, where the row carries its own key (the read
+                wrote `dismiss` from its fields) and the room wired the write. */}
+            {onDismiss && keyOf(r.dismiss) && (
+              <SetAside what={keyOf(r.dismiss)!}
+                        send={(what, reason) => onDismiss(what as NonNullable<ReturnType<typeof keyOf>>, reason)} />
             )}
           </li>
         );

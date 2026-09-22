@@ -851,6 +851,8 @@ export function MarkBlock(p: TileProps) {
     // it this way, off the row that was tapped, which is what lets a tap on a
     // product inside a shop's board travel as a product.
     onPick: (subject: string) => p.on.pick(subject, dimensionOf(rows, subject)),
+    // SET ASIDE WITH A REASON (W2.3): only where the room wired it.
+    onDismiss: p.on.dismiss,
     onTake: (a: ActionOffer) => {
       if (!a.target) return;
       if (a.act === 'why') p.on.why(a.target, dimensionOf(rows, a.target));
