@@ -1829,6 +1829,7 @@ def _notices_from(result: dict) -> list[dict]:
 # "no log" and "could not read the log" stay distinguishable on the result.
 INJECTED_READS: dict[str, tuple[str, str]] = {
     "get_attention": ("decisions", "decisions_reader"),
+    "get_overview": ("decisions", "decisions_reader"),
 }
 
 

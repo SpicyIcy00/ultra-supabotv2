@@ -194,7 +194,9 @@ def test_a_focused_message_that_asks_to_be_taken_apart_is_not_one_read(defs):
     # name. FOCUSED's floor is still under BROAD's ceiling: a focused message
     # taken apart is not a broad one.
     broad_reads = req(defs, "investigation.scope.kinds.broad.reads")
-    assert "ONE round" in broad_reads and "design the page first" in broad_reads
+    # W1.3 (2026-09-22) moved it: the one round is get_overview alone, the
+    # reads it runs in code — "design the page first" retired with the page-first recipe.
+    assert "ONE round" in broad_reads and "get_overview ALONE" in broad_reads
     assert int(apart["min_reads"]) < int(req(defs, "investigation.scope.kinds.broad.max_reads"))
 
 

@@ -1880,10 +1880,12 @@ investigation:
         # unlimited canvas he could get different data, put different text and
         # everything else." The reads follow the page a person needs, not the
         # other way round; the composition recipe is on `compose`.
+        # W1.3 (2026-09-22): the overview already holds those reads, run in
+        # code, so a broad answer is one read; measured one read in 3 of 3.
         reads: >
-          design the page first, then read for it in ONE round: {headline}
-          for the estate, the estate by day, every shop by week, the movers
-          both ways, get_attention
+          read get_overview ALONE in ONE round (it holds {headline}, shops by
+          day, the movers, get_attention); never re-read it; drill down only
+          into a finding it flags
         grouped_not_fanned_out: true
         # 5 → 7 (P2S.6): three headline reads, get_attention, and one call per
         # localizing dimension across both shops (group_by [store, day] with
