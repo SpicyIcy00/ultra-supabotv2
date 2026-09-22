@@ -1689,7 +1689,8 @@ nothing. Five decisions, recorded because the code cannot say why:
     keeps no history. Change is never inferred from when a pin was made. An
     origin snapshot beside the current figures is a later question, alongside
     the comparison layer.
-  - **Scope belongs to the thread.** The first page-aware question binds a
+  - **Scope belongs to the thread.** *(Reversed 2026-09-22 by W1.4: the
+    conversation follows the page — see that date.)* The first page-aware question binds a
     thread to its page; follow-ups keep it wherever the person has navigated;
     a scope offered mid-thread is ignored; a fresh Ask has none; opening
     another thread gives it its own or none. It lives on the stream the shell
@@ -5879,3 +5880,78 @@ them now cause we using deepseek and its cheaper."*
 Parallel agents share `george_ro`'s cap of 15 connections with production, so an agent's live runs
 set `GEORGE_MAX_CONNECTIONS=2`, and `captest.py`, which writes to live tables as one shared test
 user, stays the lead's.
+
+## 2026-09-22 — wave 1, the base: what each card decided, and what it measured
+
+Run as one workflow, one agent per card in its own worktree, merged onto `main` in the order
+W1.1, W1.2, W1.3, W1.5, W1.4 with every suite after each merge. One conflict (the eval
+harness's `run_turn` signature: W1.2's `**injected` against W1.4's `page_context`), resolved by
+keeping both.
+
+**W1.1 — the answer is the size of the question, and checks fix instead of argue.**
+1. The size ceiling is read by code from the effort table's own kind
+   (`composition.size.ceiling_by_effort_kind`): broad → broad, remember → remember, fresh →
+   LOOKUP, everything else focused. A deterministic bound, not a planner (rule 5). Fresh → lookup
+   bought the fact target: 25 s at a focused ceiling, 6 s at lookup.
+2. Bob declares `size` on compose, at or under the ceiling; above it he is brought down.
+   Bounds: remember 0 figures / 0 queries / 30 words; lookup 1 / 4 / 40; focused 3 / 12 / 70 plus
+   the "Make it a full page" offer; broad the page's own bounds / 30 queries.
+3. The read budget counts QUERIES run (set members counted, duplicates not); a batch that would
+   cross it is refused before it runs, except a turn's first. The 12-call cap stands on top.
+4. A figure refused for size or a count no longer holds the round; truth refusals still do.
+5. The notice gate buys no round and appends nothing (`notices.max_corrective_turns: 0`,
+   `_forced_caveats` deleted); the room already draws every notice that says a figure may be
+   wrong. The page gate's `max_corrective_turns` is 0. Both still log their gap.
+6. After a correction or a refused compose, a reply that does not say the claim is replaced by the
+   claim; a round settles when a compose names the claim and opens with a lede.
+7. DeepSeek's effort goes top-level (`effort.top_level`), no marker; Anthropic keeps the marker.
+8. The rest of the card: "below zero" in the negative-on-hand fingerprints, a notice listed once,
+   a page resolves only against its own turn's blocks, `get_stock group_by state` sums no
+   negative on-hand and draws states as words, the plan list bounded at four steps, the
+   single-store `previous_period` comparison no longer refused.
+
+**W1.2 — the action words are enforced, not instructed** (`action_words:` in the yaml).
+`record_belief` refuses a data-grounded view for "keep this…" and "what do you remember…";
+`set_watch` refuses "…every Monday / every morning" unless the question names a watch;
+`create_page` refuses "build it / set up a…" unless it says page or dashboard. Each refusal names
+the tool the words mean; nothing forces a write. A workflow schedule is delivered to the room
+(`workflows.schedule.delivery: [room, telegram]`) and is still born off. The same rule saved again
+is the same version. `edit_page` gained a `change` operation that replaces a pin's calls where it
+stands (audited as `change`); an `add` of the same subject is refused and names the change. Reads
+asked as one call are kept as the reads they ran as. A day with no time takes 07:00.
+
+**W1.3 — `get_overview`.** Fourteen existing reads run in code, four at a time, returned as ranked
+findings of uniform shape, each one line of fact written by code with its receipts in
+`meta.parts`. **A concentration finding is a code-computed fact decided by the yaml
+(`overview.concentration`: more than half of the estate's change → carried_most / carried_all /
+spread), not an attribution share**; rule 10 still binds his prose, and the eval excuses "most of
+the fall" only when a read returned such a row. The lead, after the merge, pointed
+`investigation.scope.kinds.broad.reads` at it (the agent measured one read in 3 of 3 with that
+line) and injected the decisions reader into it as into `get_attention`.
+
+**W1.4 — the conversation follows the page. Reverses 2026-09-08 "scope belongs to the thread"
+(line ~1692).** A question asked from a different page than the open thread starts a new thread
+there, with nothing carried over; from the same page it continues; from no page (the room's own
+composer, an @mention) it keeps the thread and its scope (`pageScope.ts` `askPlan`). One ask line
+is mounted above both chromes and answers in place; a screen registers what it is and shows,
+never a figure (a subject that looks like one is refused by the route).
+
+**W1.5 — stock cover.** The window is `replenishment.review_period_days` (7) and the speed
+`purchasing.plan.demand.lookback_days` (90), so no number was invented. What is left is the newest
+`inventory_snapshots` count. Only a line with a level set fires; the level is the draft's target;
+a shop gives only what is above max(level, speed × window). `get_replenishment` no longer refuses
+AJI BARN, whose counts carry the new `warehouse_count_not_a_shelf_count` notice.
+`attention.cannot_notice.cover` is removed: cover is now noticed per shop.
+
+**The evals, first run on DeepSeek.** 50 cases: 20 passed, 26 failed, 3 skipped, 1 xfailed
+(37 min, 57 turns, $0.70). Every failing case was run again on the pre-wave commit `6e19473`:
+the investigation cases' call caps (written for Opus; `executed_calls` 10–18 against 8),
+all seven page-workshop cases, the morning, `analyze`, and the lookup-read case fail there too —
+the baseline, not a regression. Three cases passed before and failed after: `gate_1` failed an honest
+answer whose grounded figures sat in the caveat, so the voice checks now read every slot the room
+draws (and catch an invented figure there too); `no_rows_is_said_as_no_sales` passed on a re-run
+(one draw of three), and `thread_3_correction` passed on two re-runs. The kept-page date filter (W1.4) fails because `edit_page` has no operation
+that adds a date filter.
+
+**Found, not fixed:** told "you don't need my approval under ₱20,000", Bob said *"I key orders
+under his line myself"* — an action he cannot take, said in the third person. W2.2's.

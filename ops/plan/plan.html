@@ -199,7 +199,7 @@
   .phase .gate{font-size:13px;color:var(--ink-2);border-left:2px solid rgba(var(--bob),.45);padding-left:12px;margin:12px 0 24px;max-width:70ch}
   .phase .gate b{color:var(--ink);font-weight:500}
   .card{border:1px solid var(--edge);border-radius:16px;background:var(--card);padding:18px 20px;margin-bottom:12px}
-  .card.done{opacity:.55}
+  .card.done{opacity:.8}
   .card .ch{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:baseline;margin-bottom:6px}
   .card .id{font-family:var(--mono);font-size:11.5px;color:rgb(var(--bob))}
   .card.done .id{color:var(--ink-3)}
@@ -259,7 +259,7 @@
 <header>
   <p class="kick">plan · <b>Bob, ready for anything</b> · 22 Sep 2026</p>
   <h1>Ready for anything</h1>
-  <p class="lede">Ten cards in three waves, each wave run at once by one agent per card. <em>Back to the base</em>: Bob understands the business, builds things with you, and runs them &mdash; not a chat that draws pages. The base comes first, because everything else sits on it. Earlier plans are kept in <span class="arch">ops/archive/</span>; this page is the readable copy of ops/NOW.md.</p>
+  <p class="lede">Five cards in two waves are left, each wave run at once by one agent per card; wave 1 is merged, measured and live. <em>Back to the base</em>: Bob understands the business, builds things with you, and runs them &mdash; not a chat that draws pages. The base comes first, because everything else sits on it. Earlier plans are kept in <span class="arch">ops/archive/</span>; this page is the readable copy of ops/NOW.md.</p>
 </header>
 
 <section class="why">
@@ -304,36 +304,41 @@
   </div>
 </section>
 
-<section class="phase">
-  <h2>Wave 1 &mdash; the base</h2>
-  <p class="ph">Five cards, run at once by five agents. Eval spend by the cards: <b>$1.50</b> &mdash; each card tests itself on live answers, about four turns at four cents each. The full check after each wave is about $1.90 more, so the whole plan is about $7.20.</p>
+<section class="phase wave-done">
+  <h2>Wave 1 &mdash; the base <span style="font-weight:400;color:var(--ink-3)">&middot; done 22 Sep</span></h2>
+  <p class="ph">Merged, measured and pushed. What is left to spend on the open cards&rsquo; own tests: <b>$0.75</b> &mdash; each card tests itself on live answers, about four turns at four cents each. The full check after each wave is about $1.90 more, so about $4.55 is left in all.</p>
   <p class="gate"><b>How it runs.</b> Each agent works in its own copy of the code, so none can collide. The lead session merges them one at a time, runs every test after each, then runs the whole live test suite, the full capability test, and a speed check of three kinds of question, five times each. When every test passes, it pushes the update live. <b>Done when</b> a fact comes back in about ten seconds, a narrow question in well under a minute, and every action phrase that failed the test passes in the same words.</p>
   <p class="pl" style="margin:14px 0 4px">the one prompt that runs this wave, with an agent per card</p><div class="cmd">Read ops/NOW.md. Run wave 1 as a workflow: one agent per card, each in its own worktree, then merge in order, measure, and push when every suite is green.</div>
   <div style="height:18px"></div>
 
-  <div class="card"><div class="ch"><span class="id">W1.1</span><h3>Answers and checks</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
+  <div class="card done"><div class="ch"><span class="id">W1.1</span><h3>Answers and checks</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
     <p class="does">Small questions get small answers, and a page is <b>offered</b>, not forced &mdash; enforced in the code. A missing warning is placed by code beside its figure, instead of Bob being told to rewrite his answer. With it, the bugs from your dashboard page: a check that wanted the word &ldquo;negative&rdquo;, a warning printed twice, figures that drew as dashes, a stock total of &minus;49 million, and a next-steps list with no limit.</p>
     <p class="done-when"><b>Done when:</b> a fact answers in about 5&ndash;15 seconds, a narrow question in 20&ndash;40, and your dashboard turn replays with a real headline, no grey box and no dashes.</p>
+    <p class="done-when"><b>Result:</b> a fact now answers in 6.5 seconds (median of five) &mdash; met. A narrow question takes 54 seconds, not 20&ndash;40 &mdash; <b>missed</b>, though it no longer draws a page. Your dashboard turn replays with a headline that answers.</p>
     <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W1.1.</div></div>
 
-  <div class="card"><div class="ch"><span class="id">W1.2</span><h3>Your action words do what they say</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
+  <div class="card done"><div class="ch"><span class="id">W1.2</span><h3>Your action words do what they say</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
     <p class="does">&ldquo;Keep this&rdquo; pins. &ldquo;Every Monday&rdquo; delivers to your room. &ldquo;I want this every Monday&rdquo; schedules the report, not the watch. &ldquo;Build it&rdquo; makes something that <b>changes</b> when you ask. &ldquo;What do you remember?&rdquo; only reads.</p>
     <p class="done-when"><b>Done when:</b> the save and build parts of the test pass in the same words.</p>
+    <p class="done-when"><b>Result:</b> passes in your words &mdash; &ldquo;Keep this&rdquo; pins, &ldquo;every Monday&rdquo; schedules the report, &ldquo;use 30-day velocity&rdquo; changes the plan to version 2 instead of adding a tile.</p>
     <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W1.2.</div></div>
 
-  <div class="card"><div class="ch"><span class="id">W1.3</span><h3>One read that already has the picture</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
+  <div class="card done"><div class="ch"><span class="id">W1.3</span><h3>One read that already has the picture</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
     <p class="does">One read finds what moved and hands Bob the findings as plain sentences, each with its receipt &mdash; including <b>what caused most of it</b>, like &ldquo;one shop carried most of the drop&rdquo;, worked out by code, never estimated in words.</p>
     <p class="done-when"><b>Done when:</b> a fresh broad question is one read and two rounds, and names the shop or line that carried the change.</p>
+    <p class="done-when"><b>Result:</b> the read works and names the shop that carried the change, but a broad answer still takes about 2&frac12; minutes, and only 1 run in 5 stayed at one read &mdash; he re-reads to draw charts. <b>Missed.</b></p>
     <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W1.3.</div></div>
 
-  <div class="card"><div class="ch"><span class="id">W1.4</span><h3>Alive on every page</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
+  <div class="card done"><div class="ch"><span class="id">W1.4</span><h3>Alive on every page</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
     <p class="does">One Bob line on every page, including the dashboard, analytics, warehouse, packing and vending pages that have none today. He answers <b>right there</b>, knows which page you&rsquo;re on and what it shows, and stays on it.</p>
     <p class="done-when"><b>Done when:</b> &ldquo;add date filters to this&rdquo; on a saved page edits that page without leaving it.</p>
+    <p class="done-when"><b>Result:</b> a question on the warehouse page is answered there. &ldquo;Add date filters&rdquo; on a saved page <b>does not work yet</b>: he reads the page but has no way to add a filter to it.</p>
     <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W1.4.</div></div>
 
-  <div class="card"><div class="ch"><span class="id">W1.5</span><h3>Stock: what runs out, and where to get it</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
+  <div class="card done"><div class="ch"><span class="id">W1.5</span><h3>Stock: what runs out, and where to get it</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
     <p class="does">A warning per shop <b>before</b> a shelf empties &mdash; sales speed against what is left. &ldquo;Handle the AJI BARN reorder&rdquo; works. And before ordering more, Bob suggests moving stock you already have, from the warehouse or between shops, as a draft you key into StoreHub.</p>
     <p class="done-when"><b>Done when:</b> a line running out is flagged with both numbers, and the reorder returns a draft instead of a refusal.</p>
+    <p class="done-when"><b>Result:</b> &ldquo;Handle the AJI BARN reorder&rdquo; returns a draft &mdash; 23 moves and 9 orders &mdash; in 18 seconds. Running-out lines name both numbers; only 39 lines have a level set, so most can&rsquo;t warn yet.</p>
     <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W1.5.</div></div>
 
 </section>
