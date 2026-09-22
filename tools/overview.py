@@ -430,12 +430,24 @@ def _products(results: dict, spec: dict, defs: dict) -> list[dict]:
 
 def _attention(results: dict, spec: dict, defs: dict) -> list[dict]:
     lines = spec["facts"]["attention"]
+    # The flagged day's drivers, by shop: the same day and comparison the
+    # warning list's sales rows make (overview.reads.day_*), joined on the shop.
+    tx = _by_store(results["day_transactions"]["rows"])
+    basket = _by_store(results["day_basket"]["rows"])
+
+    def moved(r: Optional[dict]) -> str:
+        if not r or not _compared_ok(r, spec):
+            return "with no comparison"
+        return f"{_dir(r)} {_pct(r.get('change_pct'))}"
+
     out: list[dict] = []
     for i, r in enumerate(results["attention"]["rows"][: int(spec["top_n"]["attention"])]):
         source = str(r.get("source") or r.get("section") or "")
         as_of = (r.get("receipts") or {}).get("as_of") or {}
         compared = as_of.get("compared") or [None, None]
+        shop_tx, shop_basket = tx.get(str(r.get("subject"))), basket.get(str(r.get("subject")))
         fields = {
+            "tx": moved(shop_tx), "basket": moved(shop_basket),
             "subject": r.get("subject"), "where": r.get("store"), "source": source,
             "day": _day(as_of.get("day")) if as_of.get("day") else "",
             "value": _amount(r.get("value"), r.get("unit"), defs), "dir": _dir(r),
@@ -448,6 +460,9 @@ def _attention(results: dict, spec: dict, defs: dict) -> list[dict]:
         fact = _say(lines.get(source) or lines["other"], **fields)
         keep = {k: r.get(k) for k in ("source", "identity", "was", "now", "quantity_on_hand",
                                       "last_sold", "sku", "threshold_applied") if r.get(k) is not None}
+        if source == "sales_vs_same_weekday" and (shop_tx or shop_basket):
+            keep["transactions"] = {k: (shop_tx or {}).get(k) for k in ("value", "baseline", "change_pct")}
+            keep["basket"] = {k: (shop_basket or {}).get(k) for k in ("value", "baseline", "change_pct")}
         out.append(_finding("attention", fact, "attention", subject=r.get("subject"),
                             where=r.get("store"), metric=source, row=r,
                             order_within=_num(r.get("rank")) or i, detail=keep or None))
@@ -547,12 +562,14 @@ def get_overview(date_range: Any = None, *, decisions: Any = None) -> dict:
     "how was the week", "anything I should know" — and answer from its
     findings in the next round: they already are the estate, the shop that
     carried it, the day and the lines that moved. A drill-down read (get_change,
-    get_sales) is for a follow-up about one thing it names, never to re-read
-    what it returned. On the page its findings are ONE read of mixed facts:
-    draw it once, as a `list`, and set a figure beside your words by its row's
-    `subject`; a chart of the shops or the days is its drill-down read, not a
-    shape these rows make. Nothing here is a threshold: which findings appear
-    is what moved.
+    get_sales) is for a follow-up about one thing it names — NEVER to re-read
+    what it already read: the shops by week, their days and the movers are
+    in its findings, and re-reading them for a chart costs a round and shows
+    nothing new. Your first sentence says the estate's change as its first
+    finding gives it, the percentage included. On the page its findings are ONE read of mixed facts: draw it
+    once, as a `list`, and set each figure beside your words by its row's
+    `subject`. Nothing here is a threshold: which findings appear is what
+    moved.
 
     Args:
         date_range: a CLOSED preset or an explicit [start, end) pair; default

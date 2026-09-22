@@ -6591,6 +6591,12 @@ overview:
     rose:                {tool: get_sales, arguments: {metric: product_revenue, group_by: product, rank_by: biggest_gain}, compared: true, window: date_range, top_n: products}
     stockouts:           {tool: get_stock_history, arguments: {view: stockouts, rank_by: most_days_out}, window: window_days, top_n: stockouts}
     attention:           {tool: get_attention, arguments: {}, window: none}
+    # The warning list's shops, investigated before they are shown: the day it
+    # compares (yesterday, against the same weekday a week before — the
+    # brief's own comparison) by shop, on both drivers, so a shop flagged for
+    # its day arrives with whether it lost visits or basket.
+    day_transactions:    {tool: get_sales, arguments: {metric: transaction_count, group_by: store, date_range: yesterday, compare_to: same_weekday_last_week}, window: none}
+    day_basket:          {tool: get_sales, arguments: {metric: average_transaction_value, group_by: store, date_range: yesterday, compare_to: same_weekday_last_week}, window: none}
 
   # WHAT "CARRIED MOST OF IT" MEANS. The subject whose change, in the same
   # direction as the whole's, is compared with the whole's change of the SAME
@@ -6641,7 +6647,7 @@ overview:
     # A source with no line here is still a finding: its row is kept whole and
     # its line names the subject and the source.
     attention:
-      sales_vs_same_weekday: "{subject}'s net sales on {day} were {value}, {dir} {change_pct} from {baseline} the same weekday a week before."
+      sales_vs_same_weekday: "{subject}'s net sales on {day} were {value}, {dir} {change_pct} from {baseline} the same weekday a week before; transactions {tx}, basket {basket}."
       stock_crossed_out: "{subject} at {where} ran out between {was_day} and {now_day}."
       newly_dead: "{subject} at {where} has not sold since {last_sold}."
       other: "{subject} is on the warning list ({source})."
@@ -6667,6 +6673,8 @@ overview:
     rose: products that rose
     stockouts: stockouts
     attention: warning list
+    day_transactions: shops' transactions on the warning list's day
+    day_basket: shops' basket on the warning list's day
 
 watches:
 

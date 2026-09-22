@@ -81,6 +81,9 @@ class Reads:
             return "rose"
         if g == ["store", "day"]:
             return "shop_days"
+        if a.get("date_range") == "yesterday":
+            return "day_" + {"transaction_count": "transactions",
+                             "average_transaction_value": "basket"}[a["metric"]]
         who = "estate" if g == [] else "shop"
         return who + "_" + {"net_sales": "sales", "transaction_count": "transactions",
                             "average_transaction_value": "basket",
@@ -131,6 +134,10 @@ class Reads:
             return [{"product": "RC Sweet Chili", "sku": "ET040", "store": SHOPS[0],
                      "observed_days": 7, "days_out_of_stock": 6, "days_negative": 0,
                      "current_stockout_run": 3}]
+        if part == "day_transactions":
+            return [_cmp(40, 80, unit="transactions", store=SHOPS[1])]
+        if part == "day_basket":
+            return [_cmp(250.25, 325.5, store=SHOPS[1])]
         if part == "attention":
             return [{"source": "sales_vs_same_weekday", "section": "sales_vs_same_weekday",
                      "subject": SHOPS[1], "rank": 1, **_cmp(10_009.5, 26_048.5),
@@ -347,6 +354,15 @@ def test_the_day_that_moved_is_set_against_the_same_weekday(reads):
     assert first["subject"] == SHOPS[0] and first["change"] == -6_000
     d, against = (date.fromisoformat(first["detail"][k]) for k in ("day", "against"))
     assert (d - against).days == 7 and d.weekday() == 2
+
+
+def test_a_shop_flagged_for_its_day_arrives_with_its_drivers(reads):
+    """Anything shown that moved is investigated before it is shown."""
+    reads(_shops(-6_000, -1_000, -1_000, 500, 0, 0, 0))
+    row = next(r for r in overview.get_overview()["rows"] if r["finding"] == "attention")
+    assert row["subject"] == SHOPS[1]
+    assert "transactions down 50%" in row["fact"] and "basket down 23.1%" in row["fact"]
+    assert row["detail"]["transactions"]["change_pct"] == -50.0
 
 
 # ---------------------------------------------------------------------------
