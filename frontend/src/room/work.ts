@@ -82,6 +82,10 @@ export const WORDS: Record<string, [string, string]> = {
   edit_page: ['changing the page', 'changed the page'],
   set_standing_question: ['keeping the question', 'kept the question'],
   set_watch: ['setting the watch', 'set the watch'],
+  // W2.2: what reaches the approver. Nothing is sent by any of them.
+  submit_draft: ['putting the draft through the line', 'put the draft through the line'],
+  set_authority: ['changing what needs approval', 'changed what needs approval'],
+  view_approvals: ['checking what is waiting on approval', 'checked what is waiting on approval'],
   // ---- RETIRED, and still narrated. record_findings was folded into compose
   // on 2026-09-13 (P1.a) and Bob cannot call it any more, but conversations
   // recorded before that hold real calls to it, and a stored turn whose work

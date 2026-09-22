@@ -35,6 +35,10 @@ STEPS = [
     ("watch_checks", "watch_id in (select id from george.watches where owner=%s)"),
     ("watches", "owner=%s"),
     ("beliefs", "created_by=%s"),
+    # W2.2: drafts it put through the line. A changed draft's replacement
+    # first, so the self-reference holds. The test user can never set the line.
+    ("requests", "requested_by=%s and replaces is not null"),
+    ("requests", "requested_by=%s"),
 ]
 
 

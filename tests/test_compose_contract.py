@@ -468,7 +468,9 @@ def test_a_self_read_may_be_composed(defs):
         ]}, calls, defs)
     assert rejected == []
     assert [b["tool"] for b in accepted] == ["view_memory", "view_automations"]
-    assert set(composite_tools.COMPOSABLE_READS) == {"view_memory", "view_automations"}
+    # W2.2 added the approval queue, a self-read of the same kind.
+    assert set(composite_tools.COMPOSABLE_READS) == {"view_memory", "view_automations",
+                                                     "view_approvals"}
 
 
 def test_a_page_read_is_still_not_composable():

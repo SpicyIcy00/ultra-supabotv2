@@ -662,6 +662,8 @@ async def view_page(
 # and test_page_context_contract will say so.
 MEMORY_TOOL = "view_memory"
 AUTOMATIONS_TOOL = "view_automations"
+# W2.2. Sorts before "view_page" for the same reason the two above do.
+APPROVALS_TOOL = "view_approvals"
 
 
 class SelfReadUnavailable(RuntimeError):
@@ -717,6 +719,32 @@ async def view_automations(*, ctx: WriteContext) -> dict:
     return await ctx.automations_reader()
 
 
+async def view_approvals(*, ctx: WriteContext) -> dict:
+    """
+    Read what is waiting on the approver: drafts that arrived as decisions,
+    drafts that landed in her list quietly, the line in force with its
+    version and words, and who approves. "What needs my approval?", "what is
+    waiting on Joy?" and "what is the line?" are this read.
+
+    Every value, total and line here is the code's, computed when the draft
+    was submitted (quantity × catalogue cost). Nothing in it has been sent:
+    approved drafts are keyed into StoreHub by a person. A decision waits for
+    Approve · Change · Look into it; a list item waits quietly for a yes.
+
+    Returns:
+        {"rows": [...], "meta": {...}}. One row per waiting request — title,
+        value, `routed` (decision or list) and `routed_because`, who asked,
+        when. meta carries the line, how many decisions and list items wait,
+        the people and what the signed-in person may do.
+    """
+    if ctx.authority is None:
+        raise SelfReadUnavailable(
+            "The approval queue is not readable in this session. Tell the user "
+            "you cannot see what is waiting."
+        )
+    return await ctx.authority.overview()
+
+
 # The composite surface, by name. Merged into the model's schema only when its
 # capability has been injected, and NEVER into agent.loop.TOOL_FUNCTIONS — see
 # the module docstring for why that separation is the whole point.
@@ -725,6 +753,7 @@ COMPOSITE_TOOL_FUNCTIONS = {
     PAGE_CONTEXT_TOOL: view_page,
     MEMORY_TOOL: view_memory,
     AUTOMATIONS_TOOL: view_automations,
+    APPROVALS_TOOL: view_approvals,
 }
 
 # COMPOSITES THAT ARE STILL READS, and may therefore be COMPOSED.
@@ -740,7 +769,7 @@ COMPOSITE_TOOL_FUNCTIONS = {
 # a page read is evidence rather than a figure — the loop never charts it and
 # never makes it the answer's receipts. These two return one ordinary
 # {rows, meta} with one source_table, exactly as a read tool does.
-COMPOSABLE_READS = frozenset({MEMORY_TOOL, AUTOMATIONS_TOOL})
+COMPOSABLE_READS = frozenset({MEMORY_TOOL, AUTOMATIONS_TOOL, APPROVALS_TOOL})
 
 # The other direction: an ordinary read tool whose rows CANNOT back an object.
 #
@@ -760,4 +789,5 @@ COMPOSITE_TOOL_REQUIRES = {
     PAGE_CONTEXT_TOOL: "page_reader",
     MEMORY_TOOL: "memory_reader",
     AUTOMATIONS_TOOL: "automations_reader",
+    APPROVALS_TOOL: "authority",
 }

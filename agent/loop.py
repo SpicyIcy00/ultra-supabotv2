@@ -3219,6 +3219,7 @@ async def run(
     page_references: Optional[list[dict]] = None,
     desk: Optional[dict] = None,
     bound_settings: Optional[dict] = None,
+    authority: Optional[write_tools.AuthorityWriter] = None,
 ) -> AsyncIterator[str]:
     """
     Answer one question, streaming SSE frames.
@@ -3348,6 +3349,8 @@ async def run(
         standing_writer=standing_writer,
         watch_writer=watch_writer,
         settings=bound_settings,
+        # W2.2: what reaches the approver. Absent, the three tools are absent.
+        authority=authority,
     )
     # Per capability, not per session: a caller with a pin writer and no
     # workflow writer gets pin_answer and not save_workflow.

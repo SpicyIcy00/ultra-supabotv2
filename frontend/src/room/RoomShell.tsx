@@ -20,9 +20,8 @@
  */
 import { type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { useBob } from '../hooks/useBob';
-import { listApprovals } from '../services/workflowsApi';
+import { useNeedsYou } from '../hooks/useNeedsYou';
 import { Rail } from './Rail';
 import './room.css';
 
@@ -30,12 +29,9 @@ export function RoomShell({ children }: { children: ReactNode }) {
   const bob = useBob();
   const navigate = useNavigate();
   // The same read the board's rail makes, for the same reason: a count is a
-  // claim about the world, so it is drawn from a result or not at all.
-  const approvals = useQuery({
-    queryKey: ['workflow-approvals'],
-    queryFn: () => listApprovals(),
-    staleTime: 30_000,
-  });
+  // claim about the world, so it is drawn from a result or not at all. W2.2:
+  // drafts that arrived as decisions for this person count too.
+  const needsYou = useNeedsYou();
 
   return (
     <div className="room">
@@ -43,7 +39,7 @@ export function RoomShell({ children }: { children: ReactNode }) {
           left the stream as it was, so the room walked straight back into the
           thread that was open. It clears the stream first, as the room's own
           New does. */}
-      <Rail busy={bob.busy} needsYou={approvals.data?.length}
+      <Rail busy={bob.busy} needsYou={needsYou}
             onNew={() => { bob.reset(); navigate('/bob'); }} />
       {/* A LIST, NOT THE BESIDE ROOM: the same ground, sidebar and type, and a
           column centred in the room the sidebar leaves (P2S.1(h)). The line

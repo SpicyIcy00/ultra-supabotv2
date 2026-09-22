@@ -9717,6 +9717,178 @@ systems:
 
 
 # =============================================================================
+# AUTHORITY — WHAT REACHES THE APPROVER, AND WHO THAT IS (W2.2, 2026-09-22)
+#
+# The owner's ops/STANDARD.md §15 as real rules: "Bob should not interrupt me
+# for every small decision … I can approve, reject, change, investigate … You
+# don't need my approval for this anymore unless it's above ₱20,000."
+#
+# AUTHORITY DECIDES WHAT REACHES THE APPROVER, NOT WHAT BOB DOES ALONE. Action
+# stays at level five: nothing leaves Bob without a person's yes, and an
+# approved draft is still keyed into StoreHub BY A PERSON (its API has no
+# transfer route and Bob holds no credential for it). The line only decides
+# whether a draft INTERRUPTS: at or under it, the draft lands in a list
+# quietly; over it, or with no value that can be trusted, it arrives as a
+# decision wearing the approvals colour (CLAUDE.md UI rule 5 — this is
+# exactly its use) with Approve · Change · Look into it.
+#
+# THE LINE IS A SETTING A PERSON BINDS (rule 6), never a threshold in code and
+# never Bob's. Its declaration is `line` below — meaning, type, bounds,
+# default, where it participates — and its VALUE lives in
+# george.authority_versions: one immutable row per change, so "you don't need
+# my approval under ₱20,000" is version N with its words, who said it and
+# when, and the history is every row (as workflows keep versions). A draft
+# records the version that routed it.
+#
+# THE PEOPLE (Isaiah, 2026-09-22), seeded into george.people by migration
+# b3c4d5e6f7a8 and linked to a login by an administrator — no account or
+# password is made for anyone. RECORDED ASSUMPTION, for the owner to correct:
+# Joy approves; Isaiah builds and administers and does not approve purchases.
+# =============================================================================
+authority:
+  introduced: "2026-09-22"
+  standard: "ops/STANDARD.md §15"
+  action_level: 5
+  sends_anything: false
+  keyed_into: StoreHub
+  assumption: >
+    Joy approves; Isaiah builds and administers and does not approve
+    purchases (Isaiah, 2026-09-22) — for the owner to correct.
+
+  # WHO MAY DO WHAT. A person's role is george.people.role; a signed-in
+  # account linked to nobody is a requester, so a stranger can ask and never
+  # decide. Linking a person to a login is an app administrator's act
+  # (app_users.role = admin).
+  roles:
+    approver:
+      says: "approves or rejects drafts and changes them; gives Bob authority"
+      may: [submit, approve, reject, change, set_line]
+    builder:
+      says: "builds Bob with him; does not approve purchases"
+      may: [submit]
+    requester:
+      says: "requests; the approver decides"
+      may: [submit]
+  unlinked_account_role: requester
+
+  # The businesses a person answers for. FFR has no data yet
+  # (data_availability.ffr), so Elijah's requests wait on it.
+  businesses:
+    aji_ichiban:
+      says: "Aji Ichiban — the candy stores, AJI BARN and AJI CMG"
+      has_data: true
+    ffr:
+      says: "FFR"
+      has_data: false
+
+  # The declaration the migration's seed is held to (tests hold the two
+  # together). The TABLE is the record; this is what it must contain.
+  people:
+    joy:
+      display_name: Joy
+      role: approver
+      businesses: [aji_ichiban, ffr]
+      says: "the boss — oversees everything, the final approver"
+    isaiah:
+      display_name: Isaiah
+      role: builder
+      businesses: [aji_ichiban, ffr]
+      says: "the builder — the one talking to Bob while he is built"
+    daniel:
+      display_name: Daniel
+      role: requester
+      businesses: [aji_ichiban]
+      says: "operations manager of Aji Ichiban — requests"
+    elijah:
+      display_name: Elijah
+      role: requester
+      businesses: [ffr]
+      says: "operations manager of FFR — requests once FFR's data exists"
+
+  # THE LINE — a declared setting (settings.declaration_requires). A person
+  # binds it; Bob may bind it only when the approver tells him to, through
+  # the same service the control uses, and says that he did.
+  line:
+    rule: purchase_drafts
+    meaning: >
+      The value of a purchase draft at or under which it lands in the
+      approver's list quietly instead of interrupting her. It decides what
+      reaches her, never what is sent: nothing is sent either way.
+    type: whole pesos
+    bounds:
+      min: 1
+      # A guard against a misheard figure, not a business rule.
+      max: 10000000
+    default: null
+    default_mode: every_draft
+    participates_in:
+      submit_draft: "routes a draft to the list or to a decision; the draft records the version that routed it"
+    # "unless it's above ₱20,000": a draft AT the line is not above it.
+    interrupts_when: above
+    modes:
+      over_line: "a draft over the line is a decision; at or under it lands in the list"
+      every_draft: "every draft is a decision (the default, and what 'ask me every time' binds)"
+      never: "no draft interrupts; every draft lands in the list and still waits for a yes"
+    bound_by: approver
+    versioned: true
+    immutable: true
+    currency_symbol: "₱"
+
+  # WHAT A DRAFT IS WORTH, computed here, never by the model (rule 9). A draft
+  # is the rows of a read that RAN in the conversation — the submit re-runs
+  # that exact call in the web process and values what it returns, so the
+  # figures are the read's, never typed by Bob.
+  drafts:
+    kind: purchase_draft
+    reads:
+      get_stock_cover:
+        requires: {view: draft}
+        order_lines_where: {kind: order}
+        quantity: quantity
+        product: product_id
+      get_purchase_plan:
+        requires_argument: cover_days
+        order_lines_where_positive: suggested_order_qty
+        quantity: suggested_order_qty
+        product: product_id
+    value:
+      formula: "sum over the draft's order lines of quantity × products.cost"
+      unit_cost: products.cost
+      source_table: products
+      # A move between shops or from AJI BARN buys nothing.
+      moves_cost: nothing
+      # A line with no cost on file makes the value unknown, and an unknown
+      # value could be over the line: it arrives as a decision, and says why.
+      unpriced_routes_to: decision
+    max_lines: 200
+    note_max_length: 300
+
+  routes:
+    list:
+      says: "lands in the list quietly — no interruption, still waits for a yes"
+      accent: false
+    decision:
+      says: "arrives as a decision"
+      accent: true
+
+  # The decision's actions, in the order drawn. `look_into` asks Bob and
+  # costs a turn; the others are the approver's and change the draft's status.
+  actions:
+    approve: {label: "Approve", by: approver, model_turn: false}
+    change: {label: "Change", by: approver, model_turn: false}
+    look_into: {label: "Look into it", by: anyone, model_turn: true}
+    reject: {label: "Reject", by: approver, model_turn: false}
+  decision_actions: [approve, change, look_into]
+  list_actions: [approve, reject]
+
+  # waiting   nobody has decided
+  # approved  the approver said yes — a person keys it into StoreHub
+  # rejected  the approver said no
+  # changed   the approver changed it; the changed draft replaces it, approved
+  statuses: [waiting, approved, rejected, changed]
+
+
+# =============================================================================
 # SETTINGS — declared, bounded, user-adjustable values inside a definition
 #
 # Approved 2026-09-09 as an amendment to architecture rule 6. A vetted
