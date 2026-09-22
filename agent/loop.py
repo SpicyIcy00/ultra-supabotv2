@@ -3466,6 +3466,10 @@ async def run(
     # declared list of reads is not. executed_reads stays the rows' count
     # for the done frame.
     asked_reads: set[str] = set()
+    # The call that answers a question of this size alone, once it has run
+    # (composition.size.kinds.<size>.answered_by, 2026-09-22): after it, the
+    # answer reads nothing more — a drill-down is the next step offered.
+    answered_whole: Optional[str] = None
     first_of_call: dict[str, int] = {}
     corrective_turns = 0
     max_corrective = req(defs, "notices.max_corrective_turns")
@@ -4538,6 +4542,8 @@ async def run(
             # thing to remember, which reads nothing at all.
             budget = int(compose.size_spec(answer_size, defs).get("max_queries") or 0)
             batch_queries = len(_expand_sets(more_reads, defs)) if more_reads else 0
+            if answered_whole is not None:
+                budget = executed_reads
             if more_reads and (budget == 0 or (executed_reads > 0
                                                and executed_reads + batch_queries > budget)):
                 size_reason = str(req(defs, "composition.size.warning_reason"))
@@ -4548,6 +4554,9 @@ async def run(
                                        "limit": budget})
                 said_no = " ".join(str(req(defs, "composition.size.budget_refused")).split()).format(
                     size=answer_size, budget=budget, spent=executed_reads)
+                if answered_whole is not None:
+                    said_no = " ".join(str(req(defs, "composition.size.answered_refused")).split()).format(
+                        call=answered_whole)
                 refused_size = []
                 for b in more_reads:
                     called_tools.append(b.name)
@@ -4698,6 +4707,9 @@ async def run(
                     batch_keys[key] = seq
                     executed_reads += 1
                     asked_reads.add(b.id)
+                if (isinstance(b, _SetMember)
+                        and b.set_name in (compose.size_spec(answer_size, defs).get("answered_by") or [])):
+                    answered_whole = b.set_name
                 batch.append((seq, b))
                 called_tools.append(b.name)
                 yield _sse("tool_call", frame)

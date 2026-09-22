@@ -383,3 +383,50 @@ def test_a_page_whose_prose_never_says_its_claim_leads_with_the_claim(monkeypatc
                                     "arrangement": page})],
     ], question="how are we doing")
     assert _final(frames).strip() == "Rockwell fell on the week"
+
+
+# ---------------------------------------------------------------------------
+# A broad answer is the overview alone (2026-09-22, finishing W1.3): once
+# get_overview has run, nothing more is read — a drill-down into a flagged
+# shop is the next step offered, not a second round of this answer.
+# ---------------------------------------------------------------------------
+
+def test_after_the_overview_a_broad_answer_reads_nothing_more(monkeypatch):
+    drill = {"store": "Greenhills"}
+    frames, _requests, executed = _drive(monkeypatch, [
+        [_ToolUse("o1", "get_overview", {})],
+        [_ToolUse("c1", "get_change", drill)],
+        [_TextBlock("Down on traffic, and no one shop carried it.")],
+    ], question="how are we doing")
+    ran = [name for name, _args in executed]
+    assert "get_overview_findings" in ran
+    assert not any(args.get("filters", {}).get("store") == "Greenhills" or args.get("store") == "Greenhills"
+                   for _name, args in executed), "a drill-down ran after the overview"
+    refused = [r for r in frames_of(frames, "tool_result") if r["error"]]
+    assert refused and all("get_overview already read" in r["error"] for r in refused)
+    assert req(DEFS, "composition.size.kinds.broad.answered_by") == ["get_overview"]
+
+
+def test_the_overview_does_not_stop_a_focused_answer_reading(monkeypatch):
+    # Only a BROAD answer is the overview alone; a focused question that asks
+    # for it keeps its own budget.
+    frames, _requests, executed = _drive(monkeypatch, [
+        [_ToolUse("o1", "get_overview", {})],
+        [_ToolUse("r1", "get_sales", SALES)],
+        [_TextBlock("Rockwell fell.")],
+    ], question="why is Rockwell down?")
+    refused = [r for r in frames_of(frames, "tool_result") if r["error"]]
+    assert not any("get_overview already read" in (r["error"] or "") for r in refused)
+
+
+def test_after_get_change_a_focused_answer_reads_nothing_more(monkeypatch):
+    frames, _requests, executed = _drive(monkeypatch, [
+        [_ToolUse("c1", "get_change", {"store": "Rockwell"})],
+        [_ToolUse("r1", "get_stock_history", {"view": "stockouts", "store": "Rockwell"})],
+        [_TextBlock("Rockwell fell on traffic.")],
+    ], question="why is Rockwell down?")
+    assert not any(name == "get_stock_history" and "view" in args and args.get("rank_by") is None
+                   for name, args in executed), "a read ran after get_change on a focused answer"
+    refused = [r for r in frames_of(frames, "tool_result") if r["error"]]
+    assert refused and all("get_change already read" in r["error"] for r in refused)
+    assert req(DEFS, "composition.size.kinds.focused.answered_by") == ["get_change"]

@@ -171,8 +171,9 @@ def get_change(store: Optional[str] = None, category: Optional[str] = None,
     category's revenue by shop compared, by day, and its products that fell
     and rose — net sales and its drivers cannot be cut to a category, and the
     shelf cannot be read by one. It is VERIFY, DECOMPOSE, LOCALIZE and CHECK
-    for one subject; what it cannot show (hours, one product's own days) is
-    still its own read.
+    for one subject — for a why about one subject it is the whole read: after
+    it, compose, and offer what it cannot show (hours, one product's own days)
+    as the next step.
 
     Args:
         store: one shop by name; omit for the whole estate. A warehouse is
@@ -219,10 +220,10 @@ def get_overview(date_range: Any = None) -> list[dict]:
     (and one product) carried most of the estate's change — quote its words,
     never a share of your own. Answer from the findings and draw from the
     parts by their own call_seq: a chart of shops is the shop read, the days
-    are the days read, the movers are the fell and rose reads. NEVER re-read
-    any of these for a chart — they are already here. A drill-down read
-    (get_change, get_sales) is only for a follow-up about one thing a
-    finding names. Your first sentence says the estate's change as its
+    are the days read, the movers are the fell and rose reads. After it,
+    compose: nothing more is read for a broad answer — not for a chart, and
+    not to drill into a shop a finding flags; that drill-down is the next
+    step you offer. Your first sentence says the estate's change as its
     first finding gives it, the percentage included.
 
     Args:

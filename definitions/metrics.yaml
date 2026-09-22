@@ -1890,8 +1890,8 @@ investigation:
         # code, so a broad answer is one read; measured one read in 3 of 3.
         reads: >
           read get_overview ALONE in ONE round (it holds {headline}, shops by
-          day, the movers, get_attention); never re-read it; drill down only
-          into a finding it flags
+          day, the movers, get_attention), then compose; a drill-down is the
+          next step you offer
         grouped_not_fanned_out: true
         # 5 → 7 (P2S.6): three headline reads, get_attention, and one call per
         # localizing dimension across both shops (group_by [store, day] with
@@ -8159,6 +8159,12 @@ composition:
         page: false
         max_words: 70
         offer: "Make it a full page"
+        # A why about one subject is get_change — VERIFY, DECOMPOSE, LOCALIZE
+        # and CHECK in one call (one_call_reads.tools.get_change.ladder) — and
+        # then the answer. Measured 2026-09-22, ten runs of "why was North Edsa
+        # up": one get_change then compose took 21–32 s; every run that read on
+        # past it took 41–95 s. A drill-down past it is the next step offered.
+        answered_by: [get_change]
       broad:
         means: the business as a whole, or the page asked for — the page
         # null: composition.max_blocks, the page's own bound.
@@ -8167,6 +8173,12 @@ composition:
         page: true
         # null: voice.body.max_words — beside a page his prose is the conclusion.
         max_words: null
+        # THE CALL THAT ANSWERS IT ALONE (2026-09-22, finishing W1.3). Once it
+        # has run, a broad answer reads nothing more: its findings already
+        # localize, its parts are drawable, and a drill-down into a flagged
+        # shop is the NEXT step he offers, not a second round of this answer.
+        # Measured before this: 4 of 5 broad turns spent 19–46 s drilling in.
+        answered_by: [get_overview]
     warning_reason: answer_over_size
     refused: >
       past the {figures} figure(s) a {size} answer carries — {means}
@@ -8184,6 +8196,11 @@ composition:
     budget_refused: >
       Not run: a {size} answer reads at most {budget} queries and {spent} have
       run. Answer from what you already have.
+    answered_refused: >
+      Not run: {call} already read what this question needs, and its reads
+      are drawn by their own call_seq. Compose the answer now; a drill-down
+      into what it shows is your next step to offer, not a read in this
+      answer.
     budget_text: >
       STOP CALLING TOOLS. A {size} answer reads at most {budget} queries and
       {spent} have run. Answer now, from the results you already have — the
