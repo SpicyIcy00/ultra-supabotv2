@@ -74,6 +74,12 @@ def pytest_configure(config):
         "the per-gram instruction once P2S.11 builds it. Run with -m core at "
         "a phase close or when choosing a model.",
     )
+    config.addinivalue_line(
+        "markers",
+        "replay: an owner's turn replayed to hold a card's Done-when (W1.1: "
+        "'build me a dashboard', 2026-09-21). One live broad turn; run with "
+        "-m replay — the full suite does not ask it.",
+    )
 
 
 @pytest.fixture(autouse=True)

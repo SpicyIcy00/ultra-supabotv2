@@ -300,8 +300,14 @@ def test_the_tool_is_offered_and_takes_the_board_and_the_reading():
     # block key he already composed or a line of his own words held to the
     # claim's no-digit rule, so the freedom costs nothing in trust
     # (metrics.yaml composition.arrangement).
+    # AND A FIFTH, decided 2026-09-22 (W1.1, "the answer is the size of the
+    # question"): how LARGE the answer is, which cannot touch a figure either —
+    # it only bounds how many are drawn and whether there is a page at all
+    # (metrics.yaml composition.size), and its values are closed.
     assert set(schema["input_schema"]["properties"]) == {
-        "blocks", "reading", "actions", "arrangement"}
+        "blocks", "reading", "actions", "arrangement", "size"}
+    assert schema["input_schema"]["properties"]["size"]["enum"] == list(
+        _DEFS["composition"]["size"]["order"])
     # Only the board is required. The reading is optional because a
     # confirmation has nothing to say in three parts, and the actions are
     # optional because most answers suggest nothing — an offer forced onto

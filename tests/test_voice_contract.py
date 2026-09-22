@@ -565,6 +565,14 @@ def test_the_prompt_says_he_writes_a_page() -> None:
     # And WHAT a page is, in the parts the room actually draws.
     for part in ("opening sentence", "headings", "paragraphs", "beside"):
         assert part in SYSTEM_PROMPT, f"the prompt does not say a page has {part}"
-    # The reasoning is on the page; the left is the conclusion and bounded.
-    assert " ".join(req(DEFS, "surface.prose.words_carry").split()) in SYSTEM_PROMPT
-    assert "THE PAGE CARRIES THE FIGURES AND THE REASONING" in SYSTEM_PROMPT
+    # REWRITTEN 2026-09-22 (W1.1, DECISIONS "the answer is the size of the
+    # question", which reverses the P12/P14 recipe that every answer is a
+    # page): the page is the BROAD answer's, and the prompt says so — a lookup
+    # is a sentence and a focused answer offers the page rather than making it.
+    # "THE PAGE CARRIES THE FIGURES AND THE REASONING" said the opposite of a
+    # lookup and left the prompt with the board era's section.
+    assert "THE ANSWER IS THE SIZE OF THE QUESTION" in SYSTEM_PROMPT
+    assert "BROAD — the business as a whole, or the page asked for — is A PAGE YOU WRITE" \
+        in SYSTEM_PROMPT
+    assert "the page is offered, not made" in SYSTEM_PROMPT
+    assert "THE PAGE CARRIES THE FIGURES AND THE REASONING" not in SYSTEM_PROMPT

@@ -89,10 +89,12 @@ _HISTORY_SOURCE = """(
 # Grouped results are AGGREGATE rows (product_count, total_quantity), not
 # product rows. meta.grain says which shape came back, so a count of products
 # can never be mistaken for a quantity.
+# THE MEASURES ARE THE YAML'S (ranking.stock_grouping.measures, W1.1
+# 2026-09-22): the total there leaves a negative count out and names it as its
+# own column, per inventory.history.negative_on_hand.exclude_from_sums.
 _SELECT_GROUPED = """
 SELECT {select_terms},
-       COUNT(*)                    AS product_count,
-       SUM(i.quantity_on_hand)     AS total_quantity
+       {measure_terms}
 FROM {source} i
 LEFT JOIN products p ON p.id = i.product_id
 WHERE {predicates}
@@ -380,8 +382,12 @@ def get_stock(
                 exprs["state"] = _state_case_sql(defs)
                 select_terms = ", ".join(f"{exprs[g]} AS {g}" for g in group_by)
                 group_terms = ", ".join(exprs[g] for g in group_by)
+                measure_terms = ", ".join(
+                    f"{expr} AS {name}" for name, expr in
+                    _req(defs, "ranking.stock_grouping.measures").items())
                 sql = _SELECT_GROUPED.format(
                     select_terms=select_terms,
+                    measure_terms=measure_terms,
                     source=_HISTORY_SOURCE if as_of else _CURRENT_SOURCE,
                     predicates="\n  AND ".join(predicates),
                     group_terms=group_terms,
@@ -430,6 +436,13 @@ def get_stock(
                 m = cur.fetchone()["m"]
                 data_as_of = m.isoformat() if m else None
 
+    # Grouped by state, the rows carry the state's WORDS (ranking.stock_grouping
+    # .state_words): a drawing names a row by this column.
+    if group_by and "state" in group_by:
+        words = _req(defs, "ranking.stock_grouping.state_words")
+        for r in rows:
+            if isinstance(r.get("state"), str):
+                r["state"] = words.get(r["state"], r["state"].replace("_", " "))
     for r in rows:
         if "store_id" in r:
             r["store"] = _label_store(catalog, r["store_id"])

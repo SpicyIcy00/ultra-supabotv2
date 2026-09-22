@@ -137,7 +137,11 @@ def test_a_long_message_in_a_thread_is_not_a_fragment() -> None:
 # What the request carries
 # ---------------------------------------------------------------------------
 
-def _drive(monkeypatch, question, history=None):
+def _drive(monkeypatch, question, history=None, provider="anthropic"):
+    # THE MARKER IS ANTHROPIC'S (W1.1, 2026-09-22): DeepSeek reads its effort
+    # top-level (effort.top_level), so the marker tests name the provider they
+    # hold, and the DeepSeek half is held at the foot of this file.
+    monkeypatch.setenv("BOB_PROVIDER", provider)
     fake = FakeClient([[_TextBlock("Rockwell held up; nothing else moved.")]])
     monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
@@ -247,6 +251,7 @@ def test_an_unavailable_beta_drops_the_marker_and_answers_anyway(monkeypatch) ->
     completes — which is exactly what every turn did before this card.
     """
     monkeypatch.setattr(bob_loop, "_EFFORT_BETA_OK", True)
+    monkeypatch.setenv("BOB_PROVIDER", "anthropic")
     inner = FakeClient([[_TextBlock("Rockwell held up.")]])
     refusing = _RefusingOnce(inner)
 
@@ -286,3 +291,38 @@ def test_a_400_that_is_not_about_the_beta_still_surfaces(monkeypatch) -> None:
         message="output_config.effort requires a model that supports per-turn effort",
         response=_FakeResponse(), body=None)
     assert bob_loop._effort_unsupported(named) is True
+
+
+# ---------------------------------------------------------------------------
+# DeepSeek reads its effort TOP-LEVEL (W1.1, 2026-09-22)
+# ---------------------------------------------------------------------------
+
+def test_deepseek_gets_the_level_top_level_and_no_marker(monkeypatch) -> None:
+    """
+    DECISIONS 2026-09-21, "why a broad answer takes minutes": DeepSeek has no
+    `medium` (it is `high` there) and does not read the per-message marker, so
+    every production turn thought at full strength. On a provider named in
+    effort.top_level the level is the request's own, in its own name.
+    """
+    levels = req(DEFS, "effort.top_level.levels.deepseek")
+    _, lowered = _drive(monkeypatch, "pin that", history=HISTORY, provider="deepseek")
+    sent = lowered[0]
+    assert sent["output_config"] == {"effort": levels["low"]}
+    assert all(m["role"] != "system" for m in sent["messages"]), "no marker on DeepSeek"
+    assert "extra_headers" not in sent, "no Anthropic beta header on DeepSeek"
+
+    _, fresh = _drive(monkeypatch, "what were rockwell's sales yesterday",
+                      provider="deepseek")
+    assert fresh[0]["output_config"] == {"effort": levels["medium"]}
+    assert levels["medium"] != "medium", "DeepSeek has no medium: it would be high"
+
+    _, digs = _drive(monkeypatch, "Why was North Edsa up so much last week?",
+                     provider="deepseek")
+    assert digs[0]["output_config"] == {"effort": levels["high"]} == {"effort": "high"}
+
+
+def test_the_level_on_the_done_frame_is_the_one_deepseek_was_sent(monkeypatch) -> None:
+    frames, requests = _drive(monkeypatch, "what were rockwell's sales yesterday",
+                              provider="deepseek")
+    done = frames_of(frames, "done")[0]
+    assert done["effort"] == requests[0]["output_config"]["effort"]

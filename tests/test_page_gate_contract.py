@@ -124,8 +124,16 @@ def test_it_finds_what_his_own_live_page_left_off(voc):
 
 
 def test_the_bound_is_declared_where_every_other_one_is(defs):
+    """
+    REWRITTEN 2026-09-22 (W1.1, DECISIONS "checks fix; they do not argue" — the
+    page gate is named among the decisions reversed that day). It held one
+    corrective round: "give the arrangement again, whole". The room already
+    draws every block he did not place, before the plan, so the round bought
+    nothing a reader could see and cost the dashboard turn one of its six. The
+    bound stays declared — at NO rounds — and what is left off is recorded.
+    """
     gate = req(defs, "composition.arrangement.gate")
-    assert int(req(gate, "max_corrective_turns")) >= 1
+    assert int(req(gate, "max_corrective_turns")) == 0
     # One is a slip; two is a page that forgot its figures.
     assert int(req(gate, "min_left_off")) >= 2
 
@@ -146,7 +154,12 @@ def test_the_turn_may_not_end_on_a_page_that_left_them_off():
     assert settle
 
 
-def test_it_costs_one_round_at_most(defs):
-    """One corrective turn, then the answer stands — the rule the rest of the file follows."""
-    assert LOOP.count("page_gate_turns += 1") == 1
+def test_it_costs_no_round_and_is_still_recorded(defs):
+    """
+    REWRITTEN 2026-09-22 (W1.1): "one corrective turn at most" became none. The
+    measure still runs and records its gap once a turn; the round-buying path
+    stays behind `max_page_gate`, which the yaml sets to 0.
+    """
     assert "page_gate_turns < max_page_gate" in LOOP
+    assert "not max_page_gate" in LOOP, "with no round the gap is still recorded"
+    assert LOOP.count('log.gap("page_left_blocks_off"') == 2

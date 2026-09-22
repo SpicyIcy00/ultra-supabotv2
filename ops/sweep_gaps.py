@@ -70,6 +70,10 @@ KINDS: dict[str, str] = {
     "no_tool_call":            "Bob answered without reading anything",
     "answer_without_prose":    "the turn drew objects and said nothing — shapes and silence",
     "notice_forced":           "a caveat had to be forced into the answer",
+    # CHECKS FIX; THEY DO NOT ARGUE (W1.1, 2026-09-22).
+    "notice_placed":           "a notice he did not carry was placed by code, drawn above the figures in its own words (notices.placed_by)",
+    "correction_reply_not_the_answer": "his reply to a correction did not say the claim, so the claim led instead of the reply",
+    "answer_over_size":        "a read would have taken the answer past its size's budget of queries, and was refused (composition.size)",
     "claim_not_said":          "the claim he asked to be lit is not in what he said, so nothing was lit",
     "reading_rejected":        "a slot of the reading was refused — a figure no read returned, or a slot past its bound",
     "volunteering_over_cap":   "more unasked-for figures than the cap allows",
@@ -78,7 +82,7 @@ KINDS: dict[str, str] = {
     "transaction_wording":     "raw table wording reached the answer",
     "body_over_length":        "the answer ran past the words the left column holds, and was cut at a sentence (voice.body)",
     # THE PAGE HE WROTE LEFT HIS OWN FIGURES OFF IT (P14, 2026-09-21).
-    "page_left_blocks_off":    "the page he wrote left figures he composed off it; the room drew them above the plan and the turn spent a round putting them back (composition.arrangement.gate)",
+    "page_left_blocks_off":    "the page he wrote left figures he composed off it; the room drew them before the plan (composition.arrangement.gate; no round since W1.1)",
     "arrangement_resent":      "a later compose re-sent the same layout it had already given, which stands by itself; the bytes bought nothing and the turn was longer for them",
     "compose_without_answer":  "a composes-only round named the claim and wrote nothing beside it, so the turn cost a round trip the settle rule exists to save (rounds.settle)",
     "restated_figure":         "prose said again what the board already draws",

@@ -96,8 +96,11 @@ def _drive(monkeypatch, replies, writes: list):
     async def writer(spec):                     # presence enables pin_answer
         raise AssertionError("not reached: _call_write_tool is stubbed")
 
+    # A BROAD QUESTION (W1.1, 2026-09-22): these hold the convergence cap on
+    # CALLS, and a narrower question now meets its size's budget of queries
+    # first (composition.size) — held on its own in test_answer_size_contract.
     async def collect():
-        return [f async for f in bob_loop.run("net sales by store?", pin_writer=writer)]
+        return [f async for f in bob_loop.run("how are we doing?", pin_writer=writer)]
 
     return asyncio.run(collect()), fake.messages.requests
 

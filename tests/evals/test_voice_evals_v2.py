@@ -322,6 +322,29 @@ def test_core_2_a_premise(monkeypatch, request):
     f["reads"] = [c.get("arguments") for c in turn.ok_calls]
 
 
+def _pages(turn: checks.Turn) -> list:
+    """Every arrangement the turn's compose frames carried — a page, when non-empty."""
+    return [data.get("arrangement") for event, data, _at in turn.frames
+            if event == "compose" and data.get("arrangement")]
+
+
+def _sized(turn: checks.Turn, f: dict) -> None:
+    """
+    THE ANSWER IS THE SIZE OF THE QUESTION (W1.1, 2026-09-22): a narrow question
+    is not a page, and the size it was held to is on the done frame. The clock
+    is recorded, never asserted — the card's targets are measured over runs.
+    """
+    f["size"] = {"answer": turn.done.get("answer_size"), "ceiling": turn.done.get("size_ceiling")}
+    f["clock"] = {"duration_ms": turn.done.get("duration_ms"),
+                  "iterations": turn.done.get("iterations"),
+                  "iteration_ms": turn.done.get("iteration_ms")}
+    offer = req(DEFS, "composition.size.kinds.focused.offer")
+    asks = [data.get("asks") or [] for event, data, _at in turn.frames if event == "reading"]
+    f["offered_the_page"] = any(offer in a for a in asks)
+    assert turn.done.get("size_ceiling") != "broad", turn.done
+    assert not _pages(turn), f"a narrow question was answered as a page: {_pages(turn)}"
+
+
 @pytest.mark.core
 def test_core_5_a_simple_lookup_is_fast(monkeypatch, request):
     """Simple is fast: one or two reads, every figure from one (AUTO); the clock is reported."""
@@ -329,8 +352,7 @@ def test_core_5_a_simple_lookup_is_fast(monkeypatch, request):
     turn = _turn(monkeypatch, "Net sales by store yesterday")
     f = _voice("simple", turn)
     f["asked_reads"] = checks.asked_reads(turn.calls)
-    f["clock"] = {"duration_ms": turn.done.get("duration_ms"),
-                  "iterations": turn.done.get("iterations")}
+    _sized(turn, f)
     assert f["asked_reads"] <= 2, f"{f['asked_reads']} reads for a lookup"
 
 
@@ -356,6 +378,60 @@ def test_depth_2_lookup(monkeypatch):
     turn = _turn(monkeypatch, "how did Rockwell do?")
     f = _voice("lookup", turn)
     f["reads"] = [c.get("arguments") for c in turn.ok_calls]
+    # "How did Rockwell do", 2026-09-21: six refusals of a single-store
+    # comparison sent as `group_by: "[]"` (W1.1). None now.
+    assert not [c for c in turn.calls if c.get("error") and "cannot be grouped by" in c["error"]]
+    _sized(turn, f)
+
+
+@pytest.mark.replay
+def test_replay_the_dashboard_turn(monkeypatch, request):
+    """
+    THE DASHBOARD TURN OF 2026-09-21 15:37, replayed (W1.1's Done-when). Its
+    headline was his reply to the notice gate — "The caveat needs the magnitude
+    and it belongs beside the counts it qualifies…" — over a forced box that
+    listed one notice twice, a page with a dash where a figure was, and a stock
+    total below zero. Replayed: a headline that is an answer, no forced box, no
+    reference to a figure this turn did not compose, and no negative total.
+    """
+    if "replay" not in (request.config.getoption("markexpr") or ""):
+        pytest.skip("a replay: run with -m replay")
+    turn = _turn(monkeypatch, "build me a dashboard")
+    f = _voice("dashboard", turn, expects_figure=False)
+    f["clock"] = {"duration_ms": turn.done.get("duration_ms"),
+                  "iterations": turn.done.get("iterations"),
+                  "iteration_ms": turn.done.get("iteration_ms")}
+    head = turn.answer.split("\n")[0]
+    f["headline"] = head
+    assert "added automatically" not in turn.answer, "a forced box"
+    assert not [w for w in turn.warnings if w.get("reason") == "unsurfaced_notice"]
+    assert not any(w in head.lower() for w in ("caveat needs", "rewrite", "restating")), head
+    said = [(n.get("kind"), n.get("message")) for n in turn.notices]
+    assert len(said) == len(set(said)), "a notice listed twice"
+    # Every {key} on the page names a figure THIS turn composed.
+    import re as _re
+    composed: set = set()
+    for event, data, _at in turn.frames:
+        if event == "compose":
+            composed |= {b.get("key") for b in data.get("blocks") or []}
+    refs: set = set()
+
+    def walk(node):
+        if isinstance(node, dict):
+            for leaf in ("lede", "head", "say", "note"):
+                if isinstance(node.get(leaf), str):
+                    refs.update(m.group(1) for m in _re.finditer(r"\{([a-z0-9][a-z0-9_-]*)", node[leaf]))
+            for kid in node.get("children") or []:
+                walk(kid)
+    for page in _pages(turn):
+        walk(page)
+    assert refs <= composed, f"a figure in a sentence names nothing this turn drew: {refs - composed}"
+    # No grouped stock total below zero.
+    for r in turn.results:
+        if r["tool"] == "get_stock" and not r["error"]:
+            for row in (r["result"] or {}).get("rows") or []:
+                if "total_quantity" in row and row["total_quantity"] is not None:
+                    assert float(row["total_quantity"]) >= 0, row
 
 
 # =============================================================================
