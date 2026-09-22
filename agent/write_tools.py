@@ -513,6 +513,49 @@ def _unrun(calls: list[dict], executed: dict[str, dict]) -> list[dict]:
     return [c for c in calls if call_key(c["tool"], c["arguments"]) not in executed]
 
 
+def as_reads(call: dict) -> list[dict]:
+    """
+    A call asked as one (get_change, get_stock_health — agent/one_call.py,
+    and a metric set) as the ordinary reads it ran as, each {tool, arguments,
+    part}; any other call as itself.
+
+    WHY (W1.2, 2026-09-22). A one-call read is recorded and replayed as its
+    reads — a pin holds the reads, never the composite — so the executed set
+    has the reads and not the name he asked. "Turn this into a workflow" was
+    then refused twice for the get_change he had just watched return, and the
+    turn took 291 s re-reading what it already had. Expanded here by the
+    loop's own expander, so the reads saved are exactly the reads that ran.
+    """
+    from agent import one_call
+    if call.get("tool") not in one_call.FUNCTIONS:
+        return [call]
+    from types import SimpleNamespace
+
+    from agent import loop
+    try:
+        members = loop._expand_sets(
+            [SimpleNamespace(id="w", name=call["tool"], input=dict(call.get("arguments") or {}))],
+            loop._load_defs())
+    except (ValueError, TypeError):
+        return [call]
+    if any(not hasattr(m, "set_name") for m in members):
+        return [call]   # it refused as a whole; the refusal is the tool's own
+    return [{"tool": m.name, "arguments": dict(m.input),
+             "part": m.part or m.input.get("metric") or m.name} for m in members]
+
+
+def _expand_calls(calls: list[dict]) -> list[dict]:
+    """Every call, one-call reads replaced by the reads they ran as (drawn_as kept off)."""
+    out: list[dict] = []
+    for c in calls:
+        reads = as_reads(c)
+        if reads == [c]:
+            out.append(c)
+        else:
+            out.extend({"tool": r["tool"], "arguments": r["arguments"]} for r in reads)
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Action words (metrics.yaml `action_words`, W1.2)
 # ---------------------------------------------------------------------------
@@ -622,7 +665,7 @@ async def pin_answer(
             "user. Tell the user the answer cannot be pinned from here."
         )
 
-    calls = _normalize_calls(tool_calls)
+    calls = _expand_calls(_normalize_calls(tool_calls))
 
     if not isinstance(title, str) or not title.strip():
         raise PinRefused("A pin needs a title.")
@@ -717,6 +760,31 @@ def _normalize_steps(steps: Any) -> list[dict]:
     return out
 
 
+def _expand_steps(steps: list[dict]) -> list[dict]:
+    """
+    A step asked as one call (get_change) saved as the reads it ran as, each
+    its own named step — a workflow step is a read, and those are the reads
+    that returned (as_reads). A step with a parameter in it is left whole:
+    what it would expand to depends on the binding.
+    """
+    out: list[dict] = []
+    for step in steps:
+        if "$param" in json.dumps(step["arguments"], default=str):
+            out.append(step)
+            continue
+        reads = as_reads({"tool": step["tool"], "arguments": step["arguments"]})
+        if len(reads) == 1 and reads[0].get("tool") == step["tool"]:
+            out.append(step)
+            continue
+        parts = [str(r.get("part")) for r in reads]
+        for r in reads:
+            part = str(r.get("part"))
+            label = part if parts.count(part) == 1 else f"{part}, {r['arguments'].get('metric')}"
+            out.append({"name": f"{step['name']}: {label}", "tool": r["tool"],
+                        "arguments": r["arguments"], "why": step.get("why")})
+    return out
+
+
 async def save_workflow(
     name: str,
     steps: list[dict],
@@ -784,7 +852,7 @@ async def save_workflow(
     if not isinstance(name, str) or not name.strip():
         raise WorkflowRefused("A workflow needs a name — it is how it is run.")
 
-    normalized = _normalize_steps(steps)
+    normalized = _expand_steps(_normalize_steps(steps))
     params = parameters if isinstance(parameters, list) else []
 
     # Provenance, extended rather than excepted: the DEFAULTED form of every
@@ -932,7 +1000,7 @@ def _normalize_analyses(analyses: Any, ctx: WriteContext, max_analyses: int) -> 
                 f"(an existing analysis of the user's)."
             )
         try:
-            calls = _normalize_calls(entry["tool_calls"])
+            calls = _expand_calls(_normalize_calls(entry["tool_calls"]))
         except PinRefused as exc:
             raise PageRefused(f"analyses[{i}]: {exc}") from exc
         title = entry.get("title")
@@ -1129,7 +1197,7 @@ async def edit_page(
                 )
         if kind == "add":
             try:
-                calls = _normalize_calls(op.get("tool_calls"))
+                calls = _expand_calls(_normalize_calls(op.get("tool_calls")))
             except PinRefused as exc:
                 raise PageRefused(f"operations[{i}]: {exc}") from exc
             title = op.get("title")
@@ -1142,7 +1210,7 @@ async def edit_page(
             entry["beside"] = bool(op.get("beside"))
         if kind == "change":
             try:
-                calls = _normalize_calls(op.get("tool_calls"))
+                calls = _expand_calls(_normalize_calls(op.get("tool_calls")))
             except PinRefused as exc:
                 raise PageRefused(f"operations[{i}] (change): {exc}") from exc
             if op.get("pin_id") is None and not op.get("title"):
@@ -1273,7 +1341,9 @@ async def record_belief(beliefs: list[dict], *, ctx: WriteContext) -> dict:
                 f"on a question about what you remember.")
 
     def is_executed(call: dict) -> bool:
-        return call_key(call["tool"], call["arguments"]) in ctx.executed
+        # A one-call read rests on the reads it ran as (as_reads).
+        return all(call_key(r["tool"], r["arguments"]) in ctx.executed
+                   for r in as_reads(call))
 
     return await _record_beliefs(beliefs, defs=defs, is_executed=is_executed,
                                  store=ctx.belief_store,

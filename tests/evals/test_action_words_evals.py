@@ -280,6 +280,9 @@ def _converse(monkeypatch, questions: list[str], world: World) -> list[dict]:
         out.append(rec)
         say(f"  [{seconds:>6.1f}s ${rec['usd']:.3f} {rec['words']:>3}w] {q!r}")
         say(f"      writes={writes}")
+        for c in calls:
+            if c.get("error") and c["tool"] in WRITES:
+                say(f"      refused {c['tool']}: {str(c['error'])[:300]}")
         say(f"      reads={[c['tool'] for c in calls if c['tool'] not in WRITES and c['tool'] != 'compose']}")
         say(f"      -> {turn.answer[:220]!r}")
         history += [

@@ -373,6 +373,56 @@ def test_each_tool_says_which_words_are_its_own():
 
 
 # ---------------------------------------------------------------------------
+# 6b. A read asked as one call is kept as the reads it ran as
+# ---------------------------------------------------------------------------
+
+CHANGE = {"tool": "get_change", "arguments": {"store": "Rockwell", "date_range": "last_week",
+                                              "compare_to": "previous_period"}}
+
+
+def test_get_change_is_saved_as_the_reads_that_ran():
+    """
+    The keep eval, 2026-09-22: "Turn this into a workflow." was refused twice
+    for a get_change step — the executed set holds its reads, never its name —
+    and the turn took 291 s re-reading them.
+    """
+    reads = write_tools.as_reads(CHANGE)
+    assert len(reads) > 1 and all(r["tool"] != "get_change" for r in reads)
+    wf = _WF()
+    out = _run(write_tools.save_workflow(
+        "Rockwell Weekly", [{"name": "The week", "tool": "get_change",
+                             "arguments": CHANGE["arguments"], "why": "the whole read"}],
+        ctx=_ctx("Turn this into a workflow.", *reads, workflow_writer=wf)))
+    names = [s["name"] for s in wf.spec.steps]
+    assert len(names) == len(reads) == len(set(names))
+    assert all(s["tool"] != "get_change" for s in wf.spec.steps)
+    assert out["rows"][0]["steps"] == names
+
+
+def test_get_change_pins_and_grounds_a_view_by_its_reads():
+    reads = write_tools.as_reads(CHANGE)
+    seen = {}
+
+    async def writer(spec):
+        seen["calls"] = spec.tool_calls
+        return {"pin_id": "p", "title": spec.title, "page": None, "created_by": "ice",
+                "created_at": "2026-09-22T01:00:00+00:00", "pins_on_page": 0}
+
+    _run(write_tools.pin_answer([CHANGE], "Rockwell's week",
+                                ctx=_ctx("Keep this.", *reads, writer=writer)))
+    assert [c["tool"] for c in seen["calls"]] == [r["tool"] for r in reads]
+    store = _Beliefs()
+    view = {**VIEW, "evidence": [CHANGE]}
+    out = _run(write_tools.record_belief(
+        [view], ctx=_ctx("how did Rockwell do?", *reads, belief_store=store)))
+    assert out["meta"]["held"] == 1
+
+
+def test_an_ordinary_read_is_itself():
+    assert write_tools.as_reads(SALES) == [SALES]
+
+
+# ---------------------------------------------------------------------------
 # 7. The service: a change is made where the analysis stands
 # ---------------------------------------------------------------------------
 
