@@ -42,6 +42,7 @@ from app.models.bob_decision import (
     BobDecision,
     DECISION_OUTCOMES,
 )
+from app.models.bob_authority import BobAuthorityVersion, BobPerson, BobRequest
 from app.models.bob_page import (
     BobPage,
     BobPageEvent,
