@@ -225,7 +225,17 @@ export function turnNotices(p: {
         : ownNotices(p.answers[o.turn]?.toolCalls.find((c) => c.seq === o.seq)?.result?.meta)
     )).map((n) => n.kind),
   );
-  return all.filter((n) => !onObjects.has(n.kind));
+  // ONE CAVEAT, DRAWN ONCE (W1.1, 2026-09-22): two reads of one plan raise the
+  // same notice, and the dashboard turn listed it twice. A turn stored before
+  // the loop raised each once still draws it once.
+  const seen = new Set<string>();
+  return all.filter((n) => {
+    if (onObjects.has(n.kind)) return false;
+    const id = `${n.kind} ${(n.message ?? '').trim()}`;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
 }
 
 /**
@@ -696,10 +706,26 @@ export function Board(p: BoardProps) {
   }
   // THE FIGURE A SENTENCE POINTS AT (P7): the block he named, drawn as the one
   // value of its row. A key that names nothing on the board draws a dash.
+  //
+  // ONLY AGAINST ITS OWN TURN'S BLOCKS (W1.1, 2026-09-22). The page is the
+  // newest turn's, and a `{key}` in it names a figure THAT turn composed. It
+  // resolved against the whole board, so a key an earlier answer used drew
+  // the earlier figure, and after a reload — the board moved on, `bounded`
+  // left it out — a dash. The server resolves a reference against the same
+  // blocks (agent/compose.py `own`), so the two ends agree.
+  const ownBlocks = new Map(
+    (p.answers[newest]?.composition?.blocks ?? [])
+      .filter((b) => b.op === undefined || b.op === 'put' || b.seq !== undefined)
+      .map((b) => [b.key, b] as const),
+  );
   const inline = (key: string, part: string | undefined, n: number): ReactNode => {
     const it = byKey.get(key);
-    return it
-      ? <InlineFigure key={`${key}-${part ?? 'v'}-${n}`} o={it.o} turn={p.answers[it.o.turn]} part={part} />
+    const own = ownBlocks.get(key);
+    const o: BoardObject | null = own && (own.seq !== undefined || own.seqs?.length)
+      ? ({ ...(it?.o ?? {}), ...own, key, turn: newest, touched: newest } as unknown as BoardObject)
+      : it && it.o.turn === newest ? it.o : null;
+    return o
+      ? <InlineFigure key={`${key}-${part ?? 'v'}-${n}`} o={o} turn={p.answers[newest]} part={part} />
       : null;
   };
   // HOW MUCH ROOM A FIGURE NEEDS WHEN IT SITS BESIDE ITS WORDS, from what it

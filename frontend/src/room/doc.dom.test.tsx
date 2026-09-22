@@ -122,7 +122,10 @@ describe('a figure inside a sentence', () => {
     fireEvent.click(figure);
     const receipt = container.querySelector('.r-inl-receipt') as HTMLElement;
     expect(receipt.textContent).toContain('Net sales, the estate');
-    expect(receipt.textContent).toMatch(/read \d{1,2}:\d{2}|new_transactions/);
+    // A read on another day names the day before its time (data.readAt): the
+    // fixture's read is 2026-09-21, so on any later day this is "read Sep 21
+    // 12:25" — the clock-dependent failure of 2026-09-22, fixed in W1.1.
+    expect(receipt.textContent).toMatch(/read (?:[A-Z][a-z]{2} \d{1,2} )?\d{1,2}:\d{2}|new_transactions/);
     fireEvent.click(figure);
     expect(container.querySelector('.r-inl-receipt')).toBeNull();
   });
@@ -183,7 +186,7 @@ describe('sections, and a figure paired with its words', () => {
     expect(lines).toHaveLength(1);
     // The window and when it was read (UI rule 6). It counted the reads until
     // P14 — "18 READS" — which says nothing about the answer or its freshness.
-    expect(lines[0].textContent).toMatch(/read \d/i);
+    expect(lines[0].textContent).toMatch(/read (?:[a-z]{3} \d{1,2} )?\d/i);
     expect(lines[0].textContent).not.toMatch(/reads/i);
   });
 
@@ -609,5 +612,35 @@ describe('a caveat and a fold', () => {
       layout: 'stack',
       children: [{ layout: 'row', children: [{ caveat: true }] }],
     } as Arrangement)).toBe(true);
+  });
+});
+
+describe('a figure in a sentence is its own turn\'s (W1.1, 2026-09-22)', () => {
+  // The page is the newest turn's; `{key}` resolved against the WHOLE board, so
+  // a key an earlier answer used drew that answer's figure — and after a
+  // reload, a dash. It resolves against the page's own turn's blocks now.
+  const EARLIER = { ...TURN, text: 'Earlier.' } as unknown as AnswerTurn;
+  const NOW_ROWS = [{ unit: 'PHP', value: 99, baseline: 100, change: -1, change_pct: -1,
+                      direction: 'down' }];
+  const page: Arrangement = { layout: 'stack', children: [{ lede: 'The week closed at {net}.' }] };
+  const drawTwo = (now: AnswerTurn) => render(
+    <Board answers={[EARLIER, now]} board={[block('net', 'figure', 0, { turn: 0 })]} local={{}}
+           focused={null} selection={[]} live={false} retuned={{}} on={ACTIONS()}
+           arrangement={page} foot={null} />,
+  );
+
+  it('never borrows a figure an earlier turn drew', () => {
+    const now = { ...TURN, toolCalls: [read(0, 'Net sales', NOW_ROWS, { group_by: [] })],
+                  composition: { blocks: [] } } as unknown as AnswerTurn;
+    const lede = drawTwo(now).container.querySelector('.r-doc-lede') as HTMLElement;
+    expect(lede.textContent).not.toContain('₱1,621,528');
+  });
+
+  it('draws the figure from its own turn\'s read when that turn composed it', () => {
+    const now = { ...TURN, toolCalls: [read(0, 'Net sales', NOW_ROWS, { group_by: [] })],
+                  composition: { blocks: [{ op: 'put', key: 'net', kind: 'figure', seq: 0,
+                                            weight: 'lead' }] } } as unknown as AnswerTurn;
+    const lede = drawTwo(now).container.querySelector('.r-doc-lede') as HTMLElement;
+    expect(lede.querySelector('button.r-inl')?.textContent).toBe('₱99');
   });
 });
