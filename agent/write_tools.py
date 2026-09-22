@@ -1124,7 +1124,8 @@ async def edit_page(
     `set_window` on THAT page — never a control on your answer. It puts one
     window control on the page; picking a window there re-runs every analysis
     on it over that window, and one whose read takes no date range says so.
-    Nothing needs reading first. Confirm in one line.
+    Read the page first (view_page, figures false — nothing is re-run) so the
+    one line confirming it names what the filter moves.
 
     A CHANGE TO AN ANALYSIS CHANGES IT. "Use 30-day velocity", "only the top
     ten", "last month instead" on something already on the page is `change`
