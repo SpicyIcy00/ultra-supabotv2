@@ -194,7 +194,8 @@ def test_a_settled_answer_still_faces_the_gates_and_a_notice_is_placed_not_argue
     ], notice=notice)
     assert len(requests) == 2, "the settled round is the answer; no rewrite is bought"
     done = frames_of(frames, "done")[0]
-    assert done["rounds_saved"] == 1 and done["notice_forced"] is True
+    assert done["rounds_saved"] == 1 and done["notices_placed"] == 1
+    assert done["notice_forced"] is False, "nothing is forced into the answer" 
     placed = [w for w in frames_of(frames, "warning")
               if w["reason"] == req(DEFS, "notices.placed_reason")]
     assert placed and "partial_window" in placed[0]["kinds"]

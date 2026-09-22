@@ -269,7 +269,8 @@ def test_a_focused_question_is_held_to_its_budget_in_queries(monkeypatch):
     refused before they run — answered as tool results, and said.
     """
     budget = int(req(DEFS, "composition.size.kinds.focused.max_queries"))
-    frames, _requests, executed = _drive(monkeypatch, _broad_turn())
+    frames, _requests, executed = _drive(monkeypatch, _broad_turn(),
+                                         question="why is north edsa down?")
     over = [w for w in frames_of(frames, "warning")
             if w.get("reason") == req(DEFS, "composition.size.warning_reason")]
     assert over and over[0]["size"] == "focused" and over[0]["limit"] == budget

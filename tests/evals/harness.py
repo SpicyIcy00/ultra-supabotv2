@@ -344,6 +344,9 @@ DONE_KEPT = (
     # the four token counts, which are the only record of what a turn cost:
     # an eval turn is not in george.conversations, so cost_report cannot see it
     "usage", "cache_hit", "cache_measured",
+    # the size the answer was held to and the most it could be, and the
+    # notices placed by code rather than argued for (W1.1, 2026-09-22)
+    "answer_size", "size_ceiling", "notices_placed",
 )
 
 DONE_DROPPED = {

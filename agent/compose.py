@@ -110,6 +110,14 @@ class Rejected(ValueError):
     pass
 
 
+class OverBound(Rejected):
+    """
+    A block refused for a COUNT, not for what it says (W1.1, 2026-09-22): past
+    max_blocks or max_in_words. It is not drawn, and the answer is not held
+    for it — the round that composed it may still settle (rounds.settle).
+    """
+
+
 def vocabulary(defs: Mapping[str, Any]) -> Mapping[str, Any]:
     return defs["composition"]
 
@@ -1036,10 +1044,10 @@ def validate(
             rides = (isinstance(item, Mapping) and isinstance(item.get("key"), str)
                      and in_words.get(item["key"]) == item.get("kind"))
             if rides and spoken >= max_in_words:
-                raise Rejected(f"more than {max_in_words} figures inside your sentences; past that "
+                raise OverBound(f"more than {max_in_words} figures inside your sentences; past that "
                                f"it is a table — draw the read as one")
             if not rides and drawn >= max_blocks:
-                raise Rejected(f"more than {max_blocks} blocks; a workspace is not a report — a "
+                raise OverBound(f"more than {max_blocks} blocks; a workspace is not a report — a "
                                f"figure written into a sentence as {{key}} is not counted")
             if not isinstance(item, Mapping):
                 raise Rejected("not a block")
@@ -1481,7 +1489,8 @@ def validate(
             else:
                 drawn += 1
         except Rejected as why:
-            rejected.append({"block": item, "reason": str(why)})
+            rejected.append({"block": item, "reason": str(why),
+                             **({"bound": "count"} if isinstance(why, OverBound) else {})})
 
     _hang(accepted, hangs, voc, coerced)
     return accepted, rejected
@@ -1558,7 +1567,7 @@ def hold_to_size(accepted: list[dict], size: str, defs: Mapping[str, Any],
         key = edit.get("key")
         if _is_figure(edit, voc) and key not in have:
             if len(have) >= most:
-                refused.append({"block": edit, "reason": why.format(
+                refused.append({"block": edit, "bound": "size", "reason": why.format(
                     figures=most, size=size,
                     means=" ".join(str(spec.get("means") or "").split()))})
                 continue

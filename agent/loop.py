@@ -2321,6 +2321,9 @@ def size_ceiling(effort_kind: str, defs: dict) -> str:
     thinks decide how large he answers, and the two cannot disagree.
     """
     size = req(defs, "composition.size")
+    by_kind = size.get("ceiling_by_effort_kind") or {}
+    if effort_kind in by_kind:
+        return str(by_kind[effort_kind])
     if effort_kind in (size.get("broad_when_effort_kind") or []):
         return "broad"
     if effort_kind in (size.get("remember_when_effort_kind") or []):
@@ -2497,7 +2500,11 @@ def _refusal_keeps_the_round(verdict: dict, defs: dict) -> bool:
     with its reason and the answer stands as drawn.
     """
     accessories = set(req(defs, "rounds.settle.stands_without"))
-    if verdict.get("rejected"):
+    # A figure refused for the answer's SIZE (composition.size) is the bound
+    # working, not his answer failing: it is not drawn and the round stands.
+    size_stands = not req(defs, "composition.size.refusal_keeps_the_round")
+    if [r for r in verdict.get("rejected") or []
+            if not (size_stands and (r or {}).get("bound") in ("size", "count"))]:
         return True
     for slot in verdict.get("rejected_slots") or []:
         if (slot or {}).get("slot") not in accessories:
@@ -3510,6 +3517,8 @@ async def run(
     answer = ""
     status = "ok"
     notice_forced = False
+    # Notices he did not carry, placed by code for the room to draw (W1.1).
+    notices_placed = 0
     # PROSE WRITTEN BESIDE A COMPOSE IS THE ANSWER, AND IT OUTLIVES ITS ROUND
     # (P2S.7, 2026-09-18). A round that only composes, labels or writes is not
     # narration — the reset below fires only before a READ — so its words stay
@@ -3872,6 +3881,18 @@ async def run(
                     kept_prose = ""
                     yield _sse("text", {"delta": answer})
                 correction_pending = None
+                # A PAGE'S PROSE THAT DOES NOT SAY ITS CLAIM IS NOT ITS HEADLINE
+                # (W1.1): beside a page the prose is the conclusion, and prose
+                # that never says the point — narration of the work, a reply to
+                # a refusal — is replaced by the point itself; the page says
+                # the rest.
+                if (claim_now and answer.strip() and _lede_of(arrangement_recorded)
+                        and not reading.was_said(answer, claim_now)):
+                    log.gap("correction_reply_not_the_answer", answer[:2000])
+                    answer = claim_now
+                    yield _reset_answer("correction_reply_not_the_answer")
+                    kept_prose = ""
+                    yield _sse("text", {"delta": answer})
                 # A ROUND THAT SETTLED ON ITS LEDE WROTE NOTHING BESIDE IT
                 # (rounds.settle): the headline is the claim, the page says
                 # the rest, and the answer post has words to be stored under.
@@ -4440,7 +4461,9 @@ async def run(
                 # nothing is appended to his prose. What was placed is
                 # recorded, so the rate stays a measured number.
                 if missing:
-                    notice_forced = True
+                    # NOTHING IS FORCED INTO THE ANSWER, so `notice_forced`
+                    # stays False; what was placed is counted on its own.
+                    notices_placed = len(_distinct_notices(missing))
                     placed_reason = str(req(defs, "notices.placed_reason"))
                     for n in _distinct_notices(missing):
                         log.gap(placed_reason, n.get("message", "")[:2000],
@@ -4862,6 +4885,10 @@ async def run(
                 verdict = result.get("meta") or {}
                 if err is not None or _refusal_keeps_the_round(verdict, defs):
                     round_stood = False
+                    # WHAT HE WRITES AFTER A REFUSED COMPOSE IS A REPLY TO IT
+                    # (W1.1): "The first pass exceeded what the workspace
+                    # holds… Tightening" was a broad answer's whole prose.
+                    correction_pending = correction_pending or "prose"
                 if err is None and (verdict.get("reading") or {}).get("claim"):
                     round_claimed = True
                 if err is None:
@@ -5452,6 +5479,11 @@ async def run(
         "asked_reads": len(asked_reads),
         "status": status,
         "notice_forced": notice_forced,
+        # The notices he did not carry, placed by code (notices.placed_by).
+        "notices_placed": notices_placed,
+        # The size the answer was held to (composition.size), and its ceiling.
+        "answer_size": answer_size,
+        "size_ceiling": ceiling,
         # The same measured clock that goes to the log, so a client and an
         # eval report the number the log holds rather than one of their own.
         # The room times the wait itself while it waits (it has to — nothing

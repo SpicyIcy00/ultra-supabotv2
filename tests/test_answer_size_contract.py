@@ -121,8 +121,12 @@ def _calls(n=3):
     ("Make it a full page", "broad"),
     ("build me a dashboard", "broad"),
     ("remember that Rockwell closes on Mondays", "remember"),
-    ("how did Rockwell do last week?", "focused"),
-    ("what were Rockwell's sales yesterday", "focused"),
+    # The definitions' own lookup example, and a fact asked: a lookup at most.
+    ("how did Rockwell do last week?", "lookup"),
+    ("what were Rockwell's sales yesterday", "lookup"),
+    # A message that digs is focused at most.
+    ("why is Rockwell down?", "focused"),
+    ("analyze tradsnax per store", "focused"),
 ])
 def test_the_ceiling_is_read_with_the_effort_tables_phrases(question, expected):
     _level, kind = bob_loop.turn_effort(question, None, DEFS)
@@ -138,8 +142,8 @@ def test_the_offer_is_a_broad_phrase_so_taking_it_is_a_broad_question():
 def test_the_size_is_said_on_the_question_and_never_in_the_cached_prefix(monkeypatch):
     _frames, requests, _ = _drive(monkeypatch, [[_TextBlock("Rockwell fell.")]])
     question = _question(requests[0])
-    assert "at most focused" in question and question.endswith("how did Rockwell do last week?")
-    assert "at most focused" not in bob_loop.SYSTEM_PROMPT
+    assert "at most lookup" in question and question.endswith("how did Rockwell do last week?")
+    assert "at most lookup" not in bob_loop.SYSTEM_PROMPT
 
 
 def test_a_surface_act_is_not_told_a_size(monkeypatch):
@@ -346,3 +350,36 @@ def test_the_plan_is_four_short_steps():
     # And paragraphs separated by a blank line are steps too.
     said, _ = reading.validate({"next": "\n\n".join(steps)}, DEFS, set(), [])
     assert len(said["next"].split("\n\n")) == most
+
+
+def test_a_block_past_the_count_is_refused_and_the_round_still_stands():
+    """
+    The broad turn of 2026-09-22 composed nineteen blocks; the ones past
+    composition.max_blocks were refused, the round did not stand, and the
+    recompose moved the page under the reader and cost 47 s. A count is the
+    bound working: refused, not drawn, and the answer is not held for it.
+    """
+    most = int(req(DEFS, "composition.max_blocks"))
+    calls = _calls(most + 2)
+    blocks = [_block(f"b{i}", i, kind="ranked") for i in range(most + 1)]
+    out = compose.compose(blocks, {"claim": "Rockwell fell"}, calls=calls, defs=DEFS,
+                          ceiling="broad", own=[])
+    over = [r for r in out["meta"]["rejected"] if r.get("bound") == "count"]
+    assert len(over) == 1, out["meta"]["rejected"]
+    assert bob_loop._refusal_keeps_the_round(out["meta"], DEFS) is False
+    # A refusal about TRUTH still keeps its round.
+    truth = {"rejected": [{"block": {"key": "x"}, "reason": "read 9 has no row"}]}
+    assert bob_loop._refusal_keeps_the_round(truth, DEFS) is True
+
+
+def test_a_page_whose_prose_never_says_its_claim_leads_with_the_claim(monkeypatch):
+    page = {"layout": "stack", "children": [
+        {"lede": "Rockwell fell on the week, to {net}."}, {"block": "net"}]}
+    frames, _requests, _ = _drive(monkeypatch, [
+        [_ToolUse("r1", "get_sales", SALES)],
+        [_TextBlock("Reads are in. Composing the page."),
+         _ToolUse("c1", "compose", {"blocks": [_block("net", 0)], "size": "broad",
+                                    "reading": {"claim": "Rockwell fell on the week"},
+                                    "arrangement": page})],
+    ], question="how are we doing")
+    assert _final(frames).strip() == "Rockwell fell on the week"
