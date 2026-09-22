@@ -157,8 +157,15 @@ def _voice(name: str, turn: checks.Turn, *, extra_results: list | None = None,
                              if w.get("reason") == "composition_rejected"]
     f["label_calls"] = len([c for c in turn.calls
                             if c.get("tool") == bob_loop.COMPOSE_TOOL])
-    f["ungrounded_numerals"] = [x.text for x in checks.ungrounded_numerals(turn.answer, results)]
-    f["grounded_numerals"] = [x.text for x in checks.grounded_numerals(turn.answer, results)]
+    # WHAT HE SAYS IS EVERYTHING THE ROOM DRAWS (2026-09-22). Since the answer
+    # is the size of the question, a lookup's answer is its claim alone and its
+    # figures sit in the caveat and next slots, which Reading.tsx draws above
+    # and below it. Both numeral checks read all three: a figure there is said,
+    # and an invented one there is caught.
+    drawn = " ".join([turn.answer] + [" ".join(map(str, v)) if isinstance(v, list) else str(v)
+                                      for v in (said.get("caveat"), said.get("next")) if v])
+    f["ungrounded_numerals"] = [x.text for x in checks.ungrounded_numerals(drawn, results)]
+    f["grounded_numerals"] = [x.text for x in checks.grounded_numerals(drawn, results)]
     f["internal_vocabulary"] = checks.internal_vocabulary(turn.answer)
     f["limitation"] = checks.limitation_statement(turn.answer)
     f["attribution"] = checks.attribution_claims(turn.answer, results)
