@@ -40,6 +40,7 @@ does. Changing them would forfeit the one comparison that carries over.
 """
 from __future__ import annotations
 
+import json
 import os
 
 import pytest
@@ -269,6 +270,28 @@ def _broad(turn: checks.Turn, f: dict) -> None:
     # bob work worse". The figure goes on the record for the close-out.
     f["localizing_reads"] = [c.get("arguments") for c in loc]
     f["turn_usd"] = round(turn_usd(turn), 4)
+    # ONE READ THAT ALREADY HAS THE PICTURE (W1.3, 2026-09-22). The card's
+    # done-when reverses the shape P2S.6/P2S.7 held here — the headline by
+    # store drawn first, then localizing reads landing before the final
+    # round: a broad question is now ONE read, get_overview, whose findings
+    # are the shops, the days and the lines already localized, and two
+    # rounds. So when the overview answered, what is held is that its
+    # findings localize and that the answer names what carried the change
+    # from the overview's own row; the reads and rounds are recorded as the
+    # card's measure, never asserted — one run is a sample.
+    overview = [r for r in turn.results if r["tool"] == "get_overview" and not r["error"]]
+    if overview:
+        rows = [row for r in overview for row in (r["result"] or {}).get("rows") or []]
+        f["overview_asked_reads"] = checks.asked_reads(turn.calls)
+        f["overview_rounds"] = turn.done.get("iterations")
+        f["overview_iteration_ms"] = turn.done.get("iteration_ms")
+        f["overview_carriers"] = checks.overview_carriers(
+            turn.answer + " " + json.dumps(_reading_of(turn)), [r["result"] for r in overview])
+        say(f"  overview: {f['overview_asked_reads']} read(s), {f['overview_rounds']} rounds "
+            f"{f['overview_iteration_ms']}, carrier {f['overview_carriers']}")
+        assert any(row.get("finding") in ("shop", "concentration") for row in rows), (
+            "the overview returned no shop or concentration finding to localize with")
+        return
     assert loc, ("a broad answer read by store and nothing under it — "
                  f"{[c.get('arguments') for c in turn.read_calls]}")
     # P2S.7: THE FIGURES FIRST, AND THEN IT BUILDS. The first thing drawn is

@@ -67,6 +67,7 @@ from tools import (
     inventory,
     movement,
     objects,
+    overview,
     products,
     purchase_plan,
     purchasing,
@@ -192,6 +193,11 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     # Bob sees when he reasons about one are the same figures from the same
     # definitions (tools/objects.py).
     "get_object": objects.get_object,
+    # The overview (W1.3): the reads a broad answer makes, run in code and
+    # returned as ranked findings, each a line of fact code wrote, with what
+    # carried the change decided by definition (tools/overview.py,
+    # metrics.yaml overview). Writes no SQL — it calls the reads above.
+    "get_overview": overview.get_overview,
 }
 
 # The one tool that reads nothing. It says what the person SEES — which reads,
@@ -305,6 +311,7 @@ def _enum_sources(defs: dict) -> dict[tuple[str, str], list]:
         ("get_change", "compare_to"): list(req(defs, "one_call_reads.tools.get_change.compare_to")),
         ("get_stock_health", "store"): _one_call_stores("get_stock_health"),
         ("get_object", "date_range"): presets,
+        ("get_overview", "date_range"): presets,
         ("get_purchasing", "measure"): purch_measures,
         ("get_purchasing", "group_by"): purch_groups,
         ("get_purchasing", "date_range"): presets,

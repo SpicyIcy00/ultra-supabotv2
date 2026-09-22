@@ -5515,6 +5515,9 @@ workflows:
       # An object view's sales sections take the window; see
       # partially_reproducible below for the half that does not.
       get_object: date_range
+      # The overview's sales, days and stockouts take its window; see
+      # partially_reproducible for the warning list, which does not.
+      get_overview: date_range
 
     # The window rebinds, but one side of the answer is still read live. Real
     # and useful, and it must say so — reporting it as fully reproduced would
@@ -5540,6 +5543,12 @@ workflows:
         sales beside today's shelf, and each section's own receipts say which
         is which — one timestamp over the view would be exactly the lie this
         classification exists to prevent.
+      get_overview: >
+        The sales reads, the shops' days and the stockouts rebind with
+        date_range; the warning list is get_attention read for TODAY, so a
+        backtested overview shows a past week's findings beside today's
+        warnings, and each part's own receipts (meta.parts) say which is which
+        (tools/overview.py).
 
     # No time axis of any kind. In a backtest these return TODAY's figure,
     # labelled as today's, with a notice. Never silently omitted and never
@@ -6662,6 +6671,155 @@ objects:
   # (backend/app/api/v1/routes/bob.py), carrying its own receipts. A
   # backtest of a past day therefore cannot accidentally show today's opinion.
   belief_is_composed_on_top: true
+
+# =============================================================================
+# THE OVERVIEW — one read that already has the picture (W1.3, 2026-09-22)
+#
+# "How are we doing" was answered by reading the estate, the shops, the days,
+# the movers, the shelf and the warning list over two or three rounds, and
+# then working out in prose which of them mattered. tools/overview.py runs
+# those reads in CODE — every one an existing vetted read, unchanged — and
+# returns FINDINGS: each one line of fact written by code, with the figures it
+# rests on as numbers on the row and the read behind it as its receipt. The
+# Tableau Pulse pattern: code finds the facts, Bob reasons over them.
+#
+# WHAT CAUSED MOST OF IT is a definition here, not a share he writes
+# (CLAUDE.md rule 10 binds HIS prose: attribution shares are unsupported
+# there). `concentration` below says what "carried most of the fall" MEANS —
+# the word "most" read plainly, more than half — and code decides whether it
+# holds from two read figures of the same measure, window and filters. The
+# ratio itself is never put on a row: it is how a word is decided, not a
+# figure to quote.
+#
+# NOTHING HERE IS A THRESHOLD ON THE BUSINESS. Which findings exist is
+# decided by what moved; how many of each is scope (top_n); the order is a
+# declared reading order, the same kind of thing attention.order is.
+# =============================================================================
+overview:
+  introduced: "2026-09-22"
+  asks: how is the business doing — the estate and every shop against the week before, what moved it, and what needs attention
+  default_window: last_week
+  # The comparison every sales read in it makes. A window still in progress is
+  # refused by that comparison's own rule (windows.check_preset_comparable),
+  # naming the closed alternative.
+  compare_to: previous_period
+  # The shops it reads are the sales reads' own population
+  # (filters.excluded_from_sales, stores.active_retail); nothing is named here.
+  stores: stores.active_retail
+  # Rows kept per ranked read — scope, like objects.top_n.
+  top_n:
+    products: 5
+    stockouts: 10
+    attention: 8
+    shop_days: 2        # the shops whose days are read out: the largest movers in the estate's direction
+  # Reads run at once. tools/_common.connect() gates connections per process;
+  # four is what tools/objects.py uses for the same reason.
+  max_parallel: 4
+
+  # Every read the overview makes. Each is an existing tool with the call's
+  # window filled in; `window` says how, exactly as one_call_reads does:
+  #   date_range          the asked window
+  #   baseline_and_window [the baseline's start, the window's end) — the
+  #                       comparison window's own days and the asked ones
+  #   window_days         inclusive calendar days, as stock history takes them
+  #   none                the read has no window (the warning list is today's)
+  reads:
+    estate_sales:        {tool: get_sales, arguments: {metric: net_sales, group_by: []}, compared: true, window: date_range}
+    estate_transactions: {tool: get_sales, arguments: {metric: transaction_count, group_by: []}, compared: true, window: date_range}
+    estate_basket:       {tool: get_sales, arguments: {metric: average_transaction_value, group_by: []}, compared: true, window: date_range}
+    estate_products:     {tool: get_sales, arguments: {metric: product_revenue, group_by: []}, compared: true, window: date_range}
+    shop_sales:          {tool: get_sales, arguments: {metric: net_sales, group_by: store}, compared: true, window: date_range}
+    shop_transactions:   {tool: get_sales, arguments: {metric: transaction_count, group_by: store}, compared: true, window: date_range}
+    shop_basket:         {tool: get_sales, arguments: {metric: average_transaction_value, group_by: store}, compared: true, window: date_range}
+    shop_days:           {tool: get_sales, arguments: {metric: net_sales, group_by: [store, day]}, window: baseline_and_window}
+    fell:                {tool: get_sales, arguments: {metric: product_revenue, group_by: product, rank_by: biggest_drop}, compared: true, window: date_range, top_n: products}
+    rose:                {tool: get_sales, arguments: {metric: product_revenue, group_by: product, rank_by: biggest_gain}, compared: true, window: date_range, top_n: products}
+    stockouts:           {tool: get_stock_history, arguments: {view: stockouts, rank_by: most_days_out}, window: window_days, top_n: stockouts}
+    attention:           {tool: get_attention, arguments: {}, window: none}
+    # The warning list's shops, investigated before they are shown: the day it
+    # compares (yesterday, against the same weekday a week before — the
+    # brief's own comparison) by shop, on both drivers, so a shop flagged for
+    # its day arrives with whether it lost visits or basket.
+    day_transactions:    {tool: get_sales, arguments: {metric: transaction_count, group_by: store, date_range: yesterday, compare_to: same_weekday_last_week}, window: none}
+    day_basket:          {tool: get_sales, arguments: {metric: average_transaction_value, group_by: store, date_range: yesterday, compare_to: same_weekday_last_week}, window: none}
+
+  # WHAT "CARRIED MOST OF IT" MEANS. The subject whose change, in the same
+  # direction as the whole's, is compared with the whole's change of the SAME
+  # measure over the SAME window and filters (net sales by shop against the
+  # estate's net sales; a product's revenue against the estate's product
+  # revenue). Three outcomes, each a sentence below:
+  #   carried_all   its change is larger than the whole's: the rest together
+  #                 moved the other way
+  #   carried_most  more than `most_means_more_than` of the whole's change
+  #   spread        no one subject did — the largest part is named as that
+  concentration:
+    most_means_more_than: 0.5
+    of:
+      shops:    {whole: estate_sales, parts: shop_sales, noun: shop, measure: net sales}
+      products: {whole: estate_products, parts: [fell, rose], noun: product, measure: product revenue}
+    # A whole that did not move, or has no baseline, has nothing to carry.
+    needs_baseline_status: ok
+
+  # THE DAY THAT MOVED. For each of the `top_n.shop_days` shops that moved most
+  # in the estate's direction, the day of the window whose net sales moved most
+  # against the SAME WEEKDAY of the baseline window — both days read in one
+  # series (shop_days). The difference is computed here, in code, and put on
+  # the row; it is never differenced in prose.
+  day_moved:
+    against: same weekday of the baseline window
+
+  # The order findings are read in, most important first — the primary fact,
+  # then what carried it, then the rest. Within a kind, largest absolute
+  # change (money) first; ties by subject.
+  order: [unread, estate, concentration, drivers, shop, day_moved, product_fell, product_rose, attention, stockout]
+
+  # EACH FINDING'S LINE. Filled by code from the row's own figures, formatted
+  # by currency (money) and as the tools give percentages. {dir} is "up" or
+  # "down" from the read's own direction; {moved} is "rose"/"fell".
+  facts:
+    estate: "{measure} across the shops: {value} over {window}, {dir} {change_pct} from {baseline} over {baseline_window}."
+    drivers: "{measure} across the shops: {value}, {dir} {change_pct} from {baseline}."
+    shop: "{subject}: net sales {value}, {dir} {change_pct} from {baseline}; transactions {tx}, basket {basket}."
+    # A compared figure whose baseline is missing: said, never filled in.
+    no_baseline: "{subject}: {measure} {value} over {window}, with no figure to compare it with ({baseline_status})."
+    carried_all: "{subject} {moved} by {change}, more than the estate's whole {movement} in {measure} of {whole_change}; the other {noun}s together moved the other way."
+    carried_most: "{subject} carried most of the estate's {movement} in {measure}: {subject} {dir} {change}, the estate {dir} {whole_change}."
+    spread: "No one {noun} carried most of the {movement} in {measure}; the largest was {subject}, {dir} {change}, against the estate's {whole_change}."
+    day_moved: "{subject}'s biggest {movement} was {day}: {value} against {baseline} on {baseline_day}."
+    product_fell: "{subject} fell {change} in {measure}, to {value} from {baseline}."
+    product_rose: "{subject} rose {change} in {measure}, to {value} from {baseline}."
+    # The warning list's rows, one line per source it ranks (attention.order).
+    # A source with no line here is still a finding: its row is kept whole and
+    # its line names the subject and the source.
+    attention:
+      sales_vs_same_weekday: "{subject}'s net sales on {day} were {value}, {dir} {change_pct} from {baseline} the same weekday a week before; transactions {tx}, basket {basket}."
+      stock_crossed_out: "{subject} at {where} ran out between {was_day} and {now_day}."
+      newly_dead: "{subject} at {where} has not sold since {last_sold}."
+      other: "{subject} is on the warning list ({source})."
+    stockout: "{subject} at {where} was out of stock {days_out} of {observed_days} days observed."
+    unread: "The {part} could not be read: {reason}"
+  # How each measure is said, from the metric a read returned.
+  measure_words:
+    net_sales: Net sales
+    transaction_count: Transactions
+    average_transaction_value: Basket
+    product_revenue: Product revenue
+  # How each read is named when it could not be read ({part} in `unread`).
+  part_words:
+    estate_sales: estate's net sales
+    estate_transactions: estate's transactions
+    estate_basket: estate's basket
+    estate_products: estate's product revenue
+    shop_sales: shops' net sales
+    shop_transactions: shops' transactions
+    shop_basket: shops' basket
+    shop_days: shops' days
+    fell: products that fell
+    rose: products that rose
+    stockouts: stockouts
+    attention: warning list
+    day_transactions: shops' transactions on the warning list's day
+    day_basket: shops' basket on the warning list's day
 
 watches:
 
