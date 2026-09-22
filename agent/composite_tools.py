@@ -685,6 +685,13 @@ async def view_memory(*, ctx: WriteContext) -> dict:
     concluded. Write nothing — record_belief refuses those words — and read
     the data only if they ask whether it still holds.
 
+    WHAT THEY SET ASIDE is here too, and only here: "what have you learned
+    from what I set aside / dismissed" is this read. A row with `set_aside`
+    is a kind of item about one subject they set aside — known or not
+    important (you leave it out), or wrong (it stays, marked) — and Undo
+    on the row lets it back. Say a doubted one first: a figure someone
+    called wrong outranks one you have stopped raising.
+
     Returns:
         {"rows": [...], "meta": {...}}. One row per view that still stands, with
         its subject, its stance, what you think, when you first held it and when

@@ -62,6 +62,7 @@ import { openMorning, switchMorning, type Morning } from '../services/standingAp
 import { decisionFor, leftBehind } from './decisions';
 import { recordDecision, type Outcome } from '../services/decisionsApi';
 import { forgetBelief } from '../services/beliefsApi';
+import { dismiss as dismissItem } from '../services/dismissalsApi';
 import { arrivedSince, firstUnseen, forgetLast, lastSeen, lastThread, questionsOf,
          remember } from './history';
 import type { TileActions } from './tiles';
@@ -828,7 +829,10 @@ export default function Room() {
         }));
       });
     },
-  }), [ask, patch, retune, board, drawn, answers, retuned, desk.data, local, focused, decide]);
+    // SET A ROW ASIDE WITH A REASON (W2.3) — the person's, like Forget. The
+    // row's own key goes back as it came; the control says what was kept.
+    dismiss: (what, reason) => dismissItem(what, reason, threadId ?? null),
+  }), [ask, patch, retune, board, drawn, answers, retuned, desk.data, local, focused, decide, threadId]);
 
   useEffect(() => { keepLocal(threadId, local); }, [threadId, local]);
 

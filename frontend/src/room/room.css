@@ -1431,6 +1431,14 @@
 .r-act:disabled { opacity: 0.4; cursor: default; }
 .r-act:disabled:hover { color: var(--ink-3); }
 
+/* SET ASIDE WITH ONE TAP FOR WHY (W2.3). Three quiet text actions after a
+   label; never the accent — setting something aside is not an approval. The
+   confirmation replaces them in the same place, in ink, not faded. */
+.r-setaside { display: inline-flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.r-setaside .r-label { margin: 0; }
+.r-setaside--kept { display: block; font: 400 12px/1.4 var(--sans); color: var(--ink-2); margin: 4px 0 0; }
+.r-mk-list-doubted { margin: 0 0 0 8px; }
+
 /* A KEPT PAGE (P2S.3(g)) — one section per analysis, a hairline between, the
    figures drawn by the room's own board. No box: a kept figure is a figure. */
 .r-kept-pin { padding: 26px 0 8px; border-top: 1px solid var(--edge); }

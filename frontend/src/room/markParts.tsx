@@ -11,6 +11,7 @@ import type { DataColour } from './catalogue';
 import { Offer, type TileProps } from './tiles';
 import { onRow } from './actions';
 import { Swatch } from './swatch';
+import type { DismissKey, Dismissed, Reason } from '../services/dismissalsApi';
 export type Row = Record<string, unknown>;
 /** The read's own `meta` — every subtitle and source line comes off it. */
 export type Meta = ToolMeta | null;
@@ -112,6 +113,11 @@ export interface Offering {
   onPick?(subject: string): void;
   /** The subjects already picked, so a row can say it is one of them. */
   picked?: string[];
+  /**
+   * Set a row aside with one tap for why (W2.3) — the row's own `dismiss`
+   * key goes back as it came. Absent: no control is drawn.
+   */
+  onDismiss?(what: DismissKey, reason: Reason): Promise<Dismissed>;
 }
 
 export const NO_TAKE: Take = () => {};

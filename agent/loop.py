@@ -1849,10 +1849,20 @@ def _bound_settings_for(name: str, ctx: Optional[WriteContext]) -> dict:
     """
     bound = (ctx.settings if ctx is not None else None) or {}
     out: dict = {}
-    for setting, decl in (req(_load_defs(), "settings.declared") or {}).items():
+    for setting, decl in _declared_settings().items():
         value = bound.get(setting)
         if value and name in (decl.get("participates_in") or {}):
             out[decl["argument"]] = value
+    return out
+
+
+def _declared_settings() -> dict:
+    """settings.declared, and the one dismissal declares for itself (W2.3)."""
+    defs = _load_defs()
+    out = dict(req(defs, "settings.declared") or {})
+    quieted = (defs.get("dismissal") or {}).get("setting")
+    if quieted:
+        out[str(quieted["name"])] = quieted
     return out
 
 
@@ -1860,7 +1870,7 @@ async def _injected_args(name: str, args: dict, ctx: Optional[WriteContext]) -> 
     # A setting's argument the MODEL sent is dropped, whatever is bound: he
     # may record what he was told, never bind a value himself
     # (settings.model_may_not.change_a_setting_silently).
-    own = {d["argument"] for d in (req(_load_defs(), "settings.declared") or {}).values()}
+    own = {d["argument"] for d in _declared_settings().values()}
     args = {**{k: v for k, v in args.items() if k not in own},
             **_bound_settings_for(name, ctx)}
     spec = INJECTED_READS.get(name)

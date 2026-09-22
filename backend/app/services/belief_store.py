@@ -70,7 +70,24 @@ MAX_TOLD_IN_PROMPT = 24
 
 
 def _told(row: dict[str, Any]) -> bool:
-    return bool(str(row.get("told") or "").strip())
+    """A view a person TOLD him — not a dismissal, which has its own list."""
+    return bool(str(row.get("told") or "").strip()) and not _set_aside(row)
+
+
+def _dismissal_defs() -> dict:
+    from tools._common import load_defs
+    return load_defs().get("dismissal") or {}
+
+
+def dismissal_stances() -> dict[str, str]:
+    """{stance: reason} for the three a dismissal writes (metrics.yaml dismissal.reasons)."""
+    return {str(v["stance"]): str(r)
+            for r, v in (_dismissal_defs().get("reasons") or {}).items()}
+
+
+def _set_aside(row: dict[str, Any]) -> bool:
+    """A dismissal: something a person set aside with a reason (W2.3)."""
+    return str(row.get("stance") or "") in dismissal_stances()
 
 
 async def current(session: AsyncSession) -> list[dict[str, Any]]:
@@ -84,7 +101,8 @@ async def current(session: AsyncSession) -> list[dict[str, Any]]:
     """
     rows = await session.execute(text("""
         SELECT id, subject_kind, subject, stance, claim, evidence, told,
-               confirmed_at, held_since, why, applied_count, last_applied_at
+               confirmed_at, held_since, why, applied_count, last_applied_at,
+               created_by
         FROM george.beliefs
         WHERE superseded_by IS NULL AND forgotten_at IS NULL
         ORDER BY confirmed_at DESC
@@ -363,8 +381,11 @@ def in_prompt(rows: list[dict[str, Any]]) -> list[str]:
 def _carried(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Every told view up to its own cap, then the newest of his own (P2S.11)."""
     told = [r for r in rows if _told(r)][:MAX_TOLD_IN_PROMPT]
-    own = [r for r in rows if not _told(r)][:MAX_IN_PROMPT]
-    return told + own
+    # WHAT THEY SET ASIDE (W2.3) is its own list with its own bound, so a
+    # month of taps never pushes a told view or one of his own out.
+    aside = [r for r in rows if _set_aside(r)][:int(_dismissal_defs().get("in_prompt") or 0)]
+    own = [r for r in rows if not _told(r) and not _set_aside(r)][:MAX_IN_PROMPT]
+    return told + aside + own
 
 
 def bound_settings(rows: list[dict[str, Any]], defs: dict) -> dict[str, list[dict]]:
@@ -401,6 +422,129 @@ def bound_settings(rows: list[dict[str, Any]], defs: dict) -> dict[str, list[dic
         limit = int((decl.get("bounds") or {}).get("max_items") or len(values))
         if values:
             out[name] = values[:limit]
+    # WHAT THEY SET ASIDE (W2.3), declared by metrics.yaml dismissal.setting
+    # and bound the same way: from the views that stand, so Undo on the memory
+    # view unbinds it by construction.
+    quiet = quieted(rows, defs)
+    if quiet:
+        out[str(defs["dismissal"]["setting"]["name"])] = quiet
+    return out
+
+
+def quieted(rows: list[dict[str, Any]], defs: dict) -> list[dict]:
+    """
+    The dismissals that stand, as the reads take them: {kind, subject, reason,
+    on, by, id}, newest first, bounded by dismissal.setting.bounds.max_items.
+
+    `kind` is the row's subject_kind and `subject` its subject — both were read
+    off the item's own row when it was set aside (tools/dismissal.key_of).
+    """
+    from zoneinfo import ZoneInfo
+    spec = defs.get("dismissal") or {}
+    if not spec:
+        return []
+    manila = ZoneInfo(str(defs["timezone"]["name"]))
+    by_stance = {str(v["stance"]): str(r) for r, v in spec["reasons"].items()}
+    out: list[dict] = []
+    for r in sorted(rows, key=lambda x: x.get("confirmed_at") or datetime.min.replace(tzinfo=timezone.utc),
+                    reverse=True):
+        reason = by_stance.get(str(r.get("stance") or ""))
+        if reason is None:
+            continue
+        since = r.get("confirmed_at") or r.get("held_since")
+        out.append({
+            "kind": r.get("subject_kind"), "subject": r.get("subject"), "reason": reason,
+            "on": (since.astimezone(manila).date().isoformat()
+                   if isinstance(since, datetime) else None),
+            "by": r.get("created_by"),
+            "id": str(r.get("id")) if r.get("id") else None,
+        })
+    return out[:int(spec["setting"]["bounds"]["max_items"])]
+
+
+class DismissalRefused(ValueError):
+    """The set-aside cannot be kept as asked, and the message says why."""
+
+
+async def dismiss(session: AsyncSession, *, kind: str, subjects: list[str], reason: str,
+                  by: str, defs: dict, conversation_id: Optional[str] = None
+                  ) -> list[dict[str, Any]]:
+    """
+    Keep a set-aside as a view a person TOLD him, one per subject (W2.3).
+
+    THE ROW IS A BELIEF LIKE ANY TOLD ONE: `told` holds the reason in the
+    person's words (dismissal.reasons.<r>.told), no calls, no figure — so the
+    one-ground check holds and the memory view draws it with a Forget.
+
+    THE SAME TAP TWICE IS A CONFIRMATION; A DIFFERENT REASON IS A REVISION.
+    "known" then "wrong" about the same thing supersedes the first and says
+    why, so the doubt carries the history of what it replaced.
+    """
+    spec = defs["dismissal"]
+    entry = (spec.get("reasons") or {}).get(reason)
+    if entry is None:
+        raise DismissalRefused(
+            f"'{reason}' is not a reason. One of: {', '.join(spec['order'])}.")
+    from tools.dismissal import valid_kind
+    kind = (kind or "").strip()
+    if not valid_kind(kind, defs):
+        raise DismissalRefused(
+            "That is not an item that can be set aside: its kind is not one "
+            "metrics.yaml dismissal.items declares.")
+    subjects = [s.strip()[:300] for s in subjects if isinstance(s, str) and s.strip()]
+    subjects = list(dict.fromkeys(subjects))[:int(spec["max_subjects_per_item"])]
+    if not subjects:
+        raise DismissalRefused("A set-aside is about something: no subject came off the row.")
+
+    stances = {str(v["stance"]) for v in spec["reasons"].values()}
+    words = spec["kind_words"]
+    claim = str(entry["claim"]).format(kind_said=words.get(kind) or words["default"])
+    now = datetime.now(timezone.utc)
+    out: list[dict[str, Any]] = []
+    for subject in subjects:
+        held = (await session.execute(text("""
+            SELECT id, stance, held_since FROM george.beliefs
+            WHERE superseded_by IS NULL AND forgotten_at IS NULL
+              AND subject_kind = :kind AND lower(subject) = lower(:subject)
+              AND stance = ANY(:stances)
+            ORDER BY confirmed_at DESC LIMIT 1
+        """), {"kind": kind, "subject": subject, "stances": list(stances)})).mappings().first()
+        if held is not None and held["stance"] == entry["stance"]:
+            await session.execute(text(
+                "UPDATE george.beliefs SET confirmed_at = :now WHERE id = :id"),
+                {"now": now, "id": held["id"]})
+            out.append({"id": held["id"], "kind": kind, "subject": subject,
+                        "reason": reason, "outcome": "confirmed"})
+            continue
+        was = None
+        if held is not None:
+            was = next((r for r, v in spec["reasons"].items()
+                        if v["stance"] == held["stance"]), held["stance"])
+        new_id = uuid.uuid4().hex
+        await session.execute(text("""
+            INSERT INTO george.beliefs
+                (id, subject_kind, subject, stance, claim, evidence, told,
+                 confirmed_at, held_since, supersedes, why,
+                 created_by, conversation_id)
+            VALUES
+                (:id, :kind, :subject, :stance, :claim, CAST('[]' AS jsonb),
+                 :told, :now, :now, :supersedes, :why, :created_by,
+                 :conversation_id)
+        """), {
+            "id": new_id, "kind": kind, "subject": subject, "stance": entry["stance"],
+            "claim": claim, "told": entry["told"], "now": now,
+            "supersedes": held["id"] if held is not None else None,
+            "why": (f"set aside again as {entry['said']}, no longer "
+                    f"{spec['reasons'].get(was, {}).get('said', was)}") if held is not None else None,
+            "created_by": by, "conversation_id": conversation_id,
+        })
+        if held is not None:
+            await session.execute(text(
+                "UPDATE george.beliefs SET superseded_by = :new WHERE id = :old"),
+                {"new": new_id, "old": held["id"]})
+        out.append({"id": new_id, "kind": kind, "subject": subject, "reason": reason,
+                    "outcome": "revised" if held is not None else "new"})
+    await session.commit()
     return out
 
 

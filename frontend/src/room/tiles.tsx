@@ -26,6 +26,7 @@ import { Swatch } from './swatch';
 import { useDrawnOnly } from './noticeDrawing';
 import { cost, says } from './actions';
 import type { ActionOffer } from '../types/bob';
+import type { DismissKey, Dismissed, Reason } from '../services/dismissalsApi';
 
 export interface TileActions {
   /** Bring it forward and give it the room. */
@@ -49,6 +50,12 @@ export interface TileActions {
    * draws the row with no Forget rather than one that does nothing.
    */
   forget?(key: string, beliefId: string): void;
+  /**
+   * Set a row aside with one tap for why (W2.3), sending back the key the
+   * row itself carried. A PERSON'S GESTURE, like forget. Optional, so a
+   * surface that has not wired it draws the row with no control.
+   */
+  dismiss?(what: DismissKey, reason: Reason): Promise<Dismissed>;
 }
 
 export interface TileProps {
@@ -594,7 +601,7 @@ export function StateTile(p: TileProps) {
 
 /* ---------------------------------------------------------------- caveats */
 
-function Caveat({ notice }: { notice: BobNotice }) {
+export function Caveat({ notice }: { notice: BobNotice }) {
   const [open, setOpen] = useState(false);
   const { head, detail } = splitCaveat(notice.message);
   return (
@@ -885,8 +892,15 @@ export function MemoryTile(p: TileProps) {
                 {row.carried === false && <> · no longer carried</>}
                 {row.unconfirmed === true && <> · unconfirmed since new data landed</>}
               </p>
+              {/* SOMETHING YOU SET ASIDE (W2.3) is undone, not forgotten: the
+                  same gesture, named for what it does — that kind of item
+                  about that thing can come back. */}
               {gone ? (
-                <p className="r-belief-gone">Forgotten. He will not bring it to the next question.</p>
+                <p className="r-belief-gone">
+                  {row.set_aside
+                    ? 'Undone. That kind of item can come back.'
+                    : 'Forgotten. He will not bring it to the next question.'}
+                </p>
               ) : (
                 <button
                   type="button"
@@ -894,7 +908,7 @@ export function MemoryTile(p: TileProps) {
                   onClick={(e) => { e.stopPropagation(); p.on.forget?.(p.o.key, id); }}
                   disabled={!id || !p.on.forget}
                 >
-                  Forget
+                  {row.set_aside ? 'Undo' : 'Forget'}
                 </button>
               )}
             </li>

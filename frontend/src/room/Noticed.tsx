@@ -19,36 +19,29 @@
  *
  * SILENCE IS THE NORMAL STATE, so an empty list renders as nothing at all —
  * not as "all clear", which would be a claim, and not as a spinner's leftovers.
+ *
+ * SET ASIDE WITH A REASON (W2.3). The session-only "dismiss" is gone: one tap
+ * for why — known, not important, wrong — is kept as a view you told Bob, and
+ * the server leaves that kind of post about those subjects off this list from
+ * then on (undo it in what he remembers). "Wrong" keeps it listed, with the
+ * doubt drawn above it as a notice, so nobody reads it as settled.
  */
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { listNoticed, type NoticedItem } from '../services/noticedApi';
+import type { Dismissed } from '../services/dismissalsApi';
+import { SetAside } from './SetAside';
+import { Caveat } from './tiles';
 
-const DISMISSED = 'bob.noticed.dismissed';
-
-function dismissedIds(): string[] {
-  try {
-    const raw = sessionStorage.getItem(DISMISSED);
-    return raw ? (JSON.parse(raw) as string[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function remember(postId: string): void {
-  try {
-    sessionStorage.setItem(DISMISSED, JSON.stringify(
-      [...dismissedIds(), postId].slice(-40),
-    ));
-  } catch {
-    /* a browser that refuses storage loses the dismissal, not the room */
-  }
-}
-
-export function Noticed({ onLookInto }: {
+export function Noticed({ onLookInto, send }: {
   onLookInto: (item: NoticedItem) => void;
+  /** The write, for a test; the route by default. */
+  send?: Parameters<typeof SetAside>[0]['send'];
 }) {
-  const [hidden, setHidden] = useState<string[]>(dismissedIds);
+  // What was set aside on THIS screen and quieted, kept until the list
+  // reloads without it: the confirmation stays where the tap was.
+  const [aside, setAside] = useState<Record<string, { item: NoticedItem; result: Dismissed }>>({});
+  const client = useQueryClient();
   const { data, isPending, isError } = useQuery({
     queryKey: ['noticed'],
     queryFn: listNoticed,
@@ -59,14 +52,24 @@ export function Noticed({ onLookInto }: {
   // Not loaded and nothing to report are different facts, and neither of them
   // is a sentence on screen: the first waits, the second is silence.
   if (isPending || isError || !data) return null;
-  const items = data.filter((item) => !hidden.includes(item.post_id));
-  if (items.length === 0) return null;
+  const items = data;
+  // Set aside here and gone from the reload: said once, where it was.
+  const gone = Object.values(aside).filter((a) => !items.some((i) => i.post_id === a.item.post_id));
+  if (items.length === 0 && gone.length === 0) return null;
+  const kept = (item: NoticedItem, result: Dismissed) => {
+    if (result.quiets) setAside((a) => ({ ...a, [item.post_id]: { item, result } }));
+    // A doubt comes back from the server on the item itself; a quieting
+    // takes it off the next load. Either way the list is read again.
+    void client.invalidateQueries({ queryKey: ['noticed'] });
+  };
 
   return (
     <div style={{ marginBottom: 22 }}>
-      <p className="r-label" style={{ color: 'rgb(var(--bob))' }}>
-        {items.length === 1 ? 'Bob noticed something' : `Bob noticed ${items.length} things`}
-      </p>
+      {items.length > 0 && (
+        <p className="r-label" style={{ color: 'rgb(var(--bob))' }}>
+          {items.length === 1 ? 'Bob noticed something' : `Bob noticed ${items.length} things`}
+        </p>
+      )}
       {items.map((item) => (
         <div
           key={item.post_id}
@@ -76,6 +79,11 @@ export function Noticed({ onLookInto }: {
           }}
         >
           <div style={{ flex: '1 1 26ch' }}>
+            {/* SOMEONE CALLED IT WRONG (W2.3): drawn above it as a notice
+                is, never in the accent, and never hidden for it. */}
+            {item.disputed && (
+              <Caveat notice={{ kind: 'disputed_by_a_person', message: item.disputed }} />
+            )}
             <p className="r-note" style={{ margin: 0 }}>
               {/* A system that broke is named as one. NOT in the approvals
                   colour: a failed run is not an approval (CLAUDE.md UI rule
@@ -109,14 +117,20 @@ export function Noticed({ onLookInto }: {
               look into it
             </button>
           )}
-          <button
-            type="button"
-            className="r-act"
-            onClick={() => { remember(item.post_id); setHidden(dismissedIds()); }}
-          >
-            dismiss
-          </button>
+          <SetAside
+            what={{ item: item.kind === 'stuck' ? 'stuck' : 'watch', post_id: item.post_id }}
+            threadId={item.thread_id || null}
+            onKept={(result) => kept(item, result)}
+            send={send}
+          />
         </div>
+      ))}
+      {gone.map(({ item, result }) => (
+        <p key={item.post_id} className="r-setaside r-setaside--kept" role="status"
+           style={{ marginTop: 10, paddingLeft: 10 }}>
+          Set aside as {result.reason === 'known' ? 'known' : 'not important'}: {item.body}.
+          {' '}He will not raise this again; undo it in what he remembers.
+        </p>
       ))}
     </div>
   );

@@ -39,8 +39,14 @@ def _stance_words() -> dict[str, str]:
     """
     from tools._common import load_defs
 
-    words = (load_defs().get("judgment") or {}).get("stance_words") or {}
-    return {str(k): str(v) for k, v in words.items()}
+    defs = load_defs()
+    words = (defs.get("judgment") or {}).get("stance_words") or {}
+    out = {str(k): str(v) for k, v in words.items()}
+    # WHAT A SET-ASIDE IS CALLED (W2.3): "Set aside: known", from
+    # metrics.yaml dismissal.reasons — the memory view is where it is undone.
+    for spec in ((defs.get("dismissal") or {}).get("reasons") or {}).values():
+        out[str(spec["stance"])] = str(spec["stance_said"])
+    return out
 
 # What he believes is a short list by design — agent/beliefs.py caps what he
 # may form in a turn, and a view he holds about everything is a view about
@@ -121,6 +127,10 @@ async def read_memory(session: AsyncSession, *, username: str) -> dict:
             "unconfirmed": bool(not told and latest_data and confirmed
                                 and latest_data > confirmed),
             "id": str(b.get("id")) if b.get("id") else None,
+            # SOMETHING THEY SET ASIDE, AND WHY (W2.3): the reason's key, so
+            # the view can offer Undo — Forget, for a set-aside — and say what
+            # it quiets. None for every other view.
+            "set_aside": belief_store.dismissal_stances().get(str(b.get("stance") or "")),
         })
 
     return {
