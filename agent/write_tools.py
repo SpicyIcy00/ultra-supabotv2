@@ -1762,6 +1762,25 @@ async def submit_draft(
         raise AuthorityRefused(
             "Drafts cannot be put through for approval in this session. Say what "
             "the draft is and that nothing was submitted.")
+    # A list sent as its JSON text is the same list (seen live on DeepSeek,
+    # 2026-09-22: the first submit of a turn arrived as a string).
+    if isinstance(tool_calls, str):
+        try:
+            tool_calls = json.loads(tool_calls)
+        except ValueError:
+            pass
+    if isinstance(tool_calls, dict):
+        tool_calls = [tool_calls]
+    if isinstance(tool_calls, list):
+        parsed = []
+        for item in tool_calls:
+            if isinstance(item, str):
+                try:
+                    item = json.loads(item)
+                except ValueError:
+                    pass
+            parsed.append(item)
+        tool_calls = parsed
     calls = _normalize_calls(tool_calls)
     if len(calls) != 1:
         raise AuthorityRefused("Submit exactly one draft read — one call.")

@@ -237,6 +237,15 @@ def test_a_draft_that_ran_is_submitted_exactly_as_it_ran():
     assert fake.calls == [("submit", "get_stock_cover", DRAFT["arguments"], "weekend", "c-9")]
 
 
+def test_a_call_sent_as_its_json_text_is_the_same_call():
+    import json
+    fake = FakeAuthority()
+    key = write_tools.call_key(DRAFT["tool"], DRAFT["arguments"])
+    for sent in (json.dumps([DRAFT]), [json.dumps(DRAFT)], DRAFT):
+        asyncio.run(write_tools.submit_draft(sent, ctx=_ctx(fake, {key: DRAFT})))
+    assert len(fake.calls) == 3
+
+
 def test_one_draft_at_a_time():
     fake = FakeAuthority()
     with pytest.raises(write_tools.AuthorityRefused, match="exactly one"):
