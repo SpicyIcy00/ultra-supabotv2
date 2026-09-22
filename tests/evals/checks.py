@@ -176,6 +176,31 @@ def _changes(results: Iterable[dict]) -> set[float]:
     return out
 
 
+def _stated_concentration(results: Iterable[dict]) -> bool:
+    """Whether a read returned a concentration finding that one subject carried most."""
+    for r in results:
+        for row in (r.get("rows") or []) if isinstance(r, dict) else []:
+            if (isinstance(row, dict) and row.get("finding") == "concentration"
+                    and (row.get("detail") or {}).get("outcome") in ("carried_most", "carried_all")):
+                return True
+    return False
+
+
+def overview_carriers(answer: str, results: Iterable[dict] = ()) -> dict:
+    """
+    What get_overview said carried the change, and whether the answer names it
+    FROM THAT ROW (W1.3's done-when): the concentration findings' subjects, and
+    which of them the answer carries.
+    """
+    subjects: list[str] = []
+    for r in results:
+        for row in (r.get("rows") or []) if isinstance(r, dict) else []:
+            if isinstance(row, dict) and row.get("finding") == "concentration" and row.get("subject"):
+                subjects.append(str(row["subject"]))
+    low = answer.lower()
+    return {"subjects": subjects, "named": [s for s in subjects if s.lower() in low]}
+
+
 def share_of_a_change(answer: str, results: Iterable[dict] = ()) -> list[str]:
     """
     A SHARE OF A CHANGE WITHOUT A PER-CENT SIGN (P2S.7, 2026-09-18).
@@ -193,8 +218,18 @@ def share_of_a_change(answer: str, results: Iterable[dict] = ()) -> list[str]:
     """
     results = list(results)
     changes = _changes(results)
+    carried = _stated_concentration(results)
     out: list[str] = []
     for m in _SHARE_IN_WORDS.finditer(answer):
+        # A READ THAT STATES WHO CARRIED IT (W1.3, 2026-09-22). "Greenhills
+        # carried most of the fall" is get_overview's own concentration
+        # finding, decided by metrics.yaml overview.concentration in code — a
+        # receipt, as a notice's own share is in attribution_claims. Excused
+        # only when a read said it, and only for "most" and its synonyms: a
+        # half or a third is still a share nobody computed.
+        if carried and re.match(r"(?:\w+\s+)?(?:most|the bulk|nearly all|almost all)\b",
+                                m.group(0).strip(), re.I):
+            continue
         out.append(m.group(0))
     for m in _PART_OF.finditer(answer):
         whole = float(re.sub(r"[^\d.]", "", m.group("whole")) or 0)

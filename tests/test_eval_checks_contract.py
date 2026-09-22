@@ -394,3 +394,31 @@ def test_reads_are_counted_as_the_cap_counts_them():
         {"seq": 5, "tool": "compose"},
     ]
     assert _c.asked_reads(calls) == 2
+
+
+def _overview(outcome):
+    return {"rows": [{"finding": "concentration", "subject": "Greenhills", "change": -36747.0,
+                      "detail": {"of": "shops", "outcome": outcome, "whole_change": -76531.38}}],
+            "meta": {}}
+
+
+def test_a_carrier_the_overview_stated_is_not_a_share_he_computed():
+    """
+    W1.3 (2026-09-22): "one shop carried most of the fall" is get_overview's
+    concentration finding, decided in code by metrics.yaml overview.
+    concentration — a receipt, like a notice's own share. Excused only when a
+    read said it, and never for a half or a third.
+    """
+    from tests.evals import checks as _c
+    said = "Greenhills carried most of the fall this week."
+    assert _c.share_of_a_change(said, [_overview("carried_most")]) == []
+    assert _c.share_of_a_change(said, [_overview("spread")])
+    assert _c.share_of_a_change(said, [])
+    assert _c.share_of_a_change("Greenhills was half of the fall.", [_overview("carried_most")])
+
+
+def test_the_carrier_is_named_from_the_overviews_own_row():
+    from tests.evals import checks as _c
+    got = _c.overview_carriers("Greenhills fell hardest.", [_overview("spread")])
+    assert got == {"subjects": ["Greenhills"], "named": ["Greenhills"]}
+    assert _c.overview_carriers("Nothing to see.", [_overview("spread")])["named"] == []
