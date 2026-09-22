@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from agent import provider  # noqa: E402  stdlib only; names the key of whichever model answers
 READ_DB = ['tests/golden.py', 'tests/test_brief_live.py', 'tests/test_pins_live.py',
-           'tests/test_storehub_tools_live.py']
+           'tests/test_storehub_tools_live.py', 'tests/test_stock_cover_live.py']
 APP_DB = ['tests/test_page_reader_live.py', 'tests/test_page_workshop_live.py',
           'tests/test_thread_as_page_live.py']
 

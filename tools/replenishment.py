@@ -87,6 +87,20 @@ def _store_catalog(defs: dict) -> dict[str, dict]:
 # The query templates — one per view, and no others
 # --------------------------------------------------------------------------
 
+def _names_warehouse(defs: dict, store: Any) -> bool:
+    """Whether `store` is the warehouse the plan ships from (replenishment.warehouse_store_id)."""
+    if not isinstance(store, str) or not store.strip():
+        return False
+    wanted = store.strip().lower()
+    wid = str(_req(defs, "replenishment.warehouse_store_id"))
+    for entry in _req(defs, "stores.warehouse"):
+        if entry["id"] == wid and wanted in (
+                wid.lower(), str(entry.get("name", "")).lower(),
+                str(entry.get("display_name", "")).lower()):
+            return True
+    return False
+
+
 # One row per store and SKU. Every figure is read back as the engine stored it;
 # `shortfall` is the only derived column and it is the engine's own sizing
 # expression (min_level - on_hand), not a new definition.
@@ -179,8 +193,10 @@ def get_replenishment(
 
     Args:
         store: Store display name (case-insensitive) or store id. None = all
-               seven retail shops. AJI BARN is where stock ships FROM and is
-               never a destination in a plan.
+               retail shops. AJI BARN is where stock ships FROM: naming it
+               reads the plan it ships, every shop's lines. For "the AJI BARN
+               reorder" as a draft of moves and orders, get_stock_cover
+               view='draft' is the one call.
         sku:   Exact products.sku, case-insensitive. No substring matching.
         view:  'plan' (default) one row per store and SKU with the levels
                behind it; 'summary' one row per store; 'runs' one row per run,
@@ -206,9 +222,14 @@ def get_replenishment(
     defs = _load_defs()
     rep = _rep(defs)
     catalog = _store_catalog(defs)
-    # The warehouse refuses in its own words: it is what a plan ships
-    # FROM, not a missing destination.
-    store_ids = _resolve_store_in(
+    # THE WAREHOUSE IS READ, NOT REFUSED (W1.5, 2026-09-22). "Handle the AJI
+    # BARN reorder" was refused here — BARN is never a destination — and the
+    # turn spent the twelve-call cap looking for another way in. A plan is
+    # still never written FOR the warehouse; naming it reads the plan it ships,
+    # every shop's lines (replenishment.warehouse_reads_as). Any other store
+    # outside the scope still refuses in its own words.
+    from_warehouse = _names_warehouse(defs, store)
+    store_ids = list(catalog) if from_warehouse else _resolve_store_in(
         store, catalog, defs,
         out_of_scope_reason=_req(defs, "replenishment.warehouse_excluded_reason"),
     )
@@ -321,6 +342,11 @@ def get_replenishment(
                 f"store_id IN ({len(store_ids)}: {', '.join(store_labels)})"
                 f"   # metrics.yaml: stores.active_retail"
             )
+            if from_warehouse:
+                filters.append(
+                    f"{store} named: {' '.join(str(_req(rep, 'warehouse_reads_as')).split())}"
+                    f"   # metrics.yaml: replenishment.warehouse_reads_as"
+                )
 
             # A run covering fewer shops than were asked about is a partial plan.
             covered = run_stats["stores"]

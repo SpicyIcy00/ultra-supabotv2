@@ -2342,6 +2342,13 @@ replenishment:
   warehouse_excluded_reason: >-
     AJI BARN is the warehouse a replenishment plan ships FROM, never a
     destination it is written for.
+  # AND SO NAMING IT READS WHAT IT SHIPS (W1.5, 2026-09-22). The capability
+  # test's "Handle the AJI BARN reorder" was refused with the reason above and
+  # then spent the twelve-call cap. The warehouse is still never a destination;
+  # asked about, the read returns every shop's lines, which is the plan BARN
+  # ships. The reorder as a draft of moves and orders is stock_cover.draft.
+  warehouse_reads_as: >-
+    the plan it ships — every shop's lines, since AJI BARN supplies them all
 
   # HOW A LINE IS SIZED, transcribed from the service so a tool never restates
   # it differently. season_adj_sales is the seasonality-adjusted daily rate and
@@ -2442,6 +2449,186 @@ replenishment:
     runs: "one row per run: when it ran, how many stores it covered, how many lines"
 
   max_rows: 500
+
+
+# =============================================================================
+# STOCK COVER — what runs out, and where to get it. Added 2026-09-22 (W1.5).
+#
+# The owner chose it from the market research: "a warning per shop BEFORE a
+# shelf empties — sales speed against what is left". Until this, Bob could say
+# a shelf HAD emptied (brief.stock_crossed_out) and never that one WAS emptying,
+# because the only low-stock level on file (inventory.warning_stock) is unset
+# on every row. The products import (storehub.products, 2026-09-19) brings the
+# warning and ideal levels a person set in StoreHub, per shop, into
+# product_stock_levels — so a line can now be read against a level somebody
+# actually chose.
+#
+# MEASURED 2026-09-22: product_stock_levels holds 40 rows — 39 with a warning
+# level, 40 with an ideal one (one is NaN, which reads as not set), across
+# Rockwell, Greenhills, North Edsa, Magnolia and closed MACOPA. Of 24,647 shop
+# lines, 3,193 sold in the last 90 closed days; 11 lines with a level set were
+# above zero with under 7 days of cover, and 210 more without a level would
+# have been. The level is what separates a line somebody stocks on purpose from
+# one nobody decided about, so only the 11 fire and the rest say why they do not.
+#
+# EVERY FIGURE IS CODE'S. The rate, the cover, the need, the quantities of a
+# move and of an order are computed in tools/stock_cover.py from the rows
+# below; Bob reads them and says what they mean (rules 1, 3 and 9).
+# =============================================================================
+stock_cover:
+  introduced: "2026-09-22"
+  tool: get_stock_cover
+  source_table: "inventory_snapshots + new_transaction_items + product_stock_levels"
+
+  # WHO SELLS AND WHO SUPPLIES, by group name — never a list of shops.
+  shops: stores.active_retail          # a line is a shop and a product
+  warehouse: stores.warehouse          # stock ships FROM here; it sells nothing
+
+  # WHAT IS LEFT: the newest stock count on or before the day before the day
+  # read. inventory_snapshots and not `inventory`, for two reasons measured on
+  # 2026-09-22: the snapshots were five days fresher (2026-09-21 against a
+  # newest `inventory` write of 2026-09-16), and a past morning can be
+  # replayed from them, which is what a watch's backtest does
+  # (watches.backtest.method). The day used is on every result.
+  on_hand:
+    table: inventory_snapshots
+    day: latest_snapshot_on_or_before_the_day_before
+    stale_after_days_ref: brief.freshness.max_age_days.inventory_snapshots
+    stale_notice_kind: snapshot_coverage_gap
+
+  # SALES SPEED: units sold per day over the last `lookback_days` CLOSED Manila
+  # days at that shop, cancelled and returns excluded (filters.standard_sales_guard).
+  # The same window purchasing.plan.demand measures a supplier's demand over,
+  # so "how fast it sells" is one number wherever it is read.
+  demand:
+    lookback_days_ref: purchasing.plan.demand.lookback_days
+    closed_days_only: true
+    rate: "units sold in the window / lookback_days"
+
+  # THE WINDOW a line's cover is read against: how long a shop must last before
+  # the next shipment reaches it. Not invented — it is the replenishment
+  # engine's own review period (REVIEW_PERIOD_DAYS, replenishment.review_period_days),
+  # which is how often the business plans a shop's stock. A person may bind a
+  # different window per read, inside the bounds, and every result names the
+  # one it used (rule 6's bounded setting).
+  window:
+    days_ref: replenishment.review_period_days
+    setting: window_days
+    type: integer
+    min: 1
+    max: 60
+
+  # THE LEVEL a person set in StoreHub. NULL means never set and 0 means set to
+  # zero (storehub.products); Postgres NaN — one exported row carries it —
+  # reads as never set. A line with NO level does not fire: nobody has said the
+  # product is stocked there on purpose, so an empty-ish shelf is not yet a
+  # warning. It says so instead, on the row and in the counts.
+  levels:
+    table: product_stock_levels
+    columns: [warning_level, ideal_level]
+    nan_means: not_set
+    required_to_fire: true
+
+  cover_formula: "on_hand / units_per_day, in days, one decimal"
+
+  # ONE STATE PER LINE, evaluated in this order so exactly one applies. `c` is
+  # the line after its reads are joined: on_hand (the count), units_per_day,
+  # cover_days, warning_level and ideal_level. %(window_days)s is bound.
+  states:
+    - name: not_counted
+      sql: "c.on_hand IS NULL"
+      says: "no stock count for this line on the day read, so nothing can be said about what is left"
+    - name: broken_record
+      sql: "c.on_hand < 0"
+      says: "the count is below zero, which is a broken record rather than a shortage — what is left is unknown"
+    - name: out_of_stock
+      sql: "c.on_hand = 0"
+      says: "the shelf is empty"
+    - name: no_level
+      sql: "c.warning_level IS NULL AND c.ideal_level IS NULL"
+      says: "no warning or ideal level is set for this line, so it is not flagged"
+    - name: no_sales
+      sql: "c.units_per_day = 0"
+      says: "nothing sold in the window, so there is no speed to run out at"
+    - name: running_out
+      sql: "c.cover_days < %(window_days)s"
+      says: "above zero, and at this speed it runs out before the window ends"
+    - name: covered
+      sql: "TRUE"
+      says: "enough to last the window at this speed"
+  fires: running_out
+
+  # What the cover view returns when no state is asked for: the lines with a
+  # level set that somebody can act on — running out, empty, or a broken count.
+  # Every other line is still COUNTED in meta.states, and the lines that would
+  # have fired had a level been set are counted on their own
+  # (meta.would_fire_without_a_level), so nothing reads an absent line as a
+  # covered one and the gap in the levels is a number, not a silence.
+  default_states: [running_out, out_of_stock, broken_record]
+  default_requires_a_level: true
+
+  # Ranked in SQL over the whole set before any limit, so the model never
+  # sorts rows itself: states in this order, then least cover first.
+  rank_order: [running_out, out_of_stock, broken_record, no_sales, covered, no_level, not_counted]
+  rank_tie_break_sql: "c.cover_days ASC NULLS LAST, c.units_per_day DESC, c.store_id, c.product_id"
+
+  views:
+    cover: "one row per shop and product: speed, what is left, cover against the window, the level, and its state"
+    draft: "the moves and the order that would restock the lines that want it: AJI BARN to a shop, shop to shop, then what is left to order — a draft a person keys into StoreHub"
+
+  # --------------------------------------------------------------------------
+  # WHERE FROM — the draft. "Handle the AJI BARN reorder" (the capability test,
+  # 2026-09-22: refused as outside the replenishment scope, then twelve calls).
+  #
+  # MOVE BEFORE YOU ORDER. Stock the business already holds is offered first —
+  # from the warehouse, then from a shop that holds more than it needs — and
+  # only what no move can cover becomes an order. Each line carries its reason,
+  # written by code from the figures on it.
+  #
+  # LEVEL FIVE. It is a DRAFT: it writes nothing and sends nothing. StoreHub's
+  # API publishes /purchaseOrders and no transfer route (storehub, source S.12),
+  # so the owner keys a move into StoreHub himself; nothing here can.
+  # --------------------------------------------------------------------------
+  draft:
+    # The lines that want stock: a level set, and either running out or empty.
+    wanting_states: [out_of_stock, running_out]
+    # Emptiest first, then least cover — the order moves are allocated in, so
+    # scarce stock goes to the shelf that needs it most.
+    allocation_order: "out_of_stock before running_out, then cover_days ascending, then shop, then product"
+    # How much a line wants: up to the IDEAL level a person set. With no ideal
+    # level there is no target, and the line says so rather than taking one.
+    target: ideal_level
+    need_formula: "ceil(ideal_level - on_hand), when above zero"
+    # The order sources are tried in, and what each may give.
+    sources:
+      - from: warehouse
+        gives: "its positive count; a count below zero gives nothing"
+      - from: shops
+        # A shop gives only what it holds above what it keeps: its own ideal
+        # level, or its own speed over the window, whichever is more. A shop
+        # never gives away the stock it needs itself.
+        keeps: "max(its ideal_level, ceil(units_per_day * window_days))"
+        gives: "on_hand - keeps, when above zero; a line that itself wants stock never gives"
+        largest_surplus_first: true
+    # What no move covers is ordered, per product, into the warehouse (the
+    # destination of the estate's purchase orders), naming the suppliers on
+    # file in the order the products export listed them.
+    order:
+      into: warehouse
+      suppliers_table: product_suppliers
+      quantity: "the sum of what each line still needs after the moves"
+    # THE WAREHOUSE COUNT IS NOT A SHELF COUNT. AJI BARN's quantities behave as
+    # accumulated dispatch counters (dead_stock.barn_excluded_reason: 89% of
+    # rows non-positive, some at minus 24 million), so a move from it is
+    # offered with the count it read and a caveat to check the shelf first.
+    warehouse_count_verified: false
+    warehouse_count_notice_kind: warehouse_count_not_a_shelf_count
+    is_a_draft: true
+    writes_anything: false
+    keyed_into: StoreHub, by a person
+    max_lines: 60
+
+  max_rows: 200
 
 
 # =============================================================================
@@ -4514,6 +4701,25 @@ brief:
     low_stock_available: false
 
   # ---------------------------------------------------------------------------
+  # STOCK RUNNING OUT: a shelf that WILL empty, not one that has (W1.5,
+  # 2026-09-22). A LEVEL, read against a speed — so unlike the crossing above
+  # it repeats while it stays true, and a watch on it posts only when the set
+  # of lines changes (watches.firing). Every number is stock_cover's: the
+  # window, the speed, the states and the rule that a line with no level does
+  # not fire. The section is blind — not quiet — when no level is set on any
+  # line, because then nothing could ever fire.
+  # ---------------------------------------------------------------------------
+  stock_running_out:
+    definition_ref: stock_cover
+    fires_ref: stock_cover.fires
+    window_ref: stock_cover.window.days_ref
+    blind_without_any_level: true
+    # Replaying a past morning reads that morning's count and speed, but
+    # TODAY's levels: product_stock_levels holds no history, so a backtest
+    # says what the current levels would have flagged then.
+    levels_have_history: false
+
+  # ---------------------------------------------------------------------------
   # DEAD STOCK: "CROSSED 30 DAYS WITH NO SALE" — an event, not an artefact.
   #
   # A product does not become dead because something happened; it becomes dead
@@ -4625,11 +4831,14 @@ brief:
     section_order:
       - sales_vs_same_weekday
       - stock_crossed_out
+      - stock_running_out
       - newly_dead
     # The field ranked WITHIN a section, largest first, absolute value.
     measure:
       sales_vs_same_weekday: change
       stock_crossed_out: was
+      # How many days inside the window the line runs out: least cover first.
+      stock_running_out: days_short
       newly_dead: quantity_on_hand
     tie_break: subject
     ranks_the_opening_line_only: true
@@ -4667,6 +4876,11 @@ attention:
       section: stock_crossed_out
       floor: brief.stock_crossed_out
       measure: was
+    stock_running_out:
+      via: get_brief
+      section: stock_running_out
+      floor: brief.stock_running_out
+      measure: days_short
     newly_dead:
       via: get_brief
       section: newly_dead
@@ -4674,7 +4888,7 @@ attention:
       measure: quantity_on_hand
   # Money first, then a shelf that just emptied, then what stopped selling —
   # the same order and reasons as brief.notability.section_order.
-  order: [sales_vs_same_weekday, stock_crossed_out, newly_dead]
+  order: [sales_vs_same_weekday, stock_crossed_out, stock_running_out, newly_dead]
   tie_break: subject
   silent_when_nothing_crossed: true
   senses_dated: true
@@ -4690,9 +4904,6 @@ attention:
     vending:
       why: brief.freshness.max_age_days
       says: "the vending sources are past their freshness limit, so a change there cannot be told from a stale feed"
-    cover:
-      why: purchasing.plan
-      says: "days of cover is measured per supplier plan, not estate-wide; a supplier's plan is watched as a standing question of its own"
 
   # ---------------------------------------------------------------------------
   # LEARNING FROM WHAT YOU DO. Added 2026-09-12. The one place Bob's
@@ -4903,6 +5114,13 @@ notices:
     must_convey:
       - ["how long", cover, last, period]
       - ["no", "not", say, choose, "tell me", "give"]
+  # ---- stock cover (W1.5, 2026-09-22) --------------------------------------
+  # A move from AJI BARN rests on a count that behaves as a dispatch tally
+  # (stock_cover.draft.warehouse_count_verified: false).
+  warehouse_count_not_a_shelf_count:
+    must_convey:
+      - [count, counted, tally, record, reads]
+      - [check, verify, confirm, "not a", "may not", unreliable, "before keying"]
 
   ambiguous_sku:
     must_convey:
@@ -5499,6 +5717,10 @@ workflows:
       # argument would refuse almost every as_of a backtest could pass.
       # source: tools/replenishment.py get_replenishment(run_date=...).
       get_replenishment: run_date
+      # The count is the snapshot before as_of and the speed the closed days
+      # before it, so both replay; the levels are today's (product_stock_levels
+      # has no history — brief.stock_running_out.levels_have_history).
+      get_stock_cover: as_of
 
     # Arguments carrying a [start, end) window. A preset there is resolved
     # against now(), so a backtest rewrites it to the explicit Manila dates the
@@ -6849,6 +7071,16 @@ watches:
       subject: product
       directions: [either]
       says: "a product crossed into out of stock"
+
+    # W1.5, 2026-09-22. A line with a level set, above zero, whose cover at its
+    # own speed is under the window (stock_cover). A line with no level never
+    # fires; the section is blind while no level is set anywhere.
+    stock_running_out:
+      section: stock_running_out
+      thresholds_ref: brief.stock_running_out
+      subject: product
+      directions: [either]
+      says: "a product at a shop will run out before the window ends, at its own sales speed"
 
     newly_dead:
       section: newly_dead
@@ -8512,6 +8744,8 @@ surface:
         - replenishment_run_stale
         - replenishment_fallback_velocity
         - demand_suppressed_by_stockouts
+        # A move from AJI BARN rests on a count that may not be the shelf.
+        - warehouse_count_not_a_shelf_count
         - orphan_line_items
         - mojibake_product_names
         - lines_removed_on_reimport

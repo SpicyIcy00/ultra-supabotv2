@@ -40,6 +40,7 @@ import statistics
 from datetime import date, timedelta
 from typing import Any, Optional
 
+from . import stock_cover
 from ._common import (
     DICT_ROW,
     DEFS_PATH as _DEFS_PATH,
@@ -174,8 +175,10 @@ def get_brief(as_of: Optional[date | str] = None) -> dict:
     """
     What changed since yesterday, across the sources that can actually say.
 
-    Three sections — sales against the same weekday last week, products that
-    crossed into out of stock, and products that crossed 30 days without a sale
+    Four sections — sales against the same weekday last week, products that
+    crossed into out of stock, products at a shop running out before the
+    window ends at their own sales speed (a level set, cover under the window —
+    both numbers on the row), and products that crossed 30 days without a sale
     — plus an explicit account of every source that is too stale or too frozen
     to contribute.
 
@@ -269,6 +272,21 @@ def get_brief(as_of: Optional[date | str] = None) -> dict:
                 crossed = [dict(r) for r in cur.fetchall()]
             else:
                 new_day = old_day = None
+
+            # ---- 2b. running out before the window ends (W1.5) -------------
+            # The same statement get_stock_cover runs, on this cursor, so the
+            # morning line and the read can never disagree about a line.
+            running_day = stock_cover.stock_day_for(cur, defs, today)
+            running_window = stock_cover.default_window_days(defs)
+            running: dict[str, Any] = {"rows": [], "lines_with_a_level": 0,
+                                       "would_fire_without_a_level": 0}
+            if running_day is not None:
+                running = stock_cover.cover_lines(
+                    cur, defs, day=today, stock_day=running_day,
+                    shops=stock_cover.shop_ids(defs), window_days=running_window,
+                    states=[_req(defs, "stock_cover.fires")], require_level=True,
+                    limit=limit,
+                )
 
             # ---- 3. crossed 30 days without a sale -------------------------
             window_days = _req(defs, "brief.newly_dead.window_days")
@@ -374,6 +392,47 @@ def get_brief(as_of: Optional[date | str] = None) -> dict:
         "snapshot_gap_days": gap_days,
     }
 
+    # ---- running out before the window ends --------------------------------
+    running_receipts = {
+        "source_table": _req(defs, "stock_cover.source_table"),
+        "filters_applied": [
+            f"state = {_req(defs, 'stock_cover.fires')}: above zero, a level set, cover under "
+            f"{running_window} days   # metrics.yaml: stock_cover.states",
+            f"speed over the {stock_cover.lookback_days(defs)} closed days before {today}"
+            f"   # metrics.yaml: stock_cover.demand",
+            f"store_id IN ({len(stock_cover.shop_ids(defs))} shops)"
+            f"   # metrics.yaml: {_req(defs, 'stock_cover.shops')}",
+        ],
+        "as_of": {"stock_day": _fmt_day(running_day), "window_days": running_window},
+        "snapshot_timestamp": snapshot_timestamp.isoformat(),
+    }
+    labels = _store_catalog_for(defs, stock_cover.shop_ids(defs))
+    for r in running["rows"]:
+        cover = float(r["cover_days"])
+        rows.append({
+            "section": "stock_running_out",
+            "subject": r["product"] or r["sku"] or r["product_id"],
+            "sku": r["sku"],
+            "store": _label_store(labels, r["store_id"]),
+            "on_hand": float(r["on_hand"]),
+            "units_per_day": float(r["units_per_day"]),
+            "cover_days": cover,
+            "window_days": running_window,
+            # How far inside the window it runs out — code's subtraction of two
+            # figures on this row, and what the morning ranks by (largest first).
+            "days_short": round(running_window - cover, 1),
+            "warning_level": r.get("warning_level"),
+            "ideal_level": r.get("ideal_level"),
+            "receipts": running_receipts,
+        })
+    sections["stock_running_out"] = {
+        "items": len(running["rows"]),
+        "window_days": running_window,
+        "stock_day": _fmt_day(running_day),
+        "lines_with_a_level": running["lines_with_a_level"],
+        "would_fire_without_a_level": running["would_fire_without_a_level"],
+    }
+
     # ---- crossed 30 days without a sale ------------------------------------
     dead_receipts = {
         "source_table": "inventory + new_transaction_items",
@@ -472,12 +531,18 @@ def get_brief(as_of: Optional[date | str] = None) -> dict:
         blind = (
             (name == "stock_crossed_out" and not new_day)
             or (name == "sales_vs_same_weekday" and not sales_considered)
+            or (name == "stock_running_out"
+                and (running_day is None or not running["lines_with_a_level"]))
         )
         s["ran"] = not blind
         if s["items"] == 0:
             reason = (
                 "there were no stock snapshots to compare"
                 if name == "stock_crossed_out" and not new_day
+                else "there was no stock count to read"
+                if name == "stock_running_out" and running_day is None
+                else "no warning or ideal level is set on any shop's line"
+                if name == "stock_running_out" and not running["lines_with_a_level"]
                 else "no store had both days of sales to compare"
                 if name == "sales_vs_same_weekday" and not sales_considered
                 else "nothing crossed the threshold"
@@ -495,7 +560,13 @@ def get_brief(as_of: Optional[date | str] = None) -> dict:
                 "source": "metrics.yaml: brief.empty_section_must_distinguish",
             })
 
-    if not _req(defs, "brief.stock_crossed_out.low_stock_available"):
+    # The low-stock notice said nothing can ever be flagged as low. That stays
+    # true of inventory.warning_stock, and stopped being true of the business
+    # when the products import brought per-shop levels in: while any level is
+    # set, stock_running_out flags against it and the notice would contradict
+    # the section beside it (stock_cover, W1.5).
+    if (not _req(defs, "brief.stock_crossed_out.low_stock_available")
+            and not running["lines_with_a_level"]):
         notices.append({
             "kind": "low_stock_not_operational",
             # Reader first: this is drawn above the brief and can be forced

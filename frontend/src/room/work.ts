@@ -58,6 +58,7 @@ export const WORDS: Record<string, [string, string]> = {
   get_purchasing: ['reading purchase orders', 'read purchase orders'],
   get_replenishment: ['reading the replenishment plan', 'read the replenishment plan'],
   get_purchase_plan: ['drafting the order', 'drafted the order'],
+  get_stock_cover: ['seeing what runs out and where to get it', 'saw what runs out and where to get it'],
   get_cost_history: ['reading costs', 'read costs'],
   get_brief: ['reading the morning brief', 'read the morning brief'],
   get_attention: ['looking at what deserves attention', 'looked at what deserves attention'],
