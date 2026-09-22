@@ -72,6 +72,7 @@ from app.services.bob_greeting import build_greeting
 from app.services import belief_store as beliefs_service
 from tools import objects as objects_tool
 from app.services import standing_questions
+from app.services import morning as morning_service
 from app.services import decisions as decisions_service
 from app.services import watch_runner
 from app.services import watches as watches_service
@@ -939,7 +940,13 @@ class StandingLatest(BaseModel):
     thread_id: str
     question: str
     answered_at: Optional[datetime] = None
-    standing_question_id: str
+    # Null for a morning answered today by a typed question rather than on
+    # schedule (W2.1): it is the same question and the same page.
+    standing_question_id: Optional[str] = None
+    # W2.1: true when this is today's answer to the morning question, and the
+    # earliest read time behind it — the stamp the room shows it with.
+    morning: bool = False
+    read_at: Optional[datetime] = None
 
 
 @router.post("/decisions", response_model=DecisionOut, status_code=status.HTTP_201_CREATED)
@@ -1034,7 +1041,93 @@ async def latest_standing(
     never checked (UI rule 8).
     """
     found = await standing_questions.latest_answer(db, user.username)
+    # THE MORNING FIRST (W2.1). Today's answer to the morning question —
+    # scheduled at 08:00 or typed earlier today, the same question and the
+    # same page — is what the room opens on, unless a standing answer is
+    # newer. A lookup that fails costs the preference, never the opening.
+    try:
+        today = await morning_service.today(db, user.username)
+    except SQLAlchemyError:
+        await db.rollback()
+        today = None
+    if today is not None and (
+        found is None or found.get("answered_at") is None
+        or today["answered_at"] >= found["answered_at"]
+    ):
+        row = await morning_service.find(db, user.username)
+        return StandingLatest(
+            thread_id=today["thread_id"], question=today["question"],
+            answered_at=today["answered_at"],
+            standing_question_id=str(row.id) if row is not None else None,
+            morning=True, read_at=today["read_at"],
+        )
     return StandingLatest(**found) if found else None
+
+
+class MorningOut(BaseModel):
+    """The person's morning: their standing question for it, and today's answer."""
+
+    standing_question_id: Optional[str] = None
+    question: Optional[str] = None
+    when: Optional[str] = None
+    #: False until the person switches it on (rule 7). Null only when there is
+    #: no morning at all (the standing question limit was reached).
+    enabled: Optional[bool] = None
+    today: Optional[StandingLatest] = None
+
+
+class MorningSwitch(BaseModel):
+    on: bool
+
+
+@router.post("/morning", response_model=MorningOut)
+async def morning_open(
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_bob_user),
+) -> MorningOut:
+    """
+    Make sure this person has the morning, and say how it stands (W2.1).
+
+    A POST because it may WRITE: the first call creates the morning as a
+    standing question at the slot metrics.yaml `morning.at` names, SWITCHED OFF
+    (rule 7) — the same service function Bob's standing writer calls, bound
+    to the authenticated user. Every later call only reads.
+    """
+    row = await morning_service.ensure(db, user.username)
+    await db.commit()
+    today = await morning_service.today(db, user.username)
+    out = MorningOut(**(morning_service.describe(row) or {}))
+    if today is not None:
+        out.today = StandingLatest(
+            thread_id=today["thread_id"], question=today["question"],
+            answered_at=today["answered_at"],
+            standing_question_id=out.standing_question_id,
+            morning=True, read_at=today["read_at"],
+        )
+    return out
+
+
+@router.post("/morning/switch", response_model=MorningOut)
+async def morning_switch(
+    body: MorningSwitch,
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_bob_user),
+) -> MorningOut:
+    """
+    Switch the morning on or off — the person's act, never Bob's (rule 7).
+
+    The same standing_questions.switch Bob's writer calls, on this person's
+    own morning; switching on clears the claimed slot, as it always does.
+    """
+    row = await morning_service.ensure(db, user.username)
+    if row is None:
+        raise HTTPException(status_code=409, detail=(
+            "There is no room for the morning: the standing question limit is reached. "
+            "Remove one first."))
+    row = await standing_questions.switch(db, owner=user.username, which=str(row.id),
+                                          on=body.on)
+    await db.commit()
+    return MorningOut(**(morning_service.describe(row) or {}))
 
 
 # ---------------------------------------------------------------------------
@@ -2509,6 +2602,51 @@ async def _recall_for(username: str, history: list[dict],
         return None
 
 
+async def _morning_reuse(username: str, question: str) -> Optional[dict]:
+    """
+    Today's morning answer to show again instead of asking (W2.1), or None.
+
+    NEVER COSTS THE QUESTION: any failure here — the george schema, the
+    read-only data check, the yaml — is None, and the question is asked as
+    any other. A reuse that could not be proven is not a reuse.
+    """
+    try:
+        async with AsyncSessionLocal() as session:
+            return await morning_service.reusable(session, username, question)
+    except Exception as exc:  # noqa: BLE001 - the ordinary answer is always the fallback
+        print(f"[morning] reuse check failed: {type(exc).__name__}: {exc}")
+        return None
+
+
+def _reused_stream_frames(reused: dict) -> list[str]:
+    """
+    The frames of a reused morning: `start` naming its thread, `reused` with
+    when it was answered and read, and `done` with no rounds and no calls —
+    the proof, on the wire, that no model turn was spent.
+    """
+    def iso(v: Any) -> Optional[str]:
+        return v.isoformat() if hasattr(v, "isoformat") else v
+
+    thread = reused["thread_id"]
+    return [
+        bob_loop._sse("start", {"thread_id": thread, "reused": True}),
+        bob_loop._sse("reused", {
+            "thread_id": thread,
+            "question": reused["question"],
+            "answered_at": iso(reused.get("answered_at")),
+            "read_at": iso(reused.get("read_at")),
+            "checked_at": iso(reused.get("checked_at")),
+        }),
+        bob_loop._sse("done", {"thread_id": thread, "status": "ok", "reused": True,
+                               "iterations": 0, "tool_calls": 0}),
+    ]
+
+
+async def _reused_stream(reused: dict) -> AsyncIterator[str]:
+    for frame in _reused_stream_frames(reused):
+        yield frame
+
+
 async def _safe_stream(question: str, user_id: Optional[str],
                        page_context: Optional[str],
                        pin_writer: PinWriter,
@@ -2629,6 +2767,19 @@ async def ask(
             raise HTTPException(status_code=400, detail="parent_id needs a thread_id.")
         if not await _parent_in_thread(user.username, request.thread_id, request.parent_id):
             raise HTTPException(status_code=404, detail="No post with that id in this thread.")
+
+    # THE MORNING, ASKED AGAIN THE SAME DAY (W2.1): today's answer is shown
+    # again, stamped with its read time, and no model turn is spent — unless
+    # something has landed since that its reads cover. A reply to a post is a
+    # reply, never a repeat.
+    if request.parent_id is None:
+        reused = await _morning_reuse(user.username, request.question)
+        if reused is not None:
+            return StreamingResponse(
+                _reused_stream(reused), media_type="text/event-stream",
+                headers={"Cache-Control": "no-cache", "Connection": "keep-alive",
+                         "X-Accel-Buffering": "no"},
+            )
 
     history = [t.model_dump() for t in request.history]
     thread = str(request.thread_id) if request.thread_id else None
