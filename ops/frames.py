@@ -179,6 +179,10 @@ FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
               "doc-live2": ROOT / "ops" / "frames_fixtures" / "doc-live2.json",
               # His 17:05 page with a FOLD and two margin notes in a row (P15.a).
               "doc-fold": ROOT / "ops" / "frames_fixtures" / "doc-fold.json",
+              # HIS PAGE OF A KNOWN TYPE (W2.4): the live "how are we doing?"
+              # turn tests/evals/test_page_types_evals.py records. Real rows,
+              # so in verification/ like the other live turns.
+              "w24-week": ROOT / "verification" / "frames_fixtures" / "w24-week.json",
               "live-packed": ROOT / "ops" / "frames_fixtures" / "live-packed.json",
               "live-page": ROOT / "ops" / "frames_fixtures" / "live-page.json",
               # BUILD TALKS (P6.g): a draft order, a watch, memory — the canvas past reads.

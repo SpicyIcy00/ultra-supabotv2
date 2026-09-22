@@ -75,10 +75,16 @@ export function turnFromRun(run: PinRun): AnswerTurn {
   } as unknown as AnswerTurn;
 }
 
-export function KeptPage({ pageId, onBack }: {
+export function KeptPage({ pageId, onBack, embedded = false }: {
   /** A page's id, or null for the ungrouped pins. */
   pageId: string | null;
   onBack: () => void;
+  /**
+   * Drawn IN THE ROOM, where the answer that built it would be (W2.4): the
+   * way out is to the page's own address, and the room — not this — says
+   * what the person is standing on.
+   */
+  embedded?: boolean;
 }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -110,14 +116,16 @@ export function KeptPage({ pageId, onBack }: {
   // WHAT THIS PAGE IS, for the line (W1.4): its id, so view_page and
   // edit_page bind to it, and its title for the words. Registered from the
   // first paint — the id is known before the title is.
-  useRegisterHere(hereForKeptPage(pageId, pageId === null ? null : page.data?.title));
+  useRegisterHere(embedded ? null : hereForKeptPage(pageId, pageId === null ? null : page.data?.title));
 
   return (
     <IdentityContext.Provider value={identities}>
       <ExplainsOnlyContext.Provider value={explainsOnly}>
-        <div className="r-kept">
+        <div className="r-kept" data-embedded={embedded ? 'yes' : undefined}>
           <div className="r-row-acts" style={{ marginTop: 0 }}>
-            <button type="button" className="r-act" onClick={onBack}>← All pages</button>
+            <button type="button" className="r-act" onClick={onBack}>
+              {embedded ? 'Open this page on its own' : '← All pages'}
+            </button>
           </div>
 
           {pageId !== null && page.isPending && <p className="r-note">Reading…</p>}

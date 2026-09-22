@@ -426,11 +426,20 @@ def test_replay_the_dashboard_turn(monkeypatch, request):
     listed one notice twice, a page with a dash where a figure was, and a stock
     total below zero. Replayed: a headline that is an answer, no forced box, no
     reference to a figure this turn did not compose, and no negative total.
+
+    AND SINCE W2.4 (2026-09-22) IT IS NOT A REPORT AT ALL. "Build me a
+    dashboard" builds a kept page (create_page) and the room opens it; this
+    held the dashboard as a broad page of prose until then. So: one page built,
+    no report page composed — and the W1.1 checks that still apply.
     """
     if "replay" not in (request.config.getoption("markexpr") or ""):
         pytest.skip("a replay: run with -m replay")
-    turn = _turn(monkeypatch, "build me a dashboard")
+    writer = FakeWriter(title="Dashboard")
+    turn = _turn(monkeypatch, "build me a dashboard", page_writer=writer)
     f = _voice("dashboard", turn, expects_figure=False)
+    f["built"] = len(writer.builds)
+    assert len(writer.builds) == 1, f"a dashboard request built {len(writer.builds)} kept pages"
+    assert not _pages(turn), f"a dashboard request wrote a report page: {_pages(turn)}"
     f["clock"] = {"duration_ms": turn.done.get("duration_ms"),
                   "iterations": turn.done.get("iterations"),
                   "iteration_ms": turn.done.get("iteration_ms")}

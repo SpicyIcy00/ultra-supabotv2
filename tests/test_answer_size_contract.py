@@ -119,7 +119,10 @@ def _calls(n=3):
 @pytest.mark.parametrize("question, expected", [
     ("how are we doing", "broad"),
     ("Make it a full page", "broad"),
-    ("build me a dashboard", "broad"),
+    # A DASHBOARD IS A KEPT PAGE TO BUILD, NOT A BROAD REPORT (W2.4,
+    # 2026-09-22 — this held "broad" until then): its own effort kind, held to
+    # the default ceiling, which draws no page of its own.
+    ("build me a dashboard", "focused"),
     ("remember that Rockwell closes on Mondays", "remember"),
     # The definitions' own lookup example, and a fact asked: a lookup at most.
     ("how did Rockwell do last week?", "lookup"),

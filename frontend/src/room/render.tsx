@@ -1156,6 +1156,8 @@ export function Board(p: BoardProps) {
   return (
     <div className={`r-board r-flow${laidOut ? ' r-board--laid' : ''}`}
          data-board={objects.length} data-columns={columns}
+         // WHICH DESIGNED PAGE THIS IS (W2.4), when he wrote into a type.
+         data-page-type={laidOut && 'type' in laidOut ? laidOut.type : undefined}
          style={{ '--cols': columns } as CSSProperties}
          onMouseOver={(e) => {
            touch.over(e);

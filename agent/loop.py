@@ -642,6 +642,10 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
             },
         }
 
+    if pname == "page" and fn_name == COMPOSE_TOOL:
+        # THE DESIGNED PAGE A BROAD ANSWER IS WRITTEN INTO (W2.4).
+        return compose.page_schema(_load_defs())
+
     if pname == "arrangement":
         # HOW THE RIGHT-HAND SIDE IS LAID OUT FOR THIS ANSWER (P3.p).
         #
@@ -1549,10 +1553,11 @@ def _board_addendum(defs: dict) -> str:
         + "Those words are: " + ", ".join(str(w) for w in req(defs, "voice.plain.instrument_words")) + ". "
         # THE PAGE FOR A BROAD QUESTION (composition.page_first, P6.c) — and
         # only for one, since W1.1: a lookup and a focused answer have none.
+        # A DESIGNED PAGE OF A KNOWN TYPE (composition.page_types, W2.4): he
+        # picks the type and writes into it; code lays it out to the design.
         + "FOR A BROAD QUESTION ONLY, THE PAGE: "
-        + " ".join(str(req(defs, "composition.page_first.about")).split()) + " "
-        + "AND LAY THE SPACE OUT YOURSELF, on `arrangement`: "
-        + " ".join(str(req(defs, "composition.arrangement.about")).split()) + " "
+        + " ".join(str(req(defs, "composition.page_types.about")).split()) + " "
+        + "`arrangement` lays a page out by hand, only for the rare broad page no type fits. "
         # THE PATH (voice.reading.path, 2026-09-19). The one thing about the
         # surface he was never told: his paragraphs ARE the page, and their
         # order is the page's order. It rides here rather than in the prompt
@@ -3433,6 +3438,10 @@ async def run(
     answer_size = ceiling
     told_size = (None if effort_kind in (req(defs, "composition.size").get(
         "not_said_on_effort_kind") or []) else size_sentence(ceiling, defs))
+    # A DASHBOARD IS A KEPT PAGE TO BUILD (composition.dashboard, W2.4).
+    dashboard = req(defs, "composition").get("dashboard") or {}
+    if effort_kind == dashboard.get("effort_kind"):
+        told_size = " ".join(str(dashboard.get("sentence") or "").split()) or None
     if told_size:
         opening = "\n\n".join([*preamble, told_size, question])
     messages.append({"role": "user", "content": opening})
@@ -4916,6 +4925,8 @@ async def run(
                         question=question,
                         # HOW HE LAID THE RIGHT-HAND SIDE OUT (P3.p).
                         arrangement=(b.input or {}).get("arrangement"),
+                        # THE PAGE TYPE HE WRITES INTO (W2.4).
+                        page=(b.input or {}).get("page"),
                         # HOW LARGE HE SAYS IT IS, never above what the
                         # message may be (composition.size, W1.1) — and the
                         # figures this turn already put, which the bound and

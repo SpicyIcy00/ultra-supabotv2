@@ -8455,7 +8455,7 @@ composition:
     remember_when_effort_kind: [remember]
     # A surface act over work already done — pin it, keep it, name it — has
     # no answer to size, so the question is not told one.
-    not_said_on_effort_kind: [label_only, automate]
+    not_said_on_effort_kind: [label_only, automate, dashboard]
     ceiling_default: focused
     order: [remember, lookup, focused, broad]
     kinds:
@@ -8539,33 +8539,107 @@ composition:
       is left out, and a focused answer offers the page instead of making it.
       Compose ONCE, when the reads are in.
 
-  page_first:
-    # WRITE IT, DO NOT CAPTION IT (P8, 2026-09-21). What stood here until today
-    # told him how to write a block's head — "the bold lead is your `question`
-    # ... a figure's `thought` sits under its number" — which is the board era
-    # giving orders inside a document. He followed it and the owner's word for
-    # the result was "a reskin": eleven tiles, each with its own question,
-    # headline and comment, with section headings in between.
+  # A BROAD ANSWER IS A PAGE OF A KNOWN TYPE (W2.4, 2026-09-22). From the
+  # research: every product that feels designed uses a fixed human design, an
+  # outline first, a few layouts and restraint. Until now he laid out every
+  # page himself on `arrangement` — a free grammar of leaves and layouts — and
+  # no two broad pages read alike, or like ops/ideal/the-page-bob-writes.html.
+  # So he PICKS a type and WRITES INTO it: a lede, and for each section of the
+  # type a head, the figure(s) it rests on by key, and two or three
+  # paragraphs. CODE lays the page out to the design (agent/compose.page_tree):
+  # the order of the sections, where a figure sits against its words, where
+  # the caveat goes and the plan's place are the type's, never his. The
+  # tree it builds goes through exactly the checks `arrangement` does — no
+  # digit of his, a figure only by {key} reference — so nothing here can
+  # reach a value. `arrangement` stays, for the page no type fits.
+  page_types:
+    introduced: "2026-09-22"
     about: >
-      For a broad question, the page: a `lede` that says the answer AGAIN, in
-      one or two sentences, with the estate's total, its movement and what
-      moved it by reference inside them; the series that shows WHEN, read
-      AGAINST ITS OWN BASELINE so the drawing can show the gap, with a `span`
-      on the point that matters; a `head` and the comparison that shows WHERE,
-      with a window `control` if the month would tell a different story; the
-      one place you cannot explain, in its own section; what moved, drops and
-      gains facing each other in a `row`, in `tabs` if you read it at two
-      scopes; a `caveat` where the data cannot be trusted as read; and the plan
-      last — with EVERY figure you composed on the page, beside the words that
-      read it. YOU ARE WRITING, NOT CAPTIONING. On a page a block carries a
-      `claim` — the few words under its drawing — and nothing else: no
-      `question`, no `thought`, because the section's head is the question and
-      the paragraph beside it is the thought. Give each section TWO OR THREE
-      paragraphs, so the figure has words to sit beside; one thin line over a
-      full-width chart is the thread you are replacing. Open a paragraph with
-      its finding in **bold** where it helps. Leave `size` out unless the
-      figure needs the width — a series over many points, a list of many
-      names; the page sizes the rest and sets them beside your words.
+      A BROAD ANSWER IS A PAGE OF ONE OF THESE TYPES, and you write INTO it on
+      `page`: pick the type the question is, then fill its slots — `lede`, one
+      or two sentences carrying the answer with its figures inside them by
+      {key}; and for each section of the type, a `head` that states what the
+      section found, the `figures` it rests on (keys of blocks you put), and
+      `says` — two or three short paragraphs about exactly those figures. The
+      page is laid out FOR you, to the design: the order of the sections, each
+      figure set beside its words, your caveat as the margin note of the
+      section it qualifies, and your `next` last. Write
+      every section the type marks required; leave out a section you have
+      nothing for. EVERY BLOCK YOU PUT BELONGS IN A SECTION.
+    # A page type is a broad answer's (composition.size.kinds.broad.page); a
+    # lookup or a focused answer has none, and a focused answer's OFFER, taken,
+    # is a broad question.
+    applies_to_sizes: [broad]
+    # NO HEADING OVER THE PLAN FROM HERE: the room draws the plan under its own
+    # "what I'd do next" (Reading.tsx ReadingNext), and a second heading above
+    # it drew the design's words twice on his first live week page.
+    max_says_per_section: 3
+    types:
+      week:
+        means: how the business did over a window — the estate's answer, then when it moved, where, and what moved on the shelf
+        when: 'the business as a whole, the week — "how are we doing"'
+        sections:
+          when:
+            means: WHEN it moved — the days against the same days before
+            figures: 1
+            required: true
+          where:
+            means: WHERE — the shops against the period before; a window control only if the month tells another story
+            figures: 1
+            control: true
+            required: true
+          odd:
+            means: the one place you cannot explain, if there is one — its own days
+            figures: 1
+          moved:
+            means: what moved on the shelf — what fell facing what rose
+            figures: 2
+            layout: row
+        caveat_in: moved
+      finding:
+        means: one thing found — the answer, the read that shows it, and the check that tests it
+        when: a question with one answer worth a page — what is wrong, what needs me
+        sections:
+          evidence:
+            means: the read that shows it
+            figures: 1
+            required: true
+          check:
+            means: what cuts against it, or what it is not
+            figures: 2
+            layout: row
+        caveat_in: evidence
+      comparison:
+        means: two or more things side by side — where each stands, then what separates them
+        when: this against that — shops, weeks, lines
+        sections:
+          compared:
+            means: them side by side, against the period before
+            figures: 1
+            control: true
+            required: true
+          apart:
+            means: what separates them — the drivers or the lines that differ
+            figures: 2
+            layout: row
+        caveat_in: compared
+
+  # "BUILD ME A DASHBOARD" OPENS A DASHBOARD (W2.4, 2026-09-22). It was a broad
+  # question (effort.kinds.broad had the word) and so a report: the dashboard
+  # turn of 2026-09-21 wrote a page of prose about the business and left the
+  # owner nothing to keep. A dashboard is a KEPT PAGE — george.pages, live pins
+  # that re-run every time it opens — so the request is its own effort kind,
+  # told this line instead of a size, held to no page of its own (its ceiling
+  # is the default, which draws none), and the room opens the kept page it
+  # made (frontend room/Room.tsx, `pageOpened`).
+  dashboard:
+    effort_kind: dashboard
+    sentence: >
+      [A dashboard is asked for: build the REAL one — a kept page of live
+      analyses, with create_page (or edit_page, if they already have one) —
+      from three to six reads you run now, each with its own arguments, one
+      analysis each. The room opens that page itself, so there is no report
+      to write and no page to lay out: confirm in one line what is on it.]
 
   arrangement:
     # THE PAGE IS A DOCUMENT (P7, 2026-09-21). The owner: "i want it like an
@@ -10407,6 +10481,17 @@ effort:
         - "take apart"
         - "drill into"
         - "compare"
+    # A DASHBOARD IS A KEPT PAGE TO BUILD, NOT A REPORT (W2.4, 2026-09-22):
+    # "dashboard" was a `broad` phrase, so the request was answered as a page of
+    # prose. It is told composition.dashboard.sentence instead of a size, and
+    # the room opens the page it built. Before `broad`, which it was part of.
+    dashboard:
+      level: medium
+      means: >
+        the person asks for a dashboard — a kept page of live analyses to
+        build (create_page), not a report to write.
+      phrases:
+        - "dashboard"
     broad:
       level: high
       means: >
@@ -10431,7 +10516,6 @@ effort:
         - "full page"
         - "the whole page"
         - "write it up"
-        - "dashboard"
     # ---- low -------------------------------------------------------------
     label_only:
       level: low
