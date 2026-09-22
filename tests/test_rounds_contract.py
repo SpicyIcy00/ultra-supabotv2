@@ -171,11 +171,17 @@ def test_anything_short_of_a_settled_round_keeps_its_round(monkeypatch, second):
     assert frames_of(frames, "done")[0]["rounds_saved"] == 0
 
 
-def test_a_settled_answer_still_faces_the_gates_and_a_rewrite_gets_its_round(monkeypatch):
+def test_a_settled_answer_still_faces_the_gates_and_a_notice_is_placed_not_argued(monkeypatch):
     """
-    A caveat the words leave out is asked for, in ONE user turn, results
-    first. The noticed read is one the board does not draw, so nothing on
-    screen discharges it.
+    A caveat the words leave out, on a read the board does not draw, so
+    nothing on screen discharges it.
+
+    REWRITTEN 2026-09-22 (W1.1, DECISIONS "checks fix; they do not argue",
+    which reverses "the caveat is said in his own words"): this held that the
+    gate bought a rewrite round — the round whose reply became the dashboard
+    turn's headline. The settled answer still faces the gate; the notice is
+    PLACED by code (the room draws it above the figures, in its own words),
+    no round is spent, and nothing is appended to his prose.
     """
     notice = {"kind": "partial_window",
               "message": "The month is missing two days of Rockwell's register data.",
@@ -184,15 +190,18 @@ def test_a_settled_answer_still_faces_the_gates_and_a_rewrite_gets_its_round(mon
         [_ToolUse("r1", "get_sales", SALES),
          _ToolUse("r2", "get_sales", {**SALES, "date_range": "last_month"})],
         [_TextBlock(ANSWER), _ToolUse("c1", "compose", _compose())],
-        [_TextBlock(ANSWER + " Two days are missing from the week, so this is partial.")],
+        [_TextBlock("not reached: no rewrite round is asked for")],
     ], notice=notice)
-    assert len(requests) == 3, "the gate's rewrite is a real round"
-    assert frames_of(frames, "done")[0]["rounds_saved"] == 1
-    last = requests[-1]["messages"]
-    _assert_answered(last)
-    tail = [m for m in last if m["role"] == "user"][-1]["content"]
-    assert tail[0]["type"] == "tool_result" and tail[-1]["type"] == "text"
-    assert "caveats" in tail[-1]["text"]
+    assert len(requests) == 2, "the settled round is the answer; no rewrite is bought"
+    done = frames_of(frames, "done")[0]
+    assert done["rounds_saved"] == 1 and done["notice_forced"] is True
+    placed = [w for w in frames_of(frames, "warning")
+              if w["reason"] == req(DEFS, "notices.placed_reason")]
+    assert placed and "partial_window" in placed[0]["kinds"]
+    said = "".join(f["delta"] for f in frames_of(frames, "text"))
+    assert "added automatically" not in said and notice["message"] not in said
+    assert [n["kind"] for n in frames_of(frames, "notice")] == ["partial_window"], (
+        "the notice still reaches the room, which draws it")
 
 
 def test_the_compose_tool_says_the_claim_ends_the_turn():

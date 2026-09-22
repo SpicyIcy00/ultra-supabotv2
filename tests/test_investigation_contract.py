@@ -386,7 +386,13 @@ def test_the_lookup_guard_is_in_the_prompt_where_breadth_is_decided():
     prompt = _prompt()
     lookup = req(OPENS, "a_lookup_is_not_one")
     assert lookup["answered_with"] in prompt
-    assert lookup["means"] in prompt
+    # WHAT A LOOKUP IS moved to the answer's size (W1.1, 2026-09-22): VOICE
+    # says it in the prompt as "one fact asked", and the size's own words are
+    # on `compose`, where the bound is enforced (composition.size).
+    assert "A LOOKUP — one fact asked" in prompt
+    from agent.loop import _board_addendum
+    size_means = " ".join(req(DEFS, "composition.size.kinds.lookup.means").split())
+    assert size_means in _board_addendum(DEFS)
     apart = req(INV, "scope.kinds.focused.taken_apart")
     assert f"taken apart gets {apart['min_reads']}, not one" in prompt
 
@@ -489,8 +495,13 @@ def test_the_answer_is_as_long_as_the_understanding_takes():
     # prose is the conclusion and never the page retold. ("the steps
     # retold" until P12, 2026-09-21, when the right of the screen stopped
     # being a stack of steps and became a page he writes.)
-    assert "never the page retold" in prompt
-    assert " ".join(req(DEFS, "surface.prose.words_carry").split()) in prompt
+    # REWRITTEN 2026-09-22 (W1.1, "the answer is the size of the question"):
+    # "never the page retold" and surface.prose.words_carry said every answer
+    # was a page with the prose as its conclusion — the P12/P14 recipe that
+    # decision reverses. The prose is the conclusion BESIDE A PAGE, bounded;
+    # a lookup and a focused answer are their words.
+    assert "your prose under the headline is then the conclusion" in prompt
+    assert "THE ANSWER IS THE SIZE OF THE QUESTION" in prompt
 
 
 def test_the_schema_he_writes_with_says_what_the_prompt_says():

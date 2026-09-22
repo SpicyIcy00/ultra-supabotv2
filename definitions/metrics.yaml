@@ -4831,8 +4831,12 @@ notices:
   # ---- stock history (2026-09-09) -----------------------------------------
   negative_on_hand:
     must_convey:
-      - [negative]
-      - [record, records, stock, reading, readings, "on hand"]
+      # "below zero" (W1.1, 2026-09-22): the notice's own message says "below
+      # zero", and the dashboard turn's caveat said it in exactly those words
+      # and was still called missing — the round that followed put the gate's
+      # words in his headline.
+      - [negative, "below zero", "under zero", "less than zero"]
+      - [record, records, stock, reading, readings, "on hand", count, counts]
   replenishment_days_of_stock_tail:
     must_convey:
       - [cover, "days of stock", "days of cover"]
@@ -4864,8 +4868,8 @@ notices:
       - ["more than one", two, both, mixed, different]
   replenishment_negative_on_hand:
     must_convey:
-      - [negative]
-      - [record, records, stock, reading, readings]
+      - [negative, "below zero", "under zero", "less than zero"]
+      - [record, records, stock, reading, readings, count, counts]
   # ---- purchase planning (2026-09-09) --------------------------------------
   supplier_coverage:
     must_convey:
@@ -4881,8 +4885,8 @@ notices:
       - [also, another, "more than one", different, other]
   purchase_plan_negative_on_hand:
     must_convey:
-      - [negative]
-      - [record, records, stock, reading, readings]
+      - [negative, "below zero", "under zero", "less than zero"]
+      - [record, records, stock, reading, readings, count, counts]
   demand_suppressed_by_stockouts:
     must_convey:
       - ["out of stock", "nothing on the shelf", unavailable, "no stock", "not on the shelf"]
@@ -5182,9 +5186,27 @@ notices:
   # item's own kind against the fingerprints above rather than the container.
   container_kind: multiple
 
-  # How many corrective turns the loop spends asking the model to surface a
-  # notice before falling back to appending it verbatim.
-  max_corrective_turns: 1
+  # CHECKS FIX; THEY DO NOT ARGUE (W1.1, 2026-09-22, DECISIONS the same day).
+  # Until today this was the ONE rewrite round the loop spent asking him to
+  # surface a notice, then it appended the notice verbatim under his answer as
+  # "Caveats (added automatically)". The dashboard turn of 2026-09-21 is why it
+  # went: the fingerprint missed "below zero", the round asked him to "rewrite
+  # the full answer", and his reply to the gate — "The caveat needs the
+  # magnitude and it belongs beside the counts it qualifies…" — became the
+  # answer AND its headline, with the forced box under it listing the notice.
+  #
+  # NOW NO ROUND AND NO BOX. A notice he did not carry is PLACED by code: the
+  # room already draws every turn notice that says a figure may be wrong,
+  # above the figures, in the notice's own reader's line (UI rule 4,
+  # frontend Room.tsx `turnNotices`) — on the object whose read raised it when
+  # that read is drawn, above the headline when it is not. So the answer is
+  # never rewritten for it and nothing is appended to his prose: the gate
+  # records which kinds it placed (gap `notice_placed`), and that is all.
+  # The guarantee is kept and made stronger — always shown, never negotiated,
+  # never lost to a model that did not carry it.
+  max_corrective_turns: 0
+  placed_by: code
+  placed_reason: notice_placed
 
 # =============================================================================
 # PINS — the vocabulary for one integrity check
@@ -5660,10 +5682,28 @@ ranking:
       # state reuses inventory.states, evaluated in order — the same CASE the
       # ungrouped path labels rows with, so the two can never disagree.
       state:    "__state_case__"
+    # A NEGATIVE COUNT IS NEVER IN A TOTAL (W1.1, 2026-09-22). This measure
+    # was a bare SUM, so grouped by state the out_of_stock row carried the
+    # broken records' own size — the dashboard turn drew a stock total below
+    # zero — against inventory.history.negative_on_hand.exclude_from_sums,
+    # which says a negative row "is never summed into a quantity, and is
+    # always named". It is named now, as its own count; the total is of what
+    # is actually held. tools/inventory.py reads these, and no SQL of its own.
     measures:
       product_count:  "COUNT(*)"
-      total_quantity: "SUM(i.quantity_on_hand)"
+      total_quantity: "COALESCE(SUM(i.quantity_on_hand) FILTER (WHERE i.quantity_on_hand >= 0), 0)"
+      negative_count: "COUNT(*) FILTER (WHERE i.quantity_on_hand < 0)"
+    excludes_from_sums: inventory.history.negative_on_hand
     ordering: "product_count DESC"
+    # A STATE IS DRAWN AS WORDS (W1.1, 2026-09-22): a grouped row said
+    # "out_of_stock" on the dashboard's shelf chart, which is the column's
+    # name for it and nobody's word. The grouped rows carry the words; the
+    # `state` ARGUMENT still takes the names in inventory.states.
+    state_words:
+      out_of_stock: out of stock
+      low_stock: low on stock
+      in_stock: in stock
+      unclassified: unclassified
 
 # =============================================================================
 # DEAD STOCK — held but not selling
@@ -5933,7 +5973,14 @@ voice:
         # each held to this slot's own rule, and they are stored as the
         # paragraphs the page already splits on — every word still his.
         steps: true
-        max_steps: 6
+        # 6 -> 4, AND EACH STEP SHORT (W1.1, 2026-09-22). The design's plan is
+        # four short steps; his dashboard turn handed over six paragraphs of
+        # 90 words each and the plan was the longest thing on the page. A step
+        # past this length is cut at a word, not refused: what to do first
+        # survives, the essay under it does not.
+        max_steps: 4
+        max_step_length: 220
+        step_over_length: cut_at_word_boundary
         # Kept whole past it, like the caveat (P2S.7): a next may name what a
         # notice says no read can settle, and a cut would drop that.
         over_length: kept_whole
@@ -7530,6 +7577,108 @@ composition:
   # page, unchanged.
   # THE PAGE FOR A BROAD QUESTION, as a recipe on `compose` (P6.c). Read at
   # the moment he composes, which is where it is needed, and not in the prompt.
+  # ===========================================================================
+  # THE ANSWER IS THE SIZE OF THE QUESTION (W1.1, 2026-09-22; DECISIONS the
+  # same day, decision 1). It reverses the P12/P14 recipe that every answer is
+  # a page. His own record: small questions take 10-25 s when they stay small
+  # and 150 s when he inflates them; the dashboard turn took 462 s.
+  #
+  # The kinds are investigation.scope.kinds' own — lookup, focused, broad —
+  # plus `remember`, which is not a question at all. ENFORCED, not asked for
+  # (agent/prose.py: "Words do not move it"):
+  #
+  #   CODE READS THE CEILING from the message, with the effort table's own
+  #   phrases (effort.kinds): a message the table reads as `broad` may be
+  #   answered broad; one it reads as `remember` is remembered; everything
+  #   else is FOCUSED AT MOST. The same phrases decide how hard he thinks, so
+  #   the two cannot disagree. It chooses a bound, never a read — rule 5.
+  #
+  #   HE DECLARES THE SIZE on compose (`size`), at or under the ceiling — a
+  #   fact asked is a lookup. Above the ceiling it is brought down, and said.
+  #
+  #   COMPOSE HOLDS IT: figures past `max_figures` are REFUSED like any other
+  #   over-bound block; a page (a lede or a head) on a size with `page: false`
+  #   is left out and said; the machine's own drawings are trimmed to the
+  #   bound. A focused answer carries `offer` among its asks — the page is
+  #   OFFERED, and the offer's words are a broad phrase, so taking it is.
+  #
+  #   THE READ BUDGET COUNTS QUERIES RUN, not decisions made (the card:
+  #   "get_change is one decision and seven reads"): every read a call becomes
+  #   counts, a duplicate served from the turn's own record does not. A batch
+  #   that would cross the budget is refused before it runs, except the turn's
+  #   first, so a question always gets its read.
+  # ===========================================================================
+  size:
+    introduced: "2026-09-22"
+    kinds_from: investigation.scope.kinds
+    declared_on: compose
+    broad_when_effort_kind: [broad]
+    remember_when_effort_kind: [remember]
+    # A surface act over work already done — pin it, keep it, name it — has
+    # no answer to size, so the question is not told one.
+    not_said_on_effort_kind: [label_only]
+    ceiling_default: focused
+    order: [remember, lookup, focused, broad]
+    kinds:
+      remember:
+        means: something to keep, not a question — record it and confirm in one line
+        max_figures: 0
+        max_queries: 0
+        page: false
+        max_words: 30
+      lookup:
+        means: one fact asked — a sentence and at most one figure, no page
+        max_figures: 1
+        max_queries: 4
+        page: false
+        max_words: 40
+      focused:
+        means: >
+          a subject, metric, dimension or window named — a short answer and the
+          two or three figures that prove it; the page is offered, not made
+        max_figures: 3
+        # A why about one shop is VERIFY (the headline set, three) and one
+        # get_change (seven), with room for one CHECK read: twelve.
+        max_queries: 12
+        page: false
+        max_words: 70
+        offer: "Make it a full page"
+      broad:
+        means: the business as a whole, or the page asked for — the page
+        # null: composition.max_blocks, the page's own bound.
+        max_figures: null
+        max_queries: 30
+        page: true
+        # null: voice.body.max_words — beside a page his prose is the conclusion.
+        max_words: null
+    warning_reason: answer_over_size
+    refused: >
+      past the {figures} figure(s) a {size} answer carries — {means}
+      (metrics.yaml composition.size)
+    page_left_out: >
+      arrangement: a {size} answer is not a page — {means} — so the page was
+      left out and your words stand as the answer
+    brought_down: >
+      size: this message is at most {ceiling}, so the answer is held to {ceiling}
+      (metrics.yaml composition.size)
+    budget_refused: >
+      Not run: a {size} answer reads at most {budget} queries and {spent} have
+      run. Answer from what you already have.
+    budget_text: >
+      STOP CALLING TOOLS. A {size} answer reads at most {budget} queries and
+      {spent} have run. Answer now, from the results you already have — the
+      size of the answer is the size of the question.
+    # On the question, never in the cached prefix: which size this message may be.
+    sentence: >
+      [This message may be answered at most {ceiling}: {means}. Declare the
+      size on compose.]
+    tool_sentence: >
+      THE ANSWER IS THE SIZE OF THE QUESTION, and `size` on this call says
+      which: {kinds}. Each question arrives saying how large it may be; a
+      figure past the bound is refused, a page on a lookup or a focused answer
+      is left out, and a focused answer offers the page instead of making it.
+      Compose ONCE, when the reads are in.
+
   page_first:
     # WRITE IT, DO NOT CAPTION IT (P8, 2026-09-21). What stood here until today
     # told him how to write a block's head — "the bold lead is your `question`
@@ -7679,8 +7828,13 @@ composition:
     # it"). It fires only where the page is written as one — a lede or a head —
     # and two or more of his own figures are not on it, so one forgotten block
     # is a slip and a good page never pays a round for the check.
+    # 1 -> 0 (W1.1, 2026-09-22): CHECKS FIX; THEY DO NOT ARGUE. The round
+    # asked him to give the whole arrangement again — the dashboard turn spent
+    # one on it — while the renderer already draws every block he did not
+    # place, before the plan (render.tsx `leftovers`). So what is left off is
+    # recorded (gap `page_left_blocks_off`) and drawn, and no round is bought.
     gate:
-      max_corrective_turns: 1
+      max_corrective_turns: 0
       min_left_off: 2
 
     # A KEY PLACED TWICE IS PLACED ONCE. The board draws a read once
@@ -9110,12 +9264,49 @@ effort:
   levels: [low, medium, high]
   beta: mid-conversation-output-config-2026-07-01
 
+  # DEEPSEEK READS ITS EFFORT TOP-LEVEL, AND HAS NO MEDIUM (W1.1, 2026-09-22;
+  # DECISIONS 2026-09-21, "why a broad answer takes minutes"). The per-message
+  # marker below is Anthropic's beta; DeepSeek's compatibility layer does not
+  # document it, so in production DeepSeek very likely thought at full strength
+  # on every question. And its `medium` IS `high`, so a turn set to medium was
+  # a turn at high. On a provider named here the turn's level goes in the
+  # request's own `output_config` — there is no Anthropic prefix cache to keep
+  # byte-stable there — and `levels` says what each of ours becomes on it.
+  # Measured the same day on one broad question at top-level low: ~152 s
+  # against ~241 s at high, half the thinking, 3/3 good pages — a lean, which
+  # is why `medium` (a question in its own right) goes to low and a question
+  # that digs or builds stays at high.
+  top_level:
+    providers: [deepseek]
+    levels:
+      deepseek: {low: low, medium: low, high: high}
+
   # A fragment is short. Longer than this and it is a question in its own
   # right, whatever came before it — "add top sellers by sales not units, i
   # value sales more" is a preference being taught, not a refinement.
   follow_up_max_words: 8
 
   kinds:
+    # ---- low, and first: a thing to remember is not a question -------------
+    # "REMEMBER THAT…" IS ONE LINE AND NO INVESTIGATION (W1.1, 2026-09-22).
+    # The capability test's "Remember that…" was right and took 108 s and a
+    # page for one sentence. It is written down with record_belief and
+    # confirmed in a line; composition.size.kinds.remember reads nothing.
+    # First, because "remember that sales fall on why-days" is not the ladder.
+    remember:
+      level: low
+      means: >
+        the person is telling Bob something to keep — a fact about the
+        business, a preference, a correction to remember. Nothing to read.
+      phrases:
+        - "remember that"
+        - "remember this"
+        - "remember,"
+        - "don't forget"
+        - "dont forget"
+        - "keep in mind"
+        - "note that"
+        - "for future reference"
     # ---- high ------------------------------------------------------------
     ladder:
       level: high
@@ -9171,6 +9362,14 @@ effort:
         - "anything i should know"
         - "what needs me"
         - "what needs my attention"
+        # THE PAGE, ASKED FOR (W1.1, 2026-09-22). A narrow question gets a
+        # short answer and the OFFER of a page (composition.size); taking the
+        # offer, or asking for one outright, is a broad answer — the same
+        # phrases decide both the effort and the size, so they cannot disagree.
+        - "full page"
+        - "the whole page"
+        - "write it up"
+        - "dashboard"
     # ---- low -------------------------------------------------------------
     label_only:
       level: low
@@ -9266,7 +9465,12 @@ rounds:
   # for a rewrite still gets its round. Anything short of all of that keeps
   # the round it always had.
   settle:
-    ends_on: compose_only_with_claim_and_words
+    # OR A LEDE (W1.1, 2026-09-22): a composes-only round whose compose names
+    # the claim and carries a page that opens with a `lede` IS the answer —
+    # the lede is the answer said, and the round that bought "a closing line"
+    # for it is the one P6.j reminded him about and he took anyway. The
+    # headline stored is the claim, which is the few words that ARE the point.
+    ends_on: compose_only_with_claim_and_words_or_a_lede
     # A refused ACCESSORY does not un-settle the round (the speed fix,
     # 2026-09-19): an ask with a figure no read returned, or an action on a
     # row the read does not have, is dropped with its reason and the answer

@@ -358,12 +358,23 @@ def _steps(name: str, value: Any, spec: Mapping[str, Any], returned: set[float],
     Each step is held to the slot's own rule, so a digit he may not write is
     still refused, one step at a time.
     """
+    if (spec.get("steps") and isinstance(value, str)
+            and len([p for p in re.split(r"\n\s*\n", value) if p.strip()]) > 1):
+        # Paragraphs he separated by a blank line ARE steps — the page already
+        # splits on them — so they are held to the same bound as a list.
+        value = [p.strip() for p in re.split(r"\n\s*\n", value) if p.strip()]
     if not isinstance(value, (list, tuple)):
         return _check(name, value, spec, returned, presentation, coerced)
     most = int(spec.get("max_steps") or 6)
+    # EACH STEP SHORT (W1.1, 2026-09-22): a step is held to its own length,
+    # cut at a word, so the plan is four short steps and not four essays.
+    step_spec = dict(spec)
+    if spec.get("max_step_length"):
+        step_spec["max_length"] = int(spec["max_step_length"])
+        step_spec["over_length"] = spec.get("step_over_length") or "cut_at_word_boundary"
     steps: list[str] = []
     for n, step in enumerate(value[:most], 1):
-        steps.append(_check(f"{name}[{n}]", step, spec, returned, presentation, coerced))
+        steps.append(_check(f"{name}[{n}]", step, step_spec, returned, presentation, coerced))
     if len(value) > most and coerced is not None:
         coerced.append(f"{name}: more than {most} steps, so the rest were left out — "
                        f"a plan nobody can hold is not a plan")

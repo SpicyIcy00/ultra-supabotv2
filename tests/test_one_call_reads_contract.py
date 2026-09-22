@@ -37,7 +37,8 @@ DEFS = load_defs()
 ANSWER = "North Edsa fell on fewer transactions."
 
 
-def _drive(monkeypatch, replies, refuse=lambda name, args: None):
+def _drive(monkeypatch, replies, refuse=lambda name, args: None,
+           question="how is north edsa doing?"):
     fake = FakeClient(replies)
     monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
@@ -60,7 +61,7 @@ def _drive(monkeypatch, replies, refuse=lambda name, args: None):
     monkeypatch.setattr(bob_loop, "_call_tool", fake_read)
 
     async def collect():
-        return [f async for f in bob_loop.run("how is north edsa doing?")]
+        return [f async for f in bob_loop.run(question)]
 
     return asyncio.run(collect()), fake.messages.requests, executed
 
@@ -224,13 +225,8 @@ def test_a_warehouse_has_no_plan_and_the_shelf_still_reads(monkeypatch):
 # The budget counts what Bob decided to read
 # ---------------------------------------------------------------------------
 
-def test_the_cap_counts_a_call_asked_as_one_once(monkeypatch):
-    """
-    A broad turn as the policy now asks it — the headline and get_attention,
-    then get_change at two shops — is four calls and seventeen reads. The cap
-    guards against a subject per call, and a check read after it still runs.
-    """
-    frames, _requests, executed = _drive(monkeypatch, [
+def _broad_turn():
+    return [
         [_ToolUse("h", "get_sales", {"metric": "sales_headline", "group_by": "store",
                                      "date_range": "last_week", "compare_to": "previous_period"}),
          _ToolUse("a", "get_attention", {})],
@@ -239,13 +235,49 @@ def test_the_cap_counts_a_call_asked_as_one_once(monkeypatch):
         [_ToolUse("x", "get_sales", {"metric": "net_sales", "group_by": "hour",
                                      "date_range": "last_week", "filters": {"store": "OPUS"}})],
         [_TextBlock(ANSWER)],
-    ])
+    ]
+
+
+def test_the_cap_counts_a_call_asked_as_one_once(monkeypatch):
+    """
+    A broad turn as the policy now asks it — the headline and get_attention,
+    then get_change at two shops — is four calls and seventeen reads. The
+    CONVERGENCE CAP counts calls and guards against a subject per call, and a
+    check read after it still runs.
+
+    REWRITTEN 2026-09-22 (W1.1, DECISIONS "the answer is the size of the
+    question"): this ran on "how is north edsa doing?", a FOCUSED question,
+    and held that seventeen reads fit because they were five decisions. The
+    read budget counts QUERIES now — "get_change is one decision and seven
+    reads" — so the shape is a BROAD turn's here, and the focused half is the
+    test after this one.
+    """
+    frames, _requests, executed = _drive(monkeypatch, _broad_turn(),
+                                         question="how are we doing?")
     assert not [w for w in frames_of(frames, "warning") if w.get("reason") == "convergence_cap"]
     assert executed[-1][1].get("group_by") == "hour", "the check read after them ran"
     done = frames_of(frames, "done")[0]
     assert done["asked_reads"] == 5 and done["executed_calls"] > bob_loop.MAX_TOOL_CALLS
-    broad = int(req(DEFS, "investigation.scope.kinds.broad.max_reads"))
-    assert 4 <= broad <= bob_loop.MAX_TOOL_CALLS
+    assert done["executed_calls"] <= int(req(DEFS, "composition.size.kinds.broad.max_queries"))
+
+
+def test_a_focused_question_is_held_to_its_budget_in_queries(monkeypatch):
+    """
+    The same shape on a FOCUSED question: the headline and the attention read
+    run (a turn's first batch always does); two get_changes are fourteen more
+    queries, past composition.size.kinds.focused.max_queries, so they are
+    refused before they run — answered as tool results, and said.
+    """
+    budget = int(req(DEFS, "composition.size.kinds.focused.max_queries"))
+    frames, _requests, executed = _drive(monkeypatch, _broad_turn())
+    over = [w for w in frames_of(frames, "warning")
+            if w.get("reason") == req(DEFS, "composition.size.warning_reason")]
+    assert over and over[0]["size"] == "focused" and over[0]["limit"] == budget
+    assert not [a for n, a in executed if a.get("filters", {}).get("store") == "OPUS"
+                and a.get("compare_to")], "a get_change read ran past the budget"
+    assert len(executed) <= budget
+    refused = [r for r in frames_of(frames, "tool_result") if r["error"]]
+    assert refused and all("Not run" in r["error"] for r in refused)
 
 
 # ---------------------------------------------------------------------------

@@ -333,6 +333,8 @@ def _enum_sources(defs: dict) -> dict[tuple[str, str], list]:
         ("get_vending", "metric"): vend_metrics,
         ("get_vending", "group_by"): vend_groups,
         ("get_vending", "date_range"): presets,
+        # How large the answer is (composition.size, W1.1).
+        ("compose", "size"): [str(k) for k in req(defs, "composition.size.order")],
     }
 
 
@@ -1305,7 +1307,7 @@ INVESTIGATING
 
 VERIFY the primary fact first, compared over a closed window; if the premise does not hold, say so and stop. DECOMPOSE — {_drivers_sentence(defs)} Read change_pct off each driver's row: the stronger moved more, close means both moved, and a share of the change — "most of the gap" — is nobody's. LOCALIZE the driver that moved — dominating is where to look, not a reason to stop — by time and by what sold. DECOMPOSE, LOCALIZE and CHECK are ONE round after VERIFY: ask every read they need together. CHECK what the data can test before offering an explanation: {checks}; {req(chk, 'unchecked')}. EXPLAIN, keeping the kinds apart: "down 12%" is measured, "basket value is the stronger driver" is your reading, and localization is not cause — and say whether it MATTERS: {matters}. STOP when the premise is false, the movement is localized and checked, no tool goes further, the evidence is mixed or the reads are spent. {_one_call_sentence(defs)}
 
-Every read keeps the primary fact's window — the baseline's own days aside — store scope and filters. COMPOSE AS YOU GO: each round's findings go on the board in the same call as the next reads; the claim settles last.
+Every read keeps the primary fact's window — the baseline's own days aside — store scope and filters. COMPOSE ONCE, when the reads are in.
 """
 
 INVESTIGATING_SECTION = _investigating_section(_load_defs())
@@ -1347,7 +1349,7 @@ def _surface_section(defs: dict) -> str:
     return f"""
 THE SURFACE
 
-The screen is ONE piece of work your reads compose into; a short follow-up — "why?", "the products" — REFINES it, keeping its window, filters and comparison. {words}. No narration such as {narration}. A transaction is a transaction, not {synonyms}.
+The screen is ONE piece of work your reads compose into; a short follow-up — "why?", "the products" — REFINES it, keeping its window, filters and comparison. No narration such as {narration}. A transaction is a transaction, not {synonyms}.
 """
 
 SURFACE_SECTION = _surface_section(_load_defs())
@@ -1397,6 +1399,11 @@ def _scope_section(defs: dict) -> str:
     # its own shorter version and dropped "then ONE localization", so the
     # definition and what the model read disagreed and nobody could see it.
     broad_reads = " ".join(str(req(broad, "reads")).split()).format(headline=headline)
+
+    # THE BUDGET IS THE SIZE'S, IN QUERIES (composition.size, W1.1): the loop
+    # refuses a batch past it, so the number he reads is the number enforced.
+    def queries(size: str) -> int:
+        return int(req(defs, f"composition.size.kinds.{size}.max_queries"))
     return f"""
 SCOPE
 
@@ -1404,7 +1411,7 @@ WHAT A MESSAGE IS — answer the one that was sent:
 
 {message_lines}
 
-HOW WIDE TO READ; what the reads find decides how deep. BROAD — no subject, metric or dimension named, or the business as a whole: do not ask where to look — {broad_reads}, at most {req(broad, 'max_reads')} calls. FOCUSED — a subject, metric, dimension or window named: {req(focused, 'reads')}, at most {req(focused, 'max_reads')}. A LOOKUP gets {req(lookup, 'answered_with')} — {req(lookup, 'means')} — and a message asking to be taken apart gets {req(apart, 'min_reads')}, not one. AMBIGUOUS — "why?", "products", "is that bad?": resolve it from the desk, the board and this conversation; ask only when those cannot settle it and the readings would differ.
+HOW WIDE TO READ, inside the answer's budget of QUERIES — a call that reads several things counts each; what the reads find decides how deep. BROAD: do not ask where to look — {broad_reads}, at most {queries('broad')} queries. FOCUSED: {req(focused, 'reads')}, at most {queries('focused')}. A LOOKUP gets {req(lookup, 'answered_with')}, at most {queries('lookup')}; a message asking to be taken apart gets {req(apart, 'min_reads')}, not one. AMBIGUOUS — "why?", "products", "is that bad?": resolve it from the desk, the board and this conversation; ask only when those cannot settle it and the readings would differ.
 
 A GROUP TOTAL IS A READ, NOT A SUM: "across the estate" is read with {req(broad, 'estate_total_read_with')}, never figures you add up from the rows in front of you. {req(pres, 'findings_min')} to {req(pres, 'findings_max')} things worth saying when the figures establish that many — never invent one to fill the range — each resting on {req(pres, 'rests_on')}, so a broad answer still rests on one verified fact.
 """
@@ -1449,7 +1456,7 @@ def _desk_section(defs: dict) -> str:
     return f"""
 THE DESK
 
-The person operates the surface directly, so a question may carry a line beginning "[On the desk" naming what they selected (a {dims}) and the window they moved to; a short instruction applies to that selection, the window is the work's from then on, and nothing there is a figure.
+The person operates the surface directly, so a question may carry a line beginning "[On the desk" naming what they selected (a {dims}) and the window they moved to; a short instruction applies to that selection, the window is the work's from then on, and nothing there is a figure. A line beginning "[On the board" names what is already on screen: if it already answers, say so and read nothing.
 """
 
 DESK_SECTION = _desk_section(_load_defs())
@@ -1462,12 +1469,10 @@ def _composing_section(defs: dict) -> str:
     weights, one object per read — is on `compose` itself (_board_addendum),
     in the schema the model reads at the moment it composes.
     """
-    ops = ", ".join(str(k) for k in req(defs, "composition.ops"))
-    return f"""
-THE BOARD
-
-The person is working on a BOARD: objects, each drawing the read it was made from. A line beginning "[On the board" names every object: read it first, and if the board already holds the figures that answer, say so and read nothing.
-"""
+    # THE BOARD ERA'S SECTION WENT (W1.1, 2026-09-22): the answer is the size
+    # of the question now, and what the person already has on screen is one
+    # sentence — the "[On the board" line — kept in THE DESK.
+    return ""
 
 COMPOSING_SECTION = _composing_section(_load_defs())
 
@@ -1477,7 +1482,14 @@ def _board_addendum(defs: dict) -> str:
     voc = req(defs, "composition")
     ops = "; ".join(f"{k} — {v['about']}" for k, v in req(voc, "ops").items())
     weights = ", ".join(str(w) for w in req(voc, "weights"))
+    # THE SIZE COMES FIRST (composition.size, W1.1): it decides whether there
+    # is a page at all, so it is the first thing he reads at the moment he
+    # composes.
+    kinds = "; ".join(
+        f"{name} — {' '.join(str(spec.get('means') or '').split())}"
+        for name, spec in req(voc, "size.kinds").items())
     return (
+        " ".join(str(req(voc, "size.tool_sentence")).split()).format(kinds=kinds) + " "
         f"The edits: {ops}. Every edit names a short key you choose; the key IS the "
         f"object, and an edit with a key already on the board changes it in place. "
         f"ONE OBJECT PER READ: change what is there, add only what is new — asked "
@@ -1497,17 +1509,9 @@ def _board_addendum(defs: dict) -> str:
         f"is read as one thing. Only where it is true: a point that simply also "
         f"holds names nothing and stands on its own, and one level is the limit — "
         f"what is under something may not have things under it in turn. "
-        f"Choose the form, not just the fact — one figure that answers "
-        f"outright is a figure, a compared set of shops is a dumbbell, what MOVED "
-        f"a thing is contributors, a series over time is a line, and a table is "
-        f"for when there is nothing to see in the shape. Every block takes a "
+        f"Every block takes a "
         f"`claim`: the few words saying what it says, with no digits in them, "
         f"because the figure is drawn under it with its own receipts. "
-        # A BLOCK IS A STEP, NOT A TILE (composition.question, P3.o). The
-        # claim is the answer; this is what was asked. Read down the page the
-        # questions ARE the path, which is the whole of what the owner kept
-        # asking for and what a claim alone could never say.
-        + f"And a `question`: {req(defs, 'composition.question.about')} ".replace("\n", " ")
         + f"A shape "
         f"carries no figure of yours: you choose the row, the value is the row's, "
         f"and an edit carrying a figure, a colour or a size is refused. YOUR "
@@ -1524,8 +1528,9 @@ def _board_addendum(defs: dict) -> str:
         + "SAY IT ONCE, PLAINLY: "
         + " ".join(str(req(defs, "voice.plain.about")).split()) + " "
         + "Those words are: " + ", ".join(str(w) for w in req(defs, "voice.plain.instrument_words")) + ". "
-        # THE PAGE FOR A BROAD QUESTION (composition.page_first, P6.c).
-        + "FOR A BROAD QUESTION, THE PAGE: "
+        # THE PAGE FOR A BROAD QUESTION (composition.page_first, P6.c) — and
+        # only for one, since W1.1: a lookup and a focused answer have none.
+        + "FOR A BROAD QUESTION ONLY, THE PAGE: "
         + " ".join(str(req(defs, "composition.page_first.about")).split()) + " "
         + "AND LAY THE SPACE OUT YOURSELF, on `arrangement`: "
         + " ".join(str(req(defs, "composition.arrangement.about")).split()) + " "
@@ -1568,9 +1573,9 @@ You read without asking and act on nothing alone: you draft, you propose, you as
 
 "I can't" is a fact about the system — no tool answers, or one refuses to mislead. "I wouldn't" is your opinion, and an opinion dressed as impossibility takes a decision from the person whose decision it is: give the reason and what you would do instead, and if they ask again, do it.
 
-VOICE — THE SHAPE OF AN ANSWER
+VOICE — THE SIZE OF AN ANSWER
 
-The right of the screen is A PAGE YOU WRITE on `compose` — a document, not blocks: an opening sentence carrying the answer with its figures in it, headings that state what a section found, paragraphs, and the figures set beside the words about them. Your prose, left under your headline, is the conclusion: __BODY_WORDS__ words at most — what it means, never the page retold. A quiet week is a line. THREE SLOTS on `compose`: the CLAIM, the words that ARE the point; the CAVEAT, what qualifies the figures, never in the body; the NEXT, what you would do, at length — never a read you could have made.
+THE ANSWER IS THE SIZE OF THE QUESTION, and `compose` holds you to it: each question arrives saying how large it may be. A LOOKUP — one fact asked — is a sentence and at most one figure. FOCUSED — a subject, metric or window named — is a short answer and the two or three figures that prove it; the page is offered, not made. BROAD — the business as a whole, or the page asked for — is A PAGE YOU WRITE: an opening sentence carrying the answer, headings that state what a section found, paragraphs, and the figures set beside the words about them; your prose under the headline is then the conclusion, __BODY_WORDS__ words at most. "Remember that…" is kept with `record_belief` and confirmed in one line; nothing is read. A quiet week is a line. THREE SLOTS on `compose`: the CLAIM, the words that ARE the point; the CAVEAT, what qualifies the figures; the NEXT, what you would do, in a few short steps — never a read you could have made.
 
 One figure in prose at most, the claim's own, exactly as the result gives it. No preamble, no summary.
 
@@ -1578,7 +1583,7 @@ THE RULES — held by the system as well as by you
 
 1. Every number you state comes from a tool result in this conversation. If no tool can answer, say so and name what would be needed.
 2. Read `meta` before `rows`: source, filters, window, read time. Results on different filters or windows are not compared.
-3. A notice that a figure may be WRONG reaches the answer; the number without it is the worst thing you can do. One that explains how a figure was measured is yours to obey, not recite.
+3. A notice that a figure may be WRONG is drawn above the figures for you, in its own words: you need not repeat it, but say in the caveat what it changes about your answer. One that explains how a figure was measured is yours to obey, not recite.
 4. A tool that refuses is declining to mislead: follow the route it names, or say why the question cannot be answered as asked.
 5. Prefer one ranked or grouped query — `group_by`, `top_n`, `rank_by`, `meta.full_row_count` — to reading once per store.
 6. A figure made from figures comes from a tool, never from you: `average_transaction_value` is a metric, and `compare_to='previous_period'` puts the baseline, the change and `baseline_status` on every row — read them, and say why when `baseline_status` is not ok.
@@ -1743,6 +1748,33 @@ def _model_result(tool_use_id: str, parts: list, defs: dict) -> dict:
         "content": json.dumps(payload),
         **({"is_error": True} if failed else {}),
     }
+
+
+def _unstring_arguments(b: Any) -> None:
+    """
+    A list or an object sent AS A STRING of JSON, read as what it says (W1.1,
+    2026-09-22).
+
+    "How did Rockwell do" was refused six times in one turn on 2026-09-21:
+    DeepSeek sent `group_by: "[]"` and `group_by: "[\\"store\\"]"` — the right
+    argument, quoted — and get_sales refused a grouping called "[]" three calls
+    at a time, twice. The value is exactly the list it spells, so it is read
+    as that list before the call is keyed, run or stored; a string that does
+    not parse as a list or an object is left exactly as it was sent.
+    """
+    args = getattr(b, "input", None)
+    if not isinstance(args, dict):
+        return
+    for name, value in list(args.items()):
+        text = value.strip() if isinstance(value, str) else ""
+        if not (text[:1] == "[" and text[-1:] == "]") and not (text[:1] == "{" and text[-1:] == "}"):
+            continue
+        try:
+            parsed = json.loads(text)
+        except ValueError:
+            continue
+        if isinstance(parsed, (list, dict)):
+            args[name] = parsed
 
 
 def _join_user_turns(messages: list[dict]) -> None:
@@ -2267,6 +2299,42 @@ def turn_effort(question: str, history: Optional[list], defs: dict) -> tuple[str
     return default, "default"
 
 
+def top_level_effort(level: str, defs: dict) -> Optional[str]:
+    """
+    The level to send IN THE REQUEST's own output_config, or None when the
+    provider reads the per-message marker (effort.top_level, W1.1 2026-09-22).
+    DeepSeek has no `medium` and does not read the marker, so every turn there
+    thought at full strength; on a provider named there the turn's level is
+    sent top-level, in that provider's own name for it.
+    """
+    spec = (defs.get("effort") or {}).get("top_level") or {}
+    name = provider.provider_name()
+    if name not in (spec.get("providers") or []):
+        return None
+    return str(((spec.get("levels") or {}).get(name) or {}).get(level, level))
+
+
+def size_ceiling(effort_kind: str, defs: dict) -> str:
+    """
+    The largest size this message may be answered at (composition.size): read
+    off the effort table's kind for it, so the phrases that decide how hard he
+    thinks decide how large he answers, and the two cannot disagree.
+    """
+    size = req(defs, "composition.size")
+    if effort_kind in (size.get("broad_when_effort_kind") or []):
+        return "broad"
+    if effort_kind in (size.get("remember_when_effort_kind") or []):
+        return "remember"
+    return str(req(size, "ceiling_default"))
+
+
+def size_sentence(ceiling: str, defs: dict) -> str:
+    """The line on the QUESTION saying how large it may be answered — never in the cached prefix."""
+    spec = compose.size_spec(ceiling, defs)
+    return " ".join(str(req(defs, "composition.size.sentence")).split()).format(
+        ceiling=ceiling, means=" ".join(str(spec.get("means") or "").split()))
+
+
 def effort_marker(level: str) -> dict:
     """
     The mid-conversation system message that sets effort for the turn.
@@ -2450,11 +2518,56 @@ def _unreceipted_line(unbacked: list[tuple[str, str, float]]) -> str:
             f"unverified; the board's figures each carry their receipt.")
 
 
-def _forced_caveats(missing: list[dict]) -> str:
-    lines = ["", "", "**Caveats** *(added automatically — these qualify the figures above)*", ""]
-    for n in missing:
-        lines.append(f"- {n.get('message', '').strip()}")
-    return "\n".join(lines)
+def _lede_of(tree: Any, depth: int = 0) -> str:
+    """The page's opening sentence, or '' (the room's `ledeOf`, board.ts)."""
+    if depth > 8 or not isinstance(tree, dict):
+        return ""
+    if isinstance(tree.get("lede"), str):
+        return tree["lede"].strip()
+    for kid in tree.get("children") or []:
+        found = _lede_of(kid, depth + 1)
+        if found:
+            return found
+    return ""
+
+
+def _held_to_size(board: list[dict], size: str, defs: dict) -> list[dict]:
+    """
+    The turn's board with the MACHINE's drawings trimmed to the answer's size
+    (composition.size, W1.1). His own blocks were already held to it by
+    compose; a default is drawn only while the figures on the board are under
+    the bound, so a lookup he composed as one figure is one figure on screen.
+    """
+    bound = compose.size_spec(size, defs).get("max_figures")
+    most = int(req(defs, "composition.max_blocks") if bound is None else bound)
+    mine = [b for b in board if not b.get("default")]
+    room = max(0, most - len(mine))
+    out: list[dict] = []
+    for b in board:
+        if b.get("default"):
+            if room <= 0:
+                continue
+            room -= 1
+        out.append(b)
+    return out
+
+
+def _distinct_notices(notices: list[dict]) -> list[dict]:
+    """
+    Each notice once (W1.1, 2026-09-22). Two reads of one plan raise the same
+    notice twice — the dashboard turn's box listed the negative-stock line of
+    the replenishment plan twice, word for word. Identity is the kind and the
+    reader's line: two notices of one kind that SAY different things are two.
+    """
+    seen: set[tuple[str, str]] = set()
+    out: list[dict] = []
+    for n in notices:
+        key = (str(n.get("kind") or ""), " ".join(str(n.get("message") or "").split()))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(n)
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -3262,11 +3375,26 @@ async def run(
     # request is byte-identical to the one before this card.
     effort_level, effort_kind = turn_effort(question, history, defs)
     marker = None
-    if effort_level != EFFORT and _EFFORT_BETA_OK:
+    # DEEPSEEK READS IT TOP-LEVEL (effort.top_level, W1.1): no marker, no beta
+    # header, and its own name for our level — it has no medium.
+    request_effort = EFFORT
+    top_level = top_level_effort(effort_level, defs)
+    if top_level is not None:
+        effort_level = request_effort = top_level
+    elif effort_level != EFFORT and _EFFORT_BETA_OK:
         marker = effort_marker(effort_level)
         messages.append(marker)
     else:
         effort_level = EFFORT
+    # THE ANSWER IS THE SIZE OF THE QUESTION (composition.size, W1.1): the
+    # largest this message may be answered, read with the effort table's own
+    # phrases. A bound, never a read — it decides nothing he looks at.
+    ceiling = size_ceiling(effort_kind, defs)
+    answer_size = ceiling
+    told_size = (None if effort_kind in (req(defs, "composition.size").get(
+        "not_said_on_effort_kind") or []) else size_sentence(ceiling, defs))
+    if told_size:
+        opening = "\n\n".join([*preamble, told_size, question])
     messages.append({"role": "user", "content": opening})
     pending: list[dict] = []
     seq = 0
@@ -3299,6 +3427,9 @@ async def run(
     # Said once per turn, in the round a compose named the claim and wrote
     # nothing beside it (P6.j).
     finish_asked = False
+    # Which kind of correction the loop just asked for, if any — "write" or
+    # "prose" — so its reply can be told from an answer (W1.1).
+    correction_pending: Optional[str] = None
     # READS THAT RAN, the one thing the convergence cap counts (2026-09-18).
     # It counted every call — compose, record_belief, a pin — so a broad turn
     # of nine reads plus its board and a view met the cap at the edge of the
@@ -3597,7 +3728,7 @@ async def run(
                         }],
                         tools=cached_tools,
                         thinking={"type": "adaptive", "display": "summarized"},
-                        output_config={"effort": EFFORT},
+                        output_config={"effort": request_effort},
                         messages=messages,
                     )
                     if marker is not None:
@@ -3673,6 +3804,8 @@ async def run(
 
                 messages.append({"role": "assistant", "content": final.content})
                 tool_uses = [b for b in final.content if b.type == "tool_use"]
+                for b in tool_uses:
+                    _unstring_arguments(b)
 
             # Prose in an iteration that goes on to call tools is NARRATION,
             # not the answer — "Rockwell is down; let me look at the drivers"
@@ -3719,6 +3852,33 @@ async def run(
                     log.gap("history_marker_echoed", answer[:2000])
                     yield _sse("warning", {"reason": "history_marker_echoed"})
 
+                # A CORRECTION'S REPLY IS NEVER THE ANSWER, OR ITS HEADLINE
+                # (W1.1, 2026-09-22). The dashboard turn's headline was his
+                # reply to a gate — "The caveat needs the magnitude and it
+                # belongs beside the counts it qualifies…" — because whatever
+                # he wrote after a correction became the answer whole. A reply
+                # that does not say the claim he composed is not an answer: the
+                # claim — the few words that ARE the point — leads instead, and
+                # after a write correction his reply stays under it, because
+                # what he says about the write (nothing was pinned) is true.
+                claim_now = (reading_recorded or {}).get("claim")
+                if (correction_pending and claim_now
+                        and not reading.was_said(answer, claim_now)):
+                    log.gap("correction_reply_not_the_answer", answer[:2000])
+                    answer = (f"{claim_now}\n\n{answer}"
+                              if correction_pending == "write" and answer.strip()
+                              else claim_now)
+                    yield _reset_answer("correction_reply_not_the_answer")
+                    kept_prose = ""
+                    yield _sse("text", {"delta": answer})
+                correction_pending = None
+                # A ROUND THAT SETTLED ON ITS LEDE WROTE NOTHING BESIDE IT
+                # (rounds.settle): the headline is the claim, the page says
+                # the rest, and the answer post has words to be stored under.
+                if not answer.strip() and claim_now and _lede_of(arrangement_recorded):
+                    answer = claim_now
+                    yield _sse("text", {"delta": answer})
+
                 # A pin claimed, or promised, but never made. Checked BEFORE the
                 # notice enforcement below, because the remedy may be another
                 # tool call, and because an answer that misreports a write is
@@ -3732,6 +3892,7 @@ async def run(
                     log.gap(f"pin_{claim}_not_made", answer[:2000])
                     yield _sse("warning", {"reason": f"pin_{claim}_not_made"})
                     yield _reset_answer(f"pin_{claim}_not_made")
+                    correction_pending = "write"
                     kept_prose = ""
                     answer = ""
                     messages.append({
@@ -3770,6 +3931,7 @@ async def run(
                     log.gap(f"save_{save}_not_made", answer[:2000])
                     yield _sse("warning", {"reason": f"save_{save}_not_made"})
                     yield _reset_answer(f"save_{save}_not_made")
+                    correction_pending = "write"
                     kept_prose = ""
                     answer = ""
                     messages.append({
@@ -3809,6 +3971,7 @@ async def run(
                     log.gap(f"page_{page_claim}_not_made", answer[:2000])
                     yield _sse("warning", {"reason": f"page_{page_claim}_not_made"})
                     yield _reset_answer(f"page_{page_claim}_not_made")
+                    correction_pending = "write"
                     kept_prose = ""
                     answer = ""
                     messages.append({
@@ -3920,6 +4083,7 @@ async def run(
                         # the only honest version of "deterministic".
                         volunteer_corrections += 1
                         yield _reset_answer("volunteering_over_cap")
+                        correction_pending = "prose"
                         kept_prose = ""
                         answer = ""
                         messages.append({
@@ -4026,6 +4190,7 @@ async def run(
                         # is unchanged where the edit cannot reach.
                         restate_corrections += 1
                         yield _reset_answer(reason)
+                        correction_pending = "prose"
                         kept_prose = ""
                         answer = ""
                         parts: list[str] = []
@@ -4092,6 +4257,11 @@ async def run(
                 # turn. Still over: cut at the sentence that crosses it, and
                 # the run record says so. The slots are measured and drawn
                 # separately, so a cut here can never take a caveat with it.
+                # THE BOUND IS THE ANSWER'S SIZE'S (composition.size, W1.1): a
+                # lookup or a focused answer has no page, so its words ARE the
+                # answer and get the room its size gives them.
+                max_body_words = int(compose.size_spec(answer_size, defs).get("max_words")
+                                     or req(defs, "voice.body.max_words"))
                 body_words = len((answer or "").split())
                 if answer and body_words > max_body_words:
                     if body_edits < max_body_edits:
@@ -4101,6 +4271,7 @@ async def run(
                         yield _sse("warning", {"reason": body_reason, "found": body_words,
                                                "limit": max_body_words, "corrected": "rewrite"})
                         yield _reset_answer(body_reason)
+                        correction_pending = "prose"
                         kept_prose = ""
                         answer = ""
                         messages.append({"role": "user", "content": (
@@ -4205,6 +4376,7 @@ async def run(
                             "detail": "; ".join(t for _s, t, _v in unbacked)[:600],
                         })
                         yield _reset_answer(ground_reason)
+                        correction_pending = "prose"
                         kept_prose = ""
                         answer = ""
                         messages.append({
@@ -4257,40 +4429,26 @@ async def run(
                     on_screen=_drawn_on_the_board(_his(composition_recorded), charted),
                 )
 
-                if missing and corrective_turns < max_corrective:
-                    corrective_turns += 1
-                    names = ", ".join(n.get("kind", "?") for n in missing)
-                    detail = " | ".join(n.get("message", "") for n in missing)
-                    messages.append({
-                        "role": "user",
-                        "content": (
-                            "Your answer does not surface these caveats, which "
-                            f"the tool results require you to state: {names}.\n\n"
-                            f"{detail}\n\n"
-                            "Rewrite the full answer, stating each of them in "
-                            "plain language alongside the figures they qualify."
-                        ),
-                    })
-                    yield _sse("warning", {"reason": "unsurfaced_notice", "kinds": names})
-                    yield _reset_answer("unsurfaced_notice")
-                    kept_prose = ""
-                    answer = ""
-                    continue
-
+                # CHECKS FIX; THEY DO NOT ARGUE (W1.1, 2026-09-22; metrics.yaml
+                # notices.placed_by). A notice he did not carry is PLACED, not
+                # argued for: the room draws every turn notice that says a
+                # figure may be wrong, in its own reader's line, on the object
+                # whose read raised it or above the headline when nothing
+                # draws that read (frontend Room.tsx `turnNotices`). So there
+                # is no "rewrite the full answer" round — the one that put the
+                # gate's own words in the dashboard turn's headline — and
+                # nothing is appended to his prose. What was placed is
+                # recorded, so the rate stays a measured number.
                 if missing:
-                    # The fingerprint may simply have misjudged the wording, so
-                    # the backstop is deterministic: append the notices verbatim
-                    # rather than withhold the answer or trust the check.
                     notice_forced = True
-                    forced = _forced_caveats(missing)
-                    answer += forced
-                    yield _sse("text", {"delta": forced})
-                    for n in missing:
-                        log.gap("notice_forced", n.get("message", "")[:2000],
+                    placed_reason = str(req(defs, "notices.placed_reason"))
+                    for n in _distinct_notices(missing):
+                        log.gap(placed_reason, n.get("message", "")[:2000],
                                 n.get("source"))
                     yield _sse("warning", {
-                        "reason": "notice_forced",
-                        "kinds": ", ".join(n.get("kind", "?") for n in missing),
+                        "reason": placed_reason,
+                        "kinds": ", ".join(dict.fromkeys(
+                            n.get("kind", "?") for n in missing)),
                     })
 
                 # A CLAIM THAT WAS NEVER SAID LIGHTS NOTHING, and the rate is
@@ -4332,6 +4490,49 @@ async def run(
             # since 2026-09-18 neither is a compose, a view or a write. A call
             # asked as one counts once (P2S.10, asked_reads).
             executed = len(asked_reads)
+            # THE SIZE'S BUDGET, IN QUERIES RUN (composition.size, W1.1). A
+            # get_change is one decision and seven reads, and a lookup that
+            # asks for one has asked for seven. `executed_reads` is the queries
+            # that ran, a duplicate served from the record not counted; this
+            # batch is counted as the reads it would become. The turn's first
+            # batch always runs, so a question always gets its read — except a
+            # thing to remember, which reads nothing at all.
+            budget = int(compose.size_spec(answer_size, defs).get("max_queries") or 0)
+            batch_queries = len(_expand_sets(more_reads, defs)) if more_reads else 0
+            if more_reads and (budget == 0 or (executed_reads > 0
+                                               and executed_reads + batch_queries > budget)):
+                size_reason = str(req(defs, "composition.size.warning_reason"))
+                log.gap(size_reason, f"{answer_size}: {executed_reads} queries run, "
+                        f"{batch_queries} more asked, budget {budget}"[:2000])
+                yield _sse("warning", {"reason": size_reason, "size": answer_size,
+                                       "queries": executed_reads, "asked": batch_queries,
+                                       "limit": budget})
+                said_no = " ".join(str(req(defs, "composition.size.budget_refused")).split()).format(
+                    size=answer_size, budget=budget, spent=executed_reads)
+                refused_size = []
+                for b in more_reads:
+                    called_tools.append(b.name)
+                    yield _sse("tool_call", {"seq": seq, "tool": b.name, "arguments": b.input})
+                    payload = {"rows": [], "meta": {"error": said_no}}
+                    log.tool_call(seq, b.name, dict(b.input), payload, 0, said_no)
+                    yield _sse("tool_result", {
+                        "seq": seq, "tool": b.name, "row_count": 0,
+                        "source_table": None, "truncated": False,
+                        "duration_ms": 0, "error": said_no,
+                    })
+                    refused_size.append({"type": "tool_result", "tool_use_id": b.id,
+                                         "content": json.dumps(payload), "is_error": True})
+                    seq += 1
+                size_text = {"type": "text", "text": " ".join(str(req(
+                    defs, "composition.size.budget_text")).split()).format(
+                        size=answer_size, budget=budget, spent=executed_reads)}
+                rest = [b for b in tool_uses if not any(b is r for r in more_reads)]
+                if not rest:
+                    messages.append({"role": "user", "content": refused_size + [size_text]})
+                    continue
+                cap_results, cap_text_pending = refused_size, size_text
+                tool_uses = rest
+                more_reads = []
             if executed >= MAX_TOOL_CALLS and not conceded and more_reads:
                 conceded = True
                 attempted = ", ".join(
@@ -4644,8 +4845,16 @@ async def run(
                         question=question,
                         # HOW HE LAID THE RIGHT-HAND SIDE OUT (P3.p).
                         arrangement=(b.input or {}).get("arrangement"),
+                        # HOW LARGE HE SAYS IT IS, never above what the
+                        # message may be (composition.size, W1.1) — and the
+                        # figures this turn already put, which the bound and
+                        # a {key} in a sentence are both counted against.
+                        size=(b.input or {}).get("size"),
+                        ceiling=ceiling,
+                        own=compose.as_board_objects(turn_board, calls_by_seq),
                     )
                     err = None
+                    answer_size = str((result.get("meta") or {}).get("size") or answer_size)
                 except (ValueError, KeyError, TypeError) as exc:
                     result, err = {"rows": [], "meta": {"error": str(exc)}}, str(exc)
                 ms = int((time.perf_counter() - started) * 1000)
@@ -4666,8 +4875,9 @@ async def run(
                         # FOLDED, NOT REPLACED (P2S.7): the frame carries the
                         # whole board of the turn so far, his edits applied
                         # where they land and nothing already drawn moved.
-                        turn_board = compose.fold(turn_board, result["rows"],
-                                                  first=not his_composed)
+                        turn_board = _held_to_size(
+                            compose.fold(turn_board, result["rows"], first=not his_composed),
+                            answer_size, defs)
                         ever_drawn |= compose.drawn_seqs(turn_board)
                         his_composed = True
                         composition_recorded = list(turn_board)
@@ -4780,6 +4990,9 @@ async def run(
                 # and already announced; adding them again would have the
                 # correction name each caveat twice.
                 found = [] if is_duplicate else _notices_from(capped)
+                # AND A NOTICE ANOTHER READ ALREADY RAISED, SAID THE SAME WAY,
+                # is not raised again (W1.1): one caveat, drawn once.
+                found = _distinct_notices(pending + found)[len(_distinct_notices(pending)):]
                 pending.extend(found)
 
                 # Keep the last meta that describes real data. A refusal's meta
@@ -4963,7 +5176,13 @@ async def run(
             added = default_composition.compose_added(
                 calls_by_seq, drawn=ever_drawn | compose.drawn_seqs(turn_board), defs=defs,
                 board=(desk or {}).get("board"), max_rows=MAX_ROWS_TO_CLIENT,
-                room=int(req(defs, "composition.max_blocks")) - len(turn_board),
+                # THE MACHINE'S DRAWINGS ARE HELD TO THE ANSWER'S SIZE TOO
+                # (composition.size, W1.1): a lookup is one figure whoever drew it.
+                room=min(int(req(defs, "composition.max_blocks")),
+                         int(compose.size_spec(answer_size, defs).get("max_figures")
+                             if compose.size_spec(answer_size, defs).get("max_figures") is not None
+                             else req(defs, "composition.max_blocks")))
+                     - len(turn_board),
                 lead=not turn_board,
             )
             if added:
@@ -5000,8 +5219,11 @@ async def run(
             # matters — never a refusal, so a compose that genuinely has more
             # to place still lands.
             finish = []
+            # A PAGE THAT OPENS WITH ITS LEDE HAS SAID THE ANSWER (rounds.settle,
+            # W1.1): no reminder, and the round below settles on it.
+            opens_with_lede = bool(_lede_of(arrangement_recorded))
             if (tool_uses and all(b.name == COMPOSE_TOOL for b in tool_uses)
-                    and round_stood and round_claimed
+                    and round_stood and round_claimed and not opens_with_lede
                     and not "".join(text_parts).strip() and not finish_asked):
                 finish_asked = True
                 log.gap("compose_without_answer",
@@ -5020,6 +5242,16 @@ async def run(
             # 2026-09-21, and one a sentence of instruction had already failed
             # to prevent twice.
             page_held = False
+            # RECORDED, NOT ARGUED (W1.1, 2026-09-22): with no round left in
+            # the gate (composition.arrangement.gate.max_corrective_turns: 0)
+            # what he left off is logged once and drawn before the plan.
+            if (not page_gate_turns and not max_page_gate and labels
+                    and compose.is_a_document(arrangement_recorded)):
+                off = compose.left_off(arrangement_recorded, turn_board,
+                                       compose.vocabulary(defs))
+                if len(off) >= min_left_off:
+                    page_gate_turns += 1
+                    log.gap("page_left_blocks_off", ", ".join(off)[:2000])
             if (max_page_gate and page_gate_turns < max_page_gate
                     and compose.is_a_document(arrangement_recorded)):
                 off = compose.left_off(arrangement_recorded, turn_board,
@@ -5054,7 +5286,7 @@ async def run(
             # verification/p2s7-gate-2.json. Anything less keeps its round.
             if (tool_uses and all(b.name == COMPOSE_TOOL for b in tool_uses)
                     and round_stood and round_claimed
-                    and "".join(text_parts).strip()
+                    and ("".join(text_parts).strip() or opens_with_lede)
                     # ...and the page he wrote carries the figures he composed.
                     and not page_held):
                 settled = True

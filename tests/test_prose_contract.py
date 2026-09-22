@@ -248,17 +248,22 @@ def test_a_value_a_notice_message_interpolates_is_reader_text_too():
     )
 
 
-def test_the_forced_caveat_carries_the_message_and_never_the_guidance():
+def test_a_placed_notice_carries_the_message_and_never_the_guidance():
     """
-    The path that turned a notice into prose. It appends `message` — so a
-    message is answer text whether or not Bob ever writes it himself.
+    The path that turned a notice into prose — `_forced_caveats`, which
+    appended `message` under his answer — is gone (W1.1, 2026-09-22, DECISIONS
+    "checks fix; they do not argue", reversing "the caveat is said in his own
+    words"). A notice he did not carry is PLACED: the room draws it from the
+    `notice` frame, which carries the reader's `message` and never the model's
+    `guidance`. So a message is still reader text, drawn whole, and this file's
+    scans above still hold it to that.
     """
-    from agent.loop import _forced_caveats
+    import agent.loop as bob_loop
 
-    out = _forced_caveats([{"kind": "k", "message": "The level was never set.",
-                            "guidance": "Populate inventory.warning_stock."}])
-    assert "The level was never set." in out
-    assert "warning_stock" not in out
+    assert not hasattr(bob_loop, "_forced_caveats"), "nothing is appended to his prose"
+    src = (Path(__file__).resolve().parents[1] / "agent" / "loop.py").read_text(encoding="utf-8")
+    assert 'yield _sse("notice", {"kind": n.get("kind"), "message": n.get("message")})' in src
+    assert '"guidance"' not in src[src.index('yield _sse("notice"'):][:200]
 
 
 def test_the_notices_that_needed_guidance_have_it():

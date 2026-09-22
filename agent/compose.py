@@ -448,7 +448,8 @@ _REF = re.compile(r"\{([a-z0-9][a-z0-9_-]*)(?:\.([a-z_]+))?\}")
 
 
 def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
-                 coerced: list[str], blocks: Any = None, board: Any = None) -> Optional[dict]:
+                 coerced: list[str], blocks: Any = None, board: Any = None,
+                 own: Any = None) -> Optional[dict]:
     """
     THE PAGE HE WRITES, validated into a tree the room draws.
 
@@ -497,6 +498,19 @@ def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
         if isinstance(obj, Mapping) and isinstance(obj.get("key"), str):
             kinds[obj["key"]] = obj.get("kind")
     known = set(keys) | set(kinds)
+    # A FIGURE IN A SENTENCE IS THIS TURN'S (W1.1, 2026-09-22). `{key}` named
+    # anything on the board, the earlier turns' included, so a page could
+    # borrow a figure an earlier answer read — and after a reload, when the
+    # board had moved on, draw a dash where the number was. A reference
+    # resolves only against the blocks of THIS turn: this call's and the ones
+    # its earlier composes put. `own` None keeps the old reading, for a caller
+    # that has no turn.
+    ref_kinds: dict[str, Any] = dict(kinds)
+    if own is not None:
+        ref_kinds = {}
+        for obj in list(own or []) + list(blocks or []):
+            if isinstance(obj, Mapping) and isinstance(obj.get("key"), str):
+                ref_kinds[obj["key"]] = obj.get("kind")
     refs = spec.get("refs") or {}
     ref_parts = set(refs.get("parts") or [])
     ref_kind = str(refs.get("of_kind") or "figure")
@@ -526,8 +540,8 @@ def _arrangement(tree: Any, voc: Mapping[str, Any], keys: list[str],
             return None
         for m in _REF.finditer(said):
             key, part = m.group(1), m.group(2)
-            if key not in known or kinds.get(key) != ref_kind:
-                coerced.append(f"{path}: {{{key}}} names no `{ref_kind}` block of this composition, "
+            if key not in ref_kinds or ref_kinds.get(key) != ref_kind:
+                coerced.append(f"{path}: {{{key}}} names no `{ref_kind}` block of this turn, "
                                f"so the line was left out — compose the figure, then point at it")
                 return None
             if part and part not in ref_parts:
@@ -1473,17 +1487,101 @@ def validate(
     return accepted, rejected
 
 
-def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: Any = None, *,
+def req_size(defs: Mapping[str, Any], key: str) -> Any:
+    """A key of metrics.yaml composition.size, which every size rule reads."""
+    return ((defs.get("composition") or {}).get("size") or {})[key]
+
+
+def size_order(defs: Mapping[str, Any]) -> list[str]:
+    """The sizes, smallest first (composition.size.order)."""
+    return [str(k) for k in req_size(defs, "order")]
+
+
+def size_spec(size: Optional[str], defs: Mapping[str, Any]) -> dict:
+    """One size's bounds, with its nulls read from where they live."""
+    spec = dict((req_size(defs, "kinds") or {}).get(size) or {})
+    if spec and spec.get("max_words") is None:
+        spec["max_words"] = int(((defs.get("voice") or {}).get("body") or {}).get("max_words") or 40)
+    return spec
+
+
+def resolve_size(declared: Any, ceiling: Optional[str], defs: Mapping[str, Any],
+                 coerced: Optional[list[str]] = None) -> str:
+    """
+    The size an answer is held to: what he declared, never above the ceiling
+    the message arrived with. Nothing declared is the ceiling itself; no
+    ceiling (a caller with no question) is the largest size, the old behaviour.
+    """
+    order = size_order(defs)
+    top = ceiling if ceiling in order else order[-1]
+    said = declared if isinstance(declared, str) and declared in order else None
+    if said is None:
+        return top
+    if order.index(said) > order.index(top):
+        if coerced is not None:
+            coerced.append(" ".join(str(req_size(defs, "brought_down")).split())
+                           .format(ceiling=top))
+        return top
+    return said
+
+
+def _is_figure(edit: Mapping[str, Any], voc: Mapping[str, Any]) -> bool:
+    """Whether an edit puts a drawing of a read on screen (a mark or a composed shape)."""
+    if edit.get("op", "put") in ("drop", "quiet"):
+        return False
+    if edit.get("spec") is not None or edit.get("kind") == voc.get("composed_kind"):
+        return True
+    return edit.get("kind") in _mark_kinds(voc) or (
+        edit.get("op") == "change" and edit.get("seq") is not None)
+
+
+def hold_to_size(accepted: list[dict], size: str, defs: Mapping[str, Any],
+                 own: Any = None) -> tuple[list[dict], list[dict]]:
+    """
+    The figures past the size's bound, REFUSED like any other over-bound
+    block (composition.size). Counted over the TURN: the figures an earlier
+    compose of this turn already put count, and a key that changes one of
+    them is not a new one.
+    """
+    voc = vocabulary(defs)
+    spec = size_spec(size, defs)
+    if spec.get("max_figures") is None:
+        # The page's own bounds hold it (composition.max_blocks, refs.max_in_words).
+        return list(accepted), []
+    most = int(spec["max_figures"])
+    have = {o.get("key") for o in (own or [])
+            if isinstance(o, Mapping) and _is_figure({"op": "put", **o}, voc)}
+    kept: list[dict] = []
+    refused: list[dict] = []
+    why = " ".join(str(req_size(defs, "refused")).split())
+    for edit in accepted:
+        key = edit.get("key")
+        if _is_figure(edit, voc) and key not in have:
+            if len(have) >= most:
+                refused.append({"block": edit, "reason": why.format(
+                    figures=most, size=size,
+                    means=" ".join(str(spec.get("means") or "").split()))})
+                continue
+            have.add(key)
+        kept.append(edit)
+    return kept, refused
+
+
+def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: Any = None,
+            size: Any = None, *,
             calls: Mapping[int, Mapping[str, Any]],
             defs: Mapping[str, Any], board: Any = None,
-            question: Optional[str] = None) -> dict:
+            question: Optional[str] = None,
+            ceiling: Optional[str] = None,
+            own: Any = None) -> dict:
     """
-    Compose the workspace: say which of the results you read the person sees, as which kind of object, at what weight — say the reading in its three slots, and offer what to do about a row. Call it AS YOU GO, in the same batch as your next reads, drawing what the reads so far found: a later call adds new keys and changes known ones where they stand, and nothing you do not name moves. The reading settles in your last call. Nothing here is a figure: every number is drawn from the read a block names.
+    Compose the answer: say which of the results you read the person sees, as which kind of object, at what weight — say the reading in its three slots, and offer what to do about a row. Call it ONCE, when the reads are in: a later call adds new keys and changes known ones where they stand, and nothing you do not name moves. Nothing here is a figure: every number is drawn from the read a block names.
 
     Args:
         blocks: the blocks on screen, in order. Each names a kind, a short key, a weight, the read (seq) it draws, a claim — the few words saying what it says — and a thought: one or two sentences of what you think it shows, drawn beside it as you go through it together.
         reading: what you are about to say, in three slots — {"claim": the few words that ARE the point, said again word for word in your answer; "caveat": what qualifies these figures, drawn whole above them; "next": one sentence, drawn last — what you would do, or what no read can settle, never a read you could have made} — and "asks": two or three short questions they might ask you next, drawn under your headline to tap — to steer, challenge, decide or act, never one this answer already settles. Optional; a confirmation needs none.
         actions: what to do about ONE ROW, offered where that row is drawn — [{"act": what the surface does, "seq": the read, "target": the row's own value, "reason": why this one, in your words}]. Optional. You never say what it costs: that is derived from the act.
+        size: how large this answer is — lookup, focused or broad (remember, for a thing to keep) — at or under the size the question arrived with. A lookup is a sentence and one figure; focused, a short answer and two or three figures, the page offered; broad, the page.
         arrangement: how the right-hand side is LAID OUT for this answer — one arrangement of the blocks you just put, so the space is used the way this answer needs rather than packed for you. LAY IT OUT ONCE: the arrangement you give STANDS for the rest of the turn, exactly as a block you do not mention stays where it is. A later call in the same turn sends this again only to CHANGE the layout — otherwise send the blocks that moved and leave this out. Optional; left out with none given yet, it is packed.
 
     Returns:
@@ -1494,6 +1592,15 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: 
     coerced: list[str] = []
     accepted, rejected = validate(blocks, calls, defs, board=board, coerced=coerced,
                                   question=question, arrangement=arrangement)
+    # THE ANSWER IS THE SIZE OF THE QUESTION (composition.size, W1.1).
+    answer_size = resolve_size(size, ceiling, defs, coerced)
+    accepted, over = hold_to_size(accepted, answer_size, defs, own)
+    rejected.extend(over)
+    if arrangement is not None and not size_spec(answer_size, defs).get("page"):
+        spec = size_spec(answer_size, defs)
+        coerced.append(" ".join(str(req_size(defs, "page_left_out")).split()).format(
+            size=answer_size, means=" ".join(str(spec.get("means") or "").split())))
+        arrangement = None
     # ONE CALL, TWO STATEMENTS (P1.a, 2026-09-13; the second one swapped in
     # P1.f). The board and the reading are said at the same moment, about the
     # same turn, and neither reads anything. Splitting them across two tools
@@ -1516,7 +1623,7 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: 
     # reach a figure — so it is coerced to the last and never refuses the
     # composition.
     laid_out = _arrangement(arrangement, vocabulary(defs), [e["key"] for e in accepted], coerced,
-                            blocks=accepted, board=board)
+                            blocks=accepted, board=board, own=own)
 
     said, said_rejected = ({}, [])
     if reading is not None:
@@ -1526,6 +1633,15 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: 
         # the same rows, the same meta, no second source of truth.
         said, said_rejected = _reading.validate(
             reading, defs, _reading.returned_numbers(calls.values()), coerced)
+    # THE PAGE IS OFFERED, NOT MADE (composition.size.kinds.focused.offer): the
+    # offer's words are a broad phrase, so tapping it is a broad question.
+    offer = size_spec(answer_size, defs).get("offer")
+    voc_now = vocabulary(defs)
+    if offer and any(_is_figure(e, voc_now) for e in accepted):
+        said = dict(said)
+        asks = [a for a in (said.get(_reading.ASKS) or []) if a != offer]
+        most = int(((_reading._reading(defs).get(_reading.ASKS) or {}).get("max_items")) or 3)
+        said[_reading.ASKS] = [offer, *asks][:max(1, most)]
     return {
         "rows": accepted,
         "meta": {
@@ -1538,6 +1654,8 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: 
             # HOW IT IS LAID OUT, or absent — and absent is the page packed for
             # him, which is every board composed before this existed.
             "arrangement": laid_out,
+            # THE SIZE THIS ANSWER IS HELD TO (composition.size).
+            "size": answer_size,
             # What was ADJUSTED rather than refused: a discriminator renamed, a
             # second lead demoted, a subject taken from the read's own scope.
             # Named because the model has to describe the board it actually
