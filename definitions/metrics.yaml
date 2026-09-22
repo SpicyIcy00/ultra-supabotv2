@@ -8493,8 +8493,12 @@ composition:
   # dropping one changes nothing drawn. The names below are the attempt the
   # refusal exists to stop — typing a figure, a colour or a size onto a block —
   # and they stay refused so the boundary is still taught.
+  # `size` left this list 2026-09-22: compose itself takes the answer's size
+  # (composition.size, W1.1), and a block carrying it is that word misplaced,
+  # not an attempt to draw — it cost a broad turn a whole round. It is dropped
+  # like any unknown field; width and height still refuse.
   refused_fields: [value, values, number, figure, figures, total, sum, count,
-                   colour, color, width, height, size, title, text, type]
+                   colour, color, width, height, title, text, type]
 
   # WHAT TO DO ABOUT IT, ON THE ROW IT IS ABOUT (P2.d, 2026-09-15).
   #

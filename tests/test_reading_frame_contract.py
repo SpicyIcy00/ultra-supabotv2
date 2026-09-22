@@ -448,8 +448,10 @@ def test_a_refused_slot_is_named_and_the_rest_stand(monkeypatch):
 def test_a_later_reading_replaces_an_earlier_one(monkeypatch):
     frames, _ = _drive(monkeypatch, [
         [_ToolUse("tu-1", "get_sales", SALES)],
-        [_ToolUse("tu-2", bob_loop.COMPOSE_TOOL, {"reading": {"claim": "one thing"}})],
-        [_ToolUse("tu-3", bob_loop.COMPOSE_TOOL, {"reading": {"claim": "another thing"}})],
+        # One round since 2026-09-22: a round that names its claim settles on
+        # it, so the second compose rides in the same round as the first.
+        [_ToolUse("tu-2", bob_loop.COMPOSE_TOOL, {"reading": {"claim": "one thing"}}),
+         _ToolUse("tu-3", bob_loop.COMPOSE_TOOL, {"reading": {"claim": "another thing"}})],
         [_TextBlock("Rockwell fell against the week before.")],
     ])
     first, second = _frames_of(frames, "reading")

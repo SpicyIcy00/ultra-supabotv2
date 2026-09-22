@@ -151,8 +151,18 @@ def test_a_round_that_composes_names_the_claim_and_writes_is_the_answer(monkeypa
     assert frames_of(frames, "error") == []
 
 
+def test_a_round_that_names_the_claim_with_no_words_beside_it_settles_on_the_claim(monkeypatch):
+    # 2026-09-22 (finishing W1.3): the claim is his words, so it is the answer.
+    frames, requests, _ = _drive(monkeypatch, [
+        [_ToolUse("r1", "get_sales", SALES)],
+        [_ToolUse("c1", "compose", _compose())],
+        [_TextBlock(ANSWER)],
+    ])
+    assert len(requests) == 2
+    assert frames_of(frames, "done")[0]["rounds_saved"] == 1
+
+
 @pytest.mark.parametrize("second", [
-    pytest.param([_ToolUse("c1", "compose", _compose())], id="no words beside it"),
     pytest.param([_TextBlock(ANSWER), _ToolUse("c1", "compose", _compose(claim=False))],
                  id="no claim named"),
     pytest.param([_TextBlock(ANSWER), _ToolUse("c1", "compose", _compose(seq=9))],

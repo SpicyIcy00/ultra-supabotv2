@@ -261,13 +261,15 @@ def test_a_compose_in_the_same_batch_as_a_refused_read_still_runs(monkeypatch):
 # 7. A compose that names the claim and says nothing is asked to finish
 # ---------------------------------------------------------------------------
 
-def test_a_compose_that_names_the_claim_and_says_nothing_is_asked_to_finish(monkeypatch):
+def test_a_compose_that_names_the_claim_and_says_nothing_settles_on_the_claim(monkeypatch):
     """
     2026-09-21, the first live page: three composes-only rounds, each naming
     the same claim, each writing nothing beside it, and the answer in a fourth
-    round — 53.9 s, 24.6 s and 26.6 s of the 156 the owner waited. The settle
-    rule already ends the turn on a composes-only round that names the claim
-    WITH his words; this is the reminder when the words are missing, once.
+    round — 53.9 s, 24.6 s and 26.6 s of the 156 the owner waited. That got a
+    reminder, once. REVERSED 2026-09-22 (finishing W1.3; checks fix, they do
+    not argue): the claim is his own words, so the round settles on it and
+    code puts it where the answer goes — no reminder, no further round. It was
+    the one round standing between a broad answer and two rounds.
     """
     writes: list = []
     frames, requests = _drive(monkeypatch, [
@@ -284,8 +286,8 @@ def test_a_compose_that_names_the_claim_and_says_nothing_is_asked_to_finish(monk
     said = [b["text"] for m in requests[-1]["messages"]
             if m["role"] == "user" and isinstance(m["content"], list)
             for b in m["content"] if b.get("type") == "text"]
-    # Once per turn, and never a refusal: the compose itself stood.
-    assert len([t for t in said if "Write the answer NOW" in t]) == 1, said
+    assert not [t for t in said if "Write the answer NOW" in t], said
+    assert len(requests) == 2, "a round was bought to write what the claim already says"
     composed = [f for f in frames_of(frames, "compose") if not f.get("default")]
     assert composed and "a" in [b["key"] for b in composed[-1]["blocks"]]
     assert frames_of(frames, "done")[0]["status"] == "ok"

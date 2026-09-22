@@ -3917,10 +3917,13 @@ async def run(
                     yield _reset_answer("correction_reply_not_the_answer")
                     kept_prose = ""
                     yield _sse("text", {"delta": answer})
-                # A ROUND THAT SETTLED ON ITS LEDE WROTE NOTHING BESIDE IT
+                # A ROUND THAT SETTLED ON ITS CLAIM WROTE NOTHING BESIDE IT
                 # (rounds.settle): the headline is the claim, the page says
                 # the rest, and the answer post has words to be stored under.
-                if not answer.strip() and claim_now and _lede_of(arrangement_recorded):
+                # Since 2026-09-22 (finishing W1.3) with or without a lede:
+                # the claim is his own words, so code puts it where the answer
+                # goes instead of buying a round to have him write it.
+                if not answer.strip() and claim_now:
                     answer = claim_now
                     yield _sse("text", {"delta": answer})
 
@@ -5281,9 +5284,13 @@ async def run(
             # A PAGE THAT OPENS WITH ITS LEDE HAS SAID THE ANSWER (rounds.settle,
             # W1.1): no reminder, and the round below settles on it.
             opens_with_lede = bool(_lede_of(arrangement_recorded))
+            # Since 2026-09-22 a round that named its claim settles on it
+            # (below), so the reminder is only for a claim with nothing that
+            # could stand as the answer — which, with round_claimed, is none.
             if (tool_uses and all(b.name == COMPOSE_TOOL for b in tool_uses)
                     and round_stood and round_claimed and not opens_with_lede
-                    and not "".join(text_parts).strip() and not finish_asked):
+                    and not "".join(text_parts).strip() and not finish_asked
+                    and not str((reading_recorded or {}).get("claim") or "").strip()):
                 finish_asked = True
                 log.gap("compose_without_answer",
                         str((reading_recorded or {}).get("claim") or question)[:2000])
@@ -5345,7 +5352,6 @@ async def run(
             # verification/p2s7-gate-2.json. Anything less keeps its round.
             if (tool_uses and all(b.name == COMPOSE_TOOL for b in tool_uses)
                     and round_stood and round_claimed
-                    and ("".join(text_parts).strip() or opens_with_lede)
                     # ...and the page he wrote carries the figures he composed.
                     and not page_held):
                 settled = True
