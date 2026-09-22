@@ -35,6 +35,8 @@ version that produced it.
 
 from __future__ import annotations
 
+import json
+
 import uuid
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
@@ -116,6 +118,58 @@ class SavedVersion:
     workflow: BobWorkflow
     version: BobWorkflowVersion
     created: bool  # True when the workflow itself was new
+    # False when the steps and parameters were identical to the current
+    # version, which is then returned rather than duplicated (W1.2: "every
+    # Monday" on a saved workflow re-saves it to attach a slot, and nothing
+    # about the rule changed).
+    new_version: bool = True
+
+
+def same_rule(version: Optional[BobWorkflowVersion], steps: list[dict],
+              parameters: list[dict]) -> bool:
+    """
+    Whether validated steps and parameters are the version's own, exactly.
+    Compared as canonical JSON so key order is not a difference. Pure.
+    """
+    if version is None:
+        return False
+
+    def canon(x: Any) -> str:
+        return json.dumps(x or [], sort_keys=True, default=str)
+
+    return canon(version.steps) == canon(steps) and canon(version.parameters) == canon(parameters)
+
+
+def same_slot(schedule: Any, *, kind: str, hour: int, minute: int,
+              days_of_week: Optional[list[int]], day_of_month: Optional[int]) -> bool:
+    """Whether a schedule row already fires at exactly this slot. Pure."""
+    return (schedule.kind == kind and schedule.hour == hour
+            and (schedule.minute or 0) == (minute or 0)
+            and sorted(schedule.days_of_week or []) == sorted(days_of_week or [])
+            and (schedule.day_of_month or None) == (day_of_month or None))
+
+
+def delivery_for(defs: dict, telegram_chat_ids: Optional[list[str]]) -> dict:
+    """
+    Where a schedule's runs go (workflows.schedule.delivery). The ROOM is
+    always a delivery when the definitions list it — every scheduled run is
+    posted to the river — and Telegram is added when chat ids are given.
+    With neither, a schedule is refused: a run nobody receives is
+    indistinguishable from one that never happened. Pure.
+    """
+    kinds = list(_req(defs, "workflows.schedule.delivery"))
+    chats = [str(c) for c in (telegram_chat_ids or []) if str(c).strip()]
+    channels = []
+    if "room" in kinds:
+        channels.append("room")
+    if "telegram" in kinds and chats:
+        channels.append("telegram")
+    if not channels:
+        raise WorkflowValidationError(
+            "A schedule needs somewhere to deliver to. A run nobody receives is "
+            "indistinguishable from one that never happened."
+        )
+    return {"channels": channels, "telegram_chat_ids": chats}
 
 
 # ---------------------------------------------------------------------------
@@ -255,6 +309,18 @@ async def save_workflow(
         check_permission(defs, "edit", username=username, role=role,
                          created_by=existing.created_by)
         workflow = existing
+        # THE SAME RULE SAVED AGAIN IS THE SAME VERSION. Nothing about the
+        # logic changed, so there is nothing new to backtest or promote.
+        if workflow.current_version_id is not None:
+            current = (
+                await db.execute(
+                    select(BobWorkflowVersion)
+                    .where(BobWorkflowVersion.id == workflow.current_version_id)
+                )
+            ).scalar_one_or_none()
+            if same_rule(current, validated, params):
+                return SavedVersion(workflow=workflow, version=current, created=False,
+                                    new_version=False)
         number = (
             await db.execute(
                 select(func.coalesce(func.max(BobWorkflowVersion.version), 0))
@@ -690,13 +756,23 @@ async def create_schedule(
     if not isinstance(minute, int) or not 0 <= minute <= 59:
         raise WorkflowValidationError("minute must be between 0 and 59.")
 
-    delivery_kinds = _req(defs, "workflows.schedule.delivery")
-    chats = list(telegram_chat_ids or [])
-    if "telegram" in delivery_kinds and not chats:
-        raise WorkflowValidationError(
-            "A schedule needs somewhere to deliver to. A run nobody receives is "
-            "indistinguishable from one that never happened."
+    chats = delivery_for(defs, telegram_chat_ids)["telegram_chat_ids"]
+
+    # THE SAME SLOT ASKED FOR AGAIN IS THE SLOT IT HAS (W1.2). Every change to
+    # a built system re-saves it, and "every Monday" came along each time: the
+    # build eval of 2026-09-22 left four Monday 07:00 slots on one workflow,
+    # all off, and "the duplicate weekly slots need a person". The existing
+    # one is returned untouched — it keeps the version it pins (rule 8).
+    existing = (
+        await db.execute(
+            select(BobWorkflowSchedule)
+            .where(BobWorkflowSchedule.workflow_id == workflow.id)
         )
+    ).scalars().all()
+    for row in existing:
+        if same_slot(row, kind=kind, hour=hour, minute=minute,
+                     days_of_week=days_of_week, day_of_month=day_of_month):
+            return row
 
     # Bindings are resolved now so a schedule cannot be created against a
     # parameter that does not exist, or a value the tools would reject.

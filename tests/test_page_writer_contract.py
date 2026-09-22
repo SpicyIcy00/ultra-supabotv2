@@ -280,9 +280,11 @@ def test_the_operation_vocabulary_is_closed_and_shared():
         "rename", "set_purpose", "add", "add_existing", "remove", "move_to_page", "place",
         # P2S.3(g): "make that one a pie" — a pin's call redrawn as another shape.
         "draw",
+        # W1.2: "use 30-day velocity" changes the analysis where it stands.
+        "change",
     }
     for op in ("rename", "set_purpose", "add", "remove", "move", "place", "create", "delete",
-               "draw"):
+               "draw", "change"):
         assert op in PAGE_OPERATIONS
 
 

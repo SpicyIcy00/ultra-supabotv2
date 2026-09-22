@@ -670,6 +670,11 @@ async def view_memory(*, ctx: WriteContext) -> dict:
     landed since; re-read before leaning on it, and say that you did. A stored
     view never carries a figure, so nothing here can be quoted as a number.
 
+    "WHAT DO YOU REMEMBER about Rockwell?" is this read, alone: answer from
+    its rows in a few lines, what you were told apart from what you
+    concluded. Write nothing — record_belief refuses those words — and read
+    the data only if they ask whether it still holds.
+
     Returns:
         {"rows": [...], "meta": {...}}. One row per view that still stands, with
         its subject, its stance, what you think, when you first held it and when

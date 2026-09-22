@@ -120,6 +120,7 @@ from app.services.workflow_writer import (
     WorkflowNotFound,
     WorkflowQuotaError,
     create_schedule,
+    delivery_for,
     run_named_workflow,
     save_workflow as save_workflow_row,
 )
@@ -1814,6 +1815,13 @@ class _WorkflowWriter:
                         "days_of_week": schedule.days_of_week,
                         "day_of_month": schedule.day_of_month,
                         "enabled": schedule.enabled,
+                        # Where its runs go (workflows.schedule.delivery): the
+                        # room always, Telegram when chats were named.
+                        "delivered_to": [
+                            _req(_load_defs(), "workflows.schedule.room_delivery_label")
+                            if c == "room" else "Telegram"
+                            for c in delivery_for(_load_defs(), schedule.telegram_chat_ids)["channels"]
+                        ],
                     }
 
                 await session.commit()
@@ -1841,6 +1849,7 @@ class _WorkflowWriter:
                 # act by an administrator, against a backtest.
                 "awaiting_promotion": saved.version.promoted_at is None,
                 "queue_name": _req(_load_defs(), "workflows.promotion.queue_name"),
+                "new_version": saved.new_version,
             }
 
 def _workflow_runner(username: str, role: str):

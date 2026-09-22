@@ -145,7 +145,8 @@ async def run_due_schedule(db: AsyncSession, schedule: BobWorkflowSchedule,
             workflow_name=workflow.name, version=version.version,
             slot=slot, reason=reason,
         )
-        delivery = await _deliver(schedule.telegram_chat_ids or [], messages)
+        chats = schedule.telegram_chat_ids or []
+        delivery = await _deliver(chats, messages) if chats else room_delivery()
         outcome = {
             "status": "failed", "mode": "scheduled", "as_of": None,
             "bindings": schedule.bindings or {}, "steps": [],
@@ -182,23 +183,35 @@ async def run_due_schedule(db: AsyncSession, schedule: BobWorkflowSchedule,
     messages = workflow_telegram.render(
         outcome, workflow_name=workflow.name, version=version.version, slot=slot
     )
-    delivery = await _deliver(schedule.telegram_chat_ids or [], messages)
+    chats = schedule.telegram_chat_ids or []
+    delivery = await _deliver(chats, messages) if chats else room_delivery()
 
     run = await record_run(
         db, workflow=workflow, version=version, outcome=outcome,
         mode="scheduled", requested_by=schedule.created_by,
         schedule_id=schedule.id, started_at=started, delivery=delivery,
     )
-    await _post_run(db, run, workflow, version, outcome, slot)
+    posted = await _post_run(db, run, workflow, version, outcome, slot)
     schedule.last_run_at = datetime.now(timezone.utc)
     schedule.last_status = outcome["status"]
-    schedule.last_error = None if delivery["ok"] else "delivery failed"
+    # With no chat, the post IS the delivery: one that failed is a delivery
+    # that failed, said on the schedule rather than lost.
+    delivered = delivery["ok"] if chats else posted
+    schedule.last_error = None if delivered else "delivery failed"
     await db.flush()
     return outcome["status"]
 
 
+def room_delivery() -> dict:
+    """
+    A run delivered to the room only (workflows.schedule.delivery, W1.2): the
+    river post _post_run makes is where it is read. Pure.
+    """
+    return {"ok": True, "channel": "room", "sent": 0, "results": []}
+
+
 async def _post_run(db, run, workflow, version, outcome: dict,
-                    slot: datetime) -> None:
+                    slot: datetime) -> bool:
     """
     The run in the river, beside the Telegram message rather than instead of it.
 
@@ -216,9 +229,11 @@ async def _post_run(db, run, workflow, version, outcome: dict,
             db, run_id=run.id, workflow_name=workflow.name,
             version=version.version, outcome=outcome, slot=slot,
         )
+        return True
     except Exception as exc:  # noqa: BLE001 - a post must not cost a run
         print(f"[workflows] river post failed for run {run.id}: "
               f"{type(exc).__name__}: {exc}")
+        return False
 
 
 async def _deliver(chat_ids: list[str], messages: list[str]) -> dict:
