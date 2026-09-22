@@ -111,7 +111,12 @@ class World:
                     delivery = ww.delivery_for(load_defs(), spec.schedule.get("telegram_chat_ids"))
                     described = {**spec.schedule, "enabled": False,
                                  "delivered_to": delivery["channels"]}
-                    world.schedules.append({"workflow": spec.name, **described})
+                    # the same slot asked again is the slot it has (create_schedule)
+                    if not any(s["workflow"] == spec.name
+                               and s.get("hour") == described.get("hour")
+                               and s.get("days_of_week") == described.get("days_of_week")
+                               for s in world.schedules):
+                        world.schedules.append({"workflow": spec.name, **described})
                 return {"workflow_id": spec.name, "name": spec.name,
                         "version": versions[-1]["version"], "created_by": "eval",
                         "created_at": _now(), "schedule": described,

@@ -264,6 +264,18 @@ def test_every_monday_on_a_workflow_takes_the_default_hour_and_is_weekly():
     assert row["hour_defaulted"] is True and row["new_version"] is False
 
 
+def test_the_same_slot_asked_again_is_the_slot_it_has():
+    """The build eval left four Monday 07:00 slots on one workflow."""
+    class Row:
+        kind, hour, minute, days_of_week, day_of_month = "weekly", 7, 0, [0], None
+    assert workflow_writer.same_slot(Row(), kind="weekly", hour=7, minute=0,
+                                     days_of_week=[0], day_of_month=None)
+    assert not workflow_writer.same_slot(Row(), kind="weekly", hour=9, minute=0,
+                                         days_of_week=[0], day_of_month=None)
+    assert not workflow_writer.same_slot(Row(), kind="weekly", hour=7, minute=0,
+                                         days_of_week=[0, 3], day_of_month=None)
+
+
 class _Version:
     def __init__(self, steps, parameters):
         self.steps, self.parameters = steps, parameters

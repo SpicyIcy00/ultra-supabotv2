@@ -140,6 +140,15 @@ def same_rule(version: Optional[BobWorkflowVersion], steps: list[dict],
     return canon(version.steps) == canon(steps) and canon(version.parameters) == canon(parameters)
 
 
+def same_slot(schedule: Any, *, kind: str, hour: int, minute: int,
+              days_of_week: Optional[list[int]], day_of_month: Optional[int]) -> bool:
+    """Whether a schedule row already fires at exactly this slot. Pure."""
+    return (schedule.kind == kind and schedule.hour == hour
+            and (schedule.minute or 0) == (minute or 0)
+            and sorted(schedule.days_of_week or []) == sorted(days_of_week or [])
+            and (schedule.day_of_month or None) == (day_of_month or None))
+
+
 def delivery_for(defs: dict, telegram_chat_ids: Optional[list[str]]) -> dict:
     """
     Where a schedule's runs go (workflows.schedule.delivery). The ROOM is
@@ -748,6 +757,22 @@ async def create_schedule(
         raise WorkflowValidationError("minute must be between 0 and 59.")
 
     chats = delivery_for(defs, telegram_chat_ids)["telegram_chat_ids"]
+
+    # THE SAME SLOT ASKED FOR AGAIN IS THE SLOT IT HAS (W1.2). Every change to
+    # a built system re-saves it, and "every Monday" came along each time: the
+    # build eval of 2026-09-22 left four Monday 07:00 slots on one workflow,
+    # all off, and "the duplicate weekly slots need a person". The existing
+    # one is returned untouched — it keeps the version it pins (rule 8).
+    existing = (
+        await db.execute(
+            select(BobWorkflowSchedule)
+            .where(BobWorkflowSchedule.workflow_id == workflow.id)
+        )
+    ).scalars().all()
+    for row in existing:
+        if same_slot(row, kind=kind, hour=hour, minute=minute,
+                     days_of_week=days_of_week, day_of_month=day_of_month):
+            return row
 
     # Bindings are resolved now so a schedule cannot be created against a
     # parameter that does not exist, or a value the tools would reject.
