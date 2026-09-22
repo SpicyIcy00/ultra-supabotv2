@@ -128,6 +128,9 @@ app.include_router(bob.router, prefix=f"{settings.API_V1_PREFIX}/bob", tags=["bo
 app.include_router(bob_pins.router, prefix=f"{settings.API_V1_PREFIX}/bob/pins", tags=["bob-pins"])
 app.include_router(bob_pages.router, prefix=f"{settings.API_V1_PREFIX}/bob/pages", tags=["bob-pages"])
 app.include_router(bob_workflows.router, prefix=f"{settings.API_V1_PREFIX}/bob/workflows", tags=["bob-workflows"])
+# W2.2: what reaches the approver, who that is, and the queue.
+from app.api.v1.routes import bob_authority  # noqa: E402
+app.include_router(bob_authority.router, prefix=f"{settings.API_V1_PREFIX}/bob/authority", tags=["bob-authority"])
 # THE OLD PATHS STAY AS ALIASES (the rename, 2026-09-19): Vercel and Railway
 # deploy minutes apart, and a front end still calling /george must keep
 # working until both have swapped. Same routers, second mount, nothing else.

@@ -78,6 +78,7 @@ from app.services import watches as watches_service
 from app.services.watches import WatchRefused as WatchServiceRefused
 from app.services.standing_questions import StandingRefused as StandingServiceRefused
 from app.services import self_reader
+from app.api.v1.routes.bob_authority import authority_writer as _authority_writer
 from app.services.bob_recall import as_block, recent_figures
 from app.services.river import (
     DEFAULT_LIMIT as RIVER_LIMIT,
@@ -2530,7 +2531,8 @@ async def _safe_stream(question: str, user_id: Optional[str],
                        standing_writer=None,
                        watch_writer=None,
                        desk: Optional[dict] = None,
-                       bound_settings: Optional[dict] = None) -> AsyncIterator[str]:
+                       bound_settings: Optional[dict] = None,
+                       authority=None) -> AsyncIterator[str]:
     """
     Wrap the loop so a crash still closes the stream cleanly.
 
@@ -2563,6 +2565,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
             watch_writer=watch_writer,
             desk=desk,
             bound_settings=bound_settings,
+            authority=authority,
         ):
             yield frame
     except Exception as exc:  # noqa: BLE001
@@ -2705,6 +2708,9 @@ async def ask(
                 uuid.UUID(page_scope["page_id"])
                 if page_scope and page_scope.get("page_id") else None,
             ),
+            # Always (W2.2): anybody signed in may put a draft through the
+            # line; the service decides who may approve or move the line.
+            authority=_authority_writer(user.username, user.role),
         ),
         media_type="text/event-stream",
         headers={

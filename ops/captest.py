@@ -103,6 +103,10 @@ async def turn(question, history, thread):
         watch_writer=route._watch_writer(USER),
         desk=None, bound_settings=bound or None,
         page_writer=route._PageWriter(USER, None),
+        # W2.2: the line and the queue, as the route injects them. The test
+        # user is linked to nobody, so it submits as a requester and any
+        # change to the line is refused — as it would be for anyone not Joy.
+        authority=route._authority_writer(USER, ROLE),
     )
     t0 = time.monotonic()
     rec = {"q": question, "calls": [], "errors": [], "warnings": [], "events": [],

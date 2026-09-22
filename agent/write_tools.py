@@ -284,6 +284,37 @@ class WatchWriter(Protocol):
     async def apply(self, action: str, fields: dict[str, Any]) -> dict: ...
 
 
+class AuthorityRefused(ValueError):
+    """
+    A draft cannot be put through the line, or the line cannot be changed, as
+    asked — and the message says why: not a draft read, a read that never ran,
+    a line outside its bounds, a person who is not the approver. A ValueError
+    like every refusal here, so the loop turns it into a real answer.
+    """
+
+
+class AuthorityWriter(Protocol):
+    """
+    Puts drafts through the line, changes the line, and reads the queue
+    (W2.2). Implemented in the web process, closed over the AUTHENTICATED user
+    — so "submit this as Daniel" or "Joy says approve it" has nowhere to go:
+    who submits and who is setting the line is the token's, never the model's.
+
+    `submit` re-runs the draft read itself and values it in code; `set_line`
+    refuses anybody who is not an approver; `overview` is a read. Each must
+    raise AuthorityRefused, with a message a person could act on, for every
+    expected failure, and return only after the write has COMMITTED.
+    """
+
+    async def submit(self, tool: str, arguments: dict, note: Optional[str],
+                     conversation_id: Optional[str]) -> dict: ...
+
+    async def set_line(self, mode: Optional[str], line: Optional[int], said: str,
+                       conversation_id: Optional[str]) -> dict: ...
+
+    async def overview(self) -> dict: ...
+
+
 class BeliefStore(Protocol):
     """
     Where Bob's understanding is kept. Implemented in the web process, bound
@@ -419,6 +450,10 @@ class WriteContext:
     # reason the standing writer is: nothing that runs unattended may change
     # what else runs unattended.
     watch_writer: Optional[WatchWriter] = None
+    # What reaches the approver (W2.2): drafts put through the line, the line
+    # itself, and the queue. Bound to the signed-in user in the web process.
+    # Withheld from a scheduled ask: nothing unattended submits or decides.
+    authority: Optional[AuthorityWriter] = None
 
 
 def call_key(tool: str, arguments: Any) -> str:
@@ -1684,6 +1719,104 @@ async def set_watch(
     })
 
 
+SUBMIT_TOOL = "submit_draft"
+AUTHORITY_TOOL = "set_authority"
+
+
+async def submit_draft(
+    tool_calls: list[dict],
+    note: Optional[str] = None,
+    *,
+    ctx: WriteContext,
+) -> dict:
+    """
+    Put a draft you read through the approver's line: it lands in her list quietly, or arrives as a decision.
+
+    Use it when they ask you to HANDLE, prepare, request or send for approval
+    an order or a reorder: read the draft first (get_stock_cover view='draft',
+    or get_purchase_plan WITH cover_days), then pass that exact call here. A
+    manager asking you to "request" it is the same act — the request is theirs.
+    Who submitted it is the signed-in person; you cannot submit for anyone else.
+
+    NOTHING IS SENT, BY YOU OR BY ANYBODY, and never say otherwise. Not "I key
+    orders under the line myself", not "ordered", not "sent": the line decides
+    only whether the draft INTERRUPTS the approver. At or under it the draft
+    lands in the list quietly; over it, with no line set, or with a line that
+    has no cost on file, it arrives as a decision with Approve · Change · Look
+    into it. Either way it waits for a person's yes, and an approved draft is
+    keyed into StoreHub by a person. Say in one line where it went and why,
+    using `routed_because` — its value and the line are the code's figures.
+
+    Args:
+        tool_calls: exactly ONE {tool, arguments} — the draft read, as it ran
+            in this conversation. It is read again and valued here
+            (quantity × catalogue cost); you supply no quantity and no total.
+        note: optional — what it is for, in their words, at most a sentence.
+
+    Returns:
+        {rows, meta}: the request as it now stands — its value, where it was
+        routed and why. THIS IS A WRITE; compose nothing over it. To show the
+        queue, read it with view_approvals.
+    """
+    if ctx.authority is None:
+        raise AuthorityRefused(
+            "Drafts cannot be put through for approval in this session. Say what "
+            "the draft is and that nothing was submitted.")
+    calls = _normalize_calls(tool_calls)
+    if len(calls) != 1:
+        raise AuthorityRefused("Submit exactly one draft read — one call.")
+    call = calls[0]
+    if _unrun(calls, ctx.executed):
+        raise AuthorityRefused(
+            f"{call['tool']} with those arguments has not run in this conversation. "
+            f"Read the draft first, with exactly the arguments you pass here, so the "
+            f"person has seen what is being submitted.")
+    return await ctx.authority.submit(call["tool"], dict(call["arguments"]), note,
+                                      ctx.conversation_id)
+
+
+async def set_authority(
+    said: str,
+    line_php: Optional[int] = None,
+    interrupt: Optional[str] = None,
+    *,
+    ctx: WriteContext,
+) -> dict:
+    """
+    Change what needs the approver: "you don't need my approval unless it's above ₱20,000" becomes a new version of the line.
+
+    Only when the APPROVER tells you, in so many words. The line is a setting
+    a person binds, never yours: it cannot be inferred, rounded, or set
+    because it seems sensible, and the service refuses anybody who is not an
+    approver — if it refuses, say who can change it and that nothing changed.
+    Every change is a new version kept with their words; nothing is overwritten.
+
+    IT DECIDES WHAT REACHES THE APPROVER, NEVER WHAT YOU DO. Under the line a
+    draft lands in her list quietly instead of interrupting her; it is still
+    waiting for a yes, and nothing is ever sent by you. Confirm in one line:
+    the line, the version, and that drafts over it will still come to her.
+
+    Args:
+        said: their words, verbatim.
+        line_php: the amount they named, in whole pesos (₱20,000 → 20000).
+            Only with interrupt 'over_line' (the default when you give one).
+        interrupt: 'over_line' (a draft over the line is a decision; at or
+            under it lands in the list), 'every_draft' ("ask me every time" —
+            the default with no line), or 'never' ("don't interrupt me for
+            drafts at all" — they still wait in the list for a yes).
+
+    Returns:
+        {rows, meta}: the version now in force. A write; compose nothing over it.
+    """
+    if ctx.authority is None:
+        raise AuthorityRefused(
+            "What needs approval cannot be changed in this session. Say that "
+            "nothing was changed.")
+    if line_php is not None and (isinstance(line_php, bool) or not isinstance(line_php, (int, float))):
+        raise AuthorityRefused("line_php is a number of pesos.")
+    return await ctx.authority.set_line(interrupt, line_php, said, ctx.conversation_id)
+
+
 WRITE_TOOL_FUNCTIONS = {
     "pin_answer": pin_answer,
     "save_workflow": save_workflow,
@@ -1692,6 +1825,8 @@ WRITE_TOOL_FUNCTIONS = {
     "record_belief": record_belief,
     STANDING_TOOL: set_standing_question,
     WATCH_TOOL: set_watch,
+    SUBMIT_TOOL: submit_draft,
+    AUTHORITY_TOOL: set_authority,
 }
 
 # The two page tools, by name, for the loop's frame and claim check.
@@ -1709,4 +1844,6 @@ WRITE_TOOL_REQUIRES = {
     "record_belief": "belief_store",
     STANDING_TOOL: "standing_writer",
     WATCH_TOOL: "watch_writer",
+    SUBMIT_TOOL: "authority",
+    AUTHORITY_TOOL: "authority",
 }
