@@ -1576,22 +1576,212 @@ def hold_to_size(accepted: list[dict], size: str, defs: Mapping[str, Any],
     return kept, refused
 
 
+# ---------------------------------------------------------------------------
+# THE PAGE TYPES (W2.4, 2026-09-22)
+# ---------------------------------------------------------------------------
+
+def page_types(defs: Mapping[str, Any]) -> Mapping[str, Any]:
+    """metrics.yaml composition.page_types — the designed pages a broad answer is written into."""
+    return (defs.get("composition") or {}).get("page_types") or {}
+
+
+def page_tree(page: Any, defs: Mapping[str, Any], reading: Any,
+              coerced: list[str]) -> tuple[Optional[dict], Optional[str]]:
+    """
+    A PAGE OF A KNOWN TYPE, BUILT TO THE DESIGN: his slots in, the tree out.
+
+    He picks the type and writes the words and names the figures; the ORDER
+    of the sections, where each figure sits against its words, where his
+    caveat goes and the plan's heading are the type's (composition.page_types),
+    so every broad page of one type reads like every other and like the
+    target. What comes out is an ordinary arrangement tree, and it goes
+    through `_arrangement` like any other — so a digit of his, a reference to
+    nothing, a key placed twice are caught exactly where they always were.
+    Nothing here reads or writes a figure.
+
+    Returns (tree, type), or (None, None) with the reason on `coerced`.
+    """
+    spec = page_types(defs)
+    types = spec.get("types") or {}
+    if not isinstance(page, Mapping):
+        coerced.append("page: a page is {\"type\": ..., \"lede\": ..., \"sections\": {...}}, "
+                       "so it was left out")
+        return None, None
+    kind = page.get("type")
+    if kind not in types:
+        coerced.append(f"page: {kind!r} is not a page type — {', '.join(types)} — so it was "
+                       f"left out (metrics.yaml composition.page_types)")
+        return None, None
+    design = types[kind] or {}
+    slots = design.get("sections") or {}
+    most_says = int(spec.get("max_says_per_section") or 3)
+    given = page.get("sections")
+    if isinstance(given, (list, tuple)):
+        # A list of sections, each naming its slot, is the same page.
+        given = {s.get("slot"): s for s in given if isinstance(s, Mapping)}
+    given = dict(given) if isinstance(given, Mapping) else {}
+    for name in [k for k in given if k not in slots]:
+        coerced.append(f"page: a {kind} page has no {name!r} section — it has "
+                       f"{', '.join(slots)} — so it was left out")
+    said = reading if isinstance(reading, Mapping) else {}
+    caveat_in = page.get("caveat_in") if page.get("caveat_in") in slots else design.get("caveat_in")
+    has_caveat = bool(str(said.get("caveat") or "").strip())
+
+    tree: list[Any] = []
+    if isinstance(page.get("lede"), str) and page["lede"].strip():
+        tree.append({"lede": page["lede"]})
+    else:
+        coerced.append(f"page: a {kind} page opens with a `lede` — the answer, its figures "
+                       f"inside it by {{key}} — and this one has none")
+    for name, rule in slots.items():
+        rule = rule or {}
+        sec = given.get(name)
+        if not isinstance(sec, Mapping):
+            if rule.get("required"):
+                coerced.append(f"page: a {kind} page needs its {name!r} section — "
+                               f"{' '.join(str(rule.get('means') or '').split())}")
+            if name == caveat_in and has_caveat:
+                caveat_in = None     # placed after the last section instead
+            continue
+        if isinstance(sec.get("head"), str) and sec["head"].strip():
+            tree.append({"head": sec["head"]})
+        else:
+            coerced.append(f"page: the {name!r} section has no `head` stating what it found")
+        if name == caveat_in and has_caveat:
+            tree.append({"caveat": True})
+        figures = sec.get("figures")
+        if figures is None and sec.get("figure") is not None:
+            figures = [sec.get("figure")]
+        if isinstance(figures, str):
+            figures = [figures]
+        figures = [f for f in (figures or []) if isinstance(f, str) and f.strip()]
+        room = int(rule.get("figures") or 1)
+        extra = figures[room:]
+        figures = figures[:room]
+        if extra:
+            coerced.append(f"page: the {name!r} section rests on {room} figure(s); "
+                           f"{', '.join(repr(k) for k in extra)} drawn after its words")
+        says = sec.get("says")
+        if isinstance(says, str):
+            says = [p for p in says.split("\n\n")]
+        says = [s for s in (says or []) if isinstance(s, str) and s.strip()]
+        if len(says) > most_says:
+            coerced.append(f"page: the {name!r} section says {most_says} paragraphs at most, "
+                           f"so the last {len(says) - most_says} were left out")
+            says = says[:most_says]
+        paras = [{"say": s} for s in says]
+        control = sec.get("control") if rule.get("control") and isinstance(sec.get("control"), str) else None
+        if rule.get("layout") == "row" and len(figures) > 1:
+            # Facing each other, on one scale, under the words that read them.
+            tree.extend(paras)
+            tree.append({"layout": "row", "children": [{"block": k} for k in figures]})
+        else:
+            for n, key in enumerate(figures):
+                leaf: dict[str, Any] = {"block": key}
+                if n == 0 and control:
+                    leaf["control"] = control
+                tree.append(leaf)
+                if n == 0:
+                    tree.extend(paras)
+            if not figures:
+                tree.extend(paras)
+        tree.extend({"block": k} for k in extra)
+    if has_caveat and caveat_in is None:
+        tree.append({"caveat": True})
+    if said.get("next"):
+        head = str(spec.get("plan_head") or "").strip()
+        if head:
+            tree.append({"head": head})
+        tree.append({"next": True})
+    if not tree:
+        return None, None
+    return {"layout": "stack", "children": tree}, str(kind)
+
+
+def page_schema(defs: Mapping[str, Any]) -> dict:
+    """
+    The `page` parameter as he is offered it: the types, each with its
+    sections and what each is for — the design he writes into, read at the
+    moment he composes (the same place the widgets are read).
+    """
+    spec = page_types(defs)
+    types = spec.get("types") or {}
+    arr = (defs.get("composition") or {}).get("arrangement") or {}
+    by_ref = ("Figures by reference only — {key}, {key.change}, {key.was} of a `figure` block "
+              "you put. No digits of your own.")
+
+    def line(leaf: str) -> int:
+        return int((arr.get(leaf) or {}).get("max_length") or 360)
+
+    kinds = "; ".join(
+        f"{name} — {' '.join(str(t.get('means') or '').split())} (when {t.get('when')}); "
+        f"sections: " + ", ".join(
+            f"{s}{' (required)' if (r or {}).get('required') else ''}: "
+            f"{' '.join(str((r or {}).get('means') or '').split())}"
+            f" [{int((r or {}).get('figures') or 1)} figure(s)"
+            f"{', a control' if (r or {}).get('control') else ''}]"
+            for s, r in (t.get("sections") or {}).items())
+        for name, t in types.items())
+    section = {
+        "type": "object",
+        "properties": {
+            "head": {"type": "string", "maxLength": line("head"),
+                     "description": "what this section found, in a few words. No digits."},
+            "figures": {"type": "array", "items": {"type": "string"},
+                        "description": "the keys of the blocks this section rests on, in order"},
+            "says": {"type": "array", "maxItems": int(spec.get("max_says_per_section") or 3),
+                     "items": {"type": "string", "maxLength": line("say")},
+                     "description": "two or three short paragraphs about exactly these figures. "
+                                    "Open one with its finding in **bold** where it helps. "
+                                    + by_ref},
+            "control": {"type": "string",
+                        "description": "the key of a `control` block to carry above the "
+                                       "figure, where the section allows one"},
+        },
+        "additionalProperties": False,
+    }
+    return {
+        "type": "object",
+        "description": " ".join(str(spec.get("about") or "").split()),
+        "properties": {
+            "type": {"type": "string", "enum": list(types),
+                     "description": "which designed page this answer is — " + kinds},
+            "lede": {"type": "string", "maxLength": line("lede"),
+                     "description": "the page's opening: the answer again, in one or two "
+                                    "sentences, its figures inside it. " + by_ref},
+            "sections": {
+                "type": "object",
+                "description": "the type's sections, each under its own name",
+                "properties": {name: section for name in sorted(
+                    {s for t in types.values() for s in (t.get("sections") or {})})},
+                "additionalProperties": False,
+            },
+            "caveat_in": {"type": "string",
+                          "description": "the section your caveat qualifies, when it is not "
+                                         "the type's own choice"},
+        },
+        "required": ["type", "lede", "sections"],
+        "additionalProperties": False,
+    }
+
+
 def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: Any = None,
-            size: Any = None, *,
+            size: Any = None, page: Any = None, *,
             calls: Mapping[int, Mapping[str, Any]],
             defs: Mapping[str, Any], board: Any = None,
             question: Optional[str] = None,
             ceiling: Optional[str] = None,
             own: Any = None) -> dict:
     """
-    Compose the answer: say which of the results you read the person sees, as which kind of object, at what weight — say the reading in its three slots, and offer what to do about a row. Call it ONCE, when the reads are in: a later call adds new keys and changes known ones where they stand, and nothing you do not name moves. Nothing here is a figure: every number is drawn from the read a block names.
+    Compose the answer: say which of the results you read the person sees, as which kind of object, at what weight — say the reading in its three slots, and offer what to do about a row. A broad answer is a DESIGNED PAGE: pick its type on `page` — the week, one finding, a comparison — and write into that type's sections; the page is built to the design from what you write. Call it ONCE, when the reads are in: a later call adds new keys and changes known ones where they stand, and nothing you do not name moves. Nothing here is a figure: every number is drawn from the read a block names.
 
     Args:
         blocks: the blocks on screen, in order. Each names a kind, a short key, a weight, the read (seq) it draws, a claim — the few words saying what it says — and a thought: one or two sentences of what you think it shows, drawn beside it as you go through it together.
         reading: what you are about to say, in three slots — {"claim": the few words that ARE the point, said again word for word in your answer; "caveat": what qualifies these figures, drawn whole above them; "next": one sentence, drawn last — what you would do, or what no read can settle, never a read you could have made} — and "asks": two or three short questions they might ask you next, drawn under your headline to tap — to steer, challenge, decide or act, never one this answer already settles. Optional; a confirmation needs none.
         actions: what to do about ONE ROW, offered where that row is drawn — [{"act": what the surface does, "seq": the read, "target": the row's own value, "reason": why this one, in your words}]. Optional. You never say what it costs: that is derived from the act.
         size: how large this answer is — lookup, focused or broad (remember, for a thing to keep) — at or under the size the question arrived with. A lookup is a sentence and one figure; focused, a short answer and two or three figures, the page offered; broad, the page.
-        arrangement: how the right-hand side is LAID OUT for this answer — one arrangement of the blocks you just put, so the space is used the way this answer needs rather than packed for you. LAY IT OUT ONCE: the arrangement you give STANDS for the rest of the turn, exactly as a block you do not mention stays where it is. A later call in the same turn sends this again only to CHANGE the layout — otherwise send the blocks that moved and leave this out. Optional; left out with none given yet, it is packed.
+        page: THE PAGE A BROAD ANSWER IS — {"type": one of the page types, "lede": your opening, "sections": {name: {"head", "figures", "says", "control"?}}}. You fill the slots; the order, where each figure sits, the caveat's place and the plan's heading are the type's. Only for a broad answer, and it replaces `arrangement`.
+        arrangement: only for a broad page NO page type fits — how the right-hand side is LAID OUT for this answer — one arrangement of the blocks you just put, so the space is used the way this answer needs rather than packed for you. LAY IT OUT ONCE: the arrangement you give STANDS for the rest of the turn, exactly as a block you do not mention stays where it is. A later call in the same turn sends this again only to CHANGE the layout — otherwise send the blocks that moved and leave this out. Optional; left out with none given yet, it is packed.
 
     Returns:
         The tool body. Returns {rows, meta} like every other tool, and names no
@@ -1599,6 +1789,17 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: 
     answer's receipts, and this read nothing.
     """
     coerced: list[str] = []
+    # A PAGE OF A KNOWN TYPE IS BUILT, THEN CHECKED AS ANY PAGE IS (W2.4): the
+    # type's tree replaces a free arrangement, and everything below — the size,
+    # the references, the digits — holds it exactly as it holds that.
+    page_type: Optional[str] = None
+    if page is not None:
+        built, page_type = page_tree(page, defs, reading, coerced)
+        if built is not None:
+            if arrangement is not None:
+                coerced.append("arrangement: a page of a known type is laid out by its type, "
+                               "so your own arrangement was left out")
+            arrangement = built
     accepted, rejected = validate(blocks, calls, defs, board=board, coerced=coerced,
                                   question=question, arrangement=arrangement)
     # THE ANSWER IS THE SIZE OF THE QUESTION (composition.size, W1.1).
@@ -1610,6 +1811,7 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: 
         coerced.append(" ".join(str(req_size(defs, "page_left_out")).split()).format(
             size=answer_size, means=" ".join(str(spec.get("means") or "").split())))
         arrangement = None
+        page_type = None
     # ONE CALL, TWO STATEMENTS (P1.a, 2026-09-13; the second one swapped in
     # P1.f). The board and the reading are said at the same moment, about the
     # same turn, and neither reads anything. Splitting them across two tools
@@ -1633,6 +1835,9 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: 
     # composition.
     laid_out = _arrangement(arrangement, vocabulary(defs), [e["key"] for e in accepted], coerced,
                             blocks=accepted, board=board, own=own)
+    if laid_out is not None and page_type:
+        # WHICH DESIGN IT IS, for the room to draw it as that page.
+        laid_out = {**laid_out, "type": page_type}
 
     said, said_rejected = ({}, [])
     if reading is not None:

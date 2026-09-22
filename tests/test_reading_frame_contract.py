@@ -304,8 +304,12 @@ def test_the_tool_is_offered_and_takes_the_board_and_the_reading():
     # question"): how LARGE the answer is, which cannot touch a figure either —
     # it only bounds how many are drawn and whether there is a page at all
     # (metrics.yaml composition.size), and its values are closed.
+    # AND A SIXTH, decided 2026-09-22 (W2.4, "the big answers as designed
+    # pages"): the PAGE TYPE a broad answer is written into. It cannot touch a
+    # figure either — code builds it into an arrangement tree, which is checked
+    # exactly as one he wrote by hand (agent/compose.page_tree).
     assert set(schema["input_schema"]["properties"]) == {
-        "blocks", "reading", "actions", "arrangement", "size"}
+        "blocks", "reading", "actions", "arrangement", "size", "page"}
     assert schema["input_schema"]["properties"]["size"]["enum"] == list(
         _DEFS["composition"]["size"]["order"])
     # Only the board is required. The reading is optional because a
