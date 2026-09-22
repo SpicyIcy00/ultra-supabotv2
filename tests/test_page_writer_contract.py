@@ -282,9 +282,11 @@ def test_the_operation_vocabulary_is_closed_and_shared():
         "draw",
         # W1.2: "use 30-day velocity" changes the analysis where it stands.
         "change",
+        # W1.4: "add date filters to this" — the page's own date window.
+        "set_window", "remove_window",
     }
     for op in ("rename", "set_purpose", "add", "remove", "move", "place", "create", "delete",
-               "draw", "change"):
+               "draw", "change", "set_window", "remove_window"):
         assert op in PAGE_OPERATIONS
 
 

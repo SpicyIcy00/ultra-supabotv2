@@ -5537,6 +5537,32 @@ pages:
     # the UI; the prompt asks Bob for the same distinction.
     remove_wording: "Removed {analysis} from {page} · kept in Ungrouped"
 
+  # ---- The page's date window (W1.4, 2026-09-22) ------------------------------
+  # "Add date filters to this" on a kept page. A page may carry ONE window a
+  # person changes from the page itself; changing it re-runs every analysis on
+  # the page with its own window argument set to that preset — the analysis's
+  # own vetted read, run again, never a figure worked out in the browser.
+  #
+  # WHAT IT IS NOT. It is not a threshold and not a definition: it is scope,
+  # the same argument a replay changes (`surface.desk.replay.arguments.window`
+  # is where it lands in each tool's own argument list). Its options are the
+  # sales-day presets and nothing else, so "last_month" on a page means what it
+  # means everywhere.
+  #
+  # UNSET IS ITS OWN STATE. A window put on a page with no preset named leaves
+  # every analysis reading what it was kept with until a person picks one —
+  # adding a filter does not quietly move the page's figures.
+  #
+  # AN ANALYSIS THAT TAKES NO WINDOW SAYS SO. A read with no window argument,
+  # or one whose window is not a date range (a count of days, a stock
+  # snapshot), is run as it was kept and the page says which ones, in
+  # `no_window_says`, rather than drawing it under a window it ignored.
+  window:
+    options_from: sales_day.presets
+    lands_through: surface.desk.replay.arguments.window
+    unset_label: "As each was kept"
+    no_window_says: "{analysis} reads no date range, so the page's dates do not change it; it shows what it was kept with."
+
   # ---- The claim check, exactly as for pins and workflows ---------------------
   # A page write is the third kind of thing Bob can say that changes
   # something outside the conversation. Same failure, same remedy: if the
@@ -5591,6 +5617,9 @@ pages:
       # An analysis changed in place (W1.2): the page "now has" the new
       # reading where the old one stood.
       change: [page now has, now on the page]
+      # The page's date window (W1.4): "the page now has a date filter".
+      set_window: [page now has, now on the page]
+      remove_window: [removed it from, removed from the page]
     intents:
       - i'll create the page
       - i will create the page

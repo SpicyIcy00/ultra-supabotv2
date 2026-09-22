@@ -57,7 +57,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.bob_page import BobPage
 from app.models.bob_pin import BobPin
-from app.services import page_writer
+from app.services import page_window, page_writer
 from app.services.page_writer import PageNotFound  # noqa: F401 - the reader's own refusal
 from app.services.pin_runner import run_pin
 
@@ -206,6 +206,7 @@ async def replay_pins(
     concurrency: int = PIN_REPLAY_CONCURRENCY,
     run: Runner = run_pin,
     clock: Clock = time.monotonic,
+    preset: Optional[str] = None,
 ) -> Replay:
     """
     Replay the chosen pins, a bounded number at a time, until the deadline.
@@ -233,7 +234,15 @@ async def replay_pins(
                         replay.not_started.append((queue.pop(0), NOT_READ_DEADLINE))
                     return
                 pin = queue.pop(0)
-            outcome = await run(list(pin.tool_calls))
+            # THE PAGE'S WINDOW, IF IT HAS ONE (W1.4): each call run with its
+            # own window set to it, exactly as the page's tile runs it, so
+            # what Bob reads is what the page shows.
+            calls, notes = page_window.windowed(list(pin.tool_calls), preset, title=pin.title)
+            outcome = await run(calls)
+            if preset is not None:
+                for result, note in zip(outcome.get("results") or [], notes):
+                    if isinstance(result, dict):
+                        result["window"] = note
             replay.outcomes[str(pin.id)] = outcome
 
     workers = max(1, int(concurrency))
@@ -305,10 +314,11 @@ async def read_page(
                               limit=DEFAULT_PINS if pins is None else MAX_PINS_PER_PAGE_READ)
 
     read_at = datetime.now(timezone.utc)
+    preset = page_window.current(page.date_window) if page is not None else None
     if figures and selection.chosen:
         replay = await replay_pins(
             selection.chosen, deadline_s=deadline_s, concurrency=concurrency,
-            run=run, clock=clock,
+            run=run, clock=clock, preset=preset,
         )
     else:
         replay = Replay()
@@ -343,6 +353,11 @@ async def read_page(
         # on labelled as such; never an instruction.
         "purpose": page.purpose if page else None,
         "page_updated_at": _iso(page.updated_at) if page else None,
+        # The page's date window (W1.4): None when the page has no filter;
+        # otherwise the stored preset (None = each analysis as kept) and its
+        # words. Every figure above was read over it.
+        "window": ({**page.date_window, "label": page_window.label(preset)}
+                   if page is not None and page.date_window is not None else None),
         "empty": not all_pins,
         "read_at": read_at.isoformat(),
         "figures": bool(figures),

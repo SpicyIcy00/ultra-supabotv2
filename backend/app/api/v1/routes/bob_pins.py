@@ -57,7 +57,7 @@ from app.core.database import get_db
 from app.core.deps import require_page
 from app.models.app_user import AppUser
 from app.models.bob_pin import BobPin
-from app.services import page_writer
+from app.services import page_window, page_writer
 from app.services.pin_runner import PinValidationError, run_pin
 from app.services.thread_access import conversations_in_thread
 from app.services.pin_writer import (
@@ -186,6 +186,11 @@ class PinRunOut(BaseModel):
     # the same rule and through the same gate, the board is drawn from, one per
     # call that came back with rows (agent/default_composition.pin_blocks).
     blocks: List[dict] = Field(default_factory=list)
+    # THE PAGE'S DATE WINDOW THIS RUN WAS READ OVER (W1.4): None when the pin's
+    # page has no window, or its window has nothing picked. Each result then
+    # carries its own `window` — what the window did to that call, or the
+    # line saying its read takes no date range and ran as it was kept.
+    window: Optional[dict] = None
 
 
 # ---------------------------------------------------------------------------
@@ -510,10 +515,25 @@ async def run_pinned(
     pin = await _owned(db, pin_id, user)
     ran_at = datetime.now(timezone.utc)
 
-    outcome = await run_pin(pin.tool_calls)
+    # THE PAGE'S WINDOW, READ HERE AND NOWHERE ELSE (W1.4). The client never
+    # says which window: it changes the page's, and every tile re-runs. The
+    # stored calls are not touched — the window is scope applied at run time.
+    preset = None
+    if pin.page_id is not None:
+        try:
+            page = await page_writer.get_page(db, user.username, pin.page_id)
+            preset = page_window.current(page.date_window)
+        except page_writer.PageNotFound:
+            preset = None
+    calls, notes = page_window.windowed(list(pin.tool_calls), preset, title=pin.title)
+
+    outcome = await run_pin(calls)
+    if preset is not None:
+        for result, note in zip(outcome["results"], notes):
+            result["window"] = note
     from agent import default_composition
     from tools._common import load_defs
-    blocks = default_composition.pin_blocks(pin.tool_calls, outcome["results"], defs=load_defs())
+    blocks = default_composition.pin_blocks(calls, outcome["results"], defs=load_defs())
 
     pin.last_run_at = ran_at
     pin.last_status = outcome["status"]
@@ -533,4 +553,6 @@ async def run_pinned(
         last_ok_at=pin.last_ok_at if outcome["status"] == "ok" else previous_ok,
         ran_at=ran_at,
         blocks=blocks,
+        window=({"preset": preset, "label": page_window.label(preset)}
+                if preset is not None else None),
     )

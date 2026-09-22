@@ -43,7 +43,7 @@ from app.core.database import get_db
 from app.core.deps import require_page
 from app.models.app_user import AppUser
 from app.models.bob_pin import BobPin
-from app.services import page_operations, page_writer
+from app.services import page_operations, page_window, page_writer
 from app.services.page_writer import (
     MAX_PURPOSE_LEN,
     MAX_TITLE_LEN,
@@ -116,6 +116,16 @@ class PageOut(BaseModel):
     updated_at: datetime
     # How many pins sit on it. Zero is a real state — an empty page exists.
     pins: int
+    # THE PAGE'S DATE WINDOW (W1.4). None: the page has no date filter.
+    # Otherwise the preset picked (None: each analysis as kept), its words,
+    # who set it and when, and the options — the yaml's presets, never a list
+    # the client holds.
+    window: Optional[dict[str, Any]] = None
+
+
+class PageWindowIn(BaseModel):
+    """The window a person picked on the page: a preset, or null for each as kept."""
+    preset: Optional[str] = None
 
 
 class PageDeletedOut(BaseModel):
@@ -165,9 +175,20 @@ async def _counts(db: AsyncSession, username: str) -> dict[uuid.UUID, int]:
     return {pid: n for pid, n in rows}
 
 
+def _window(stored: Any) -> Optional[dict[str, Any]]:
+    """The page's window as the page draws it, with the yaml's options. Pure."""
+    if not isinstance(stored, dict):
+        return None
+    preset = page_window.current(stored)
+    return {"preset": preset, "label": page_window.label(preset),
+            "set_at": stored.get("set_at"), "set_by": stored.get("set_by"),
+            "options": page_window.options()}
+
+
 def _out(page, pins: int) -> PageOut:
     return PageOut(id=page.id, title=page.title, purpose=page.purpose,
-                   created_at=page.created_at, updated_at=page.updated_at, pins=pins)
+                   created_at=page.created_at, updated_at=page.updated_at, pins=pins,
+                   window=_window(getattr(page, "date_window", None)))
 
 
 def _from_summary(summary: dict[str, Any]) -> PageOut:
@@ -188,6 +209,7 @@ def _from_summary(summary: dict[str, Any]) -> PageOut:
         purpose=summary["purpose"],
         created_at=_at(summary["created_at"]), updated_at=_at(summary["updated_at"]),
         pins=int(summary["analysis_count"]),
+        window=_window(summary.get("window")),
     )
 
 
@@ -329,3 +351,40 @@ async def page_events(
     except PageNotFound as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return [PageEventOut.model_validate(r) for r in rows]
+
+
+@router.put("/{page_id}/window", response_model=PageOut)
+async def set_page_window(
+    page_id: uuid.UUID,
+    payload: PageWindowIn,
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_page_user),
+) -> PageOut:
+    """
+    Pick the page's date window (W1.4). Every analysis on the page re-runs
+    over it when its tile next runs — the client re-runs them; this stores
+    the choice, audited as `set_window`. A value that is not one of the
+    yaml's presets is a 422 naming them.
+    """
+    try:
+        page = await page_writer.set_window(db, owner=user.username, page_id=page_id,
+                                            preset=payload.preset)
+    except PageNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except PageValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    return _out(page, (await _counts(db, user.username)).get(page.id, 0))
+
+
+@router.delete("/{page_id}/window", response_model=PageOut)
+async def remove_page_window(
+    page_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_page_user),
+) -> PageOut:
+    """Take the page's date window off; audited as `remove_window`."""
+    try:
+        page = await page_writer.remove_window(db, owner=user.username, page_id=page_id)
+    except PageNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return _out(page, (await _counts(db, user.username)).get(page.id, 0))

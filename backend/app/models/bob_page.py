@@ -59,6 +59,8 @@ PAGE_OPERATIONS = (
     "place",         # a pin changed position within the page
     "draw",          # a pin's call was redrawn as another shape (P2S.3(g))
     "change",        # a pin's calls were changed in place, same id and place (W1.2)
+    "set_window",    # the page's date window was put on or changed (W1.4)
+    "remove_window", # the page's date window was taken off (W1.4)
     "delete",        # the page row was deleted; its pins went to Ungrouped
 )
 
@@ -74,6 +76,8 @@ class BobPage(Base):
             "AND position(chr(10) in purpose) = 0)",
             name="ck_pages_purpose_shape",
         ),
+        CheckConstraint("date_window IS NULL OR jsonb_typeof(date_window) = 'object'",
+                        name="ck_pages_date_window_is_object"),
         UniqueConstraint("owner", "title", name="uq_pages_owner_title"),
         Index("ix_pages_owner_updated", "owner", text("updated_at DESC")),
         {"schema": "george"},
@@ -83,6 +87,12 @@ class BobPage(Base):
     owner: Mapped[str] = mapped_column(Text, nullable=False)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     purpose: Mapped[Optional[str]] = mapped_column(Text)
+    # THE PAGE'S DATE WINDOW (W1.4, migration a2b3c4d5e6f7). NULL is a page
+    # with no window control; {"preset": null, ...} is the control with
+    # nothing picked (each analysis as kept); {"preset": "last_month", ...}
+    # re-runs every analysis that takes a date range over last month. Scope,
+    # never a figure — app/services/page_window.py.
+    date_window: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
