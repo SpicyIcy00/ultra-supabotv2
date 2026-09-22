@@ -1125,7 +1125,8 @@ async def edit_page(
     window control on the page; picking a window there re-runs every analysis
     on it over that window, and one whose read takes no date range says so.
     Read the page first (view_page, figures false — nothing is re-run) so the
-    one line confirming it names what the filter moves.
+    one line confirming it names what the filter moves. The page draws its own
+    control: compose no control or figure for it, and read nothing more.
 
     A CHANGE TO AN ANALYSIS CHANGES IT. "Use 30-day velocity", "only the top
     ten", "last month instead" on something already on the page is `change`
