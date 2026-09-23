@@ -347,6 +347,15 @@ export function useBobStream() {
       // server answers with today's morning instead of a turn (W2.1).
       const before = turnsRef.current;
       let reusedHere = false;
+      // WHETHER THE TURN EVER SAID HOW IT ENDED (D1, 2026-09-23). The owner:
+      // *"it hung there i had to refresh"*. His turn of 06:44 wrote its answer
+      // post and then failed before it wrote a conversations row; the stream
+      // closed with neither a `done` frame nor an `error` one. Every branch
+      // below leaves this false until one of those two arrives, and the
+      // `finally` treats a stream that ended without either as a failure —
+      // because it is one, and a turn that stops speaking and says nothing
+      // about it is the one rendering UI rule 8 forbids.
+      let ended = false;
       setReused(null);
       const thread = threadRef.current;
       const scope = plan.scope;
@@ -725,6 +734,7 @@ export function useBobStream() {
                 break;
 
               case 'error':
+                ended = true;
                 patchLast((t) => {
                   t.error = String(data.message ?? 'Unknown error');
                 });
@@ -749,6 +759,7 @@ export function useBobStream() {
                 break;
 
               case 'done':
+                ended = true;
                 // A reused morning's `done` lands on no turn (W2.1): its
                 // answer is the stored thread the room opens, not the last
                 // turn on screen.
@@ -784,6 +795,26 @@ export function useBobStream() {
               : new BobStreamError(String(err));
           },
         });
+        // THE STREAM ENDED AND THE TURN NEVER SAID HOW (D1, 2026-09-23).
+        // `fetchEventSource` resolves when the response body closes, whether
+        // or not the turn finished, so a loop that died mid-write left the
+        // room with a Bob turn holding no answer, no error and nothing
+        // running — the loaded rendering of a turn that had not loaded (UI
+        // rule 8), which is what *"it hung there i had to refresh"* looked
+        // like from the outside.
+        //
+        // His answer POST may exist even so — it did on 06:44 — so the thread
+        // and the river are re-read, and a refresh is what he had to do
+        // instead.
+        if (!ended && !reusedHere && !ctrl.signal.aborted) {
+          patchLast((t) => {
+            t.error = 'Bob stopped before he finished this answer. '
+              + 'Anything he had written is in the thread; ask again to run it afresh.';
+          });
+          setState('error');
+          qc.invalidateQueries({ queryKey: ['river'] });
+          qc.invalidateQueries({ queryKey: ['thread'] });
+        }
       } catch (err) {
         if (!ctrl.signal.aborted) {
           patchLast((t) => {

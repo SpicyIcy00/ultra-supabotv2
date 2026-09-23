@@ -328,6 +328,71 @@ export const COMP_PAD = 16;
 /** At or under this width the three stack and the page scrolls. */
 export const PHONE = 900;
 
+/* ------------------------------------------- his side travels, or it flows */
+
+/**
+ * WHETHER HIS SIDE TRAVELS BESIDE THE PAGE, OR FLOWS WITH IT (D1, 2026-09-23).
+ *
+ * The owner, of the live build: *"i couldnt scroll down the left but there was
+ * more"*. His side was `position: sticky` under a `max-height` of the window
+ * less its head and foot, with `overflow: visible` — so words past that height
+ * were DRAWN and could not be reached. Sticky is what put them out of reach:
+ * the page scroll moves the page, and the pinned column stays where it is with
+ * its tail under the composer. On his own turn of 06:40 the column was 862px
+ * of content in a 686px box, and 26px of it was still below the window with the
+ * page scrolled to its very end.
+ *
+ * TWO FIXES WERE POSSIBLE AND ONE OF THEM IS A PANE. Giving his side its own
+ * scroller reads to the end, and puts back exactly the thing P10 removed and
+ * the owner refused twice (*"i dont really ever want to see a scroll down on
+ * the charts"*, *"only charts area should be able to be scrolled"*). The other
+ * is to move what his side is pinned AT: while it fits, it pins under the
+ * composition's head, as P10 decided; when it is taller than that, it pins by
+ * its FOOT instead — his words travel up with the page until their end rests
+ * just above the line, and stay there while the page goes on under them.
+ *
+ * So the end of what he said is always reachable, his side still travels
+ * beside the page, and no second scroller comes back. P10 stands whole; the
+ * top of his side (his mark, then what you asked) is what leaves the screen on
+ * a long answer, which is the right thing to lose.
+ *
+ * The tall column is a defect in its own right — *"why is there soo much text
+ * on the left i want most text on the right"* — so the pinned-by-the-foot case
+ * is an exception's degradation, not a second layout.
+ */
+/** `.r-aside`'s top offset: the composition's own head, `max(5vh, 64px)`. */
+export const ASIDE_TOP = 64;
+/**
+ * What the composition leaves under it — `.r-beside`'s `padding-bottom`, which
+ * already clears the line (the log, 2026-09-18: *"it should stop almost right
+ * before the text bar"*).
+ */
+export const ASIDE_FOOT = 130;
+
+/** The height a sticky aside has to itself, at this window height. */
+export function asideWindow(viewportHeight: number): number {
+  return Math.max(0, viewportHeight - Math.max(viewportHeight * 0.05, ASIDE_TOP) - ASIDE_FOOT);
+}
+
+/** True while his side fits the window it sticks in, head-pinned as P10 set it. */
+export function travels(contentHeight: number, viewportHeight: number): boolean {
+  return contentHeight <= asideWindow(viewportHeight);
+}
+
+/**
+ * What his side pins AT — `.r-aside`'s `top`, in window pixels.
+ *
+ * Fits: the composition's head, `max(5vh, 64px)`, unchanged.
+ * Taller: a NEGATIVE offset, so that what pins is its foot — the end of his
+ * words comes to rest `ASIDE_FOOT` above the bottom of the window and stays
+ * there. Never below the head offset, so this can only ever let more of his
+ * side be read, never less.
+ */
+export function stickyTop(contentHeight: number, viewportHeight: number): number {
+  const head = Math.max(viewportHeight * 0.05, ASIDE_TOP);
+  return Math.min(head, Math.round(viewportHeight - ASIDE_FOOT - contentHeight));
+}
+
 export interface Composition {
   /** Where the room begins: the sidebar's edge when it is open, else 0. */
   roomLeft: number;

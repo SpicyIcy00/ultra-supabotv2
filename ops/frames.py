@@ -191,8 +191,24 @@ FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
               "canvas-memory": ROOT / "ops" / "frames_fixtures" / "canvas-memory.json",
               "canvas-stores": ROOT / "ops" / "frames_fixtures" / "canvas-stores.json",
               "canvas-products": ROOT / "ops" / "frames_fixtures" / "canvas-products.json",
-              "canvas-whatsdown": ROOT / "ops" / "frames_fixtures" / "canvas-whatsdown.json"}
-SIZES = {1440: 900, 1920: 1080, 1857: 963}
+              "canvas-whatsdown": ROOT / "ops" / "frames_fixtures" / "canvas-whatsdown.json",
+              # D1's own check — THE FOUR TURNS THE OWNER TESTED ON 2026-09-23,
+              # rebuilt from george.posts by ops/frames_from_posts.py: his
+              # question, his answer, his blocks, his reading, the turn's
+              # notices and every read's rows and meta, untouched. They are the
+              # scenes the scroll complaint was made of: `gh-why` is the
+              # single-figure Aji Kiamoy White block he could only read by
+              # hovering, `gh-pattern` carries twelve notices and is the tall
+              # left column he could not scroll, `gh-levels` is the turn that
+              # hung. Real business rows, so verification/ like every other
+              # live turn.
+              "gh-why": ROOT / "verification" / "frames_fixtures" / "gh-why.json",
+              "gh-products": ROOT / "verification" / "frames_fixtures" / "gh-products.json",
+              "gh-pattern": ROOT / "verification" / "frames_fixtures" / "gh-pattern.json",
+              "gh-levels": ROOT / "verification" / "frames_fixtures" / "gh-levels.json"}
+# THE PHONE LAYOUT IS THE REAL ONE (UI rule 7), so it is a width a frame can
+# be shot at: 390x844 is the iPhone 14/15 CSS viewport.
+SIZES = {390: 844, 1440: 900, 1920: 1080, 1857: 963}
 VOCAB_READS = ROOT / "frontend" / "src" / "room" / "__fixtures__" / "vocab-reads.json"
 MAX_ROWS = 200
 
@@ -202,8 +218,15 @@ MAX_ROWS = 200
 def build_scenes(report_path: Path, scenes: list[str]) -> dict[str, Any]:
     from agent import default_composition
 
-    report = json.loads(report_path.read_text(encoding="utf-8"))
-    cases = {c.get("scenario"): c for c in report["cases"]}
+    # A run of nothing but fixture scenes needs no recorded report, and on a
+    # machine that has none it must still draw (D1): the report is read only
+    # when a scene actually comes out of it.
+    needs_report = any(s not in FIXTURE_OF and s not in ("vocab", "vocab2", "vocab3")
+                       for s in scenes)
+    cases: dict[Any, Any] = {}
+    if needs_report:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        cases = {c.get("scenario"): c for c in report["cases"]}
     out = []
     for scene in scenes:
         if scene in ("vocab", "vocab2", "vocab3"):
@@ -473,6 +496,49 @@ MEASURE = r"""
     page_scrolls: document.documentElement.scrollHeight > innerHeight + 1,
     visible_scrollbars: bars,
     figures_area: box(figs), right: box(right),
+    // CAN EACH COLUMN BE READ TO ITS END (D1, 2026-09-23)? The owner: *"i
+    // couldnt scroll down the left but there was more"* and *"sometimes i cant
+    // scroll down in the page"*. `page_scrolls` above asks the DOCUMENT, which
+    // never scrolls — `.r-main` is the scroller — so it answered false on a
+    // room three screens tall and said nothing about either column.
+    //
+    // This drives the room's own scroller to its end and then asks, of each
+    // column, how many pixels of its CONTENT are still below the window. A
+    // column that scrolls inside itself answers 0 by definition, and one whose
+    // box clips shorter than its content is caught by scrollH > clientH.
+    readable: (() => {
+      // WHICHEVER SCROLLER IS THE PAGE'S. `.r-main` is it on the desktop; on
+      // the phone `.r-main` goes static and the document scrolls instead, so
+      // asking only `.r-main` reported a room that could not move at all.
+      const main = document.querySelector('.r-main');
+      if (!main) return null;
+      const doc = document.scrollingElement || document.documentElement;
+      const sc = (main.scrollHeight > main.clientHeight + 1) ? main : doc;
+      const was = sc.scrollTop;
+      sc.scrollTop = sc.scrollHeight;
+      const of = (sel) => {
+        const el = document.querySelector(sel);
+        if (!el) return null;
+        const s = getComputedStyle(el);
+        const b = el.getBoundingClientRect();
+        const own = ['auto', 'scroll'].includes(s.overflowY);
+        return {
+          client_h: Math.round(el.clientHeight),
+          content_h: Math.round(el.scrollHeight),
+          position: s.position,
+          scrolls_itself: own,
+          // Pixels of its own content below the window at full page scroll.
+          cut_px: own ? 0 : Math.round(Math.max(0, (b.top + el.scrollHeight) - innerHeight)),
+        };
+      };
+      const out = {
+        scroller: sc === main ? '.r-main' : 'document',
+        scroller_range_px: Math.round(sc.scrollHeight - sc.clientHeight),
+        aside: of('.r-aside'), words: of('.r-words'), right: of('.r-right'),
+      };
+      sc.scrollTop = was;
+      return out;
+    })(),
   };
 })()
 """
@@ -509,6 +575,25 @@ async def run(scenes: list[str], out: Path, sizes: dict[int, int], cdp_port: int
                     await asyncio.sleep(3.5)
                     await page.shot(out / f"{stem}-room.png")
                     measured[stem] = await page.eval(MEASURE)
+                    # THE FOOT OF THE ROOM (D1, 2026-09-23). *"sometimes i cant
+                    # scroll down in the page"*, *"i couldnt scroll down the
+                    # left but there was more"*. `readable` above says in
+                    # numbers whether the end of each column can be reached;
+                    # this is the same claim as a picture, so it is looked at
+                    # rather than trusted.
+                    await page.eval(
+                        "(() => { const m = document.querySelector('.r-main');"
+                        " const d = document.scrollingElement || document.documentElement;"
+                        " const s = (m && m.scrollHeight > m.clientHeight + 1) ? m : d;"
+                        " s.scrollTop = s.scrollHeight; return s.scrollTop; })()")
+                    await asyncio.sleep(0.8)
+                    await page.shot(out / f"{stem}-foot.png")
+                    await page.eval(
+                        "(() => { const m = document.querySelector('.r-main');"
+                        " if (m) m.scrollTop = 0;"
+                        " (document.scrollingElement || document.documentElement).scrollTop = 0;"
+                        " return true; })()")
+                    await asyncio.sleep(0.4)
                     # TOUCH (P2S.2(f)): one mark tapped and its receipt opened,
                     # so the tip and the receipts in place are seen, not assumed.
                     if rail == "open" and await page.eval(

@@ -102,11 +102,49 @@ function Figure(p: TileProps & { rows: Row[]; meta: Meta }) {
   const was = p.canvas && v && hasBaseline([row]) && row.threshold_applied == null
     ? `${(windowLabel(meta) ?? 'this period').replace(/^last /, 'this ')} · was ${fmt(v.key, Number(row.baseline), v.unit)}`
     : null;
+  // WHAT THIS NUMBER IS, DRAWN, NOT HOVERED (D1, 2026-09-23). The owner, of
+  // this exact block: *"it doesnt say what product data its showing untill i
+  // hover which is bad"*. It read `₱1,393 ▼ −88.1% · this week · was ₱11,741`
+  // and only `data-v` — a tooltip — said *Aji Kiamoy White · Product revenue*.
+  //
+  // THE NAME DRAWN IS ALWAYS A STRING THE ROW CARRIES, never the block's
+  // `subject`, which is a word the model chose. Where the block names a
+  // subject the row holds, the row's own spelling of it is what is drawn —
+  // `subjectOf` alone would say "Greenhills" of a row that carries a shop AND
+  // a product, and the figure is about the product. Where the row does not
+  // hold it, what the row IS about stands instead. The measure is the read's
+  // `metric_label`. Nothing computed, nothing inferred, and the read time
+  // stays on the source line under it (UI rule 6).
+  //
+  // SAID ONCE, as the measure line under it already was (P6.b): where a head
+  // or a claim above the number already names it, the line carries only the
+  // measure — and where nothing names it, both.
+  const wanted = p.o.subject?.trim().toLowerCase();
+  const held = wanted
+    ? Object.values(row).find(
+      (x) => typeof x === 'string' && x.trim().toLowerCase() === wanted) as string | undefined
+    : undefined;
+  const named = held ?? subjectOf(row);
+  const measure = v ? measureOf(meta, v.key) : '';
+  const above = `${p.o.question ?? ''} ${p.o.claim ?? ''}`.toLowerCase();
+  const namesIt = Boolean(named && above.includes(named.toLowerCase()));
+  const dimension = named ? dimensionOf(rows, named) : null;
+  const saysMeasure = Boolean(measure) && !above.includes(measure.toLowerCase());
   return (
     <>
+      {(!!named && !namesIt) || saysMeasure ? (
+        <p className="r-mk-of">
+          {!!named && !namesIt && (
+            <RowName name={named} dimension={dimension} className="r-mk-name r-mk-of-name"
+                     pickable={Boolean(p.on.pick)} picked={p.selection?.includes(named)}
+                     onPick={(x) => p.on.pick(x, dimension)} plain={p.canvas} />
+          )}
+          {saysMeasure && <span className="r-mk-of-measure">{measure}</span>}
+        </p>
+      ) : null}
       <div className="r-mk-figure" data-canvas={p.canvas ? 'yes' : undefined}>
         <span className="r-num r-mk-num" style={{ '--size': `${size}px` } as CSSProperties}
-              data-v={v ? told(p.o.subject ?? subjectOf(row), measureOf(meta, v.key),
+              data-v={v ? told(p.o.subject ?? named, measure,
                                 fmt(v.key, v.value, v.unit), moved(change)) : undefined}>
           {v ? fmt(v.key, v.value, v.unit) : '—'}
         </span>
@@ -122,9 +160,12 @@ function Figure(p: TileProps & { rows: Row[]; meta: Meta }) {
           FLOOR (`threshold_applied`), which is the one thing a pill cannot
           draw and the reason the instrument exists (room.dom.test.tsx, "a
           comparison is drawn as an instrument, not only a pill"). */}
-      {v && measureOf(meta, v.key) && !p.o.claim?.trim() && !p.o.question?.trim() && (
-        <p className="r-mk-measure">{measureOf(meta, v.key)}</p>
-      )}
+      {/* THE MEASURE UNDER THE NUMBER WENT UP (D1, 2026-09-23). It said the
+          measure and only where nothing above named the block, so the block
+          the owner was looking at — which had a head — said neither what the
+          number measured nor what it was OF. `.r-mk-of` above the number says
+          both, from the row and the read, and it says each only where nothing
+          above already has. */}
       {hasBaseline([row]) && (p.canvas ? row.threshold_applied != null
         : change.pct == null || row.threshold_applied != null) && (
         <Dumbbell rows={[row]} meta={meta} o={p.o} />
