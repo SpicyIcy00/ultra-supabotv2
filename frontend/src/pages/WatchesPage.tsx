@@ -32,8 +32,8 @@
  * the last look beside them (UI rule 6). Loading, failed and loaded are three
  * renderings and the first two never borrow the third's words (UI rule 8).
  */
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RoomHead } from '../room/RoomShell';
 import { useRegisterHere } from '../hooks/useHere';
@@ -295,6 +295,17 @@ export default function WatchesPage() {
   });
   const questions = watching.data?.questions ?? [];
   const watches = watching.data?.watches ?? [];
+
+  // THE RAIL LINKS TO A ROW, NOT TO THE PAGE. The browser resolves a hash
+  // against the document it loaded, and these rows arrive after it — so the
+  // row is brought into view once it exists, or the link lands at the top and
+  // the person is back to looking for the thing they just clicked.
+  const { hash } = useLocation();
+  const loaded = Boolean(watching.data);
+  useEffect(() => {
+    if (!loaded || !hash) return;
+    document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' });
+  }, [loaded, hash]);
 
   // WHAT IS ON THIS PAGE, for Bob's line (UI rule 1). Names only — what each
   // one asks or watches — never a figure and never a reading of one.

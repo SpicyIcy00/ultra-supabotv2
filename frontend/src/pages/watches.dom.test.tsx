@@ -120,6 +120,26 @@ describe('every standing question and watch, on one page', () => {
     expect(container.querySelector('#watch-w1')).toBeTruthy();
   });
 
+  it('brings the linked row into view once it exists', async () => {
+    read.mockResolvedValue({ questions: [question()], watches: [watch()] });
+    const seen: unknown[] = [];
+    const real = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function into(this: Element) { seen.push(this.id); };
+    try {
+      render(
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <MemoryRouter initialEntries={['/watches#watch-w1']}><WatchesPage /></MemoryRouter>
+        </QueryClientProvider>,
+      );
+      await screen.findByText('How are we doing?');
+      // The rows arrive after the document does, so the browser's own hash
+      // resolution has already run and found nothing.
+      await waitFor(() => expect(seen).toContain('watch-w1'));
+    } finally {
+      Element.prototype.scrollIntoView = real;
+    }
+  });
+
   it('tells Bob what is on it — names only, never a figure', async () => {
     read.mockResolvedValue({ questions: [question()], watches: [watch()] });
     page();
