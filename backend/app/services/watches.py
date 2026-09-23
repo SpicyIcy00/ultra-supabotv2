@@ -413,6 +413,32 @@ async def rescope(session: AsyncSession, *, owner: str, which: Optional[str],
     return watch
 
 
+def why_not_on(watch: BobWatch, defs: Optional[dict] = None) -> Optional[str]:
+    """
+    Why this watch cannot be switched on yet, or None when it can (rule 7).
+
+    THE SAME SENTENCE, READ AND WRITTEN. `switch` raises exactly this, and the
+    watches page shows it beside the switch BEFORE anybody presses it — a
+    gate a person only meets as a failed click is a gate that reads as a bug.
+    One function so the two can never drift.
+    """
+    if not watch.backtest:
+        return (
+            "This watch has not been backtested, so nobody knows how often "
+            "it would speak. Back it over the last 60 days first — that "
+            "says how many days it would have fired, and on which."
+        )
+    current = str(req(defs or load_defs(), "version"))
+    measured = str((watch.backtest or {}).get("definitions_version"))
+    if measured != current:
+        return (
+            f"The backtest was measured under definitions version "
+            f"{measured} and the current one is {current}, so it describes "
+            f"a rule that has changed. Back it again before switching it on."
+        )
+    return None
+
+
 async def switch(session: AsyncSession, *, owner: str, which: Optional[str],
                  on: bool) -> BobWatch:
     """
@@ -424,20 +450,9 @@ async def switch(session: AsyncSession, *, owner: str, which: Optional[str],
     """
     watch = await _owned(session, owner, which)
     if on:
-        if not watch.backtest:
-            raise WatchRefused(
-                "This watch has not been backtested, so nobody knows how often "
-                "it would speak. Back it over the last 60 days first — that "
-                "says how many days it would have fired, and on which."
-            )
-        current = str(req(load_defs(), "version"))
-        measured = str((watch.backtest or {}).get("definitions_version"))
-        if measured != current:
-            raise WatchRefused(
-                f"The backtest was measured under definitions version "
-                f"{measured} and the current one is {current}, so it describes "
-                f"a rule that has changed. Back it again before switching it on."
-            )
+        refusal = why_not_on(watch)
+        if refusal:
+            raise WatchRefused(refusal)
         watch.last_slot = None
     watch.enabled = bool(on)
     watch.updated_at = datetime.now(slots.MANILA)
