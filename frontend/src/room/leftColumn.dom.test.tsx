@@ -17,6 +17,11 @@
  * FIGURES: still always drawn, still above every number this turn drew, still
  * never the accent (UI rule 4, UI rule 5) — and off his column.
  *
+ * AND SO IS HIS OWN CAVEAT. Measured live on his "Why is Greenhills down?" the
+ * same day: an EIGHT-word answer under a FORTY-SEVEN word caveat. The caveat
+ * qualifies the figures, so it goes above them, and his column is left with
+ * the point and the line under it.
+ *
  * Mounted whole, as voice.dom.test.tsx mounts it: a fake stream holding one
  * recorded-shape turn, an axios adapter answering the definitions, no network.
  */
@@ -49,7 +54,11 @@ const BELOW_ZERO = '2,180 stock counts are below zero, the lowest -78,291. A cou
   + 'have a bad count.';
 const ANSWER = 'Greenhills is down on fewer transactions, not a smaller basket.';
 
-function mountRoom(notices: { kind: string; message: string }[]) {
+const CAVEAT = 'Greenhills is measured Monday to Sunday against the same seven days '
+  + 'before; 44 of the 118 products have no figure on one side, so the product split is '
+  + 'partial and the shop total is not.';
+
+function mountRoom(notices: { kind: string; message: string }[], caveat: string | null = null) {
   const desk = (frames as { desk: Record<string, unknown> }).desk;
   axios.defaults.adapter = async (config: InternalAxiosRequestConfig): Promise<AxiosResponse> => {
     const url = config.url ?? '';
@@ -65,7 +74,7 @@ function mountRoom(notices: { kind: string; message: string }[]) {
     { role: 'user', text: 'check all products', at: '2026-09-23T06:40:00Z' },
     {
       role: 'bob', text: ANSWER, thinking: '', at: '2026-09-23T06:40:05Z',
-      reading: { claim: 'Greenhills is down on fewer transactions', caveat: null, next: null, asks: [] },
+      reading: { claim: 'Greenhills is down on fewer transactions', caveat, next: null, asks: [] },
       toolCalls: [{
         seq: 0, tool: 'get_sales',
         arguments: { group_by: ['store'], date_range: 'last_7_days', compare_to: 'previous_period' },
@@ -95,8 +104,9 @@ function mountRoom(notices: { kind: string; message: string }[]) {
   );
 }
 
-async function room(notices: { kind: string; message: string }[] = []) {
-  render(mountRoom(notices));
+async function room(notices: { kind: string; message: string }[] = [],
+                    caveat: string | null = null) {
+  render(mountRoom(notices, caveat));
   await waitFor(() => expect(document.querySelector('.r-steer .r-token')).not.toBeNull());
 }
 
@@ -142,5 +152,34 @@ describe('a notice with no figure of its own is drawn at the head of the figures
     const box = await waitFor(() => document.querySelector('.r-figures-caveats .r-caveats')!);
     expect(box.getAttribute('data-folded')).toBe('yes');
     expect(box.textContent).toContain('2 notes on these figures');
+  });
+});
+
+describe('his own caveat goes with the figures it qualifies', () => {
+  it('is drawn at the head of the figures, not in his column', async () => {
+    await room([], CAVEAT);
+    const drawn = await waitFor(() => document.querySelector('.r-figures-caveats .r-turn-caveat')!);
+    expect(drawn.textContent).toContain('44 of the 118 products');
+    const words = document.querySelector('.r-words') as HTMLElement;
+    expect(words.querySelector('.r-turn-caveat')).toBeNull();
+    expect(words.textContent).not.toContain('44 of the 118 products');
+  });
+
+  it('leaves his column the point and the line under it', async () => {
+    await room([], CAVEAT);
+    await waitFor(() => expect(document.querySelector('.r-figures-caveats .r-turn-caveat')).not.toBeNull());
+    const words = (document.querySelector('.r-words') as HTMLElement).textContent ?? '';
+    expect(words).toContain('fewer transactions');
+    // His answer is eight words; nothing here multiplies it.
+    expect(words.split(/\s+/).filter(Boolean).length).toBeLessThan(40);
+  });
+
+  it('draws his caveat above the machine notices, both above the figures', async () => {
+    await room([{ kind: 'negative_on_hand', message: BELOW_ZERO }], CAVEAT);
+    const box = await waitFor(() => document.querySelector('.r-figures-caveats')!);
+    const his = box.querySelector('.r-turn-caveat')!;
+    const placed = box.querySelector('.r-caveats')!;
+    expect(his.compareDocumentPosition(placed) & 4).toBeTruthy();
+    expect(box.compareDocumentPosition(document.querySelector('.r-board')!) & 4).toBeTruthy();
   });
 });

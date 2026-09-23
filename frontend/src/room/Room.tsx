@@ -959,10 +959,14 @@ export default function Room() {
                   <Reading part="rest" text={latest?.text} reading={latest?.reading}
                            calls={latest?.toolCalls} onFigure={showFigure}
                            standing={bodyOf(latest?.text, latest?.reading?.claim, latest?.reading?.next)}
-                           // ON THE PAGE WHERE HE SET IT (P7), and then not here
-                           // too: said twice it is the wall of text the owner
-                           // kept finding on this side.
-                           caveat={caveatOnPage ? '' : thoughts?.caveat} />
+                           // AND HIS CAVEAT IS NEVER HERE NOW (D2, 2026-09-23).
+                           // On the page where he set it (P7) as before; on
+                           // every other answer at the head of the figures,
+                           // because that is what it qualifies (UI rule 4).
+                           // Measured live on his own "Why is Greenhills
+                           // down?": an eight-word answer under a forty-seven
+                           // word caveat. The left is the bigger picture.
+                           caveat="" />
                 )}
                 <ReadingAsks reading={latest?.reading} busy={busy} onAsk={(q) => ask(q)} />
                 {/* WHAT HE'D DO NEXT IS UNDER THE FIGURES NOW (P6.f), with the
@@ -991,11 +995,17 @@ export default function Room() {
 
             <FiguresArea areaRef={areaRef}>
               {/* WHAT QUALIFIES THESE FIGURES, ABOVE THEM (UI rule 4, D2).
-                  Two or more fold to one line ("N notes on these figures"),
-                  which is what the owner asked for on 2026-09-19 and what
-                  three of them on one screen on 2026-09-23 say is needed. */}
+                  HIS caveat first, in his own words, then the notices code
+                  placed; two or more of those fold to one line ("N notes on
+                  these figures"), which is what the owner asked for on
+                  2026-09-19 and what three on one screen on 2026-09-23 says
+                  is needed. Both were on HIS side until today. Never the
+                  accent — prominence from position (UI rule 5). */}
               {!empty && !busy && (
                 <div className="r-figures-caveats">
+                  {!caveatOnPage && thoughts?.caveat && (
+                    <p className="r-caveat r-turn-caveat">{thoughts.caveat}</p>
+                  )}
                   <Caveats notices={drawnOnly(notices, explainsOnly)} />
                 </div>
               )}

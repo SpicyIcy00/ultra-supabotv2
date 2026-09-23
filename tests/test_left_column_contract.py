@@ -15,9 +15,11 @@ The owner, testing the live build after wave 2 (`ops/DOGFOOD_LOG.md`, the
 Three things are held here, and each is enforced rather than asked for —
 instructing has not held any of them (`enforce the page, don't instruct it`):
 
-  WHAT IS MEASURED IS WHAT IS DRAWN. The body bound counted the body string;
-  the left column also draws the caveat above the headline, so four turns of
-  2026-09-23 were cut to ~60 words and drawn under up to 320 characters more.
+  THE LEFT IS THE POINT AND A LINE UNDER IT. Measured live on his own "Why is
+  Greenhills down?" on 2026-09-23: the body came back at EIGHT words and the
+  caveat drawn above it at FORTY-SEVEN. The bound on the body was never what
+  made that column long, so the caveat went to the head of the figures — what
+  it qualifies, where UI rule 4 puts it — and the column holds the answer.
 
   A NON-PAGE ANSWER IS SHORT AGAIN. W1.1 gave the focused answer 70 words where
   every answer had been held to `voice.body.max_words` (40 since P6.h). That is
@@ -68,15 +70,15 @@ def _block(key: str, seq: int) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# 1. What is measured is what is drawn
+# 1. What he says before the first figure, and what the gate measures
 # ---------------------------------------------------------------------------
 
-def test_the_bound_counts_the_body_and_the_caveat_the_body_does_not_carry():
+def test_what_he_says_before_the_first_figure_is_the_body_and_the_caveat():
     body = "Greenhills fell on fewer transactions."
     said = reading.drawn_left(body, {"caveat": "Two different weeks.",
                                      "next": "Check the hours."})
-    assert "Two different weeks." in said, "the caveat is drawn on the left and is counted"
-    assert "Check the hours" not in said, "`next` is drawn under the figures, on the other side"
+    assert "Two different weeks." in said, "the caveat is read before the figures"
+    assert "Check the hours" not in said, "`next` is drawn last, under the figures"
     assert reading.drawn_left_words(body, {"caveat": "Two different weeks."}) == (
         len(body.split()) + 3)
 
@@ -90,9 +92,21 @@ def test_a_caveat_sentence_the_answer_already_carries_is_counted_once():
         len(body.split()))
 
 
-def test_the_definitions_say_the_measure_is_the_drawn_left():
-    assert list(req(BODY, "counts_drawn")) == ["body", "caveat"]
-    assert req(BODY, "caveat_is_never_cut") is True
+def test_the_definitions_say_the_left_is_the_body_and_the_caveat_is_with_the_figures():
+    assert list(req(BODY, "drawn_on_the_left")) == ["body"]
+    assert req(BODY, "caveat_drawn_with") == "figures"
+
+
+def test_the_caveat_is_back_to_one_thing_said_once():
+    """
+    640 -> 320. The raise was made because the bound REFUSED the slot and a
+    refusal lost the caveat; it is `kept_whole` since the same afternoon, so a
+    crossing loses nothing — and on 2026-09-23 a 47-word caveat sat over an
+    eight-word answer.
+    """
+    caveat = req(DEFS, "voice.reading.slots.caveat")
+    assert int(caveat["max_length"]) == 320
+    assert caveat["over_length"] == "kept_whole", "a cut caveat can drop the warning it carries"
 
 
 # ---------------------------------------------------------------------------

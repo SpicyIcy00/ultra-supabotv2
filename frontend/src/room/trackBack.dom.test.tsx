@@ -155,9 +155,16 @@ describe('"if its stating whats already stated or shown in the page … dont mak
   it('is fed what the room draws: the reads on screen and his words beside them', () => {
     expect(ROOM).toMatch(/thoughtsOf\(latest\.text, latest\.reading\?\.claim, latest\.toolCalls, thoughtful,\s*\{ drawn: shown, said \}\)/);
     expect(ROOM).toMatch(/latest\.reading\?\.next, \.\.\.\(latest\.reading\?\.asks \?\? \[\]\)/);
-    // Beside his answer it is still the caveat LESS what the screen says — unless his
-    // page set it on itself (P7), and then it is there and not here too.
-    expect(ROOM).toMatch(/caveat=\{caveatOnPage \? '' : thoughts\?\.caveat\}/);
+    // REWRITTEN BY D2 (2026-09-23). This held "beside his answer it is the caveat
+    // LESS what the screen says — unless his page set it on itself (P7)". The
+    // owner: *"why is there soo much text on the left i want most text on the
+    // right. the left is just the bigger picture."* Measured live on his own
+    // "Why is Greenhills down?": an eight-word answer under a forty-seven word
+    // caveat. The caveat qualifies the FIGURES, so it is drawn above them (UI
+    // rule 4) and never in his column; the filtering it is still subject to is
+    // unchanged, and `thoughts.caveat` is still what is drawn.
+    expect(ROOM).toMatch(/<Reading part="rest"[\s\S]*?caveat=""/);
+    expect(ROOM).toMatch(/r-figures-caveats[\s\S]*?!caveatOnPage && thoughts\?\.caveat/);
   });
 });
 

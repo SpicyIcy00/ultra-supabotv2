@@ -2674,3 +2674,9 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
    answer. Prominence from position, never hue (UI rule 5). */
 .r-figures-caveats:empty { display: none; }
 .r-figures-caveats .r-caveats { margin: 0 0 18px; }
+/* HIS OWN caveat, in the same place and the same face as the notices under it:
+   one rule down the side, his words, no hue. */
+.r-figures-caveats > .r-turn-caveat {
+  font: 400 12.5px/1.55 var(--sans); color: var(--ink); max-width: 60ch;
+  margin: 0 0 12px; border-left: 2px solid var(--edge-strong); padding-left: 14px;
+}

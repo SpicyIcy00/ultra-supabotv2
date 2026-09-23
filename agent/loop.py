@@ -4330,22 +4330,23 @@ async def run(
                 # THE BOUND IS THE ANSWER'S SIZE'S (composition.size, W1.1): a
                 # lookup or a focused answer has no page, so its words ARE the
                 # answer and get the room its size gives them.
-                # AND WHAT IS MEASURED IS WHAT IS DRAWN (D2, 2026-09-23). The
-                # owner: "i couldnt scroll down the left but there was more, i
-                # why is there soo much text on the left i want most text on
-                # the right. the left is just the bigger picture." This
-                # counted the body string alone, and his column draws the
-                # caveat above the headline too (UI rule 4) — so four turns of
-                # 2026-09-23 were cut to ~60 words and then drawn under up to
-                # 320 characters more that nothing had measured. The measure
-                # is the drawn left now (voice.body.counts_drawn): the body,
-                # plus the caveat sentences the body does not already carry.
+                # AND WHAT THE LEFT DRAWS IS THE BODY ALONE (D2, 2026-09-23).
+                # The owner: "i couldnt scroll down the left but there was
+                # more, i why is there soo much text on the left i want most
+                # text on the right. the left is just the bigger picture."
+                # MEASURED LIVE THE SAME DAY, on his own "Why is Greenhills
+                # down?": the body came back at EIGHT words and the caveat
+                # drawn above it at 47 — the bound here was never what made
+                # that column long. So the caveat went where the figures are
+                # (Room.tsx, `r-figures-caveats`): it qualifies the figures,
+                # UI rule 4 puts it above them, and this column is left with
+                # the point and the line under it. That is why this still
+                # counts the body and nothing else — a bound counting a slot
+                # this cannot cut, and that the body could not shrink far
+                # enough to pay for, would be a gate that can never be met.
                 max_body_words = int(compose.size_spec(answer_size, defs).get("max_words")
                                      or req(defs, "voice.body.max_words"))
-                caveat_drawn = reading.caveat_unsaid(
-                    (reading_recorded or {}).get("caveat"), answer or "")
-                caveat_words = len(caveat_drawn.split())
-                body_words = len((answer or "").split()) + caveat_words
+                body_words = len((answer or "").split())
                 if answer and body_words > max_body_words:
                     if body_edits < max_body_edits:
                         body_edits += 1
@@ -4358,38 +4359,29 @@ async def run(
                         kept_prose = ""
                         answer = ""
                         messages.append({"role": "user", "content": (
-                            f"The left of the screen draws {body_words} words of yours and it "
-                            f"holds {max_body_words} — your answer and your caveat above it. "
-                            "The left is the bigger picture: the point, and a line under it. "
-                            "The figures you composed are drawn on the right and carry the "
-                            "evidence; the reader walks them. Write only the conclusion — what "
-                            "it means, in a line or two, in the words the business uses. What "
-                            "else you would say belongs on the RIGHT: on the blocks' own "
-                            "claims and thoughts, or as `say` lines of the page; what you "
-                            "would do goes in `next`. Keep the claim, the caveat and the next "
-                            "exactly as they are.")})
+                            f"Your answer is {body_words} words and the left of the screen "
+                            f"holds {max_body_words}. The left is the bigger picture: the "
+                            "point, and a line under it. The figures you composed are drawn "
+                            "on the right and carry the evidence; the reader walks them. "
+                            "Write only the conclusion — what it means, in a line or two, in "
+                            "the words the business uses. What else you would say belongs on "
+                            "the RIGHT: on the blocks' own claims and thoughts, or as `say` "
+                            "lines of the page; what you would do goes in `next`. Keep the "
+                            "claim, the caveat and the next exactly as they are.")})
                         continue
-                    # THE CAVEAT IS NEVER WHAT GOES (voice.body.caveat_is_
-                    # never_cut). It is the one thing on that side that says a
-                    # figure may be wrong, so the BODY absorbs the bound: the
-                    # room it has is what is left after the caveat, and its
-                    # first sentence survives whatever that leaves.
-                    for_body = max(0, max_body_words - caveat_words)
                     kept_sents: list[str] = []
                     used = 0
                     for sent in _prose.sentences(answer):
                         n = len(sent.split())
-                        if kept_sents and used + n > for_body:
+                        if kept_sents and used + n > max_body_words:
                             break
                         kept_sents.append(sent)
                         used += n
                     log.gap(body_reason,
-                            f"{body_words} words drawn on the left ({caveat_words} of them "
-                            f"the caveat) after the rewrite; the body was cut to {used} "
-                            f"at a sentence")
+                            f"{body_words} words after the rewrite; cut to {used} at a sentence")
                     yield _sse("warning", {"reason": body_reason, "found": body_words,
                                            "limit": max_body_words, "corrected": "deterministic",
-                                           "removed": body_words - (used + caveat_words)})
+                                           "removed": body_words - used})
                     answer = " ".join(kept_sents)
                     deterministic_edits += 1
                     yield _reset_answer(body_reason)

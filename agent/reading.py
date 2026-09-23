@@ -544,25 +544,33 @@ def caveat_unsaid(caveat: Optional[str], said: str) -> str:
 
 def drawn_left(answer: Optional[str], reading: Optional[Mapping[str, Any]]) -> str:
     """
-    EVERYTHING HIS COLUMN DRAWS OF THIS TURN, as one string to be counted.
+    EVERYTHING OF HIS THE READER PASSES BEFORE THE FIRST FIGURE, to be counted.
 
     The owner, 2026-09-23: *"why is there soo much text on the left i want
-    most text on the right. the left is just the bigger picture."* The body
-    bound counted the body string, and the left draws his caveat above the
-    headline too (UI rule 4) — up to 320 characters of it — so a body cut to
-    sixty words could still be drawn under ninety. The headline is a SPAN of
-    the body (`claimAndStanding`), so it is already counted once and is not
-    added again; `next` is drawn under the figures, on the other side, and is
-    not counted here at all.
+    most text on the right. the left is just the bigger picture."* Measured
+    live on his own "Why is Greenhills down?" the same day: the body came back
+    at EIGHT words and the caveat above it at FORTY-SEVEN — so the bound on
+    the body was never what made that column long, and the caveat went to the
+    head of the figures instead (voice.body.caveat_drawn_with).
+
+    This is the two together, because the two together are what he reads
+    first, and it is what the eval reports. The headline is a SPAN of the body
+    (`claimAndStanding`), so it is counted once and not added again; `next` is
+    drawn last, under the figures, and is not counted here at all.
+
+    NOT WHAT THE BODY GATE MEASURES. That is the body (voice.body.
+    drawn_on_the_left) and it has to be: a gate cannot cut a caveat — cutting
+    one can drop the warning it exists for — so counting it would be a bound
+    the body could not pay for and the turn could never meet.
     """
     body = (answer or "").strip()
-    extra = caveat_unsaid((reading or {}).get("caveat")
-                          if isinstance((reading or {}).get("caveat"), str) else None, body)
+    caveat = (reading or {}).get("caveat")
+    extra = caveat_unsaid(caveat if isinstance(caveat, str) else None, body)
     return " ".join(x for x in (body, extra) if x)
 
 
 def drawn_left_words(answer: Optional[str], reading: Optional[Mapping[str, Any]]) -> int:
-    """How many words the left column draws of this turn."""
+    """How many of his words are drawn before the first figure."""
     return len(drawn_left(answer, reading).split())
 
 

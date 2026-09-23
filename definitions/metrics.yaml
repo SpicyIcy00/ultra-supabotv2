@@ -6355,7 +6355,15 @@ voice:
         # caveat on 2 of 7 turns once Bob investigated — a partial product
         # comparison AND frozen purchase orders is two honest things, and the
         # refusal lost the slot. A caveat is still one thing said whole.
-        max_length: 640
+        # 640 → 320 (D2, 2026-09-23), and the reason the raise was made has
+        # gone. It was raised because the bound REFUSED the slot and a refusal
+        # lost the caveat; since P2S.7 the same afternoon it is `kept_whole`,
+        # so nothing is lost by a bound being crossed — it is recorded on
+        # `meta.coerced` and drawn in full. The owner has twice now said there
+        # is too much text before the figures, and on 2026-09-23 his caveat
+        # ran to 47 words over an eight-word answer. This is the guide the
+        # prompt gives him back; it still cannot drop a word he wrote.
+        max_length: 320
         # PAST IT, KEPT WHOLE (P2S.7): a caveat is where the notices go, and
         # cutting one could drop the very warning it exists for. The bound is
         # the prompt's guide to length, recorded on meta.coerced when crossed.
@@ -6606,25 +6614,25 @@ voice:
     over_length: cut_at_sentence
     warning_reason: body_over_length
     # =========================================================================
-    # WHAT IS MEASURED IS WHAT IS DRAWN (D2, 2026-09-23). The owner, testing
-    # the live build: *"i couldnt scroll down the left but there was more, i
-    # why is there soo much text on the left i want most text on the right.
-    # the left is just the bigger picture."*
+    # AND THIS IS THE BODY ALONE, BECAUSE THE CAVEAT LEFT THE COLUMN (D2,
+    # 2026-09-23). The owner: *"i couldnt scroll down the left but there was
+    # more, i why is there soo much text on the left i want most text on the
+    # right. the left is just the bigger picture."*
     #
-    # The bound above counted the BODY STRING and nothing else, and the left
-    # column draws more than that string: his caveat sits above the headline
-    # (UI rule 4) and the headline is a span of the body. Four turns of
-    # 2026-09-23 wrote 403, 279, 246 and 192 words, were cut at a sentence to
-    # ~60 — and then a caveat of up to 320 characters was drawn ON TOP of the
-    # ~60, so the left held half as much again as anything had measured.
+    # MEASURED LIVE THE SAME DAY on his own question, "Why is Greenhills
+    # down?": the body came back at EIGHT words and the caveat drawn above it
+    # at FORTY-SEVEN. This bound was not what made that column long — his
+    # caveat was, and a bound cannot cut a caveat (cutting one can drop the
+    # warning it exists for, `over_length: kept_whole`).
     #
-    # So the measure is the DRAWN LEFT: his body, plus the sentences of his
-    # caveat the body does not already carry (the room's own `unsaid`,
-    # Reading.tsx). The caveat is NEVER what gets cut — it is the one thing on
-    # that side that says a figure may be wrong — so the body absorbs the
-    # bound, and the first sentence of the body always survives.
-    counts_drawn: [body, caveat]
-    caveat_is_never_cut: true
+    # So the caveat went where the figures are (`surface.desk.notices`, and
+    # Room.tsx's `r-figures-caveats`): it qualifies the figures, UI rule 4
+    # puts it above them, and this column is left with the point and the line
+    # under it. What the left draws is what this measures, and that is the
+    # body. `reading.drawn_left` is the two together — everything of his the
+    # reader passes before the first number — and is what the eval reports.
+    drawn_on_the_left: [body]
+    caveat_drawn_with: figures
 
   restatement:
     introduced: "2026-09-12"
