@@ -2553,7 +2553,7 @@ class _PageWriter:
             try:
                 built = await page_operations.build_page(
                     session, owner=self._username, title=spec.title,
-                    purpose=spec.purpose, analyses=spec.analyses,
+                    purpose=spec.purpose, analyses=spec.analyses, kind=spec.kind,
                     question=spec.question,
                     conversation_id=(
                         uuid.UUID(spec.conversation_id) if spec.conversation_id else None

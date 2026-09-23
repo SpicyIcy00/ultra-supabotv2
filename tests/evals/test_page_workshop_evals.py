@@ -86,24 +86,33 @@ class FakeWriter:
 
     def __init__(self, title="Rockwell", pins=None, refuse_edit: Exception | None = None):
         self.title = title
+        # The kind the page is, once anybody has said (W4.1). None is nobody
+        # having said, which is what a fresh fake page is.
+        self.kind: str | None = None
         self.pins = list(pins or [])
         self.builds: list[PageBuildSpec] = []
         self.edits: list[PageEditSpec] = []
         self.refuse_edit = refuse_edit
 
-    def _summary(self, title, analyses, ops):
+    def _summary(self, title, analyses, ops, kind=None):
         return {
             "owner": "eval",
             "page": {
                 "page_id": PAGE_ID, "title": title, "purpose": None,
                 "created_at": "2026-09-08T00:00:00+00:00", "updated_at": "2026-09-08T01:00:00+00:00",
                 "analyses": analyses, "analysis_count": len(analyses),
+                # W4.1: a page shape never carries a null kind. The committed
+                # write answers with what was set, or with the default a
+                # derivation would give a page nobody has said anything about.
+                "kind": kind or self.kind or "collection",
+                "kind_set_by": "bob" if (kind or self.kind) else "derived",
             },
             "operations": ops,
         }
 
     async def create(self, spec: PageBuildSpec) -> dict:
         self.builds.append(spec)
+        self.kind = spec.kind or self.kind
         analyses = [{"pin_id": f"new-{i}", "title": a.get("title") or "existing", "position": i,
                      "tools": [c["tool"] for c in a.get("tool_calls", [])]}
                     for i, a in enumerate(spec.analyses)]
@@ -124,6 +133,9 @@ class FakeWriter:
                             "from_page": self.title, "to": "ungrouped"})
             elif o["op"] == "add":
                 ops.append({"op": "add", "pin_id": "new-1", "title": o["title"], "position": len(self.pins), "source": "new"})
+            elif o["op"] == "set_kind":
+                self.kind = o["kind"]
+                ops.append({"op": "set_kind", "to": self.kind, "set_by": "bob"})
             elif o["op"] == "move_to_page":
                 ops.append({"op": "move_to_page", "pin_id": o.get("pin_id"), "title": o.get("title") or "ATP",
                             "from_page": self.title, "to_page_id": o["page_id"], "to_page": "Aji Overview"})

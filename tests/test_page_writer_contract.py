@@ -284,9 +284,12 @@ def test_the_operation_vocabulary_is_closed_and_shared():
         "change",
         # W1.4: "add date filters to this" — the page's own date window.
         "set_window", "remove_window",
+        # W4.1: "make this a dashboard" — what KIND of page it is, which
+        # decides how it is DRAWN and nothing else.
+        "set_kind",
     }
     for op in ("rename", "set_purpose", "add", "remove", "move", "place", "create", "delete",
-               "draw", "change", "set_window", "remove_window"):
+               "draw", "change", "set_window", "remove_window", "set_kind"):
         assert op in PAGE_OPERATIONS
 
 

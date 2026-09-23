@@ -60,6 +60,10 @@ def _summary(title: str = "how are we doing", n: int = 1) -> dict:
         "created_at": "2026-09-15T09:02:00+00:00",
         "updated_at": "2026-09-15T09:02:00+00:00",
         "analyses": [], "analysis_count": n,
+        # Every real page_summary carries the page's kind (W4.1) — never
+        # null, derived when nobody has said.
+        "kind": "collection", "kind_set_by": "derived",
+        "kind_means": "a set of saved answers",
     }
 
 
