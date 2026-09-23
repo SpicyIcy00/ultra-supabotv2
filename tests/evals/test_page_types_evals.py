@@ -13,6 +13,10 @@ LIVE MODEL, LIVE DATABASE, OPT IN.
   w24_dashboard   "build me a dashboard" builds a KEPT PAGE (create_page, a
                   fake writer — nothing reaches george.pages) from reads that
                   ran, and composes no report page of its own.
+  w41_dashboard_kind
+                  and that page is DRAWN as a dashboard: create_page carries
+                  kind "dashboard" (W4.1). Held here rather than in code,
+                  because a rule forcing this kind would guess at the rest.
 
 What is asserted is structure, never wording; turns, seconds and dollars are
 printed, never asserted.
@@ -135,3 +139,36 @@ def test_w24_dashboard(monkeypatch):
     assert turn.page_changes and turn.page_changes[-1].get("page_id"), "no page_changed frame for the room"
     assert not _pages(turn), f"a dashboard request wrote a report page too: {_pages(turn)}"
     assert turn.done.get("size_ceiling") != "broad", turn.done
+
+
+def test_w41_dashboard_is_a_dashboard_kind(monkeypatch):
+    """
+    W4.1 — the page he builds for a dashboard is DRAWN as one.
+
+    W2.4 made "build me a dashboard" build a kept page instead of a report.
+    That page still came out drawn like every other kept page: a header and N
+    boards in the same packed grid. A page's KIND is how it is drawn, and a
+    dashboard's kind is `dashboard` — numbers checked at a glance, single
+    figures as stat tiles in a row, not a page read top to bottom.
+
+    He is told this on the tool (create_page's `kind`) and in the sentence the
+    request is answered with (composition.dashboard.sentence). Nothing in code
+    forces the kind, because a rule that forced this one would be guessing at
+    every other page too — so the eval is what holds it.
+
+    The writer is a fake: nothing reaches george.pages. What is asserted is
+    the SPEC he handed it, never a word of the answer.
+    """
+    w = FakeWriter(title="Dashboard")
+    turn = run_turn(monkeypatch, "build me a dashboard", page_writer=w)
+    say(f"\n  w41_dashboard_kind: {_clock(turn)}")
+    kinds = [b.kind for b in w.builds] + [o.get("kind") for e in w.edits
+                                          for o in e.operations if o.get("op") == "set_kind"]
+    report.add("w41_dashboard_kind", turn,
+               {"builds": len(w.builds), "edits": len(w.edits), "kinds": kinds}, None)
+    say(f"  create_page x{len(w.builds)}; kinds {kinds}; answer: {turn.answer[:200]!r}")
+    assert turn.done.get("status") == "ok", turn.warnings
+    assert len(w.builds) == 1, f"expected one kept page built, got {len(w.builds)}"
+    assert "dashboard" in kinds, (
+        f"the dashboard he built is not drawn as one: kind={kinds}")
+    assert req(DEFS, "pages.kinds.catalogue.dashboard.draws.group_single_figures") is True
