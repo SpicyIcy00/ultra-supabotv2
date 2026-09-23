@@ -15,6 +15,7 @@ import type {
   Page,
   PageDeleted,
   PageEvent,
+  PageKind,
   UpdatePageRequest,
 } from '../types/pins';
 
@@ -50,6 +51,18 @@ export const updatePage = async (id: string, body: UpdatePageRequest): Promise<P
  */
 export const setPageWindow = async (id: string, preset: string | null): Promise<Page> => {
   const { data } = await axios.put<Page>(`${API_BASE}/${id}/window`, { preset });
+  return data;
+};
+
+/**
+ * SET WHAT KIND OF PAGE THIS IS (W4.1) — the owner changing it by hand.
+ *
+ * Presentation only: the kind decides how the page is DRAWN and never what is
+ * on it, what any figure says or the order the analyses sit in. PUT, as the
+ * window is, because it replaces one value rather than patching a set of them.
+ */
+export const setPageKind = async (id: string, kind: PageKind): Promise<Page> => {
+  const { data } = await axios.put<Page>(`${API_BASE}/${id}`, { kind });
   return data;
 };
 
