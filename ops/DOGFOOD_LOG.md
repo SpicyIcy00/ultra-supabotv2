@@ -57,6 +57,37 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-23 — found by the sweep of Bob's own record (3 days, 67 turns)
+
+Ranked by what would annoy him most. Numbers 1, 2, 3 and 5 are fixed above; the
+rest are open and none has a card yet.
+
+1. **He writes the same belief two and three times in one turn, and each costs a
+   round.** 64 `record_belief` calls in 3 days made 16 rows; 43 of the estate's
+   58 beliefs are superseded. The same Greenhills claim was written at 06:33:07,
+   superseded 06:35:11, superseded again 06:40:43 — three near-identical
+   sentences in seven minutes.
+2. **A product NAME in `product_id` comes back empty instead of refusing, and
+   costs half a turn.** "why?" (06:33:51) ran three reads with
+   `product_id: 'Aji Kiamoy White'`, all three returned nothing, and Bob then
+   worked out the sku himself and re-asked the same three as `sku: SH1147`. Six
+   reads where three would do. Every other bad argument in this system refuses
+   and says what it takes; this one returns silence.
+3. **Bob's own defect feed misreports itself.** 19 of the 26 `empty_result` gaps
+   in 3 days name `record_belief`, a write that returns no rows by design. The
+   weekly sweep sends a person to read that feed, and three quarters of it is
+   noise.
+4. **The record cannot say which decision he made, only which queries ran.** A
+   `get_change` is logged as its seven member reads and never as itself, so the
+   refusal he was handed ("get_change already read what this question needs")
+   names a call that appears nowhere in `george.tool_calls`.
+5. **No figure carries its own measure or read time in what is stored** — they
+   live only in the call's arguments, which is why the tooltip was the only
+   place they appeared.
+6. **Latent, since wave 1:** `_unstring_arguments` unwraps a quoted list or
+   object but not a quoted scalar, so `group_by: '"product"'` still refuses.
+   Nine of eighteen `get_sales` refusals in the window are this one bug.
+
 ### 2026-09-23 — the owner testing wave 1 and 2 on the live build, nine things
 
 > *"sometimes i cant scroll down in the page."*
@@ -113,6 +144,25 @@ the StoreHub API in the codebase is barcodes — but "true" is not an answer to
 the third asking. He has no place to keep a level he worked out himself, so he
 cannot alert on one: 39 lines of 3,474 carry a level, and he told the owner 212
 more would have fired today had there been one. **Card W4.2.**
+
+**FIXED 2026-09-23** (merges 39ee867 D3, 12bf737 D2, and D1; measured on his own
+questions, three runs each): the left column reads to its end and pins by its
+FOOT when it is taller than the window; a figure names its subject and measure
+above the number; a read refused by a bound never happens (the reading tools
+leave the schema once the call that answers the question has run) and is never
+drawn as "declined" — 0 refusals in 6 runs, against 2 on his why-question; his
+words on the left are 5–21, against 192–403 written and ~60 kept; his caveat
+moved to the head of the figures it qualifies; an ask that repeats the question
+just asked is dropped; a turn that dies now records how it ended and the room
+fails it in words instead of sitting idle. "Why is Greenhills down?" 82.8 s →
+**48.4 s**; "how are we doing?" 141.9 s → **115.0 s**.
+
+**NOT FIXED, and he should hear it plainly:** *"its taking long again"*. A why
+is 48.4 s against the 20–40 s it is meant to be, and a broad answer is still
+just under two minutes. Removing the refused round did not buy the time back —
+D3 measured the asking round's 10.4 s reappearing in the writing round (27.1 →
+38.8 s median): DeepSeek spends the same thinking whether it is asked in one
+request or two. The remaining time is the WRITING round.
 
 Nine screenshots, the live build after wave 2 (`ce8fed4`). What they show:
 1. **Neither column scrolls all the way.** The right column cut off mid-answer
