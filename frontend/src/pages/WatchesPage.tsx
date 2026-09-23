@@ -85,10 +85,10 @@ export function silenceOf(row: WatchingRow): string | null {
 function Told({ row }: { row: WatchingRow }) {
   if (!row.told.length) {
     return (
-      <p className="r-note r-w-told">
-        <span className="r-label">told</span>
-        Nothing beyond the question itself. Ask Bob to add a standing instruction.
-      </p>
+      <div className="r-w-told">
+        <p className="r-label">told</p>
+        <p className="r-note">Nothing beyond the question itself. Ask Bob to add one.</p>
+      </div>
     );
   }
   return (

@@ -168,7 +168,12 @@ async def watch_row(session: AsyncSession, row, defs: Optional[dict] = None) -> 
     and the page says which of the two this is from those two counts.
     """
     base = watches.as_row(row, defs)
-    told = [str(base["watching"])]
+    # The three things it was told, apart. The NAME already reads them as one
+    # sentence (`watches.label`), so repeating that sentence underneath says
+    # nothing; the condition, the direction and the scope are three facts a
+    # person changes separately and they are listed as three.
+    spec = watches.conditions(defs).get(row.condition) or {}
+    told = [str(spec.get("says") or row.condition)]
     if row.direction != "either":
         told.append(f"only when it moves {row.direction}")
     told.append(", ".join(row.stores) if row.stores else "every shop")

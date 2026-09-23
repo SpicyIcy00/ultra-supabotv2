@@ -22,8 +22,14 @@ const imports = vi.fn();
 vi.mock('../services/pagesApi', () => ({ listPages: () => pages() }));
 vi.mock('../services/workflowsApi', () => ({ listWorkflows: () => workflows() }));
 vi.mock('../services/standingApi', () => ({
-  railWatching: () => standing(),
+  // One query, two readings: the rail selects a flat list out of the shape the
+  // watches page reads, so they share a cache key and never fight over it.
+  getWatching: () => standing(),
+  railRows: (w: { questions: unknown[]; watches: unknown[] }) => [...w.questions, ...w.watches],
   anchorOf: (r: { family: string; id: string }) => `${r.family}-${r.id}`,
+  // The slot in the rail's width, built from the slot the service holds.
+  slotShort: (r: { slot?: { hour: number; minute: number } }) =>
+    `${String(r.slot?.hour ?? 0).padStart(2, '0')}:${String(r.slot?.minute ?? 0).padStart(2, '0')} daily`,
 }));
 vi.mock('../services/storehubImportsApi', () => ({ listImports: () => imports() }));
 
@@ -49,9 +55,11 @@ beforeEach(() => {
                                  current_version: { version: 2 } }]);
   // W4.4: one row shape for both families, and the SLOT is there whether
   // the thing is on or off.
-  standing.mockResolvedValue([{ id: 's1', family: 'question', asks: 'Morning question',
-                                when: 'every day at 06:00', on: false,
-                                state: 'switched off' }]);
+  standing.mockResolvedValue({ questions: [{ id: 's1', family: 'question',
+                                 asks: 'Morning question', when: 'every day at 06:00',
+                                 on: false, state: 'switched off',
+                                 slot: { kind: 'daily', hour: 6, minute: 0, days_of_week: null } }],
+                               watches: [] });
   imports.mockReset();
   imports.mockResolvedValue([
     { id: 14, kind: 'purchase_orders', uploaded_at: '2026-09-03T14:57:42+00:00' },
@@ -85,7 +93,7 @@ describe('every item opens what it names', () => {
     mount();
     expect((await screen.findByText('Seikyo PO')).parentElement?.textContent).toContain('v2 · active');
     const row = (await screen.findByText('Morning question')).parentElement;
-    expect(row?.textContent).toContain('every day at 06:00');
+    expect(row?.textContent).toContain('06:00');
     expect(row?.querySelector('.r-pip--off')).toBeTruthy();
   });
 
@@ -100,7 +108,7 @@ describe('three renderings, never two (UI rule 8)', () => {
     let resolve!: (v: unknown) => void;
     pages.mockReturnValue(new Promise((r) => { resolve = r; }));
     workflows.mockRejectedValue(new Error('down'));
-    standing.mockResolvedValue([]);
+    standing.mockResolvedValue({ questions: [], watches: [] });
     mount();
     expect(screen.getAllByText('loading').length).toBeGreaterThan(0);
     expect(await screen.findByText('could not be read')).toBeTruthy();

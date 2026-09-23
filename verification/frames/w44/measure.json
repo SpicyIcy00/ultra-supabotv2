@@ -1,0 +1,563 @@
+{
+  "desktop-1440": {
+    "viewport": [
+      1440,
+      1100
+    ],
+    "side": "open",
+    "heads": [
+      "Watches \u00b7 standing questions",
+      "Standing questions",
+      "Watches"
+    ],
+    "groups": [
+      {
+        "left": 272,
+        "top": 119,
+        "width": 692,
+        "height": 654
+      },
+      {
+        "left": 272,
+        "top": 774,
+        "width": 692,
+        "height": 1028
+      }
+    ],
+    "rows": [
+      {
+        "id": "question-q1",
+        "when": "every day at 08:00 \u00b7 asked on schedule",
+        "gate": null,
+        "button": {
+          "text": "Switch off",
+          "disabled": false,
+          "box": {
+            "left": 272,
+            "top": 280,
+            "width": 112,
+            "height": 40
+          },
+          "min_side": 40
+        },
+        "gate_above_switch": null,
+        "said": "Yesterday was \u20b1182,400 across the estate, a little under the usual Tuesday. Rockwell carried most of the shortfall.\n\nsaid 23 Sept, 08:01 \u00b7 read 23 Sept, 08:00 \u00b7 open the thread",
+        "told": [
+          "Show more of Rockwell.",
+          "Leave AJI CMG out of the estate line."
+        ]
+      },
+      {
+        "id": "question-q2",
+        "when": "Mon, Thu at 07:00 \u00b7 switched off",
+        "gate": null,
+        "button": {
+          "text": "Switch on",
+          "disabled": false,
+          "box": {
+            "left": 272,
+            "top": 624,
+            "width": 110,
+            "height": 40
+          },
+          "min_side": 40
+        },
+        "gate_above_switch": null,
+        "said": "It has not run yet.",
+        "told": []
+      },
+      {
+        "id": "watch-w1",
+        "when": "every day at 08:00 \u00b7 not backtested yet",
+        "gate": "This watch has not been backtested, so nobody knows how often it would speak. Back it over the last 60 days first \u2014 that says how many days it would have fired, and on which.",
+        "button": {
+          "text": "Switch on",
+          "disabled": true,
+          "box": {
+            "left": 272,
+            "top": 1024,
+            "width": 110,
+            "height": 40
+          },
+          "min_side": 40
+        },
+        "gate_above_switch": true,
+        "said": "Not checked yet: it is switched off.",
+        "told": [
+          "A shop\u2019s sales drop",
+          "only when it moves down",
+          "every shop"
+        ]
+      },
+      {
+        "id": "watch-w2",
+        "when": "every day at 06:30 \u00b7 ready \u2014 not switched on",
+        "gate": null,
+        "button": {
+          "text": "Switch on",
+          "disabled": false,
+          "box": {
+            "left": 272,
+            "top": 1319,
+            "width": 110,
+            "height": 40
+          },
+          "min_side": 40
+        },
+        "gate_above_switch": null,
+        "said": "Not checked yet: it is switched off.",
+        "told": [
+          "A line runs out",
+          "Rockwell, Greenhills"
+        ]
+      },
+      {
+        "id": "watch-w3",
+        "when": "Mon at 08:00 \u00b7 watching",
+        "gate": null,
+        "button": {
+          "text": "Switch off",
+          "disabled": false,
+          "box": {
+            "left": 272,
+            "top": 1606,
+            "width": 112,
+            "height": 40
+          },
+          "min_side": 40
+        },
+        "gate_above_switch": null,
+        "said": "11 checks, and it has not spoken. Silence is normal for a watch.",
+        "told": [
+          "Stock below cover",
+          "AJI BARN"
+        ]
+      }
+    ],
+    "rail_rows": [
+      {
+        "head": "PAGES",
+        "items": []
+      },
+      {
+        "head": "SYSTEMS",
+        "items": []
+      },
+      {
+        "head": "WATCHES \u00b7 STANDING QUESTIONS",
+        "items": [
+          {
+            "text": "How are we doing? \u00b7 08:00 daily",
+            "href": "/watches#question-q1"
+          },
+          {
+            "text": "What needs ordering at AJI BARN? \u00b7 Mon, Thu 07:00",
+            "href": "/watches#question-q2"
+          },
+          {
+            "text": "A shop\u2019s sales drop \u2014 any shop \u00b7 08:00 daily",
+            "href": "/watches#watch-w1"
+          },
+          {
+            "text": "A line runs out \u2014 Rockwell, Greenhills \u00b7 06:30 daily",
+            "href": "/watches#watch-w2"
+          },
+          {
+            "text": "Stock below cover \u2014 AJI BARN \u00b7 Mon 08:00",
+            "href": "/watches#watch-w3"
+          }
+        ]
+      },
+      {
+        "head": "PEOPLE",
+        "items": [
+          {
+            "text": "You \u00b7 owner",
+            "href": "/settings"
+          }
+        ]
+      }
+    ],
+    "accent_worn_by": [],
+    "page_scrolls_sideways": false,
+    "widest": {
+      "right": 1400,
+      "who": "r-column"
+    },
+    "scrolled_to": 851
+  },
+  "desktop-1440-rail-closed": {
+    "viewport": [
+      1440,
+      1100
+    ],
+    "side": "closed",
+    "heads": [
+      "Watches \u00b7 standing questions",
+      "Standing questions",
+      "Watches"
+    ],
+    "groups": [
+      {
+        "left": 58,
+        "top": 119,
+        "width": 692,
+        "height": 654
+      },
+      {
+        "left": 58,
+        "top": 774,
+        "width": 692,
+        "height": 1028
+      }
+    ],
+    "rows": [
+      {
+        "id": "question-q1",
+        "when": "every day at 08:00 \u00b7 asked on schedule",
+        "gate": null,
+        "button": {
+          "text": "Switch off",
+          "disabled": false,
+          "box": {
+            "left": 58,
+            "top": 280,
+            "width": 112,
+            "height": 40
+          },
+          "min_side": 40
+        },
+        "gate_above_switch": null,
+        "said": "Yesterday was \u20b1182,400 across the estate, a little under the usual Tuesday. Rockwell carried most of the shortfall.\n\nsaid 23 Sept, 08:01 \u00b7 read 23 Sept, 08:00 \u00b7 open the thread",
+        "told": [
+          "Show more of Rockwell.",
+          "Leave AJI CMG out of the estate line."
+        ]
+      },
+      {
+        "id": "question-q2",
+        "when": "Mon, Thu at 07:00 \u00b7 switched off",
+        "gate": null,
+        "button": {
+          "text": "Switch on",
+          "disabled": false,
+          "box": {
+            "left": 58,
+            "top": 624,
+            "width": 110,
+            "height": 40
+          },
+          "min_side": 40
+        },
+        "gate_above_switch": null,
+        "said": "It has not run yet.",
+        "told": []
+      },
+      {
+        "id": "watch-w1",
+        "when": "every day at 08:00 \u00b7 not backtested yet",
+        "gate": "This watch has not been backtested, so nobody knows how often it would speak. Back it over the last 60 days first \u2014 that says how many days it would have fired, and on which.",
+        "button": {
+          "text": "Switch on",
+          "disabled": true,
+          "box": {
+            "left": 58,
+            "top": 1024,
+            "width": 110,
+            "height": 40
+          },
+          "min_side": 40
+        },
+        "gate_above_switch": true,
+        "said": "Not checked yet: it is switched off.",
+        "told": [
+          "A shop\u2019s sales drop",
+          "only when it moves down",
+          "every shop"
+        ]
+      },
+      {
+        "id": "watch-w2",
+        "when": "every day at 06:30 \u00b7 ready \u2014 not switched on",
+        "gate": null,
+        "button": {
+          "text": "Switch on",
+          "disabled": false,
+          "box": {
+            "left": 58,
+            "top": 1319,
+            "width": 110,
+            "height": 40
+          },
+          "min_side": 40
+        },
+        "gate_above_switch": null,
+        "said": "Not checked yet: it is switched off.",
+        "told": [
+          "A line runs out",
+          "Rockwell, Greenhills"
+        ]
+      },
+      {
+        "id": "watch-w3",
+        "when": "Mon at 08:00 \u00b7 watching",
+        "gate": null,
+        "button": {
+          "text": "Switch off",
+          "disabled": false,
+          "box": {
+            "left": 58,
+            "top": 1606,
+            "width": 112,
+            "height": 40
+          },
+          "min_side": 40
+        },
+        "gate_above_switch": null,
+        "said": "11 checks, and it has not spoken. Silence is normal for a watch.",
+        "told": [
+          "Stock below cover",
+          "AJI BARN"
+        ]
+      }
+    ],
+    "rail_rows": [
+      {
+        "head": "PAGES",
+        "items": []
+      },
+      {
+        "head": "SYSTEMS",
+        "items": []
+      },
+      {
+        "head": "WATCHES \u00b7 STANDING QUESTIONS",
+        "items": [
+          {
+            "text": "How are we doing? \u00b7 08:00 daily",
+            "href": "/watches#question-q1"
+          },
+          {
+            "text": "What needs ordering at AJI BARN? \u00b7 Mon, Thu 07:00",
+            "href": "/watches#question-q2"
+          },
+          {
+            "text": "A shop\u2019s sales drop \u2014 any shop \u00b7 08:00 daily",
+            "href": "/watches#watch-w1"
+          },
+          {
+            "text": "A line runs out \u2014 Rockwell, Greenhills \u00b7 06:30 daily",
+            "href": "/watches#watch-w2"
+          },
+          {
+            "text": "Stock below cover \u2014 AJI BARN \u00b7 Mon 08:00",
+            "href": "/watches#watch-w3"
+          }
+        ]
+      },
+      {
+        "head": "PEOPLE",
+        "items": [
+          {
+            "text": "You \u00b7 owner",
+            "href": "/settings"
+          }
+        ]
+      }
+    ],
+    "accent_worn_by": [],
+    "page_scrolls_sideways": false,
+    "widest": {
+      "right": 1382,
+      "who": "r-column"
+    },
+    "scrolled_to": 851
+  },
+  "phone-390": {
+    "viewport": [
+      390,
+      844
+    ],
+    "side": "closed",
+    "heads": [
+      "Watches \u00b7 standing questions",
+      "Standing questions",
+      "Watches"
+    ],
+    "groups": [
+      {
+        "left": 18,
+        "top": 140,
+        "width": 354,
+        "height": 715
+      },
+      {
+        "left": 18,
+        "top": 855,
+        "width": 354,
+        "height": 1103
+      }
+    ],
+    "rows": [
+      {
+        "id": "question-q1",
+        "when": "every day at 08:00 \u00b7 asked on schedule",
+        "gate": null,
+        "button": {
+          "text": "Switch off",
+          "disabled": false,
+          "box": {
+            "left": 18,
+            "top": 318,
+            "width": 112,
+            "height": 40
+          },
+          "min_side": 40
+        },
+        "gate_above_switch": null,
+        "said": "Yesterday was \u20b1182,400 across the estate, a little under the usual Tuesday. Rockwell carried most of the shortfall.\n\nsaid 23 Sept, 08:01 \u00b7 read 23 Sept, 08:00 \u00b7 open the thread",
+        "told": [
+          "Show more of Rockwell.",
+          "Leave AJI CMG out of the estate line."
+        ]
+      },
+      {
+        "id": "question-q2",
+        "when": "Mon, Thu at 07:00 \u00b7 switched off",
+        "gate": null,
+        "button": {
+          "text": "Switch on",
+          "disabled": false,
+          "box": {
+            "left": 18,
+            "top": 705,
+            "width": 110,
+            "height": 40
+          },
+          "min_side": 40
+        },
+        "gate_above_switch": null,
+        "said": "It has not run yet.",
+        "told": []
+      },
+      {
+        "id": "watch-w1",
+        "when": "every day at 08:00 \u00b7 not backtested yet",
+        "gate": "This watch has not been backtested, so nobody knows how often it would speak. Back it over the last 60 days first \u2014 that says how many days it would have fired, and on which.",
+        "button": {
+          "text": "Switch on",
+          "disabled": true,
+          "box": {
+            "left": 18,
+            "top": 1126,
+            "width": 110,
+            "height": 40
+          },
+          "min_side": 40
+        },
+        "gate_above_switch": true,
+        "said": "Not checked yet: it is switched off.",
+        "told": [
+          "A shop\u2019s sales drop",
+          "only when it moves down",
+          "every shop"
+        ]
+      },
+      {
+        "id": "watch-w2",
+        "when": "every day at 06:30 \u00b7 ready \u2014 not switched on",
+        "gate": null,
+        "button": {
+          "text": "Switch on",
+          "disabled": false,
+          "box": {
+            "left": 18,
+            "top": 1421,
+            "width": 110,
+            "height": 40
+          },
+          "min_side": 40
+        },
+        "gate_above_switch": null,
+        "said": "Not checked yet: it is switched off.",
+        "told": [
+          "A line runs out",
+          "Rockwell, Greenhills"
+        ]
+      },
+      {
+        "id": "watch-w3",
+        "when": "Mon at 08:00 \u00b7 watching",
+        "gate": null,
+        "button": {
+          "text": "Switch off",
+          "disabled": false,
+          "box": {
+            "left": 18,
+            "top": 1725,
+            "width": 112,
+            "height": 40
+          },
+          "min_side": 40
+        },
+        "gate_above_switch": null,
+        "said": "11 checks, and it has not spoken. Silence is normal for a watch.",
+        "told": [
+          "Stock below cover",
+          "AJI BARN"
+        ]
+      }
+    ],
+    "rail_rows": [
+      {
+        "head": "PAGES",
+        "items": []
+      },
+      {
+        "head": "SYSTEMS",
+        "items": []
+      },
+      {
+        "head": "WATCHES \u00b7 STANDING QUESTIONS",
+        "items": [
+          {
+            "text": "How are we doing? \u00b7 08:00 daily",
+            "href": "/watches#question-q1"
+          },
+          {
+            "text": "What needs ordering at AJI BARN? \u00b7 Mon, Thu 07:00",
+            "href": "/watches#question-q2"
+          },
+          {
+            "text": "A shop\u2019s sales drop \u2014 any shop \u00b7 08:00 daily",
+            "href": "/watches#watch-w1"
+          },
+          {
+            "text": "A line runs out \u2014 Rockwell, Greenhills \u00b7 06:30 daily",
+            "href": "/watches#watch-w2"
+          },
+          {
+            "text": "Stock below cover \u2014 AJI BARN \u00b7 Mon 08:00",
+            "href": "/watches#watch-w3"
+          }
+        ]
+      },
+      {
+        "head": "PEOPLE",
+        "items": [
+          {
+            "text": "You \u00b7 owner",
+            "href": "/settings"
+          }
+        ]
+      }
+    ],
+    "accent_worn_by": [],
+    "page_scrolls_sideways": false,
+    "widest": {
+      "right": 372,
+      "who": "r-column"
+    },
+    "scrolled_to": 764
+  }
+}

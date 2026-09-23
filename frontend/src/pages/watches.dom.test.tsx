@@ -64,7 +64,7 @@ function watch(over: Partial<WatchingRow> = {}): WatchingRow {
     ...question(),
     id: 'w1', family: 'watch', asks: 'A shop’s sales drop — any shop',
     when: 'Mon at 08:00', state: 'not backtested yet',
-    told: ['A shop’s sales drop — any shop', 'only when it moves down', 'every shop'],
+    told: ['A shop’s sales drop', 'only when it moves down', 'every shop'],
     told_by: 'condition',
     slot: { kind: 'weekly', hour: 8, minute: 0, days_of_week: [0] },
     checks: 0, spoke: 0,

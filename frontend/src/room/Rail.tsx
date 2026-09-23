@@ -27,7 +27,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listPages } from '../services/pagesApi';
 import { listWorkflows } from '../services/workflowsApi';
-import { anchorOf, railWatching } from '../services/standingApi';
+import { anchorOf, getWatching, railRows, slotShort } from '../services/standingApi';
 import { listImports } from '../services/storehubImportsApi';
 import { useAuthStore } from '../stores/authStore';
 import { useRoomTheme } from './theme';
@@ -157,7 +157,7 @@ export function Rail({ busy, needsYou, onNew, estate }: RailProps) {
 
   const pages = useQuery({ queryKey: ['pages'], queryFn: listPages, staleTime: 30_000, retry: false });
   const systems = useQuery({ queryKey: ['workflows'], queryFn: listWorkflows, staleTime: 30_000, retry: false });
-  const standing = useQuery({ queryKey: ['watching'], queryFn: railWatching, staleTime: 60_000, retry: false });
+  const standing = useQuery({ queryKey: ['watching'], queryFn: getWatching, select: railRows, staleTime: 60_000, retry: false });
 
   // The import ledger is behind its own page key. A role without it is not
   // shown the group at all — a link that bounces is worse than no link — and
@@ -230,7 +230,7 @@ export function Rail({ busy, needsYou, onNew, estate }: RailProps) {
             <NavLink key={q.id} to={`/watches#${anchorOf(q)}`} className="r-side-it" title={q.asks}>
               <i className={q.on ? 'r-pip r-pip--run' : 'r-pip r-pip--off'} />
               <span>{q.asks}</span>
-              <small>{q.when}</small>
+              <small>{slotShort(q)}</small>
             </NavLink>
           ))}
         </Group>

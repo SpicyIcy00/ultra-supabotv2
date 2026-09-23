@@ -147,15 +147,42 @@ export async function getWatching(): Promise<Watching> {
   return data;
 }
 
-/** One flat list for the sidebar, questions first, in the page's own order. */
-export async function railWatching(): Promise<WatchingRow[]> {
-  const { questions, watches } = await getWatching();
-  return [...questions, ...watches];
+/**
+ * One flat list for the sidebar, questions first, in the page's own order.
+ *
+ * A `select` over the SAME query, never a second one: the rail and the page
+ * share the cache key `['watching']`, so switching something on from the page
+ * moves the pip on the rail, and one shape is read two ways rather than two
+ * shapes being written under one key. (Two query functions under one key was
+ * this card's own bug: the rail's array overwrote the page's object and the
+ * page drew "none yet" beside a rail listing five.)
+ */
+export function railRows(w: Watching): WatchingRow[] {
+  return [...w.questions, ...w.watches];
 }
 
 /** Where a row of `family` lives on the page. The rail deep-links to it. */
 export function anchorOf(row: { family: string; id: string }): string {
   return `${row.family}-${row.id}`;
+}
+
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/**
+ * The same slot in the rail's width: "08:00 daily", "Mon, Thu 07:00".
+ *
+ * Built from the slot the service holds, never from the sentence — so it says
+ * exactly what `when` says and cannot drift from it. The rail's column is
+ * about eleven characters wide beside a name, and "every day at 08:00" ate
+ * the name down to "Ho…"; every other row there carries a short fact.
+ */
+export function slotShort(row: WatchingRow): string {
+  const at = `${String(row.slot?.hour ?? 0).padStart(2, '0')}:${String(row.slot?.minute ?? 0).padStart(2, '0')}`;
+  const days = row.slot?.days_of_week;
+  if (row.slot?.kind === 'weekly' && days?.length) {
+    return `${days.map((d) => DAYS[d]).filter(Boolean).join(', ')} ${at}`;
+  }
+  return `${at} daily`;
 }
 
 function of(row: { family: string; id: string }): string {
