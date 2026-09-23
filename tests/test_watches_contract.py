@@ -257,14 +257,19 @@ def test_the_backtest_gate_is_a_constraint_not_only_a_service_rule():
 
 
 def test_switching_on_without_a_backtest_is_refused_in_the_owners_terms():
-    source = inspect.getsource(watches.switch)
+    # W4.4 (2026-09-23) moved the two sentences into `why_not_on`, which
+    # `switch` raises and the watches page READS, so a person meets the gate
+    # where they are looking rather than as a failed click. Same gate, same
+    # words, one source — so the check reads both, and that switch still asks.
+    source = inspect.getsource(watches.switch) + inspect.getsource(watches.why_not_on)
+    assert "why_not_on(watch)" in inspect.getsource(watches.switch)
     assert "not been backtested" in source
     # And the refusal explains the consequence, not the policy.
     assert "how often" in source
 
 
 def test_a_backtest_measured_under_other_definitions_does_not_count():
-    source = inspect.getsource(watches.switch)
+    source = inspect.getsource(watches.switch) + inspect.getsource(watches.why_not_on)
     assert "definitions_version" in source
 
 

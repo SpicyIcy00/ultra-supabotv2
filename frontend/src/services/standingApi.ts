@@ -79,3 +79,122 @@ export async function latestStanding(): Promise<StandingLatest | null> {
   const { data } = await axios.get<StandingLatest | null>(`${API_BASE}/latest`);
   return data ?? null;
 }
+
+/* ------------------------------------------------------------------ W4.4 --
+ *
+ * WHAT IS WATCHING: the standing questions AND the watches, on one page.
+ *
+ * Until this card `listStanding` above was called in exactly one place — the
+ * sidebar — so `last_asked`, `last_status` and `instructions[]` came back on
+ * every row and were drawn nowhere, and watches were not read here at all.
+ *
+ * TWO FAMILIES, ONE READING SHAPE. A standing question always speaks and a
+ * watch speaks only on a change, so they are two lists and not one — but both
+ * answer the same four things, and `WatchingRow` is those four. `when` is a
+ * time whether the thing is on or off; `on` is the switch.
+ */
+
+/** One standing question or one watch, as the page reads it. */
+export interface WatchingRow {
+  id: string;
+  family: 'question' | 'watch';
+  /** What it asks, or what it watches. */
+  asks: string;
+  /** Its slot, in words. ALWAYS a time — never "off". */
+  when: string;
+  on: boolean;
+  /** Where it stands, in the service's own words. */
+  state: string;
+  /** What it was told: a question's instructions, a watch's condition. */
+  told: string[];
+  told_by: 'instructions' | 'condition';
+  /** The slot as the service holds it, so a reschedule keeps what it does not change. */
+  slot: { kind: string; hour: number; minute: number; days_of_week: number[] | null };
+  last_run_at: string | null;
+  last_status: string | null;
+  last_error: string | null;
+  /** What it last said, in its own words, with the read behind it. */
+  last_said: {
+    said: string;
+    at: string | null;
+    read_at: string | null;
+    thread_id: string | null;
+    post_id: string;
+  } | null;
+  thread_id: string | null;
+  /** A watch's checks and how many of those it spoke on. Null on a question. */
+  checks: number | null;
+  spoke: number | null;
+  /** "9 of the last 60 days", where a backtest was recorded. */
+  backtest: string | null;
+  /** When that was measured, and over which closed window (UI rule 6). */
+  backtest_at: string | null;
+  backtest_window: string | null;
+  /** Rule 7's own sentence, when it cannot be switched on yet. */
+  switch_on_refusal: string | null;
+  may: { switch: boolean; reschedule: boolean; rewrite: boolean; remove: boolean };
+}
+
+export interface Watching {
+  questions: WatchingRow[];
+  watches: WatchingRow[];
+}
+
+const WATCHING = '/api/v1/bob/watching';
+
+export async function getWatching(): Promise<Watching> {
+  const { data } = await axios.get<Watching>(WATCHING);
+  return data;
+}
+
+/** One flat list for the sidebar, questions first, in the page's own order. */
+export async function railWatching(): Promise<WatchingRow[]> {
+  const { questions, watches } = await getWatching();
+  return [...questions, ...watches];
+}
+
+/** Where a row of `family` lives on the page. The rail deep-links to it. */
+export function anchorOf(row: { family: string; id: string }): string {
+  return `${row.family}-${row.id}`;
+}
+
+function of(row: { family: string; id: string }): string {
+  return `${WATCHING}/${row.family === 'watch' ? 'watches' : 'questions'}/${row.id}`;
+}
+
+/**
+ * Switch one on or off — the person's act, never Bob's (rule 7).
+ *
+ * A watch with no recorded backtest is REFUSED by the server, and the page has
+ * already said so beside the switch. The refusal's sentence comes back as the
+ * response detail and is shown verbatim.
+ */
+export async function switchWatching(row: WatchingRow, on: boolean): Promise<WatchingRow> {
+  const { data } = await axios.post<WatchingRow>(`${of(row)}/switch`, { on });
+  return data;
+}
+
+export async function rescheduleWatching(
+  row: WatchingRow,
+  slot: { hour: number; minute?: number; kind?: string | null; days_of_week?: number[] | null },
+): Promise<WatchingRow> {
+  const { data } = await axios.post<WatchingRow>(`${of(row)}/reschedule`, slot);
+  return data;
+}
+
+/** Change what a standing question asks. A watch has no name to rewrite. */
+export async function rewriteWatching(row: WatchingRow, question: string): Promise<WatchingRow> {
+  const { data } = await axios.post<WatchingRow>(`${of(row)}/rewrite`, { question });
+  return data;
+}
+
+/** Forget it. What it already said stays — those are posts. */
+export async function removeWatching(row: WatchingRow): Promise<void> {
+  await axios.delete(of(row));
+}
+
+/** The sentence a refused call came back with, or a plain one if it had none. */
+export function refusalOf(err: unknown): string {
+  const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+  return typeof detail === 'string' && detail.trim() ? detail : 'That could not be done.';
+}

@@ -141,6 +141,8 @@ async def question_row(session: AsyncSession, row) -> dict:
         "state": base["state"],
         "told": list(base["instructions"]),
         "told_by": "instructions",
+        "slot": {"kind": row.kind, "hour": row.hour, "minute": row.minute,
+                 "days_of_week": list(row.days_of_week or []) or None},
         "last_run_at": base["last_asked"],
         "last_status": base["last_status"],
         "last_error": row.last_error,
@@ -149,6 +151,8 @@ async def question_row(session: AsyncSession, row) -> dict:
         "checks": None,
         "spoke": None,
         "backtest": None,
+        "backtest_at": None,
+        "backtest_window": None,
         "switch_on_refusal": None,
         "may": {"switch": True, "reschedule": True, "rewrite": True, "remove": True},
     }
@@ -180,14 +184,25 @@ async def watch_row(session: AsyncSession, row, defs: Optional[dict] = None) -> 
         #: A watch's condition is not a sentence somebody typed, so the page
         #: must not offer to edit it as one. It is what the watch IS.
         "told_by": "condition",
-        "last_run_at": row.last_checked_at,
+        "slot": {"kind": row.kind, "hour": row.hour, "minute": row.minute,
+                 "days_of_week": list(row.days_of_week or []) or None},
+        #: The last check, whichever record carries it. A watch checked by an
+        #: older build may have rows in watch_checks and nothing on the row.
+        "last_run_at": row.last_checked_at or counted["newest"],
         "last_status": base["last_status"],
         "last_error": row.last_error,
         "last_said": await _watch_said(session, row.id),
         "thread_id": None,
         "checks": counted["checks"],
         "spoke": counted["spoke"],
+        # RULE 6: a measurement carries the time it was measured, and the
+        # window it was measured over. "9 of the last 60 days" with no date
+        # on it is a claim with no expiry.
         "backtest": base["would_have_fired"],
+        "backtest_at": (row.backtest or {}).get("measured_at"),
+        "backtest_window": (
+            f"{(row.backtest or {}).get('from')} to {(row.backtest or {}).get('to')}"
+            if (row.backtest or {}).get("from") else None),
         "switch_on_refusal": watches.why_not_on(row, defs),
         "may": {"switch": True, "reschedule": True, "rewrite": False, "remove": True},
     }

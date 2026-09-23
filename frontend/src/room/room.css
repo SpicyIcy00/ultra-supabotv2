@@ -2816,3 +2816,84 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
   font: 400 12.5px/1.55 var(--sans); color: var(--ink); max-width: 60ch;
   margin: 0 0 12px; border-left: 2px solid var(--edge-strong); padding-left: 14px;
 }
+
+/* ============================================================== W4.4 ======
+   THE WATCHES PAGE — standing questions and watches, and the switch.
+
+   Phone first: one column, everything full width, the switch reachable with a
+   thumb. Desktop is the same column with room beside it, which is what every
+   other room screen does.
+
+   NO ACCENT ANYWHERE IN THIS BLOCK. The colour means "needs you" and a switch
+   is not an approval, however much it feels like the important control on the
+   screen. Weight, position and a pip carry it instead (UI rule 5) — and the
+   pip is the rail's own, so on/off reads the same in both places.
+
+   EMPHASIS ADDS, NEVER DIMS: a row that is on is not made to stand out by
+   fading the others, and a disabled switch loses its pointer, not its ink
+   beyond what "you cannot press this" needs to say. */
+
+.r-w-grp { padding-top: 26px; }
+.r-w-h {
+  font: 500 15px/1.2 var(--sans);
+  letter-spacing: -0.01em; color: var(--ink); margin: 0;
+}
+.r-w-of { margin: 6px 0 0; max-width: 60ch; }
+.r-w-rows { list-style: none; margin: 4px 0 0; padding: 0; }
+
+/* The line somebody reading down the page is looking for: the slot, then
+   where it stands. The slot is ALWAYS a time — "off" is the switch. */
+.r-w-state { margin-top: 8px; font-size: 15px; }
+
+/* Rule 7's own sentence, above the switch it governs. A caveat takes its
+   prominence from position, never from hue. */
+.r-w-gate {
+  margin: 10px 0 0; max-width: 60ch;
+  padding-left: 12px; border-left: 2px solid var(--edge-strong);
+}
+
+/* THE ONE GESTURE. A button that says what pressing it does, with the rail's
+   pip saying what is true now — so the row reads the same here and there. */
+.r-w-switch {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: 500 13px/1 var(--sans); color: var(--ink);
+  background: none; border: 1px solid var(--edge-strong); border-radius: 999px;
+  padding: 9px 16px; cursor: pointer;
+  /* A thumb target on the phone, where this page is really used. */
+  min-height: 40px;
+}
+.r-w-switch:hover:not(:disabled), .r-w-switch:focus-visible { border-color: var(--ink-3); }
+.r-w-switch:disabled { opacity: 0.55; cursor: default; }
+
+.r-w-change { margin-top: 14px; }
+.r-w-field {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 0 0 10px;
+}
+.r-w-field .r-label { margin: 0; }
+.r-w-input {
+  font: 400 14px/1.4 var(--sans); color: var(--ink);
+  background: none; border: 1px solid var(--edge); border-radius: 6px;
+  padding: 8px 10px; min-height: 38px;
+}
+.r-w-input:focus-visible { border-color: var(--edge-strong); outline: none; }
+.r-w-input--wide { flex: 1 1 22ch; min-width: 0; }
+
+/* What it last said, in its own words. Set in from the left, because it is a
+   quotation of him and not the page speaking. */
+.r-w-said {
+  margin: 14px 0 0; padding-left: 14px;
+  border-left: 1px solid var(--edge); max-width: 60ch;
+}
+.r-w-said .r-src { margin-top: 6px; }
+
+.r-w-told { margin-top: 14px; max-width: 60ch; }
+.r-w-told .r-label { margin: 0 0 6px; }
+.r-w-list { list-style: none; margin: 0; padding: 0; }
+.r-w-list li { margin: 0 0 4px; }
+
+@media (min-width: 900px) {
+  /* Desktop is the phone layout with room beside it: the column does not
+     grow past what a line of prose should be. */
+  .r-w-grp { max-width: 72ch; }
+}

@@ -21,7 +21,10 @@ const standing = vi.fn();
 const imports = vi.fn();
 vi.mock('../services/pagesApi', () => ({ listPages: () => pages() }));
 vi.mock('../services/workflowsApi', () => ({ listWorkflows: () => workflows() }));
-vi.mock('../services/standingApi', () => ({ listStanding: () => standing() }));
+vi.mock('../services/standingApi', () => ({
+  railWatching: () => standing(),
+  anchorOf: (r: { family: string; id: string }) => `${r.family}-${r.id}`,
+}));
 vi.mock('../services/storehubImportsApi', () => ({ listImports: () => imports() }));
 
 import { Rail, restoreSide } from './Rail';
@@ -44,8 +47,11 @@ beforeEach(() => {
   pages.mockResolvedValue([{ id: 'p1', title: 'Seikyo Purchasing', purpose: null, pins: 3, created_at: '', updated_at: '' }]);
   workflows.mockResolvedValue([{ id: 'w1', name: 'Seikyo PO', status: 'active', created_by: '', created_at: '',
                                  current_version: { version: 2 } }]);
-  standing.mockResolvedValue([{ id: 's1', question: 'Morning question', instructions: [], when: 'every day at 06:00',
-                                state: 'switched off', last_asked: null, last_status: null }]);
+  // W4.4: one row shape for both families, and the SLOT is there whether
+  // the thing is on or off.
+  standing.mockResolvedValue([{ id: 's1', family: 'question', asks: 'Morning question',
+                                when: 'every day at 06:00', on: false,
+                                state: 'switched off' }]);
   imports.mockReset();
   imports.mockResolvedValue([
     { id: 14, kind: 'purchase_orders', uploaded_at: '2026-09-03T14:57:42+00:00' },
@@ -63,16 +69,24 @@ describe('every item opens what it names', () => {
     await screen.findByText('Seikyo Purchasing');
     expect(href(/Seikyo Purchasing/)).toBe('/pages/p1');
     expect(href(/Seikyo PO/)).toBe('/workflows');
-    expect(href(/Morning question/)).toBe('/workflows');
+    // W4.4: it opens the page it is actually on, at its own row.
+    expect(href(/Morning question/)).toBe('/watches#question-s1');
     expect(href(/You/)).toBe('/settings');
     expect(href('Needs you, 2 waiting')).toBe('/inbox');
     expect(href('Back to Supabot BI')).toBe('/dashboard');
   });
 
-  it('says a system\'s version and state, and a switched-off automation is off', async () => {
+  // REWRITTEN BY W4.4 (2026-09-23). It used to hold that a switched-off
+  // standing question says "off" WHERE ITS SLOT GOES, which meant an off
+  // row and an on row in one group carried different kinds of fact and
+  // could not be read down. The pip already says on or off; the slot is
+  // the thing only the row knows.
+  it('says a system\'s version and state, and an off watch still says when it runs', async () => {
     mount();
     expect((await screen.findByText('Seikyo PO')).parentElement?.textContent).toContain('v2 · active');
-    expect((await screen.findByText('Morning question')).parentElement?.textContent).toContain('off');
+    const row = (await screen.findByText('Morning question')).parentElement;
+    expect(row?.textContent).toContain('every day at 06:00');
+    expect(row?.querySelector('.r-pip--off')).toBeTruthy();
   });
 
   it('draws no console switch and no status line (row 22)', () => {
@@ -90,7 +104,7 @@ describe('three renderings, never two (UI rule 8)', () => {
     mount();
     expect(screen.getAllByText('loading').length).toBeGreaterThan(0);
     expect(await screen.findByText('could not be read')).toBeTruthy();
-    expect(await screen.findByText('none switched on')).toBeTruthy();
+    expect(await screen.findByText('none set up yet')).toBeTruthy();
     await act(async () => { resolve([]); });
     expect(await screen.findByText('nothing kept yet')).toBeTruthy();
   });
