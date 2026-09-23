@@ -27,7 +27,7 @@ import { FiguresArea, Wires, scrollToFigure } from './FiguresArea';
 import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
 import { HEADLINE_RESTATED_AT, bodyOf, caveatUnshown, claimAndStanding, restated,
-         thoughtsOf, unmark } from './beside';
+         stickyTop, thoughtsOf, travels, unmark } from './beside';
 import { pageOf } from './page';
 import { placeFigures as figuresInText } from './figures';
 import { identitiesFrom } from './identity';
@@ -166,6 +166,7 @@ export default function Room() {
   const himRef = useRef<HTMLDivElement>(null);
   const wordsRef = useRef<HTMLDivElement>(null);
   const areaRef = useRef<HTMLDivElement>(null);
+  const asideRef = useRef<HTMLDivElement>(null);
   // WHETHER HIS WORDS RUN PAST THE BOTTOM OF THEIR COLUMN, so the column can
   // fade there instead of cutting a sentence (the log, 2026-09-17).
   // HOW THE FIGURES' ARRIVAL IS GOING, from the board (P2S.2(d)). The mark
@@ -358,6 +359,30 @@ export default function Room() {
   useEffect(() => {
     if (!busy && wordsRef.current) wordsRef.current.scrollTop = 0;
   }, [busy, answers.length]);
+  // WHERE HIS SIDE PINS (D1, 2026-09-23). The owner: *"i couldnt scroll down
+  // the left but there was more"*. A sticky column taller than the window it
+  // is pinned in cannot be read to its end by scrolling the page, because the
+  // page is what moves and the column is what does not. So a tall column pins
+  // by its FOOT instead of its head — `beside.stickyTop` — and the end of what
+  // he said comes to rest above the line. This is only the MEASUREMENT the
+  // rule is given, re-taken whenever the column or the window changes; nothing
+  // here is a layout, it sets one property and one attribute.
+  useEffect(() => {
+    const el = asideRef.current;
+    if (!el) return;
+    const look = () => {
+      const fits = travels(el.scrollHeight, window.innerHeight);
+      el.dataset.travels = fits ? 'yes' : 'no';
+      el.style.setProperty('--aside-top', `${stickyTop(el.scrollHeight, window.innerHeight)}px`);
+    };
+    look();
+    window.addEventListener('resize', look);
+    // A caveat, a notice or a third suggested question landing mid-turn makes
+    // the column taller without the window moving, so the box is watched too.
+    const grew = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(look);
+    grew?.observe(el);
+    return () => { window.removeEventListener('resize', look); grew?.disconnect(); };
+  }, [busy, answers.length, at]);
 
   const lead = useMemo(() => {
     if (!latest || busy) return null;
@@ -895,7 +920,7 @@ export default function Room() {
               his words were two cells of the grid, each scrolling inside
               itself; they are one sticky aside now, as the artifact's
               `.words` is, and the room scrolls as one document. */}
-          <div className="r-aside">
+          <div className="r-aside" ref={asideRef}>
           <div className="r-him" ref={himRef}>
             <AliveMark state={mark.state} failed={mark.failed} drawn={mark.reads}
                        pulses={mark.reads + landing.arrived} />

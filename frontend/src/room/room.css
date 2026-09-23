@@ -575,10 +575,24 @@
 /* HIS SIDE, TRAVELLING WITH THE PAGE (the artifact's `.words`): him, what you
    asked, the claim, what he said and the questions — one column, sticky, so
    the page moves under it instead of beside it. */
+/* AND IT TRAVELS ONLY WHILE IT FITS (D1, 2026-09-23). The owner: *"i couldnt
+   scroll down the left but there was more"*. This carried
+   `max-height: calc(100vh - max(5vh,64px) - 150px)` with `overflow: visible`,
+   so a column taller than that was drawn past its box and pinned there — the
+   page scrolled under it and the tail never came up. On his own turn of 06:40
+   it was 862px of words in a 686px box.
+
+   WHAT IT PINS AT IS MEASURED, never guessed (`beside.stickyTop`, set on
+   `--aside-top` by Room.tsx): while his side fits the window it pins under the
+   composition's head, as P10 decided; when it is taller it pins by its FOOT —
+   a negative offset — so his words travel up with the page until their END
+   rests just above the line and stay there. It is still sticky, still one
+   page, and no second scroller comes back. `data-travels` says which of the
+   two it is doing, for the tests and for anyone reading the DOM. */
 .r-aside {
-  position: sticky; top: max(5vh, 64px); align-self: start; z-index: 1;
+  position: sticky; top: var(--aside-top, max(5vh, 64px)); align-self: start; z-index: 1;
   display: flex; flex-direction: column; align-items: flex-end;
-  min-width: 0; max-height: calc(100vh - max(5vh, 64px) - 150px); overflow: visible;
+  min-width: 0; overflow: visible;
 }
 
 /* THE LEADING LINES, over the whole composition (row 10). */
@@ -2214,6 +2228,18 @@ button.r-mk-name[aria-pressed="true"], .r-mk-cellname[aria-pressed="true"] {
 .r-mk-fig small { font-size: 0.86em; color: var(--ink-3); display: block; }
 
 /* figure — one number, at the size its weight implies */
+/* WHAT THE NUMBER IS OF, AND WHAT IT MEASURES, ABOVE IT (D1, 2026-09-23) —
+   *"it doesnt say what product data its showing untill i hover which is bad"*.
+   A label, so it takes the label's size and the quiet ink, never the accent
+   (UI rule 5); the swatch is the row's own identity channel (P2S.2(e)). */
+.r-mk-of {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px;
+  margin: 0 0 4px; font: 400 11.5px/1.5 var(--sans); color: var(--ink-2);
+}
+/* The name is drawn as every other row name is — `.r-mk-name`, swatch and all
+   — so one read's subject looks the same wherever it appears. */
+.r-mk-of-name { padding-left: 0; padding-top: 0; padding-bottom: 0; }
+.r-mk-of-measure { color: var(--ink-3); }
 .r-mk-figure { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .r-mk-num { font-family: var(--mono); letter-spacing: -0.02em; }
 .r-mk-measure { font: 400 11px/1.4 var(--sans); color: var(--ink-3); margin: 8px 0 0; }
