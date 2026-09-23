@@ -5,8 +5,10 @@
  * names and a cache button: nothing on it is about a person. The people
  * themselves — Joy, Isaiah, Daniel and Elijah (W2.2, `george.people`) — were
  * readable only half way down the Needs you page, and the screen that holds
- * the accounts and page access, /admin/page-access, was linked from nowhere
- * at all. Three places for one subject. This is the one.
+ * the accounts and page access, /admin/page-access, was reachable from
+ * nothing in the ROOM: its only way in is the Admin item in the legacy
+ * Supabot chrome (`components/Layout.tsx`), which Bob's rail never shows.
+ * Three places for one subject. This is the one.
  *
  * EVERY WORD ABOUT AUTHORITY IS THE SERVER'S. A person's role, what that role
  * may do and which businesses they answer for are `metrics.yaml authority`,
@@ -168,10 +170,11 @@ export default function PeoplePage() {
         </p>
       )}
 
-      {/* THE SURFACE THAT WAS LINKED FROM NOWHERE. Accounts, roles and which
-          pages each role may open live on /admin/page-access; it is behind
-          its own page key, so the way in is drawn only for a role that has
-          it — a link that bounces is worse than no link. */}
+      {/* THE WAY IN FROM THE ROOM. Accounts, roles and which pages each role
+          may open live on /admin/page-access, whose only other way in is the
+          Admin item in the legacy Supabot chrome. It is behind its own page
+          key, so this is drawn only for a role that has it — a link that
+          bounces is worse than no link. */}
       {mayAdmin && (
         <p className="r-people-foot">
           <Link className="r-act" to="/admin/page-access">Accounts and page access</Link>
