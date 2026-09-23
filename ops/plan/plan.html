@@ -259,7 +259,7 @@
 <header>
   <p class="kick">plan · <b>Bob, ready for anything</b> · 22 Sep 2026</p>
   <h1>Ready for anything</h1>
-  <p class="lede">Four cards in three waves are left, each wave run at once by one agent per card; wave 1 is complete, and wave 2 is live &mdash; three of its cards met their targets and the morning page waits for you to switch it on. <em>Back to the base</em>: Bob understands the business, builds things with you, and runs them &mdash; not a chat that draws pages. The base comes first, because everything else sits on it. Earlier plans are kept in <span class="arch">ops/archive/</span>; this page is the readable copy of ops/NOW.md.</p>
+  <p class="lede">Six cards in three waves are left, each wave run at once by one agent per card; wave 1 is complete, and wave 2 is live &mdash; three of its cards met their targets and the morning page waits for you to switch it on. <em>Back to the base</em>: Bob understands the business, builds things with you, and runs them &mdash; not a chat that draws pages. The base comes first, because everything else sits on it. Earlier plans are kept in <span class="arch">ops/archive/</span>; this page is the readable copy of ops/NOW.md.</p>
 </header>
 
 <section class="why">
@@ -306,7 +306,7 @@
 
 <section class="phase wave-done">
   <h2>Wave 1 &mdash; the base <span style="font-weight:400;color:var(--ink-3)">&middot; done 22 Sep</span></h2>
-  <p class="ph">Complete: every card met its own target on the live model, and it is live. What is left to spend on the open cards&rsquo; own tests: <b>$0.60</b> &mdash; each card tests itself on live answers, about four turns at four cents each. The full check after wave 3 is about $1.90 more, so about $2.20 is left in all.</p>
+  <p class="ph">Complete: every card met its own target on the live model, and it is live. What is left to spend on the open cards&rsquo; own tests: <b>$0.75</b> &mdash; each card tests itself on live answers, about four turns at four cents each. The full check after a wave is about $1.90 more.</p>
   <p class="gate"><b>How it runs.</b> Each agent works in its own copy of the code, so none can collide. The lead session merges them one at a time, runs every test after each, then runs the whole live test suite, the full capability test, and a speed check of three kinds of question, five times each. When every test passes, it pushes the update live. <b>Done when</b> a fact comes back in about ten seconds, a narrow question in well under a minute, and every action phrase that failed the test passes in the same words.</p>
   <p class="pl" style="margin:14px 0 4px">the one prompt that runs this wave, with an agent per card</p><div class="cmd">Read ops/NOW.md. Run wave 1 as a workflow: one agent per card, each in its own worktree, then merge in order, measure, and push when every suite is green.</div>
   <div style="height:18px"></div>
@@ -377,21 +377,37 @@
 </section>
 
 <section class="phase">
-  <h2>Wave 4 &mdash; the pages you keep</h2>
-  <p class="ph">Two cards, started 23 Sep: the saved pages should each look like the thing they are, and Bob should be able to keep the warning levels you keep asking him for.</p>
+  <h2>Wave 4 &mdash; the pages you keep, and the screens behind them</h2>
+  <p class="ph">Four cards: the saved pages now look like the thing they are (done 23 Sep), Bob should be able to keep the warning levels you keep asking him for, and the screens behind the sidebar &mdash; systems, watches, people &mdash; get the same treatment.</p>
   <p class="gate"><b>Why:</b> today Estate Dashboard, Estate Week and the AJI BARN Reorder are drawn by exactly the same code &mdash; a title, then one ruled strip per analysis, each with its own little two-column grid. None of the page layout Bob uses for his big answers reaches a saved page.</p>
   <p class="pl" style="margin:14px 0 4px">the one prompt that runs this wave, with an agent per card</p><div class="cmd">Read ops/NOW.md. Run wave 4 as a workflow: one agent per card, each in its own worktree, then merge in order, measure, and push when every suite is green.</div>
   <div style="height:18px"></div>
 
-  <div class="card"><div class="ch"><span class="id">W4.1</span><h3>A kept page reads like what it is</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
+  <div class="card done"><div class="ch"><span class="id">W4.1</span><h3>A kept page reads like what it is</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
     <p class="does">A page gets a <b>kind</b>, and the kind decides how it is drawn &mdash; never what is on it, and never the order you put things in. A <b>dashboard</b> puts its single numbers in one row at a glance, with the tables full width below. A <b>week</b> reads as one column with the date at the top and a heading per analysis. A <b>list</b> page like the reorder leads with the rows you act on and makes the charts beside them small. A <b>collection</b> is a page that is just a set of saved answers &mdash; what you have today. Bob picks the kind when he builds a page, it is worked out from what the analyses read when nobody said, and you can change it.</p>
     <p class="done-when"><b>Done when:</b> the four kinds each draw differently from the same analyses, you can change a page&rsquo;s kind, your order never moves, and all four of your real pages have been seen on a screen and on a phone.</p>
+    <p class="done-when"><b>Result:</b> live since 23 Sep. Your four pages worked it out for themselves: Estate Dashboard and Store Dashboard draw as dashboards, Estate Week as a week, AJI BARN Reorder as a working list &mdash; nobody typed a kind. Seen on a screen and on a phone for all four. <b>Met.</b> Two things I changed after the build: the six controls over every analysis are one quiet mark now, and the kind control speaks the definitions&rsquo; words. What is <i>not</i> done: the layout rules live in the stylesheet rather than in the definitions.</p>
     <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W4.1.</div></div>
 
   <div class="card"><div class="ch"><span class="id">W4.2</span><h3>His own levels, and the alert that fires on them</h3><span class="tags"><span class="tag eval">eval: subset</span></span></div>
     <p class="does">You have asked three times for warning levels and an alert on them. Bob cannot write a level into StoreHub &mdash; those fields are yours to maintain there and he can only read them &mdash; so he will keep <b>his own</b>: worked out by code from how fast each line sells and how long a shop waits between deliveries, proposed to you as a list you accept, change line by line, or reject. Only 39 of your 3,474 lines carry a StoreHub level today, which is why almost nothing can warn you; a StoreHub level always wins where it exists. The running-out alert then fires against his levels and is tested against the past before it is switched on.</p>
     <p class="done-when"><b>Done when:</b> &ldquo;set the levels for me&rdquo; gives you levels to accept in one gesture, and &ldquo;alert me when it reaches it&rdquo; then sets up a watch on them, off until you switch it on.</p>
     <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W4.2.</div></div>
+
+  <div class="card"><div class="ch"><span class="id">W4.3</span><h3>A system you can run, backtest, promote and switch on</h3><span class="tags"><span class="tag feat">your &ldquo;how do i turn it on&rdquo;</span><span class="tag eval">eval: subset</span></span></div>
+    <p class="does">Today the Systems page can only be read. You cannot see a system&rsquo;s versions, you see one run and cannot open it, you cannot test it against a past week, you cannot promote it, and you cannot switch its schedule on &mdash; even though the server can do all five. The screen that told you &ldquo;an administrator promotes it&rdquo; had no way to promote, and you <b>are</b> the administrator it meant. Each system gets its own page, and Bob names the person who can turn it on rather than the role.</p>
+    <p class="done-when"><b>Done when:</b> from one system&rsquo;s own page you can read its versions and runs, test it against a past week, promote it, and switch it on &mdash; and asked &ldquo;how do I turn it on&rdquo;, Bob names you.</p>
+    <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W4.3.</div></div>
+
+  <div class="card"><div class="ch"><span class="id">W4.4</span><h3>The watches page</h3><span class="tags"><span class="tag feat">nothing lists them today</span><span class="tag eval">eval: subset</span></span></div>
+    <p class="does">&ldquo;How are we doing? &middot; off&rdquo; and &ldquo;Remind me &middot; Mon at 08:00&rdquo; both open the Systems page, which does not contain them: nothing in the app lists a standing question or a watch. So you cannot see when one last ran, what it last said, or what it was told &mdash; and you cannot switch one on except by telling Bob. They get a page.</p>
+    <p class="done-when"><b>Done when:</b> every standing question and watch is on one page with its time, its last run and what it last said, switched on or off in one gesture.</p>
+    <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W4.4.</div></div>
+
+  <div class="card"><div class="ch"><span class="id">W4.5</span><h3>People, and the last old screen</h3><span class="tags"><span class="tag free">no model time</span></span></div>
+    <p class="does">PEOPLE opens store filters and a refresh button &mdash; nothing on it is about a person. The screen that really holds accounts and roles is linked from nowhere, and Joy, Daniel and Elijah live in a third place. It is also the last screen built the old way, where an empty list is drawn as a spinner that never stops.</p>
+    <p class="done-when"><b>Done when:</b> PEOPLE opens the people &mdash; who they are, what they may approve, and which login is theirs &mdash; and no sidebar row leads somewhere you cannot go.</p>
+    <p class="pl">run it alone</p><div class="cmd">Read ops/NOW.md. Do card W4.5.</div></div>
 
 </section>
 
