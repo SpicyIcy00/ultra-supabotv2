@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 import type { PeriodType, PeriodDateRanges } from '../utils/dateCalculations';
 import { calculatePeriodDateRanges } from '../utils/dateCalculations';
 import { getDashboardDefaults } from '../services/dashboardDefaultsApi';
+import { serverSaid } from '../services/serverSaid';
 
 export interface StoredStore {
   id: string;
@@ -21,6 +22,18 @@ interface DashboardState {
 
   // Available stores fetched from API
   stores: StoredStore[];
+
+  // HOW THE READ WENT, kept apart from what it returned (W4.5).
+  //
+  // Settings used to infer it: `stores.length === 0` rendered a spinner
+  // saying "Loading stores…", so a read that failed and a list that is
+  // genuinely empty both drew as loading, forever. CLAUDE.md UI rule 8: a
+  // claim about state renders from a loaded result, never a literal, and
+  // loading, failed and loaded are three renderings. Not persisted — a
+  // reload has not read anything yet.
+  storesRead: 'idle' | 'loading' | 'failed' | 'loaded';
+  // What the server said, when it said anything. Never a wording of our own.
+  storesError: string | null;
 
   // Selected stores (store IDs)
   selectedStores: string[];
@@ -69,6 +82,8 @@ export const useDashboardStore = create<DashboardState>()(
       selectedPeriod: 'TODAY',
       customDateRange: undefined,
       stores: [],
+      storesRead: 'idle',
+      storesError: null,
       selectedStores: [],
       isAllStoresSelected: false, // Default to false to use specific defaults
       dateRanges: calculatePeriodDateRanges('TODAY'),
@@ -100,14 +115,17 @@ export const useDashboardStore = create<DashboardState>()(
 
       // Fetch stores from API
       fetchStores: async () => {
+        set({ storesRead: 'loading', storesError: null });
         try {
           // Use relative URL to leverage Vercel rewrite proxy (avoids CORS)
           const apiUrl = '/api/v1';
           const response = await authenticatedFetch(`${apiUrl}/analytics/stores`);
-          if (!response.ok) throw new Error('Failed to fetch stores');
+          // The server's own sentence where there is one — "Failed to fetch
+          // stores" told a person nothing they could act on.
+          if (!response.ok) throw new Error(await serverSaid(response));
 
           const stores: StoredStore[] = await response.json();
-          set({ stores });
+          set({ stores, storesRead: 'loaded', storesError: null });
 
           const currentState = get();
           const hasSelection = currentState.selectedStores.length > 0;
@@ -157,6 +175,10 @@ export const useDashboardStore = create<DashboardState>()(
           }
         } catch (error) {
           console.error('Error fetching stores:', error);
+          set({
+            storesRead: 'failed',
+            storesError: error instanceof Error ? error.message : String(error),
+          });
         }
       },
 
