@@ -417,12 +417,22 @@ export function KeptPin({ pin, pageId, title, window: pageWindow = null,
              data-tile={kind === 'dashboard' && shape === 'stat' ? 'yes' : undefined}>
       <div className="r-kept-pin-head">
         <h2 className="r-kept-pin-title">{pin.title}</h2>
-        <span className="r-row-acts" style={{ marginTop: 0 }}>
-          <button type="button" className="r-act" disabled={run.refreshing} onClick={run.refresh}>
-            {run.refreshing ? 'Reading…' : 'Refresh'}
-          </button>
-          {actions}
-        </span>
+        {/* WHAT I CAN DO WITH THIS ANALYSIS, ASKED FOR (the lead, 2026-09-23).
+            Six text links over every analysis — Refresh, Move up, Move down,
+            Move, Remove, Delete — were the loudest thing on all four kinds,
+            louder than the figures they sat over. They are one quiet gesture
+            now, and a disclosure rather than a hover, because the phone layout
+            is the real one and a hover does not exist there. Nothing is
+            removed: every control still works in every kind. */}
+        <details className="r-kept-acts">
+          <summary className="r-act" aria-label={`What I can do with “${pin.title}”`}>⋯</summary>
+          <span className="r-row-acts" style={{ marginTop: 0 }}>
+            <button type="button" className="r-act" disabled={run.refreshing} onClick={run.refresh}>
+              {run.refreshing ? 'Reading…' : 'Refresh'}
+            </button>
+            {actions}
+          </span>
+        </details>
       </div>
 
       {/* NOT YET STARTED IS READING TOO: the run starts on mount, and a first

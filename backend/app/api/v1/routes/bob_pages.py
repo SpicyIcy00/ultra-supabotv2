@@ -151,6 +151,10 @@ class PageOut(BaseModel):
     # the way the window's options are, so no component holds a copy of a
     # layout rule (CLAUDE.md rule 3).
     kind_draws: dict[str, Any]
+    # THE FOUR KINDS IN THE OWNER'S OWN CONTROL — {value, label, says} each,
+    # the yaml's words, so the control that changes a page's kind never holds
+    # its own wording for one.
+    kind_options: list[dict[str, str]]
 
 
 class PageWindowIn(BaseModel):
@@ -257,7 +261,7 @@ def _out(page, pins: int, analyses: Optional[list[list[dict]]] = None) -> PageOu
                    created_at=page.created_at, updated_at=page.updated_at, pins=pins,
                    window=_window(getattr(page, "date_window", None)),
                    kind=kind, kind_set_by=set_by, kind_means=page_kind.means(kind),
-                   kind_draws=page_kind.draws(kind))
+                   kind_draws=page_kind.draws(kind), kind_options=page_kind.options())
 
 
 async def _one(db: AsyncSession, username: str, page) -> PageOut:
@@ -292,6 +296,7 @@ def _from_summary(summary: dict[str, Any]) -> PageOut:
         kind=str(summary["kind"]), kind_set_by=str(summary["kind_set_by"]),
         kind_means=str(summary["kind_means"]),
         kind_draws=page_kind.draws(str(summary["kind"])),
+        kind_options=page_kind.options(),
     )
 
 

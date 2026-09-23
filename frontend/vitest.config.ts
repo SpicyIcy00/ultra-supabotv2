@@ -26,5 +26,18 @@ export default defineConfig({
     environment: 'node',
     environmentMatchGlobs: [['src/**/*.dom.test.tsx', 'jsdom']],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    /*
+     * A TEST THAT LOSES A RACE FOR THE MACHINE IS NOT A FAILING PRODUCT
+     * (the lead, 2026-09-23). Several dom tests `await import('./Room')` or
+     * wait on a lazily-loaded panel. Alone each passes in well under a second;
+     * in the full suite, with every worker compiling at once, that first import
+     * has repeatedly gone past the 5s default — a different file each run
+     * (askBar on 2026-09-22, trackBack today), which is the signature of load,
+     * not of a regression. A suite whose green is a coin flip is worse than a
+     * slow one: the number stops meaning anything and a real break hides in it.
+     * 20s is the wait; nothing else about these tests changes, and a test that
+     * genuinely hangs still fails, just later.
+     */
+    testTimeout: 20_000,
   },
 });

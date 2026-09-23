@@ -275,3 +275,29 @@ describe('the owner says what the page is', () => {
       .toContain('nobody has set it');
   });
 });
+
+/* --------------------------------------------------------------------------
+ * THE CONTROLS ARE QUIET (the lead, 2026-09-23)
+ *
+ * Six text links stood over every analysis in every kind, louder than the
+ * figures. They are behind one gesture now. What this holds: the gesture is
+ * a disclosure (a phone has no hover), every control is still there, and it
+ * is the same one gesture in every kind.
+ * ----------------------------------------------------------------------- */
+describe('what I can do with this analysis', () => {
+  for (const kind of ['dashboard', 'week', 'list', 'collection'] as const) {
+    it(`is one closed gesture on a ${kind}, and holds every control`, async () => {
+      const container = await drawn(kind);
+      const discs = container.querySelectorAll('details.r-kept-acts');
+      expect(discs.length).toBeGreaterThan(0);
+      for (const d of Array.from(discs)) {
+        expect((d as HTMLDetailsElement).open).toBe(false);
+        const summary = d.querySelector('summary');
+        expect(summary?.getAttribute('aria-label') ?? '').toMatch(/What I can do with/);
+        const words = Array.from(d.querySelectorAll('button')).map((b) => b.textContent ?? '');
+        expect(words.some((w) => /Refresh|Reading/.test(w))).toBe(true);
+        expect(words.some((w) => /Delete/.test(w))).toBe(true);
+      }
+    });
+  }
+});

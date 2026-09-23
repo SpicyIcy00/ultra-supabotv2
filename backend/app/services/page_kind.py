@@ -111,6 +111,25 @@ def draws(kind: str, defs: Optional[Mapping[str, Any]] = None) -> dict[str, Any]
     return dict(req(spec(defs), f"catalogue.{kind}.draws"))
 
 
+def options(defs: Optional[Mapping[str, Any]] = None) -> list[dict[str, str]]:
+    """
+    THE FOUR KINDS AS A PERSON READS THEM — what the owner's own control
+    offers. `label` is the kind's `means` and `says` is its `when`, both the
+    yaml's words: a control that spelled out "collection" would be the schema
+    talking to the owner, and a control holding its own wording would be a
+    second copy of a definition (CLAUDE.md rule 3).
+    """
+    out: list[dict[str, str]] = []
+    for kind in kinds(defs):
+        label = means(kind, defs).strip()
+        out.append({
+            "value": kind,
+            "label": label[:1].upper() + label[1:],
+            "says": " ".join(str(req(spec(defs), f"catalogue.{kind}.when")).split()),
+        })
+    return out
+
+
 def check(kind: Any, defs: Optional[Mapping[str, Any]] = None) -> str:
     """One of the four, or refused naming them. Never None: a page has a kind."""
     names = kinds(defs)

@@ -1448,6 +1448,27 @@
   flex-wrap: wrap; margin-bottom: 14px;
 }
 .r-kept-pin-title { font: 400 18px/1.35 var(--serif); color: var(--ink); margin: 0; }
+/* THE ANALYSIS'S CONTROLS, QUIET (the lead, 2026-09-23). A disclosure, not a
+   hover: the phone layout is the real one. Closed it is one mark the width of
+   a character; open it is the same .r-row-acts row it always was, and the
+   controls keep their own words and order. */
+.r-kept-acts { position: relative; }
+.r-kept-acts > summary {
+  list-style: none; display: inline-block; padding: 0 6px; line-height: 1.2;
+  color: var(--ink-3); letter-spacing: 0.12em;
+}
+.r-kept-acts > summary::-webkit-details-marker { display: none; }
+.r-kept-acts > summary:hover, .r-kept-acts[open] > summary { color: var(--ink); }
+.r-kept-acts > .r-row-acts {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 4;
+  flex-direction: column; align-items: flex-start; gap: 10px;
+  background: var(--card); border: 1px solid var(--edge); border-radius: 10px;
+  padding: 12px 14px; min-width: 168px; box-shadow: 0 12px 28px rgba(0,0,0,.45);
+}
+@media (max-width: 640px) {
+  /* On a phone the sheet takes the width it needs and never leaves the screen. */
+  .r-kept-acts > .r-row-acts { right: 0; left: auto; min-width: 150px; }
+}
 .r-kept-purpose { margin: 10px 0 6px; }
 .r-kept-ask {
   display: flex; gap: 12px; align-items: center; margin-top: 34px; padding-top: 22px;

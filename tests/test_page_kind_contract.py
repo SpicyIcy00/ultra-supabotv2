@@ -495,3 +495,23 @@ def test_build_me_a_dashboard_is_told_to_make_a_dashboard_page():
     assert "create_page" in sentence
     assert 'kind: "dashboard"' in sentence
     assert "pages.kinds" in sentence
+
+
+# ---------------------------------------------------------------------------
+# THE CONTROL SPEAKS THE DEFINITIONS' WORDS (the lead, 2026-09-23)
+#
+# The two halves of W4.1 met here: the room's kind control asks for
+# {value, label, says} per kind, and the room carries fallback wording of its
+# own for a server that serves none. That fallback is a second copy of a
+# definition, so the page serves the yaml's words and the fallback never fires.
+# ---------------------------------------------------------------------------
+
+def test_the_kinds_are_offered_in_the_yamls_own_words():
+    served = page_kind.options()
+    assert [o["value"] for o in served] == page_kind.kinds()
+    for option in served:
+        assert option["label"] and option["label"][0].isupper(), option
+        assert option["value"] not in option["label"].lower().split(), (
+            f"the control would show the schema's word: {option}")
+        assert len(option["says"].split()) >= 4, option
+        assert "\n" not in option["says"], "a control's line is one line"
