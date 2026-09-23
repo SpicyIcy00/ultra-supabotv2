@@ -15,10 +15,11 @@
  * as such. A hairline separates one rule from the next. No card is needed to
  * say where one workflow ends.
  *
- * NO BUILDER. Saving is Bob's (`save_workflow`, in conversation), promoting
- * is Needs you's, and running is Bob's too — so the one action here is a
- * draft dropped into Ask, for the person to read and send. Versions, runs and
- * backtests keep their existing semantics; this page only reads them.
+ * NO BUILDER, AND NO ACTS (W4.3). Saving is Bob's (`save_workflow`, in
+ * conversation). Running, backtesting, promoting and switching a schedule on
+ * are on the SYSTEM'S OWN page — `/workflows/:workflowId` — because they are
+ * acts on one system and this is a list. Every row here opens it. Versions,
+ * runs and backtests keep their existing semantics; this page only reads.
  *
  * A run's notices are drawn through the room's Caveat like every other
  * caveat on this surface — a `version_divergence` notice is the record that the number on
