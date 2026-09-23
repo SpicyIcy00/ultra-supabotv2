@@ -258,6 +258,22 @@ def _iso(value: Optional[datetime]) -> Optional[str]:
     return value.isoformat() if value else None
 
 
+def _kind_of(page: BobPage, pins: list[BobPin]) -> dict:
+    """
+    The page's kind as Bob reads it (W4.1): what it is drawn as, how it got
+    that, and one line of what that kind of page is. Derived from the pins'
+    STORED CALLS when nobody has said — never from a title, and never from
+    anything a model wrote.
+    """
+    from app.services import page_kind
+
+    kind, set_by = page_kind.resolve(
+        page.kind, page.kind_set_by, page_kind.calls_of(pins),
+        has_date_window=page.date_window is not None,
+    )
+    return {"kind": kind, "kind_set_by": set_by, "kind_means": page_kind.means(kind)}
+
+
 def _definition(pin: BobPin) -> dict:
     """A pin as the reader reports it: the row, with its calls as stored."""
     return {
@@ -358,6 +374,12 @@ async def read_page(
         # words. Every figure above was read over it.
         "window": ({**page.date_window, "label": page_window.label(preset)}
                    if page is not None and page.date_window is not None else None),
+        # WHAT KIND OF PAGE IT IS (W4.1): how it is DRAWN, never what is on
+        # it. Never null on a real page — derived from what the pins carry
+        # when nobody has said. None for the ungrouped pins, which are not a
+        # page and have no drawing of their own.
+        **(_kind_of(page, all_pins) if page is not None
+           else {"kind": None, "kind_set_by": None, "kind_means": None}),
         "empty": not all_pins,
         "read_at": read_at.isoformat(),
         "figures": bool(figures),

@@ -348,6 +348,9 @@ class PageBuildSpec:
     # executed set) or {"pin_id"} (an existing pin; the service checks it is
     # the caller's).
     analyses: list[dict[str, Any]]
+    # WHAT KIND OF PAGE IT IS (W4.1) — how it is DRAWN, never what is on it.
+    # None means nobody said, and the server works it out from the analyses.
+    kind: Optional[str]
     # Filled by the loop, never by the model.
     question: Optional[str]
     conversation_id: Optional[str]
@@ -986,7 +989,7 @@ def _page_bounds() -> dict:
 # (app/services/page_operations.EDIT_OPERATIONS) and held equal by a test.
 PAGE_EDIT_OPERATIONS = (
     "rename", "set_purpose", "add", "add_existing", "remove", "move_to_page", "place",
-    "draw", "change", "set_window", "remove_window",
+    "draw", "change", "set_window", "remove_window", "set_kind",
 )
 
 
@@ -1058,6 +1061,10 @@ def _page_result(stored: dict, wrote: str) -> dict:
             "purpose": page.get("purpose"),
             "updated_at": page.get("updated_at"),
             "analysis_count": page.get("analysis_count"),
+            # How the page is DRAWN (W4.1), and how it got that kind. Never
+            # null — when nobody said, it is worked out from the analyses.
+            "kind": page.get("kind"),
+            "kind_set_by": page.get("kind_set_by"),
             "analyses": [
                 {"pin_id": a.get("pin_id"), "title": a.get("title"),
                  "position": a.get("position"), "tools": a.get("tools")}
@@ -1083,6 +1090,7 @@ async def create_page(
     title: str,
     analyses: Optional[list[dict]] = None,
     purpose: Optional[str] = None,
+    kind: Optional[str] = None,
     *,
     ctx: WriteContext,
 ) -> dict:
@@ -1094,6 +1102,13 @@ async def create_page(
     analyses in one transaction, or not at all. A page is for LOOKING ("make
     this a page"); "build it" is a system, saved with save_workflow, and is
     refused here.
+
+    SAY WHAT KIND OF PAGE IT IS, in `kind`. A page's kind is how it is DRAWN
+    — nothing else. It never changes what is on the page, what a figure says,
+    or the order the analyses are in. A page of numbers checked at a glance
+    and a page of rows worked down are not the same page and should not read
+    the same, so name the one you are building. A DASHBOARD IS ALWAYS
+    kind "dashboard": when they asked for a dashboard, say so here.
 
     Args:
         title: The page's name, e.g. "Rockwell Weekly". At most 100 characters;
@@ -1108,11 +1123,24 @@ async def create_page(
             per store or per product.
         purpose: One line the user would recognise as what the page is for,
             e.g. "Monitor Rockwell sales performance." Optional.
+        kind: How the page is DRAWN. One of:
+            "dashboard" — numbers you check. Several readings glanced at
+            rather than read; single figures draw as compact stat tiles in a
+            row. THIS IS THE KIND FOR "build me a dashboard".
+            "week" — how it went over a window: one window looked at from
+            several sides, read top to bottom once, dated at the top.
+            "list" — a working page: the rows are the point (what to reorder,
+            what is dead, what is on hand); tables take the width.
+            "collection" — a set of saved answers with no one job.
+            Say which the page you are building is. Leave it out only when you
+            genuinely cannot tell, and it is worked out from the analyses.
+            It is presentation: it never changes a figure, a reading, or the
+            order of the analyses.
 
     Returns:
         {rows, meta} like every other tool. rows holds one row describing the
-        page that now exists — its page_id, title, and each analysis with its
-        pin_id and position; meta.source_table is george.pages.
+        page that now exists — its page_id, title, its kind, and each analysis
+        with its pin_id and position; meta.source_table is george.pages.
     """
     if ctx.page_writer is None:
         raise PageRefused(
@@ -1133,10 +1161,19 @@ async def create_page(
     normalized = _normalize_analyses(analyses, ctx, bounds["max_analyses"])
     if purpose is not None and not isinstance(purpose, str):
         raise PageRefused("purpose must be text.")
+    if kind is not None:
+        from tools._common import load_defs, req
+
+        names = [str(k) for k in req(load_defs(), "pages.kinds.catalogue")]
+        if kind not in names:
+            raise PageRefused(
+                f"{kind!r} is not a kind of page. One of: {', '.join(names)} — "
+                f"or leave it out and it is worked out from the analyses."
+            )
 
     stored = await ctx.page_writer.create(PageBuildSpec(
         title=title.strip(), purpose=(purpose or None), analyses=normalized,
-        question=ctx.question, conversation_id=ctx.conversation_id,
+        kind=kind, question=ctx.question, conversation_id=ctx.conversation_id,
     ))
     return _page_result(stored, "page")
 
@@ -1149,10 +1186,17 @@ async def edit_page(
 ) -> dict:
     """
     Change one of the user's pages: rename it, set its purpose, add analyses,
-    change one in place, take one off, move one to another page, reorder, or
-    give the page a date filter. All the operations in one call are applied
-    together, in order, or none of them are. Nothing is re-run; a page's
-    analyses keep their calls.
+    change one in place, take one off, move one to another page, reorder, give
+    the page a date filter, or say what KIND of page it is. All the operations
+    in one call are applied together, in order, or none of them are. Nothing
+    is re-run; a page's analyses keep their calls.
+
+    A KIND IS HOW THE PAGE IS DRAWN. "Make this a dashboard", "this should
+    read like a list", "lay this out as a week" is `set_kind` on THAT page —
+    four kinds, one of "dashboard", "week", "list", "collection". It changes
+    the DRAWING and nothing else: no analysis moves, changes what it reads, or
+    is read again, and no figure changes. So never use it to reorganise a page
+    and never describe it as one — say in one line what it now reads like.
 
     A DATE FILTER IS THE PAGE'S OWN. "Add date filters to this", "let me pick
     the dates", "show this page for last month", asked from a page, is
@@ -1192,6 +1236,11 @@ async def edit_page(
             set_window {window} — the page's date filter: `window` a date
             preset ("last_month") when they named one, null when they did not
             (the control goes on and they pick); remove_window {} takes it off.
+            set_kind {kind} — how the page is DRAWN: "dashboard" (numbers you
+            check, single figures as stat tiles in a row), "week" (one window
+            read top to bottom, dated), "list" (a working page where the rows
+            are the point) or "collection" (a set of saved answers). Nothing
+            on the page moves and no figure changes.
             Name an analysis by pin_id (from view_page or an earlier result);
             a title is accepted when exactly one analysis has it, and a title
             two analyses share is refused with both ids — never guess between
@@ -1283,6 +1332,16 @@ async def edit_page(
             entry = {"op": "set_window", "window": window}
         if kind == "remove_window":
             entry = {"op": "remove_window"}
+        if kind == "set_kind":
+            from tools._common import load_defs, req
+
+            names = [str(k) for k in req(load_defs(), "pages.kinds.catalogue")]
+            wanted = op.get("kind")
+            if wanted not in names:
+                raise PageRefused(
+                    f"operations[{i}] (set_kind): {wanted!r} is not a kind of page. "
+                    f"One of: {', '.join(names)}.")
+            entry = {"op": "set_kind", "kind": wanted}
         if kind == "draw":
             from agent import vocabulary
             from tools._common import load_defs

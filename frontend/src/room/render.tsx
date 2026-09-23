@@ -824,7 +824,12 @@ export function Board(p: BoardProps) {
       const room = beside ? node.size ?? roomFor(it.o) : 'full';
       const control = node.control ? byKey.get(node.control) : undefined;
       return (
-        <div key={at} className="r-doc-fig" data-size={room} data-beside={beside ? 'yes' : undefined}>
+        // WHAT THIS BLOCK DREW, on its own box (W4.1). The figure inside
+        // already carries `data-kind`; a surface that lays a page out by what
+        // is on it — a kept page drawn by its kind — needs it on the box that
+        // has the width, and reading it off a descendant is `:has()`.
+        <div key={at} className="r-doc-fig" data-size={room} data-kind={it.o.kind}
+             data-beside={beside ? 'yes' : undefined}>
           {control && <div className="r-doc-ctl-host">{drawFigure(control, 0, true)}</div>}
           {drawFigure(it, 0, true)}
         </div>

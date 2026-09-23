@@ -57,6 +57,81 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-23 — the owner testing wave 1 and 2 on the live build, nine things
+
+> *"sometimes i cant scroll down in the page."*
+>
+> *"why is it getting declined is that adding to the time?"*
+>
+> *"theres still alot of discliamers i dont really want to see them. and i dont
+> really like thats its making me ask why when i already asked why and it should
+> provide most it for me. and its still really long even for non pages we need to
+> check that, it wasnt like that before."*
+>
+> *"it doesnt say what product data its showing untill i hover which is bad."*
+>
+> *"its taking long again"*
+>
+> *"it hung there i had to refresh."*
+>
+> *"i couldnt scroll down the left but there was more, i why is there soo much
+> text on the left i want most text on the right. the left is just the bigger
+> picture."*
+>
+> *"taking really long again"*
+>
+> *"this is all the problems i could find but i bet theres alot more seeing how
+> lousy this is"*
+
+> *"how do i turn it on and what its telling me to do?"*
+
+Asked of "Morning Runout is switched off and not mine to switch on", where Bob
+says *"nothing here is waiting on me to promote, so the seven-o'clock run stays
+off until an administrator backtests version one and switches it on… Tell me who
+holds that and I will prepare it for them."* **The person asking IS the
+administrator** — `public.app_users` has exactly two logins, `admin` (role
+`admin`, his) and `warehouse` — so Bob sent the owner to find himself. Two
+defects under it: (1) Bob names the role and not the person, and never checks
+whether the person he is talking to holds it; (2) there is no way to promote
+from the Systems page that shows the version — the Promote button is only in the
+Inbox, and a version that has never been backtested (Morning Runout v1:
+`backtested_at` and `promoted_at` both null) never appears there, so the screen
+that says "an administrator promotes it" has no path to promoting it.
+Belongs with W2.2's authority work.
+
+> *"also look i keep telling it to set levels for me and alert me when it
+> reaches but its not doing anything"*
+
+Two more screenshots: "come up with your own warning levels based on data and
+alert me when it reaches it" → *"No level, no alert — and the same lines keep
+running out"*, and "set the levels for me" → *"Levels aren't the missing piece —
+acting on them is… I also can't set them: nothing I have writes a level into
+StoreHub, where a warning and ideal level are fields a person maintains and I
+can only read."* **Both sentences are TRUE** — `product_stock_levels` is filled
+only by the StoreHub export import (`storehub_import.py`), and the only use of
+the StoreHub API in the codebase is barcodes — but "true" is not an answer to
+the third asking. He has no place to keep a level he worked out himself, so he
+cannot alert on one: 39 lines of 3,474 carry a level, and he told the owner 212
+more would have fired today had there been one. **Card W4.2.**
+
+Nine screenshots, the live build after wave 2 (`ce8fed4`). What they show:
+1. **Neither column scrolls all the way.** The right column cut off mid-answer
+   ("2 MORE READS HE DID NOT WRITE UP"), and the left column cut off with more
+   text below it.
+2. **Reads drawn as `declined`** in the work trail — "read stock over time
+   declined · read sales declined · 7 reads done · thinking… 54s".
+3. **Disclaimers again**: "2,180 stock counts are below zero, the lowest
+   -78,291…" drawn as the first thing under the question, and "99 of the 464
+   lines in this plan are for products whose recorded stock is NEGATIVE".
+4. **A figure block that does not say what it is** until hovered: the product
+   revenue chart's rows name products, and only the tooltip says "Aji Kiamoy
+   White · Product revenue · ₱1,393 · −88.1%".
+5. **He asks "why" back** after a why was already asked ("Why is Greenhills
+   down?" offered under an answer to a why).
+6. **The left column is long prose** on answers that are not pages — the owner
+   wants the left to be the bigger picture and the words to sit on the right.
+7. **Slow twice more**, and **one turn hung** until he refreshed.
+
 ### 2026-09-18 — found by the session: the sales record has no autumn 2024
 
 Found building P2S.4 (year over year). `new_transactions` has every shop on

@@ -606,6 +606,14 @@ async def view_page(
         # preset every analysis was read over (null preset = each as kept).
         # edit_page set_window changes it.
         "page_window": read.get("window"),
+        # WHAT KIND OF PAGE IT IS (W4.1): how it is DRAWN — "dashboard",
+        # "week", "list" or "collection" — and how it got that kind ("user",
+        # "bob", or "derived" when nobody has said and it is worked out from
+        # what the pins carry). Presentation: it says nothing about what is on
+        # the page or what any figure says. edit_page set_kind changes it.
+        "page_kind": read.get("kind"),
+        "page_kind_is": read.get("kind_means"),
+        "page_kind_set_by": read.get("kind_set_by"),
         # An empty page exists and says so. Nothing was inspected because
         # there was nothing; that is not partial and not truncated.
         "empty": bool(read.get("empty")),

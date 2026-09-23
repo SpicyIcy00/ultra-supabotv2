@@ -66,6 +66,9 @@ EDIT_OPERATIONS = (
     "draw", "change",
     # W1.4: the page's date window, which re-runs every analysis over it.
     "set_window", "remove_window",
+    # W4.1: what kind of page it is, which decides how it is DRAWN and
+    # nothing else — no analysis moves, changes or is re-read.
+    "set_kind",
 )
 
 
@@ -116,6 +119,12 @@ def _analysis_row(pin: BobPin) -> dict[str, Any]:
 
 def page_summary(page: BobPage, pins: list[BobPin]) -> dict[str, Any]:
     """The page after a write, as every caller reports it."""
+    from app.services import page_kind
+
+    kind, set_by = page_kind.resolve(
+        page.kind, page.kind_set_by, page_kind.calls_of(pins),
+        has_date_window=page.date_window is not None,
+    )
     return {
         "page_id": str(page.id),
         "title": page.title,
@@ -126,6 +135,12 @@ def page_summary(page: BobPage, pins: list[BobPin]) -> dict[str, Any]:
         "analysis_count": len(pins),
         # The page's date window (W1.4): None when it has none.
         "window": page.date_window,
+        # WHAT KIND OF PAGE IT IS (W4.1), and how it got that. Never null:
+        # a page always draws as something, so when nobody has said the kind
+        # is derived from what the pins carry.
+        "kind": kind,
+        "kind_set_by": set_by,
+        "kind_means": page_kind.means(kind),
     }
 
 
@@ -219,6 +234,7 @@ async def build_page(
     conversation_id: Optional[uuid.UUID] = None,
     actor: Actor = USER,
     allow_similar_page: bool = False,
+    kind: Optional[str] = None,
 ) -> PageResult:
     """
     A new page with its first analyses, or an empty one, as one act.
@@ -243,9 +259,10 @@ async def build_page(
 
     page = await page_writer.create_page(
         db, owner=owner, title=name, purpose=why, actor=actor,
-        allow_similar_page=allow_similar_page,
+        allow_similar_page=allow_similar_page, kind=kind,
     )
-    ops: list[dict[str, Any]] = [{"op": "create", "page_id": str(page.id), "title": page.title}]
+    ops: list[dict[str, Any]] = [{"op": "create", "page_id": str(page.id), "title": page.title,
+                                  "kind": page.kind}]
 
     for item in planned:
         if isinstance(item, _NewAnalysis):
@@ -391,6 +408,17 @@ async def plan_edit(
         elif kind == "remove_window":
             plan.steps.append({"op": kind})
 
+        elif kind == "set_kind":
+            # WHAT KIND OF PAGE THIS IS (W4.1). Presentation: it changes how
+            # the page is DRAWN and nothing else — no analysis moves, changes
+            # its calls, or is re-read.
+            from app.services import page_kind as _page_kind
+            try:
+                wanted = _page_kind.check(op.get("kind"))
+            except _page_kind.KindRefused as exc:
+                raise PageValidationError(f"operations[{i}] (set_kind): {exc}") from exc
+            plan.steps.append({"op": kind, "kind": wanted})
+
         elif kind == "add":
             adds += 1
             if adds > MAX_ADDS_PER_EDIT:
@@ -522,7 +550,8 @@ async def _preflight_order(db: AsyncSession, owner: str, plan: _Plan) -> None:
 
     for step in plan.steps:
         kind = step["op"]
-        if kind in ("rename", "set_purpose", "draw", "change", "set_window", "remove_window"):
+        if kind in ("rename", "set_purpose", "draw", "change", "set_window", "remove_window",
+                    "set_kind"):
             continue
         if kind == "add":
             pin = BobPin(id=uuid.uuid4())
@@ -616,6 +645,26 @@ async def apply_edit(
                         "label": page_window.label(step.get("window")) if kind == "set_window" else None,
                         "options": [o["value"] for o in page_window.options()[1:]],
                         "moves": takes, "reads_no_window": ignores})
+
+        elif kind == "set_kind":
+            # PRESENTATION, AND SAID AS SUCH. The record carries what it was
+            # drawn as before (a derived kind included, so "it already looked
+            # like that" is visible) and what it is now — and nothing else
+            # changes: the analyses, their order and their figures are
+            # untouched.
+            from app.services import page_kind as _page_kind
+            pins_now = await page_writer.page_pins(db, owner, page.id)
+            was, was_set_by = _page_kind.resolve(
+                page.kind, page.kind_set_by, _page_kind.calls_of(pins_now),
+                has_date_window=page.date_window is not None,
+            )
+            await page_writer.set_kind(db, owner=owner, page_id=page.id,
+                                       kind=step["kind"], actor=actor)
+            ops.append({"op": kind, "from": was, "from_set_by": was_set_by,
+                        "to": page.kind, "set_by": page.kind_set_by,
+                        "means": _page_kind.means(page.kind),
+                        "options": _page_kind.kinds(),
+                        "analyses_unchanged": len(pins_now)})
 
         elif kind == "add":
             created = await pin_writer.create_pin(

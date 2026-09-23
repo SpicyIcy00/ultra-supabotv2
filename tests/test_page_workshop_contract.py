@@ -142,7 +142,9 @@ def test_the_tools_take_no_owner_and_no_way_to_name_another_person():
         assert "ctx" not in props
         for word in ("user", "username", "owner", "created_by"):
             assert word not in props
-    assert set(_schema("create_page")["input_schema"]["properties"]) == {"title", "analyses", "purpose"}
+    # W4.1 added `kind`: how the page is DRAWN. Still nothing naming a person.
+    assert set(_schema("create_page")["input_schema"]["properties"]) == {
+        "title", "analyses", "purpose", "kind"}
     assert set(_schema("create_page")["input_schema"]["required"]) == {"title"}
     assert set(_schema("edit_page")["input_schema"]["properties"]) == {"operations", "page_id"}
     assert set(_schema("edit_page")["input_schema"]["required"]) == {"operations"}

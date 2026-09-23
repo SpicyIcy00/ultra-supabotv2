@@ -154,7 +154,14 @@ describe('the answer, beside the page', () => {
   it('opens beside the page it was asked from, with Open in Bob, and never elsewhere', async () => {
     Object.assign(bobState, { turns, where: 'screen:warehouse', storedThreadId: 't-9' });
     mount('/warehouse', <Registers here={{ key: 'warehouse', label: 'Warehouse' }} />);
-    expect(await screen.findByText('Rockwell is the one to look at.')).toBeTruthy();
+    // A LAZY PANEL UNDER FULL-SUITE LOAD IS SLOWER THAN 1s (the lead, 2026-09-23).
+    // These waits sit on a lazily-loaded panel chunk: the test timed out in 3 of
+    // 4 full runs on this machine and passed 10 of 10 alone. What is under test
+    // is WHERE an answer is drawn, never how fast a chunk loads, so the waits are
+    // given room rather than the suite given a flake that makes "green" mean
+    // nothing. The queryByText assertions below are unchanged: they must stay
+    // instant, because "not drawn here" is not something to wait for.
+    expect(await screen.findByText('Rockwell is the one to look at.', {}, { timeout: 5000 })).toBeTruthy();
     expect(screen.getByText('which shops are short?')).toBeTruthy();
     fireEvent.click(screen.getByText('Open in Bob'));
     expect(navigate).toHaveBeenCalledWith('/w/t-9');
@@ -168,11 +175,11 @@ describe('the answer, beside the page', () => {
   it('closes, and says where the answer went so it can be shown again', async () => {
     Object.assign(bobState, { turns, where: 'screen:warehouse', storedThreadId: null });
     mount('/warehouse', <Registers here={{ key: 'warehouse', label: 'Warehouse' }} />);
-    await screen.findByText('Rockwell is the one to look at.');
+    await screen.findByText('Rockwell is the one to look at.', {}, { timeout: 5000 });
     fireEvent.click(screen.getByLabelText('Close'));
     expect(screen.queryByText('Rockwell is the one to look at.')).toBeNull();
     fireEvent.click(screen.getByText('Show answer'));
-    expect(await screen.findByText('Rockwell is the one to look at.')).toBeTruthy();
+    expect(await screen.findByText('Rockwell is the one to look at.', {}, { timeout: 5000 })).toBeTruthy();
     // Not stored yet: the room, which is already drawing this stream.
     fireEvent.click(screen.getByText('Open in Bob'));
     expect(navigate).toHaveBeenCalledWith('/bob');

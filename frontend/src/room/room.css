@@ -1462,12 +1462,148 @@
   flex-wrap: wrap; margin-bottom: 14px;
 }
 .r-kept-pin-title { font: 400 18px/1.35 var(--serif); color: var(--ink); margin: 0; }
+/* THE ANALYSIS'S CONTROLS, QUIET (the lead, 2026-09-23). A disclosure, not a
+   hover: the phone layout is the real one. Closed it is one mark the width of
+   a character; open it is the same .r-row-acts row it always was, and the
+   controls keep their own words and order. */
+.r-kept-acts { position: relative; }
+.r-kept-acts > summary {
+  list-style: none; display: inline-block; padding: 0 6px; line-height: 1.2;
+  color: var(--ink-3); letter-spacing: 0.12em;
+}
+.r-kept-acts > summary::-webkit-details-marker { display: none; }
+.r-kept-acts > summary:hover, .r-kept-acts[open] > summary { color: var(--ink); }
+.r-kept-acts > .r-row-acts {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 4;
+  flex-direction: column; align-items: flex-start; gap: 10px;
+  background: var(--card); border: 1px solid var(--edge); border-radius: 10px;
+  padding: 12px 14px; min-width: 168px; box-shadow: 0 12px 28px rgba(0,0,0,.45);
+}
+@media (max-width: 640px) {
+  /* On a phone the sheet takes the width it needs and never leaves the screen. */
+  .r-kept-acts > .r-row-acts { right: 0; left: auto; min-width: 150px; }
+}
 .r-kept-purpose { margin: 10px 0 6px; }
 .r-kept-ask {
   display: flex; gap: 12px; align-items: center; margin-top: 34px; padding-top: 22px;
   border-top: 1px solid var(--edge);
 }
 .r-kept-ask .r-field { flex: 1; }
+
+/* ------------------------------------------------------------------------- */
+/* A KEPT PAGE READS LIKE WHAT IT IS (W4.1, 2026-09-23).
+
+   The owner, of the pages in the sidebar: *"next thing we need to do is make
+   how each page style work idealy"*. A page's KIND decides how the page is
+   DRAWN — never what is on it, never what a figure says, never the order the
+   person put the analyses in. Everything below is scoped by `data-page-kind`
+   on `.r-kept`, and `collection` has no rule at all: it is what a kept page
+   has always been, which is the fallback for every response that carries no
+   kind.
+
+   NO KIND WEARS THE ACCENT (UI rule 5) and no kind greys or fades an analysis
+   (emphasis adds, never dims): what changes between kinds is size, width and
+   what sits beside what.
+
+   MOBILE-FIRST (UI rule 7): the phone layout is the rules as written, and the
+   two-and-up layouts are inside a min-width query. A dashboard row is one
+   column on a phone and nothing on any kind scrolls sideways. */
+.r-kept { min-width: 0; }
+.r-kept-dateline { margin: 14px 0 6px; }
+
+/* ONE ANALYSIS IS ONE COLUMN. `.r-flow` is the packed board's two-column grid
+   and it is still the element a laid-out board sits in, so an analysis the
+   page laid out landed in ONE of those two columns and shrank to fit it — a
+   table at 563 of 1324px with nothing to its right (the frame, 2026-09-23).
+   A kept page lays each analysis out itself, so the grid it sits in is one
+   column wide and the tree inside it has the width to spend. A `collection`
+   passes no arrangement and never reaches this rule: it is the packing. */
+.r-kept .r-board--laid { grid-template-columns: minmax(0, 1fr); }
+.r-kept .r-board--laid > .r-laid { align-self: stretch; width: 100%; }
+
+/* A RUN OF SINGLE-FIGURE ANALYSES, ON ONE LINE — a dashboard's only structural
+   move. One column first; `--tiles` is the length of the run this row holds. */
+.r-kept-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; min-width: 0; }
+@media (min-width: 760px) {
+  .r-kept-row {
+    grid-template-columns: repeat(var(--tiles, 1), minmax(0, 1fr));
+    column-gap: var(--comp-gap, 28px);
+  }
+}
+
+/* ---- dashboard: numbers you check -------------------------------------- */
+/* A TILE IS A CAPTION OVER A NUMBER. The hairline that rules one analysis off
+   the next is the collection's rhythm; between tiles on one line it would be a
+   grid of boxes, so a tile carries its own top rule and its title reads small.
+   The read time stays exactly where it is — every figure keeps its receipt. */
+.r-kept[data-page-kind="dashboard"] .r-kept-pin[data-tile] {
+  padding: 20px 0 6px; display: flex; flex-direction: column;
+}
+.r-kept[data-page-kind="dashboard"] .r-kept-row .r-kept-pin:first-of-type {
+  border-top: 1px solid var(--edge);
+}
+/* THE CAPTION IS OVER THE NUMBER AND THE CONTROLS ARE UNDER IT. The head holds
+   both, and on a tile six buttons between the caption and the figure put the
+   chrome where the answer goes (the frame, 2026-09-23). `display: contents`
+   hands the title and the controls to the tile's own column, and the controls
+   take the last place — they are still there, still in the tab order, still
+   every one of them. */
+.r-kept[data-page-kind="dashboard"] .r-kept-pin[data-tile] > .r-kept-pin-head {
+  display: contents;
+}
+.r-kept[data-page-kind="dashboard"] .r-kept-pin[data-tile] .r-kept-pin-title {
+  font: 500 10.5px/1.5 var(--mono); letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 6px;
+}
+.r-kept[data-page-kind="dashboard"] .r-kept-pin[data-tile] > .r-kept-pin-head > .r-row-acts {
+  order: 9; margin: 12px 0 0; font-size: 11px; flex-wrap: wrap; gap: 8px;
+}
+/* A tile's figure fills its column: the cap exists for a chart given 940px it
+   did not ask for, and a stat tile is 200 of them. */
+.r-kept[data-page-kind="dashboard"] .r-kept-pin[data-tile] .r-fig-body { max-width: none; }
+
+/* ---- week: how it went over a window ----------------------------------- */
+/* ONE COLUMN, THE DOCUMENT RHYTHM. The analysis's title is the section head
+   the page already draws heads at (.r-doc-h), and the hairline goes: a head
+   and its air are the separation a document uses. */
+.r-kept[data-page-kind="week"] .r-kept-pin { border-top: 0; padding: 0 0 40px; }
+.r-kept[data-page-kind="week"] .r-kept-pin-head { margin-bottom: 10px; }
+.r-kept[data-page-kind="week"] .r-kept-pin-title {
+  font: 600 21px/1.28 var(--serif); color: var(--ink); max-width: 28em; text-wrap: balance;
+}
+/* A READABLE SIZE IS NOT THE WHOLE WINDOW. The laid-out figure is uncapped
+   because a page chose its width (`.r-doc-fig .r-fig-body`); read down a
+   column, a dumbbell spending 1324px puts its name at one edge and its number
+   at the other, which is the defect the packed board's cap exists for. */
+.r-kept[data-page-kind="week"] .r-board--laid > .r-laid { max-width: 860px; }
+
+/* ---- list: a working page ---------------------------------------------- */
+/* THE ROWS ARE THE POINT. A table or a list takes the width; anything drawn as
+   a shape to read is beside it and small — which is the demotion, not a fade.
+   `.r-doc-fig` carries the block's own kind since W4.1 (render.tsx). */
+.r-kept[data-page-kind="list"] .r-kept-pin { padding: 22px 0 10px; }
+.r-kept[data-page-kind="list"] .r-doc-fig[data-kind="table"],
+.r-kept[data-page-kind="list"] .r-doc-fig[data-kind="list"] { width: 100%; }
+.r-kept[data-page-kind="list"] .r-doc-fig[data-kind="table"] .r-fig-body,
+.r-kept[data-page-kind="list"] .r-doc-fig[data-kind="list"] .r-fig-body { max-width: none; }
+@media (min-width: 760px) {
+  /* A CHART ON A WORKING PAGE IS SMALL. Not faded and not moved — narrower,
+     which is the whole demotion (emphasis adds, never dims). */
+  .r-kept[data-page-kind="list"] .r-doc-fig:not([data-kind="table"]):not([data-kind="list"]) {
+    width: 46%;
+  }
+  /* BESIDE THE ROWS, where the rows are in the SAME analysis: then there is
+     something for the float to be an aside to. A float with nothing to wrap it
+     is not a float, it is a hole down one side (P15.a). */
+  .r-kept[data-page-kind="list"] .r-kept-pin[data-shape="mixed"]
+    .r-doc-fig:not([data-kind="table"]):not([data-kind="list"]) {
+    width: 38%; float: right; margin: 0 0 18px 32px; clear: right;
+  }
+}
+
+/* The kind control, beside Rename — the same form shape the rename wears. */
+.r-kept-kind { flex-wrap: wrap; }
+.r-kept-kind .r-src { flex-basis: 100%; }
 
 /* The one action in the app that wears the approvals colour. */
 .r-do {

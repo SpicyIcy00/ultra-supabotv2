@@ -461,11 +461,27 @@ def renumber(pins: list[BobPin]) -> list[BobPin]:
 async def create_page(
     db: AsyncSession, *, owner: str, title: str, purpose: Optional[str] = None,
     actor: Actor = USER, allow_similar_page: bool = False,
+    kind: Optional[str] = None,
 ) -> BobPage:
-    """An empty page. It exists from this moment, with nothing on it yet."""
+    """
+    An empty page. It exists from this moment, with nothing on it yet.
+
+    `kind` is optional and is what the page is FOR, in how it is drawn (W4.1).
+    Left out, nobody has said and the kind is derived from what the page's
+    pins carry, every read, never stored — which is right for a page whose
+    analyses are still arriving. A kind that is not one of the four is
+    refused; the create is refused with it, before the row exists.
+    """
+    from app.services import page_kind
+
     await lock_workspace(db, owner)
     name = normalize_title(title)
     why = normalize_purpose(purpose)
+    if kind is not None:
+        try:
+            kind = page_kind.check(kind)
+        except page_kind.KindRefused as exc:
+            raise PageValidationError(str(exc)) from exc
     if await _count_pages(db, owner) >= MAX_PAGES_PER_OWNER:
         raise PageQuotaError(
             f"You already have {MAX_PAGES_PER_OWNER} pages, the maximum. "
@@ -474,10 +490,12 @@ async def create_page(
     await ensure_title_free(db, owner, name, allow_similar_page=allow_similar_page)
     now = _now()
     page = BobPage(id=uuid.uuid4(), owner=owner, title=name, purpose=why,
+                      kind=kind, kind_set_by=(actor.kind if kind else None),
                       created_at=now, updated_at=now)
     db.add(page)
     _event(db, owner=owner, actor=actor, operation="create", page_id=page.id,
-           after={"title": name, "purpose": why})
+           after={"title": name, "purpose": why, "kind": kind,
+                  "kind_set_by": page.kind_set_by})
     await db.flush()
     return page
 
@@ -571,6 +589,43 @@ async def set_window(
     _touch(page)
     _event(db, owner=owner, actor=actor, operation="set_window", page_id=page.id,
            before={"window": before}, after={"window": after})
+    await db.flush()
+    return page
+
+
+async def set_kind(
+    db: AsyncSession, *, owner: str, page_id: uuid.UUID, kind: str,
+    actor: Actor = USER,
+) -> BobPage:
+    """
+    Say what KIND of page this is — and therefore how it is DRAWN (W4.1).
+
+    `kind` is one of the four in `pages.kinds.catalogue`; anything else is
+    refused naming them. PRESENTATION ONLY: this writes two columns and moves
+    nothing else. No pin changes page, position or calls, no read is re-run
+    and no figure is touched — a page under another kind holds the same
+    analyses saying the same things in the same order.
+
+    Audited as `set_kind`, before and after, like every structural write, with
+    the before recording whether anybody had said (a null kind is the derived
+    one). Setting what is already stored is no write and no event.
+    """
+    from app.services import page_kind
+
+    await lock_workspace(db, owner)
+    page = await get_page(db, owner, page_id)
+    try:
+        value = page_kind.check(kind)
+    except page_kind.KindRefused as exc:
+        raise PageValidationError(str(exc)) from exc
+    before = {"kind": page.kind, "kind_set_by": page.kind_set_by}
+    if page.kind == value and page.kind_set_by == actor.kind:
+        return page
+    page.kind = value
+    page.kind_set_by = actor.kind
+    _touch(page)
+    _event(db, owner=owner, actor=actor, operation="set_kind", page_id=page.id,
+           before=before, after={"kind": value, "kind_set_by": actor.kind})
     await db.flush()
     return page
 

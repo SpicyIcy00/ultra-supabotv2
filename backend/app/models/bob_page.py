@@ -61,6 +61,7 @@ PAGE_OPERATIONS = (
     "change",        # a pin's calls were changed in place, same id and place (W1.2)
     "set_window",    # the page's date window was put on or changed (W1.4)
     "remove_window", # the page's date window was taken off (W1.4)
+    "set_kind",      # the page's kind — how it is DRAWN — was set (W4.1)
     "delete",        # the page row was deleted; its pins went to Ungrouped
 )
 
@@ -78,6 +79,10 @@ class BobPage(Base):
         ),
         CheckConstraint("date_window IS NULL OR jsonb_typeof(date_window) = 'object'",
                         name="ck_pages_date_window_is_object"),
+        CheckConstraint("kind IS NULL OR kind IN ('dashboard', 'week', 'list', 'collection')",
+                        name="ck_pages_kind"),
+        CheckConstraint("kind_set_by IS NULL OR kind_set_by IN ('user', 'bob')",
+                        name="ck_pages_kind_set_by"),
         UniqueConstraint("owner", "title", name="uq_pages_owner_title"),
         Index("ix_pages_owner_updated", "owner", text("updated_at DESC")),
         {"schema": "george"},
@@ -93,6 +98,15 @@ class BobPage(Base):
     # re-runs every analysis that takes a date range over last month. Scope,
     # never a figure — app/services/page_window.py.
     date_window: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB)
+    # WHAT KIND OF PAGE THIS IS (W4.1, migration c4d5e6f7a8b9) — and therefore
+    # how it is DRAWN: dashboard, week, list or collection. Presentation only:
+    # a kind never changes what is on the page, what a figure says, or the
+    # order the person put the analyses in. NULL is "nobody has said", and the
+    # server derives one from what the pins carry, on every read, never stored
+    # (app/services/page_kind.py). `kind_set_by` is NULL exactly when `kind`
+    # is: "derived" is what a null column reads as, not a value anybody keeps.
+    kind: Mapped[Optional[str]] = mapped_column(Text)
+    kind_set_by: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

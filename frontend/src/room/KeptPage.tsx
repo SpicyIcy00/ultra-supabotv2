@@ -21,14 +21,37 @@
  * WHAT A RUN SAYS IS DRAWN AS ITSELF (UI rule 8): reading, could not be read,
  * came back partly, came back empty, and drew — never one borrowing another's
  * words. A call that did not reproduce is named above what did.
+ *
+ * AND IT READS LIKE WHAT IT IS (W4.1, 2026-09-23). The owner, of the pages in
+ * the sidebar: *"next thing we need to do is make how each page style work
+ * idealy"*. The page carries a KIND — dashboard, week, list, collection — and
+ * the kind decides how the page is DRAWN: nothing else. Two things make that
+ * possible here, and both are this file's:
+ *
+ *   THE RUNS ARE THE PAGE'S. Each analysis used to run itself, so the page
+ *   could not know any analysis's SHAPE until it had already drawn it. They are
+ *   started here, one read per analysis, and handed down — and each analysis
+ *   still draws its own state, so the page never waits for its slowest one.
+ *
+ *   THE ORDER NEVER MOVES. A dashboard puts a RUN of consecutive single-figure
+ *   analyses on one line; that is a partition of the person's list in place
+ *   (`pageKind.groupsFor`), never a sort. Move up, Move down, Move, Remove,
+ *   Delete, Rename, Purpose and the window control work identically in all
+ *   four kinds.
  */
-import { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState, type CSSProperties } from 'react';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import type { AnswerTurn } from './data';
-import type { Page, PageWindow, Pin, PinRun, SimilarPageConflict } from '../types/pins';
+import { readAt } from './data';
+import type { Arrangement } from '../types/bob';
+import type {
+  Page, PageKind, PageWindow, Pin, PinRun, SimilarPageConflict,
+} from '../types/pins';
 import { useBob } from '../hooks/useBob';
-import { deletePage, getPage, removePageWindow, setPageWindow, updatePage } from '../services/pagesApi';
+import {
+  deletePage, getPage, removePageWindow, setPageKind, setPageWindow, updatePage,
+} from '../services/pagesApi';
 import {
   deletePin, errorMessage, listPinPages, listPins, runPin, similarPageConflict, updatePin,
 } from '../services/pinsApi';
@@ -46,6 +69,10 @@ import { ExplainsOnlyContext, explainsOnlyFrom } from './noticeDrawing';
 import { asSelection, subjectOnBoard } from './subjects';
 import { Caveats, type TileActions } from './tiles';
 import { RoomHead } from './RoomShell';
+import {
+  blockOrderFor, groupsFor, kindOf, kindOptions, shapeOf, wordsFor,
+  type AnalysisShape,
+} from './pageKind';
 
 /** How long ago, in words — a figure's age is a claim with an expiry (UI rule 6). */
 export function ago(iso?: string | null): string {
@@ -73,6 +100,54 @@ export function turnFromRun(run: PinRun): AnswerTurn {
     pinned: [], saved: [], pageChanges: [],
     composition: { blocks: run.blocks ?? [] },
   } as unknown as AnswerTurn;
+}
+
+/**
+ * ONE ANALYSIS'S RUN, AS A STATE THE PAGE CAN HOLD (W4.1).
+ *
+ * The three renderings stay three (UI rule 8): `reading` is a read on its way
+ * with nothing drawn yet, `failed` is a read that could not be reached, and
+ * data present is drawn. `refreshing` is a read on its way over something
+ * already on screen — which is the Refresh button's own state and not one of
+ * the three.
+ *
+ * KEYED BY THE PAGE'S WINDOW, so moving the window re-runs every analysis
+ * through its own read on the server, exactly as the per-analysis effect did.
+ * Nothing is computed here and no figure is cached across a window.
+ */
+export interface PinRunState {
+  data: PinRun | undefined;
+  reading: boolean;
+  refreshing: boolean;
+  failed: boolean;
+  error: unknown;
+  refresh(): void;
+}
+
+/** The query one analysis's run is read by — one shape, page or pin. */
+export function pinRunQuery(pinId: string, windowKey: string | null) {
+  return {
+    queryKey: ['pin-run', pinId, windowKey] as const,
+    queryFn: () => runPin(pinId),
+    retry: false,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  };
+}
+
+function stateOf(q: {
+  data?: PinRun; isPending: boolean; isFetching: boolean; isError: boolean; error: unknown;
+  refetch: () => unknown;
+}): PinRunState {
+  return {
+    data: q.data,
+    reading: !q.data && !q.isError,
+    refreshing: q.isFetching,
+    failed: q.isError && !q.data,
+    error: q.error,
+    refresh: () => { void q.refetch(); },
+  };
 }
 
 export function KeptPage({ pageId, onBack, embedded = false }: {
@@ -113,6 +188,76 @@ export function KeptPage({ pageId, onBack, embedded = false }: {
 
   const title = pageId === null ? UNGROUPED_NAME : page.data?.title;
   const list = pins.data ?? [];
+
+  // ---- the page's runs (W4.1) ----------------------------------------------
+  // ONE READ PER ANALYSIS, STARTED HERE. The page needs each analysis's shape
+  // to know what sits on one line with what; an analysis that ran itself could
+  // only be grouped after it had already been drawn somewhere else.
+  const windowKey = page.data?.window?.preset ?? null;
+  const runs = useQueries({ queries: list.map((pin) => pinRunQuery(pin.id, windowKey)) });
+  const states = runs.map(stateOf);
+  const kind = kindOf(page.data);
+  // WHAT EACH ANALYSIS DREW — off the blocks its own run returned, never a
+  // label anything inferred. An analysis still reading has no shape yet, and
+  // the page draws it at the width until it has one.
+  const shapes: AnalysisShape[] = states.map((s) => shapeOf(s.data?.blocks));
+  const groups = groupsFor(kind, list.map((_, i) => i), (i) => shapes[i]);
+  // WHEN THE PAGE WAS READ, at its head, for the kind that reads as a document
+  // (UI rule 6). The earliest read on the page and the window every analysis
+  // was run over — both off loaded runs, never asserted (UI rule 8).
+  const stamps = states
+    .flatMap((s) => (s.data?.results ?? []).map((r) => r.meta?.snapshot_timestamp))
+    .filter((x): x is string => typeof x === 'string').sort();
+  const dateline = [page.data?.window?.label, stamps.length ? readAt(stamps[0]) : null]
+    .filter(Boolean).join(' · ');
+
+  const analysisAt = (i: number) => (
+    <KeptPin
+      key={list[i].id}
+      pin={list[i]}
+      pageId={pageId}
+      title={title ?? null}
+      window={page.data?.window ?? null}
+      kind={kind}
+      shape={shapes[i]}
+      run={states[i]}
+      actions={
+        <>
+          {pageId !== null && (
+            <>
+              <button type="button" className="r-act" disabled={place.isPending || i === 0}
+                      aria-label={`Move ${list[i].title} up`}
+                      onClick={() => place.mutate({ id: list[i].id, body: { place: { before: list[i - 1].id } } })}>
+                Move up
+              </button>
+              <button type="button" className="r-act"
+                      disabled={place.isPending || i === list.length - 1}
+                      aria-label={`Move ${list[i].title} down`}
+                      onClick={() => place.mutate({ id: list[i].id, body: { place: { after: list[i + 1].id } } })}>
+                Move down
+              </button>
+            </>
+          )}
+          <MoveControl pin={list[i]} onMoved={invalidate} />
+          {pageId !== null && (
+            <button type="button" className="r-act" disabled={place.isPending}
+                    aria-label={`Remove ${list[i].title} from page`}
+                    onClick={() => place.mutate({ id: list[i].id, body: { page_id: null } })}>
+              Remove from page
+            </button>
+          )}
+          <button type="button" className="r-act" aria-label={`Delete ${list[i].title}`}
+                  onClick={() => {
+                    if (window.confirm(`Delete “${list[i].title}”? This deletes the saved analysis itself, not just its place on this page.`)) {
+                      remove.mutate(list[i].id);
+                    }
+                  }}>
+            Delete
+          </button>
+        </>
+      }
+    />
+  );
   // WHAT THIS PAGE IS, for the line (W1.4): its id, so view_page and
   // edit_page bind to it, and its title for the words. Registered from the
   // first paint — the id is known before the title is.
@@ -121,7 +266,8 @@ export function KeptPage({ pageId, onBack, embedded = false }: {
   return (
     <IdentityContext.Provider value={identities}>
       <ExplainsOnlyContext.Provider value={explainsOnly}>
-        <div className="r-kept" data-embedded={embedded ? 'yes' : undefined}>
+        <div className="r-kept" data-page-kind={kind}
+             data-embedded={embedded ? 'yes' : undefined}>
           <div className="r-row-acts" style={{ marginTop: 0 }}>
             <button type="button" className="r-act" onClick={onBack}>
               {embedded ? 'Open this page on its own' : '← All pages'}
@@ -141,6 +287,7 @@ export function KeptPage({ pageId, onBack, embedded = false }: {
               aside={page.data ? (
                 <span className="r-row-acts" style={{ marginTop: 0 }}>
                   <RenameControl page={page.data} onDone={invalidate} />
+                  <KindControl page={page.data} onDone={invalidate} />
                   <DeletePageControl page={page.data} pinCount={list.length}
                                      onDeleted={() => { invalidate(); navigate('/pages', { replace: true }); }} />
                 </span>
@@ -149,6 +296,14 @@ export function KeptPage({ pageId, onBack, embedded = false }: {
           )}
           {page.data && <PurposeControl page={page.data} onDone={invalidate} />}
           {page.data && <WindowControl page={page.data} onDone={invalidate} />}
+
+          {/* WHEN THIS PAGE WAS READ, at its head, where the page reads as a
+              document (UI rule 6). Drawn from loaded runs and from the page's
+              own window — never asserted before either has arrived. Every
+              figure below still wears its own read time, in every kind. */}
+          {kind === 'week' && dateline && (
+            <p className="r-doc-dateline r-kept-dateline">{dateline}</p>
+          )}
 
           {pins.isPending && <p className="r-note">Reading…</p>}
           {pins.isError && <p className="r-say">Could not load this page.</p>}
@@ -163,49 +318,19 @@ export function KeptPage({ pageId, onBack, embedded = false }: {
             </div>
           )}
 
-          {list.map((pin, i) => (
-            <KeptPin
-              key={pin.id}
-              pin={pin}
-              pageId={pageId}
-              title={title ?? null}
-              window={page.data?.window ?? null}
-              actions={
-                <>
-                  {pageId !== null && (
-                    <>
-                      <button type="button" className="r-act" disabled={place.isPending || i === 0}
-                              aria-label={`Move ${pin.title} up`}
-                              onClick={() => place.mutate({ id: pin.id, body: { place: { before: list[i - 1].id } } })}>
-                        Move up
-                      </button>
-                      <button type="button" className="r-act" disabled={place.isPending || i === list.length - 1}
-                              aria-label={`Move ${pin.title} down`}
-                              onClick={() => place.mutate({ id: pin.id, body: { place: { after: list[i + 1].id } } })}>
-                        Move down
-                      </button>
-                    </>
-                  )}
-                  <MoveControl pin={pin} onMoved={invalidate} />
-                  {pageId !== null && (
-                    <button type="button" className="r-act" disabled={place.isPending}
-                            aria-label={`Remove ${pin.title} from page`}
-                            onClick={() => place.mutate({ id: pin.id, body: { page_id: null } })}>
-                      Remove from page
-                    </button>
-                  )}
-                  <button type="button" className="r-act" aria-label={`Delete ${pin.title}`}
-                          onClick={() => {
-                            if (window.confirm(`Delete “${pin.title}”? This deletes the saved analysis itself, not just its place on this page.`)) {
-                              remove.mutate(pin.id);
-                            }
-                          }}>
-                    Delete
-                  </button>
-                </>
-              }
-            />
-          ))}
+          {/* THE PAGE, DRAWN BY ITS KIND (W4.1). A dashboard puts a RUN of
+              consecutive single-figure analyses on one line; every other kind,
+              and every other analysis, stands where it stands. The order is
+              the person's in all four — these groups flatten back to `list`. */}
+          {groups.map((g) => (g.row && g.items.length > 1
+            ? (
+              <div key={`row-${list[g.at].id}`} className="r-kept-row"
+                   data-tiles={g.items.length}
+                   style={{ '--tiles': g.items.length } as CSSProperties}>
+                {g.items.map(analysisAt)}
+              </div>
+            )
+            : analysisAt(g.items[0])))}
 
         </div>
       </ExplainsOnlyContext.Provider>
@@ -220,27 +345,51 @@ export function KeptPage({ pageId, onBack, embedded = false }: {
  * drawn by the board. No polling: the receipt under each figure carries its
  * read time, which is the honest alternative to churning the warehouse.
  */
-export function KeptPin({ pin, pageId, title, window: pageWindow = null, actions }: {
+export function KeptPin({ pin, pageId, title, window: pageWindow = null,
+                          kind = 'collection', shape = 'none', run: given, actions }: {
   pin: Pin; pageId: string | null; title: string | null;
   /** The page's date window (W1.4): a change re-runs this analysis over it. */
   window?: PageWindow | null;
+  /** How the page it sits on is drawn (W4.1). Presentation, nothing else. */
+  kind?: PageKind;
+  /** What this analysis drew, read off its own run by the page. */
+  shape?: AnalysisShape;
+  /**
+   * ITS RUN, FROM THE PAGE (W4.1) — so the page knows every analysis's shape
+   * before it draws any of them. Absent, the analysis reads for itself, which
+   * is what it did before this card and is what keeps it usable alone.
+   */
+  run?: PinRunState;
   actions?: React.ReactNode;
 }) {
-  const qc = useQueryClient();
   const bob = useBob();
-  const run = useMutation<PinRun, unknown, void>({
-    mutationFn: () => runPin(pin.id),
-    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['pins'] }); },
-  });
-  const { mutate } = run;
   // RE-RUN WHEN THE PAGE'S WINDOW MOVES. The server reads the window off the
-  // page and runs this pin's own calls over it; nothing is computed here.
+  // page and runs this pin's own calls over it; nothing is computed here. The
+  // key carries the window, so a window that moves is a different read.
   const windowKey = pageWindow?.preset ?? null;
-  useEffect(() => { mutate(); }, [mutate, windowKey]);
+  const own = useQuery({ ...pinRunQuery(pin.id, windowKey), enabled: given === undefined });
+  const run = given ?? stateOf(own);
   const data = run.data;
 
   const answers = useMemo(() => (data ? [turnFromRun(data)] : []), [data]);
   const board = useMemo(() => buildBoard(answers), [answers]);
+  /**
+   * HOW THIS ANALYSIS IS LAID OUT, BY THE PAGE'S KIND (W4.1) — an arrangement
+   * over the blocks its OWN run returned, drawn by the room's own renderer
+   * rather than a second one. `collection` sends none, which is the packing a
+   * kept page has always drawn with.
+   *
+   * IT NAMES NO VALUE, COLOUR OR WIDTH — the same bound Bob's own arrangement
+   * carries. The only thing a kind may reorder is the blocks WITHIN one
+   * analysis, on a week, so comparisons come before lists; the analyses
+   * themselves never move.
+   */
+  const arrangement = useMemo<Arrangement | null>(() => {
+    if (!data || kind === 'collection') return null;
+    const blocks = blockOrderFor(kind, (data.blocks ?? []).filter((b) => b.op !== 'drop'));
+    if (!blocks.length) return null;
+    return { layout: 'stack', children: blocks.map((b) => ({ block: b.key })) };
+  }, [data, kind]);
   const missing = (data?.results ?? []).filter((r) => r.status !== 'ok');
   // A read the page's window could not move says so, in the definitions' words.
   const unmoved = (data?.results ?? []).flatMap((r) => (r.window && r.window.applied === null && r.window.says ? [r.window.says] : []));
@@ -264,21 +413,32 @@ export function KeptPin({ pin, pageId, title, window: pageWindow = null, actions
   }, [answers, board, bob, pageId, title]);
 
   return (
-    <section className="r-kept-pin" data-pin={pin.id}>
+    <section className="r-kept-pin" data-pin={pin.id} data-shape={shape}
+             data-tile={kind === 'dashboard' && shape === 'stat' ? 'yes' : undefined}>
       <div className="r-kept-pin-head">
         <h2 className="r-kept-pin-title">{pin.title}</h2>
-        <span className="r-row-acts" style={{ marginTop: 0 }}>
-          <button type="button" className="r-act" disabled={run.isPending} onClick={() => run.mutate()}>
-            {run.isPending ? 'Reading…' : 'Refresh'}
-          </button>
-          {actions}
-        </span>
+        {/* WHAT I CAN DO WITH THIS ANALYSIS, ASKED FOR (the lead, 2026-09-23).
+            Six text links over every analysis — Refresh, Move up, Move down,
+            Move, Remove, Delete — were the loudest thing on all four kinds,
+            louder than the figures they sat over. They are one quiet gesture
+            now, and a disclosure rather than a hover, because the phone layout
+            is the real one and a hover does not exist there. Nothing is
+            removed: every control still works in every kind. */}
+        <details className="r-kept-acts">
+          <summary className="r-act" aria-label={`What I can do with “${pin.title}”`}>⋯</summary>
+          <span className="r-row-acts" style={{ marginTop: 0 }}>
+            <button type="button" className="r-act" disabled={run.refreshing} onClick={run.refresh}>
+              {run.refreshing ? 'Reading…' : 'Refresh'}
+            </button>
+            {actions}
+          </span>
+        </details>
       </div>
 
       {/* NOT YET STARTED IS READING TOO: the run starts on mount, and a first
           paint that said nothing would be a fourth state (UI rule 8). */}
-      {(run.isPending || run.isIdle) && !data && <p className="r-note">Reading…</p>}
-      {run.isError && !data && (
+      {run.reading && !data && <p className="r-note">Reading…</p>}
+      {run.failed && !data && (
         <p className="r-say" data-state="failed">
           Could not reach Bob. {errorMessage(run.error)} <span className="r-src">Last worked {ago(pin.last_ok_at)}</span>
         </p>
@@ -310,7 +470,7 @@ export function KeptPin({ pin, pageId, title, window: pageWindow = null, actions
           )}
           {board.length > 0 ? (
             <Board answers={answers} board={board} local={{}} focused={null} selection={[]}
-                   live={false} retuned={{}} on={on} />
+                   live={false} retuned={{}} on={on} arrangement={arrangement} />
           ) : missing.length === data.results.length ? null : (
             <p className="r-say" data-state="empty">
               No rows matched. That is an empty result, not a zero.{' '}
@@ -358,6 +518,76 @@ function RenameControl({ page, onDone }: { page: Page; onDone: () => void }) {
         </p>
       )}
       {error && <p className="r-note">{error}</p>}
+    </form>
+  );
+}
+
+/**
+ * WHAT KIND OF PAGE THIS IS, AND CHANGING IT (W4.1).
+ *
+ * Beside Rename and shaped like it — one gesture, one Save — because it is the
+ * same act: saying what this page is. It says the kind in the ROOM'S WORDS
+ * (`pageKind.wordsFor`, the definitions' own where the server serves them),
+ * never the enum, and it says when Bob or the server worked the kind out
+ * rather than letting a derived kind look like a choice somebody made.
+ *
+ * IT CHANGES ONLY THE DRAWING. No figure moves, no analysis moves, and the
+ * page's own order is untouched — which is why this sits with Rename and not
+ * with the window, whose change re-reads every analysis.
+ */
+function KindControl({ page, onDone }: { page: Page; onDone: () => void }) {
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const kind = kindOf(page);
+  const [picked, setPicked] = useState<PageKind>(kind);
+  const save = useMutation({
+    mutationFn: (next: PageKind) => setPageKind(page.id, next),
+    onSuccess: (next) => {
+      setEditing(false); setError(null);
+      qc.setQueryData(['page', page.id], next);
+      onDone();
+    },
+    onError: (err) => setError(errorMessage(err)),
+  });
+  const words = wordsFor(page, kind);
+  const cancel = () => { setEditing(false); setPicked(kind); setError(null); };
+  if (!editing) {
+    return (
+      <button type="button" className="r-act" aria-label="What this page is"
+              onClick={() => { setPicked(kind); setEditing(true); }}>
+        {words.label}
+      </button>
+    );
+  }
+  return (
+    <form className="r-newpage r-kept-kind" onSubmit={(e) => {
+      e.preventDefault();
+      if (picked !== kind) save.mutate(picked); else cancel();
+    }}>
+      <label>
+        This page is{' '}
+        <select className="r-field" autoFocus aria-label="What this page is"
+                value={picked} disabled={save.isPending}
+                onChange={(e) => setPicked(e.target.value as PageKind)}>
+          {kindOptions(page).map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </label>
+      <button type="submit" className="r-act" disabled={save.isPending}>
+        {save.isPending ? 'Saving…' : 'Save'}
+      </button>
+      <button type="button" className="r-act" onClick={cancel}>Cancel</button>
+      <span className="r-src" data-kind-says="yes">
+        {wordsFor(page, picked).says}
+        {/* HOW IT GOT THIS KIND — a derived kind is not a decision anybody
+            made, and saying so is what lets the owner know it is his to set. */}
+        {picked === kind && page.kind_set_by === 'derived'
+          && ' Worked out from what is on this page; nobody has set it.'}
+        {picked === kind && page.kind_set_by === 'bob' && ' Set by Bob.'}
+      </span>
+      {error && <span className="r-note" data-state="failed">{error}</span>}
     </form>
   );
 }
