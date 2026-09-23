@@ -125,6 +125,49 @@ def test_a_read_a_bound_refused_says_which_bound(monkeypatch):
 # 3: the turn nobody is listening to any more
 # ---------------------------------------------------------------------------
 
+def test_a_round_that_will_not_end_ends_the_turn(monkeypatch):
+    """
+    One live run in five on 2026-09-23 streamed thinking for 604.7 s and
+    returned no text and no tool call: ten minutes of nothing to watch, and
+    nothing to draw at the end of it. A round is bounded; the person is told.
+    """
+    from tests.test_convergence_cap_contract import _BlocksStream
+
+    class _ClosableStream(_BlocksStream):
+        closed = False
+
+        async def close(self):
+            type(self).closed = True
+
+    class _Messages:
+        def __init__(self):
+            self.requests: list[dict] = []
+
+        def stream(self, **kwargs):
+            self.requests.append(kwargs)
+            return _ClosableStream([_TextBlock("half a thought")])
+
+    class _Client:
+        def __init__(self):
+            self.messages = _Messages()
+
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: _Client())
+    monkeypatch.setattr(bob_loop, "ROUND_CEILING_S", -1.0)   # every round is over
+    StubLog.instances.clear()
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
+
+    async def collect():
+        return [f async for f in bob_loop.run("why is Rockwell down?")]
+
+    frames = asyncio.run(collect())
+    assert [f for f in frames_of(frames, "error")], "the room was given nothing to draw"
+    assert any(w["reason"] == "round_ceiling" for w in frames_of(frames, "warning"))
+    assert _ClosableStream.closed, "the stream was left open"
+    assert any("round_ceiling" in str(params) for sql, params in StubLog.instances[0].statements
+               if "george.gaps" in sql), "the ending was not recorded"
+    assert frames_of(frames, "done"), "a turn that ends still says it ended"
+
+
 def test_a_turn_whose_client_went_away_still_writes_its_record(monkeypatch):
     """The owner's refresh must not be how a turn disappears."""
     fake = FakeClient([[_ToolUse("c1", "get_change", {"store": "Rockwell"})],

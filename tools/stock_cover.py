@@ -280,6 +280,21 @@ def cover_lines(cur, defs: dict, *, day: date, stock_day: date, shops: list[str]
     """
     The lines, ranked and counted, on an open cursor.
 
+    WHAT IT COSTS, AND WHY IT IS NOT SMALLER (D3, measured 2026-09-23). The
+    owner's `get_stock_cover(store="Greenhills", top_n=10)` took 12.3 s and was
+    the slowest read of his day. The statement is not what took it: EXPLAIN
+    ANALYZE puts this query at ~1.0 s server-side, the same call shapes measure
+    0.60–1.89 s from here, and the LIVE record has the same call at 402 ms eight
+    minutes later (2026-09-23 06:44:42). What was different is that it went out
+    in a batch of five reads against the one shared instance.
+
+    Nor can the work be pruned. `meta.states` counts every line in every state
+    and `would_fire_without_a_level` counts the fast lines nobody set a level
+    for — the estate has 39 lines with a level and ~24,700 without — so a
+    demand figure is needed for every line even when ten rows come back. The
+    90-day window's line items are read once, into a MATERIALIZED CTE, which is
+    already the cheap shape for it.
+
     Shared by get_stock_cover and the brief's stock_running_out section, so the
     morning line and the read are the same statement with the same definitions.
     Returns {"rows", "state_counts", "full_row_count",

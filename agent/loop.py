@@ -52,7 +52,6 @@ from decimal import Decimal
 from typing import Any, AsyncIterator, Callable, Optional
 
 import anthropic
-import httpx
 import psycopg
 
 from agent import prose as _prose
@@ -122,20 +121,33 @@ EFFORT = "high"
 
 # A TURN MUST ALWAYS END (D3, 2026-09-23).
 #
-# The SDK's default is a 600-second whole-request timeout, which on a streamed
-# request means a stalled connection can hold a turn open for ten minutes with
-# nothing on the person's screen. The owner watched one for 2m 42s and
-# refreshed; the turn left five tool calls in the log and no conversation row.
+# The SDK's default is 600 seconds on every phase of the request, the gap
+# between streamed bytes included, so a connection that goes quiet can hold a
+# turn open for ten minutes with nothing on the person's screen. The owner
+# watched one for 2m 42s and refreshed; the turn left five tool calls in the
+# log and no conversation row.
 #
-# So the bound is on the GAP BETWEEN BYTES, not on the turn: a round may take
-# as long as it legitimately takes — the broad question's writing round has
-# measured 84–117 s on DeepSeek — and a stream that says nothing for
-# STREAM_STALL_S is a stall, not a long thought. It surfaces as an
-# APITimeoutError, which `_is_transient` already retries once while nothing
-# has been streamed and otherwise draws as an error frame. Either way the turn
-# ends, and the room says so.
-STREAM_CONNECT_S = 15.0
+# So the bound is on the GAP BETWEEN BYTES, not on the turn: httpx reads this
+# as a per-read timeout, so a round may take as long as it legitimately takes
+# — the broad question's writing round has measured 84–117 s on DeepSeek — and
+# a stream that says nothing for STREAM_STALL_S is a stall, not a long
+# thought. It surfaces as an APITimeoutError, which `_is_transient` already
+# retries while nothing has been streamed and otherwise draws as an error
+# frame. Either way the turn ends, and the room says so.
+#
+# A FLOAT, NOT AN httpx.Timeout. anthropic 1.2.0 does arithmetic on this value
+# when it opens a stream ("unsupported operand type(s) for +: 'float' and
+# 'Timeout'"), and the TypeError arrives as an APIConnectionError — three live
+# turns died in 7 s each before this line was measured rather than assumed.
 STREAM_STALL_S = 120.0
+
+# And the other half: a stream that never goes quiet and never finishes.
+# One live run in five on 2026-09-23 streamed thinking for 604.7 s and
+# returned no text and no tool call. Twice the slowest legitimate round on
+# record (the broad question's writing round, 117 s), so it fires on
+# pathology and not on a long thought. A TOOL's time is not bounded here —
+# this is the model's own stream, and a backtest that takes 87 s is work.
+ROUND_CEILING_S = 240.0
 
 # How long the STATIC prefix — the tools array and the system prompt — is kept
 # alive after it is written. The moving breakpoint on the message tail keeps the
@@ -3404,9 +3416,8 @@ async def run(
 
     # Empty kwargs on Anthropic, so this is the client it always was — except
     # for the stall bound, which is the same on both providers (D3).
-    client = anthropic.AsyncAnthropic(
-        timeout=httpx.Timeout(STREAM_STALL_S, connect=STREAM_CONNECT_S),
-        **provider.client_kwargs())
+    client = anthropic.AsyncAnthropic(timeout=STREAM_STALL_S,
+                                      **provider.client_kwargs())
     # Context on the QUESTION, never in the system prompt. Both of these vary
     # per request, and a page name or a list of past chats in the cached prefix
     # would invalidate it on every single call.
@@ -3866,6 +3877,8 @@ async def run(
             # surfaces instead of retrying.
             attempt = 0
             text_parts: list[str] = []
+            over_time = False
+            round_started = iteration_marks[-1] if iteration_marks else time.monotonic()
             while not settling:
                 text_parts = []
                 streamed = False
@@ -3951,7 +3964,22 @@ async def run(
                                 elif d.type == "thinking_delta":
                                     streamed = True
                                     yield _sse("thinking", {"delta": d.thinking})
-                        final = await stream.get_final_message()
+                            # AND ONE ROUND MAY NOT RUN FOREVER (D3). The
+                            # stall bound above ends a stream that goes quiet;
+                            # this one ends a stream that never stops talking.
+                            # Measured 2026-09-23, one live run in five: a
+                            # round streamed thinking for 604.7 s and returned
+                            # no text and no tool call — nothing to draw, ten
+                            # minutes of nothing to watch. The person is told
+                            # the turn failed, which is a fact he can act on;
+                            # the alternative is the screen he refreshed.
+                            if time.monotonic() - round_started > ROUND_CEILING_S:
+                                over_time = True
+                                break
+                        if over_time:
+                            await stream.close()
+                        else:
+                            final = await stream.get_final_message()
                     break
                 except Exception as exc:  # noqa: BLE001 - re-raised unless transient
                     # THE BETA MAY NOT BE OURS TO USE, and losing it must not
@@ -3984,6 +4012,22 @@ async def run(
                         "detail": f"{type(exc).__name__}: {exc}"[:300],
                     })
                     await asyncio.sleep(delay)
+
+            # THE ROUND THAT WOULD NOT END (D3). Nothing usable came back and
+            # nothing more is asked of the model: the turn stops here, with an
+            # error the room draws, and the record below is written as for any
+            # other ending. Whatever streamed stays on screen — it is his, and
+            # the sentence above it says the turn did not finish.
+            if over_time:
+                status = "round_ceiling"
+                log.gap("round_ceiling",
+                        f"round {iterations} streamed past {int(ROUND_CEILING_S)}s "
+                        f"and was ended"[:2000])
+                yield _sse("warning", {"reason": "round_ceiling",
+                                       "seconds": int(ROUND_CEILING_S),
+                                       "round": iterations})
+                yield _sse("error", {"message": _turn_failure_sentence("model_unavailable")})
+                break
 
             if settling:
                 tool_uses = []
