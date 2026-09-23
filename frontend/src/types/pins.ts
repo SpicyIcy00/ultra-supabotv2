@@ -49,6 +49,41 @@ export interface Pin {
 }
 
 /**
+ * WHAT KIND OF PAGE THIS IS (W4.1, 2026-09-23) — the owner, of the pages in
+ * the room's sidebar: *"next thing we need to do is make how each page style
+ * work idealy"*.
+ *
+ * A page's kind decides how the page is DRAWN. It never changes what is on the
+ * page, what any figure says, or the order the person put the analyses in.
+ *
+ *   dashboard   numbers you check — single figures sit together as stat tiles
+ *   week        how it went over a window — one column, the document rhythm
+ *   list        a working page — the rows are the point
+ *   collection  the default and the fallback: a set of saved answers
+ *
+ * NEVER NULL IN A RESPONSE: the server derives one when the column is unset,
+ * and a response from a server older than this card carries none at all — in
+ * which case the room reads `collection`, which is what a kept page has always
+ * drawn as (`room/pageKind.ts`).
+ */
+export type PageKind = 'dashboard' | 'week' | 'list' | 'collection';
+
+/** How a page got its kind — the same shape `date_window.set_by` already uses. */
+export type PageKindSetBy = 'user' | 'bob' | 'derived';
+
+/**
+ * One kind a page may be set to, in the definitions' own words
+ * (metrics.yaml `pages.kinds`). Optional: a server that does not serve them
+ * leaves the room reading its own fallback wording, and the kind names are the
+ * contract's four either way.
+ */
+export interface PageKindOption {
+  value: PageKind;
+  label: string;
+  says?: string | null;
+}
+
+/**
  * A page: a person's ordered workspace of pins, with a title and a one-line
  * purpose. A row since 2026-09-08, so it can be empty and can be renamed
  * without anything bound to it moving.
@@ -61,6 +96,12 @@ export interface Page {
   updated_at: string;
   /** How many pins sit on it. Zero is a real state. */
   pins: number;
+  /** HOW THIS PAGE IS DRAWN (W4.1). Never null from a current server. */
+  kind?: PageKind;
+  /** Who decided it: the owner, Bob, or the server working it out. */
+  kind_set_by?: PageKindSetBy;
+  /** The kinds this page may be set to, in the definitions' words. */
+  kind_options?: PageKindOption[];
   /**
    * THE PAGE'S DATE WINDOW (W1.4). Absent or null: the page has no date
    * filter. Otherwise the preset picked (null: each analysis as it was kept),
@@ -214,6 +255,11 @@ export interface UpdatePageRequest {
   title?: string;
   purpose?: string | null;
   allow_similar_page?: boolean;
+}
+
+/** The owner setting the page's kind by hand (W4.1). PUT, as the window is. */
+export interface SetPageKindRequest {
+  kind: PageKind;
 }
 
 export interface PageDeleted {
