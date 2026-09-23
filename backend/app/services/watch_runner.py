@@ -41,6 +41,28 @@ from tools._common import load_defs, req
 # How many mornings are replayed at once. The read-only role is capped and
 # tools/_common.connect() gates at 8 per process; three keeps a backtest brisk
 # without competing with whatever else the web process is serving.
+#
+# WHERE THE 87 SECONDS GO (D3, measured 2026-09-23 against the live database).
+# The owner's `set_watch(action="backtest")` took 86.9 s of a 166.5 s turn.
+# Reproduced here at 88.8 s: 60 closed mornings, each one `get_brief` at
+# 2.3–3.8 s of SQL over eleven statements, and two of those statements scan
+# the 926,586-row new_transaction_items table — the Manila-date predicates
+# (`(transaction_time AT TIME ZONE 'Asia/Manila')::date >= …`) cannot use
+# idx_nt_time, so the planner takes a parallel sequential scan every time.
+# 120 full scans of a million rows is the number.
+#
+# RAISING THIS IS NOT THE FIX, and it was measured rather than assumed: six
+# replays at once ran the same backtest in 79.2 s — 11% for double the
+# connections held. The database is already the bottleneck, and a backtest
+# that holds six of the eight gated connections for 79 s makes another
+# person's reads wait 20 s and then fail, which `one()` below would count as
+# an unreadable morning. A slower number honestly measured beats a faster one
+# measured against a shrinking denominator.
+#
+# The cut that would work is less work per morning — `get_brief` reading only
+# the section the condition can fire on, in the LIVE check and the backtest
+# alike, so the two still run the same code path (which is the whole point of
+# replaying through it). That is tools/brief.py, and it is a card of its own.
 BACKTEST_CONCURRENCY = 3
 
 TICK_MINUTES = 1

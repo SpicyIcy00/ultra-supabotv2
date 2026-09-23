@@ -142,6 +142,14 @@ export interface ToolCall {
      * anything that is not.
      */
     pinnable?: boolean;
+    /**
+     * WHICH BOUND REFUSED THIS READ, when one did — the answer's size budget,
+     * the call that already answered the question whole, or the convergence
+     * cap. Nothing reached the database and no tool declined anything: the
+     * answer was already in hand. Absent on every read that actually ran, and
+     * on a frame from an older backend.
+     */
+    refused_by?: string;
   };
 }
 

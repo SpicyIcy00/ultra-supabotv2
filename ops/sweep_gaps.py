@@ -67,6 +67,12 @@ KINDS: dict[str, str] = {
     "duplicate_read":          "the same read was asked for twice in one turn",
     "convergence_cap":         "the answer was rewritten until the cap stopped it",
     "iteration_cap":           "the turn ran out of iterations without finishing",
+    # THE TURN THAT ENDED WITH NOBODY LISTENING (D3, 2026-09-23). The client
+    # went away — a refresh, a closed tab, a dropped connection — and the
+    # generator was closed mid-turn. The record is still written; this says
+    # the turn ended that way rather than by answering.
+    "turn_abandoned":          "the person's connection went away mid-turn and the turn was closed",
+    "round_ceiling":           "one round streamed past its ceiling without finishing, and the turn was ended",
     "no_tool_call":            "Bob answered without reading anything",
     "answer_without_prose":    "the turn drew objects and said nothing — shapes and silence",
     "notice_forced":           "a caveat had to be forced into the answer",
@@ -103,6 +109,9 @@ KINDS: dict[str, str] = {
 # so a week with two hundred rows still says which ten matter.
 DEFECTS = {
     "api_error", "unhandled", "iteration_cap", "convergence_cap",
+    # A turn somebody stopped waiting for is a turn that took too long or
+    # stopped speaking, and on 2026-09-23 it was the only trace of either.
+    "turn_abandoned", "round_ceiling",
     "tool_vocabulary_leaked", "transaction_wording", "history_marker_echoed",
     "pin_claimed_not_made", "save_claimed_not_made", "page_claimed_not_made",
     # A wrong number on screen is never operating noise, and neither is one

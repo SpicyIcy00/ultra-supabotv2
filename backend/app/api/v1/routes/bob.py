@@ -48,6 +48,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import json
+import logging
 import re
 import sys
 import uuid
@@ -2830,7 +2831,16 @@ async def _safe_stream(question: str, user_id: Optional[str],
         ):
             yield frame
     except Exception as exc:  # noqa: BLE001
-        payload = json.dumps({"message": f"{type(exc).__name__}: {exc}"})
+        # AND WHAT IT SAYS IS A SENTENCE, NOT THE EXCEPTION (D3, 2026-09-23).
+        # The client draws `message` as the answer, so `KeyError: 'rows'` on
+        # the screen is a raw diagnostic reaching the reader — the thing UI
+        # rule 4 forbids, and the thing the loop's own handlers were changed
+        # to stop doing on 2026-09-16. This is the last way out that still
+        # did it. The exception goes to the process log, where it was always
+        # going to be read from.
+        logging.getLogger(__name__).exception("bob turn failed before the loop could say so")
+        payload = json.dumps({"message": bob_loop._turn_failure_sentence("unhandled"),
+                              "detail": f"{type(exc).__name__}"})
         yield f"event: error\ndata: {payload}\n\n"
         yield f"event: done\ndata: {json.dumps({'status': 'error'})}\n\n"
 
