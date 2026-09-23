@@ -116,6 +116,21 @@ this file wins. **A defect under Open in DOGFOOD_LOG outranks every card here.**
 
 ## 2. Where we are
 
+**The owner tested waves 1 and 2 on 2026-09-23 and found nine things; seven are fixed and
+live at `f7087ad`** (DOGFOOD_LOG, that date, has his words and the record behind each).
+Four agents: D1 the room you can read, D2 the left is the bigger picture, D3 speed and the
+hang, D4 a read-only sweep that found six more. Measured, three runs each: "Why is
+Greenhills down?" 82.8 s → **48.4 s**; "how are we doing?" 141.9 s → **115.0 s**; his words
+on the left 192–403 written and ~60 kept → **5–21**; refused reads **0 in 6 runs**. Suites:
+pure **2,522**, frontend **1,323/1,323**, `tsc` clean, migration `c4d5e6f7a8b9` applied.
+
+**Still open, and he was told plainly:** a why is 48.4 s against the 20–40 s it is meant to
+be, and a broad answer is just under two minutes. Removing the refused round did not buy the
+time back — the asking round's 10.4 s reappeared in the writing round (27.1 → 38.8 s median):
+DeepSeek spends the same thinking whether it is asked in one request or two. **The remaining
+time is the WRITING round**, and that is where the next speed work goes. Six more defects
+from the sweep are in DOGFOOD_LOG under Open, none with a card yet.
+
 **Wave 2 is merged, measured and live at `ce8fed4` (2026-09-22); W2.2, W2.3 and W2.4 met
 their done-when, W2.1 waits on the owner's switch.** Four agents in worktrees, merged
 W2.2, W2.1, W2.3, W2.4 (one import conflict in `Room.tsx`). Suites: pure **2,481** passed,
