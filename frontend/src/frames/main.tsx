@@ -24,7 +24,10 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { BobCtx, type BobContext } from '../components/bob/bobContext';
 import { useAuthStore } from '../stores/authStore';
 import Room from '../room/Room';
+import { KeptPage } from '../room/KeptPage';
 import { BobHere } from '../room/BobHere';
+import { RoomShell } from '../room/RoomShell';
+import vocabReads from '../room/__fixtures__/vocab-reads.json';
 import { Layout } from '../components/Layout';
 import { useRegisterHere } from '../hooks/useHere';
 import scenes from './scenes.json';
@@ -61,10 +64,88 @@ useAuthStore.setState({
           allowed_pages: ['bob', 'dashboard', 'analytics', 'warehouse', 'packing'] },
 });
 
+/* ------------------------------------------------------- a kept page (W4.1) */
+/**
+ * THE FOUR PAGES OF THE SIDEBAR, AS SHAPES — Estate Dashboard, Store
+ * Dashboard, Estate Week and AJI BARN Reorder, each drawn by the REAL
+ * `KeptPage` over the reads `ops/record_vocab_reads.py` recorded with the
+ * vetted tools. `?kept=dashboard|week|list|collection` mounts one; every figure
+ * on it is a recorded read, and the kind is the only thing that differs
+ * between the frames.
+ */
+const READS = vocabReads as unknown as Record<string, {
+  tool: string; arguments: Record<string, unknown>;
+  rows: Record<string, unknown>[]; meta: Record<string, unknown>;
+}>;
+const KEPT_PAGES: Record<string, { title: string; analyses: [string, string, string][] }> = {
+  dashboard: { title: 'Estate Dashboard', analyses: [
+    ['Estate net sales', 'figure', 'figure'],
+    ['Transactions', 'figure', 'figure'],
+    ['Average ticket', 'figure', 'figure'],
+    ['Stock cover', 'figure', 'figure'],
+    ['By shop', 'ranked', 'ranked'],
+    ['Day by day', 'line', 'line'],
+  ] },
+  week: { title: 'Estate Week', analyses: [
+    ['How the estate moved', 'dumbbell', 'dumbbell'],
+    ['Day by day', 'line', 'line'],
+    ['What moved it', 'contributors', 'contributors'],
+    ['By shop', 'ranked', 'ranked'],
+  ] },
+  list: { title: 'AJI BARN Reorder', analyses: [
+    ['Lines at zero', 'list', 'table'],
+    ['Below cover', 'table', 'table'],
+    ['What is moving', 'ranked', 'ranked'],
+    // One analysis carrying both — the case where a chart has rows to be an
+    // aside to, and is set beside them rather than above them.
+    ['Orders waiting', 'ranked,table', 'ranked,table'],
+    ['To visit', 'table', 'table'],
+  ] },
+  collection: { title: 'Estate Dashboard', analyses: [
+    ['Estate net sales', 'figure', 'figure'],
+    ['Transactions', 'figure', 'figure'],
+    ['Average ticket', 'figure', 'figure'],
+    ['Stock cover', 'figure', 'figure'],
+    ['By shop', 'ranked', 'ranked'],
+    ['Day by day', 'line', 'line'],
+  ] },
+};
+const keptKind = params.get('kept');
+const keptPage = keptKind ? KEPT_PAGES[keptKind] ?? KEPT_PAGES.collection : null;
+const keptPins = (keptPage?.analyses ?? []).map(([title], i) => ({
+  id: `pin-${i}`, title, question: null, page: keptPage?.title ?? null, page_id: 'page-1',
+  position: i, conversation_id: null, tool_calls: [], created_at: '2026-09-23T00:00:00+08:00',
+  last_run_at: null, last_ok_at: '2026-09-23T08:00:00+08:00', last_status: 'ok',
+}));
+const keptRunOf = (id: string) => {
+  const i = Number(id.split('-')[1]);
+  const [title, marks, reads_] = (keptPage?.analyses ?? [])[i] ?? ['', 'table', 'table'];
+  const pairs = marks.split(',').map((m, n) => [m, reads_.split(',')[n]] as const);
+  return {
+    id, title, status: 'ok', notices: [], last_ok_at: null, ran_at: '2026-09-23T08:00:00+08:00',
+    blocks: pairs.map(([mark, read], n) => ({
+      op: 'put', kind: mark, key: `pin-${n}`, weight: n ? 'supporting' : 'lead',
+      seq: n, tool: READS[read].tool })),
+    results: pairs.map(([, read]) => ({
+      tool: READS[read].tool, arguments: READS[read].arguments, status: 'ok',
+      duration_ms: 12, rows: READS[read].rows, meta: READS[read].meta, notices: [] })),
+  };
+};
+
 const desk = (scenes as { desk: unknown }).desk;
 axios.defaults.adapter = async (config: InternalAxiosRequestConfig): Promise<AxiosResponse> => {
   const url = config.url ?? '';
   const ok = (data: unknown): AxiosResponse => ({ data, status: 200, statusText: 'OK', headers: {}, config });
+  if (keptPage) {
+    if (url.endsWith('/bob/pages/page-1')) {
+      return ok({ id: 'page-1', title: keptPage.title,
+                  purpose: 'What this page is for, in one line.',
+                  created_at: '2026-09-23T00:00:00+08:00', updated_at: '2026-09-23T00:00:00+08:00',
+                  pins: keptPins.length, kind: keptKind, kind_set_by: 'derived' });
+    }
+    if (/\/bob\/pins\/[^/]+\/run$/.test(url)) return ok(keptRunOf(url.split('/').slice(-2)[0]));
+    if (url.endsWith('/bob/pins')) return ok(keptPins);
+  }
   if (url.endsWith('/definitions/desk')) {
     if (desk) return ok(desk);
     throw new AxiosError('no desk definitions in the fixture', 'ERR_BAD_RESPONSE', config, null,
@@ -148,7 +229,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={client}>
       <BobCtx.Provider value={bob}>
-        {here ? (
+        {keptPage ? (
+          <MemoryRouter initialEntries={['/pages/page-1']}>
+            <RoomShell><KeptPage pageId="page-1" onBack={noop} /></RoomShell>
+          </MemoryRouter>
+        ) : here ? (
           <MemoryRouter initialEntries={[`/${here}`]}>
             <Layout><HerePage name={here} /></Layout>
             <BobHere />
