@@ -212,7 +212,7 @@ export function Rail({ busy, needsYou, onNew, estate }: RailProps) {
           {(rows) => rows.map((w) => {
             const v = w.current_version?.version;
             return (
-              <NavLink key={w.id} to="/workflows" className="r-side-it" title={w.name}>
+              <NavLink key={w.id} to={`/workflows/${w.id}`} className="r-side-it" title={w.name}>
                 <i className={w.status === 'active' ? 'r-pip r-pip--run' : 'r-pip r-pip--off'} />
                 <span>{w.name}</span>
                 <small>{[v ? `v${v}` : null, w.status].filter(Boolean).join(' · ')}</small>

@@ -15,6 +15,7 @@ import type {
   Workflow,
   WorkflowRun,
   WorkflowSchedule,
+  WorkflowVersion,
 } from '../types/workflows';
 
 const API_BASE = '/api/v1/bob/workflows';
@@ -59,5 +60,76 @@ export const listRuns = async (workflowId: string, limit = 3): Promise<WorkflowR
   const { data } = await axios.get<WorkflowRun[]>(`${API_BASE}/${workflowId}/runs`, {
     params: { limit },
   });
+  return data;
+};
+
+/* ---------------------------------------------------------------------------
+ * ONE SYSTEM, AND THE FOUR ACTS (W4.3)
+ *
+ * Every endpoint below has existed on the server since the workflows feature
+ * landed; none of them had a client, so `promoteVersion` above was the only
+ * write in the whole frontend and it was reachable from one place. That is
+ * how the owner came to be told an administrator must promote Morning Runout
+ * on a screen with no way to promote anything.
+ *
+ * RULE 7 IS ENFORCED ON THE SERVER AND NOWHERE ELSE. These are clients: a
+ * refusal arrives as a 4xx whose detail says which gate refused, and the
+ * caller renders it verbatim rather than guessing ahead of it.
+ * ------------------------------------------------------------------------- */
+
+/** One system, with its newest version. */
+export const getWorkflow = async (workflowId: string): Promise<Workflow> => {
+  const { data } = await axios.get<Workflow>(`${API_BASE}/${workflowId}`);
+  return data;
+};
+
+/** Every version, newest first. Versions are immutable, so this is a history. */
+export const listVersions = async (workflowId: string): Promise<WorkflowVersion[]> => {
+  const { data } = await axios.get<WorkflowVersion[]>(`${API_BASE}/${workflowId}/versions`);
+  return data;
+};
+
+/**
+ * Run a version now, or BACKTEST it against a past Manila date.
+ *
+ * `asOf` is what makes it a backtest: the server records it against the
+ * version, and that record is what a promotion later rests on. A date that is
+ * not past is refused there, not here — `backtest_must_be_past`.
+ */
+export const runWorkflow = async (
+  workflowId: string,
+  opts: { version?: number; asOf?: string | null } = {},
+): Promise<{ run_id?: string; status?: string; [k: string]: unknown }> => {
+  const { data } = await axios.post(`${API_BASE}/${workflowId}/run`, {
+    bindings: {},
+    ...(opts.version ? { version: opts.version } : {}),
+    ...(opts.asOf ? { as_of: opts.asOf } : {}),
+  });
+  return data;
+};
+
+/** One run in full: every step, its receipts and its notices. */
+export const getRun = async (
+  workflowId: string, runId: string,
+): Promise<Record<string, unknown>> => {
+  const { data } = await axios.get(`${API_BASE}/${workflowId}/runs/${runId}`);
+  return data;
+};
+
+/**
+ * Switch a schedule on or off, or point it at a different version.
+ *
+ * Switching one ON is the moment unattended execution begins, so the server
+ * requires the pinned version to be promoted. Repointing is the act that ENDS
+ * a divergence, and it is separate from promoting on purpose: approving a
+ * version must never silently change what a schedule fires (CLAUDE.md rule 8).
+ */
+export const updateSchedule = async (
+  workflowId: string, scheduleId: string,
+  change: { enabled?: boolean; version?: number },
+): Promise<WorkflowSchedule> => {
+  const { data } = await axios.patch<WorkflowSchedule>(
+    `${API_BASE}/${workflowId}/schedules/${scheduleId}`, change,
+  );
   return data;
 };

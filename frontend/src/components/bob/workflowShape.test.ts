@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Workflow, WorkflowRun, WorkflowSchedule, WorkflowVersion } from '../../types/workflows';
-import { lastRunLine, scheduleLine, workflowView } from './workflowShape';
+import {
+  blocksPromotion, divergence, lastRunLine, listOf, scheduleLine, workflowView,
+} from './workflowShape';
 
 function version(over: Partial<WorkflowVersion> = {}): WorkflowVersion {
   return {
@@ -85,5 +87,86 @@ describe('the words', () => {
       as_of: null, status: 'ok', started_at: '2026-09-07T01:00:00Z', finished_at: null, notices: [] };
     expect(lastRunLine([run])).toBe('Last run ok');
     expect(lastRunLine([{ ...run, mode: 'backtest', status: 'failed' }])).toBe('Last backtest failed');
+  });
+});
+
+/**
+ * W4.3 — divergence with weight, and what stands in front of a promotion.
+ *
+ * `diverges` had been computed since this file was written and every surface
+ * dropped it, so rule 8's notice had no weight anywhere. These two functions
+ * are what a page draws instead of folding it into a sentence.
+ */
+describe('a version divergence, as something to draw', () => {
+  const promoted = version({ id: 'v3', backtested_at: 'x', backtest_run_id: 'r', promoted_at: 'y' });
+
+  it('is nothing when the schedules are not known yet, and says so by being null', () => {
+    // Not "no divergence" — not yet known. The caller renders that state
+    // itself rather than borrowing the loaded one (UI rule 8).
+    expect(divergence(workflow(promoted), undefined)).toBeNull();
+  });
+
+  it('is nothing when an enabled schedule fires the newest version', () => {
+    expect(divergence(workflow(promoted), [schedule({ version_id: 'v3' })])).toBeNull();
+  });
+
+  it('ignores a schedule that is switched off, because it fires nothing', () => {
+    expect(divergence(workflow(promoted), [schedule({ version_id: 'v1', enabled: false })])).toBeNull();
+  });
+
+  it('names which version a run uses, which the schedule fires and why', () => {
+    const d = divergence(workflow(promoted), [schedule({ version_id: 'v1' })]);
+    expect(d?.ran).toBe(3);
+    expect(d?.fires).toEqual([{ scheduleId: 's', version: 'v1', when: 'daily at 06:00' }]);
+    expect(d?.why).toMatch(/promoting never repoints one/);
+  });
+
+  it('carries every enabled schedule that fires something else', () => {
+    const d = divergence(workflow(promoted), [
+      schedule({ id: 'a', version_id: 'v1' }),
+      schedule({ id: 'b', version_id: 'v2', kind: 'weekly', days_of_week: [1] }),
+      schedule({ id: 'c', version_id: 'v3' }),
+    ]);
+    expect(d?.fires.map((f) => f.scheduleId)).toEqual(['a', 'b']);
+  });
+});
+
+describe('what stands between a version and running unattended', () => {
+  it('names the backtest first, because that is the order the gate applies', () => {
+    expect(blocksPromotion(version(), { mayPromote: true })).toMatch(/Never backtested/);
+  });
+
+  it('does not let a backtest be enough on its own for somebody who may not promote', () => {
+    const v = version({ backtested_at: 'x', backtest_run_id: 'r' });
+    expect(blocksPromotion(v, { mayPromote: false, administrators: ['Isaiah'] }))
+      .toBe('Only Isaiah can promote a version.');
+  });
+
+  it('sends a person to Bob rather than to an office nobody is attached to', () => {
+    const v = version({ backtested_at: 'x', backtest_run_id: 'r' });
+    const said = blocksPromotion(v, { mayPromote: false }) ?? '';
+    expect(said).toMatch(/Ask Bob who/);
+    expect(said).not.toMatch(/^Only an administrator/);
+  });
+
+  it('lets a backtested version be promoted by somebody who holds it', () => {
+    const v = version({ backtested_at: 'x', backtest_run_id: 'r' });
+    expect(blocksPromotion(v, { mayPromote: true })).toBeNull();
+  });
+
+  it('says nothing is left to do about one already promoted', () => {
+    const v = version({ backtested_at: 'x', backtest_run_id: 'r', promoted_at: 'y' });
+    expect(blocksPromotion(v, { mayPromote: true })).toBe('Already promoted.');
+  });
+
+  it('does not decide before it knows who is asking', () => {
+    const v = version({ backtested_at: 'x', backtest_run_id: 'r' });
+    expect(blocksPromotion(v, undefined)).toMatch(/Checking/);
+  });
+
+  it('names people the way a person would', () => {
+    expect(listOf(['Isaiah'])).toBe('Isaiah');
+    expect(listOf(['Isaiah', 'Joy'])).toBe('Isaiah and Joy');
+    expect(listOf(['Isaiah', 'Joy', 'Daniel'])).toBe('Isaiah, Joy and Daniel');
   });
 });

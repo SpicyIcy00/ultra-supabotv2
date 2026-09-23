@@ -2816,3 +2816,67 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
   font: 400 12.5px/1.55 var(--sans); color: var(--ink); max-width: 60ch;
   margin: 0 0 12px; border-left: 2px solid var(--edge-strong); padding-left: 14px;
 }
+
+/* ===================================================================
+   ONE SYSTEM, AND THE FOUR ACTS (W4.3, 2026-09-23)
+
+   The owner, of a screen that named an act it could not perform: "how do i
+   turn it on and what its telling me to do?" A system has its own page now,
+   with its versions, its runs, its schedules and the four acts on it.
+
+   NOTHING HERE WEARS THE ACCENT (UI rule 5). Run, Backtest, Promote and
+   Switch on are acts on the company's rule, not approvals; the one accent in
+   the app stays on the approval queue. They are the quiet text action with
+   weight added — emphasis ADDS, never dims (the owner, 2026-09-18).
+
+   MOBILE FIRST: one column at every width, the acts wrapping onto their own
+   lines rather than being pushed off the side.
+   =================================================================== */
+
+.r-sys-sec { padding: 26px 0 4px; border-top: 1px solid var(--edge); }
+.r-sys-sec:first-of-type { border-top: 0; padding-top: 14px; }
+.r-sys-sec > .r-side-h { margin-bottom: 12px; }
+.r-sys-list { list-style: none; margin: 4px 0 0; padding: 0; }
+
+/* A version's or a run's standing, said in a word beside its name. The word
+   is the carrier; there is no hue under it at all. */
+.r-sys-tag {
+  display: inline-block; margin-left: 10px;
+  font: 400 11px/1.4 var(--sans); color: var(--ink-2);
+  letter-spacing: 0; text-transform: none; vertical-align: middle;
+}
+
+/* THE ACT ITSELF — `.r-act` with weight and a rule under it. Heavier than the
+   quiet actions beside it, and still not the approvals colour. */
+.r-act--do {
+  font-weight: 600; color: var(--ink);
+  border-bottom: 1px solid var(--ink-3); padding-bottom: 2px;
+}
+.r-act--do:hover, .r-act--do:focus-visible { border-bottom-color: var(--ink); }
+.r-act--do:disabled { opacity: 0.4; border-bottom-color: var(--edge-strong); }
+.r-act--do:disabled:hover { color: var(--ink); border-bottom-color: var(--edge-strong); }
+
+/* A VERSION DIVERGENCE, DRAWN (CLAUDE.md rule 8). It says a figure may be
+   wrong — the number in chat is not the number the schedule sends — so it is
+   ABOVE what it qualifies, and it takes its prominence from position and a
+   rule down its side, never from hue (UI rules 4 and 5). */
+.r-sys-diverge {
+  margin: 18px 0 6px; padding: 0 0 0 14px;
+  border-left: 2px solid var(--edge-strong);
+}
+
+/* The steps of a version, and the steps of a run: a numbered list, quiet,
+   opened on purpose. */
+.r-sys-steps {
+  list-style: decimal; margin: 12px 0 0; padding: 0 0 0 20px;
+  font: 400 13px/1.7 var(--sans); color: var(--ink-2);
+}
+.r-sys-steps > li { margin-bottom: 6px; }
+.r-sys-step-name { color: var(--ink); font-weight: 500; }
+
+@media (max-width: 700px) {
+  /* The phone layout is the real one: every act on its own line, in the
+     order it is performed, rather than three of them crushed into a row. */
+  .r-sys-sec .r-row-acts { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .r-sys-tag { display: block; margin: 4px 0 0; }
+}
