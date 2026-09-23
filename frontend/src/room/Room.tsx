@@ -67,6 +67,7 @@ import { forgetBelief } from '../services/beliefsApi';
 import { dismiss as dismissItem } from '../services/dismissalsApi';
 import { arrivedSince, firstUnseen, forgetLast, lastSeen, lastThread, questionsOf,
          remember } from './history';
+import { Caveats } from './tiles';
 import type { TileActions } from './tiles';
 import { useReader } from './Mic';
 import { asksToHear, spokenClaim } from './voice';
@@ -936,7 +937,16 @@ export default function Room() {
                     chart (`thoughtsOf`); a repeat of what is on screen is not
                     drawn at all. A notice that says the data may be wrong stays
                     above the headline (UI rule 4). */}
-                <Reading part="claim" text={latest?.text} notices={drawnOnly(notices, explainsOnly)}
+                {/* AND THE NOTICES ARE NOT HERE ANY MORE (D2, 2026-09-23).
+                    They were the first thing under the question — forty words
+                    of "2,180 stock counts are below zero, the lowest -78,291"
+                    before Bob said anything — on the side the owner has just
+                    asked to be the bigger picture. A notice qualifying a read
+                    that IS drawn already rides that figure (`turnNotices`);
+                    what was left qualified no number on this side, so it goes
+                    to the head of the figures, above every number this turn
+                    drew. Still always drawn, still never the accent. */}
+                <Reading part="claim" text={latest?.text}
                          reading={latest?.reading} calls={latest?.toolCalls} onFigure={showFigure}
                          speaking={reader.speaking} headlineOnPage={headlineOnPage} />
                 {/* HIS PROSE IS THE CONCLUSION, AND IT IS HERE (2026-09-20).
@@ -980,6 +990,15 @@ export default function Room() {
             })} />
 
             <FiguresArea areaRef={areaRef}>
+              {/* WHAT QUALIFIES THESE FIGURES, ABOVE THEM (UI rule 4, D2).
+                  Two or more fold to one line ("N notes on these figures"),
+                  which is what the owner asked for on 2026-09-19 and what
+                  three of them on one screen on 2026-09-23 say is needed. */}
+              {!empty && !busy && (
+                <div className="r-figures-caveats">
+                  <Caveats notices={drawnOnly(notices, explainsOnly)} />
+                </div>
+              )}
               {/* THE REAL DASHBOARD (W2.4, 2026-09-22). "Build me a dashboard"
                   built a kept page — live analyses that re-run on opening —
                   so the room opens that page here, the same page /pages

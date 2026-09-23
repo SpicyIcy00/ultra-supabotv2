@@ -2661,3 +2661,16 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
   grid-template-columns: minmax(50px, 1fr) minmax(0, 1.4fr) 82px;
 }
 .r-board--laid .r-mk-contributors[data-gains] .r-mk-bar { order: -1; }
+
+
+/* WHAT QUALIFIES THESE FIGURES, AT THE HEAD OF THEM (D2, 2026-09-23).
+
+   The owner: "theres still alot of discliamers i dont really want to see them"
+   and "why is there soo much text on the left i want most text on the right.
+   the left is just the bigger picture." A notice whose read IS drawn rides
+   that figure; what was left used to be drawn at the top of HIS column, above
+   the headline - forty words of stock diagnostics before he said anything. It
+   is here now: above every number this turn drew, off the side that holds the
+   answer. Prominence from position, never hue (UI rule 5). */
+.r-figures-caveats:empty { display: none; }
+.r-figures-caveats .r-caveats { margin: 0 0 18px; }

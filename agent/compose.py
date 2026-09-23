@@ -1791,7 +1791,7 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: 
 
     Args:
         blocks: the blocks on screen, in order. Each names a kind, a short key, a weight, the read (seq) it draws, a claim — the few words saying what it says — and a thought: one or two sentences of what you think it shows, drawn beside it as you go through it together.
-        reading: what you are about to say, in three slots — {"claim": the few words that ARE the point, said again word for word in your answer; "caveat": what qualifies these figures, drawn whole above them; "next": one sentence, drawn last — what you would do, or what no read can settle, never a read you could have made} — and "asks": two or three short questions they might ask you next, drawn under your headline to tap — to steer, challenge, decide or act, never one this answer already settles. Optional; a confirmation needs none.
+        reading: what you are about to say, in three slots — {"claim": the few words that ARE the point, said again word for word in your answer; "caveat": what qualifies these figures, drawn whole above them; "next": one sentence, drawn last — what you would do, or what no read can settle, never a read you could have made} — and "asks": two or three short questions they might ask you next, drawn under your headline to tap — to steer, challenge, decide or act, never one this answer already settles and NEVER the question you were just asked in other words (that one is dropped; if the obvious next step is a "why", answer the why here rather than offering it back). Your "claim" and what stands under it are the only words drawn on the LEFT and they are the bigger picture — a short conclusion; the reasoning, the figures and the words about them go on the RIGHT, on the blocks' own claims and thoughts or on the page. Optional; a confirmation needs none.
         actions: what to do about ONE ROW, offered where that row is drawn — [{"act": what the surface does, "seq": the read, "target": the row's own value, "reason": why this one, in your words}]. Optional. You never say what it costs: that is derived from the act.
         size: how large this answer is — lookup, focused or broad (remember, for a thing to keep) — at or under the size the question arrived with. A lookup is a sentence and one figure; focused, a short answer and two or three figures, the page offered; broad, the page.
         page: THE PAGE A BROAD ANSWER IS — {"type": one of the page types, "lede": your opening, "sections": {name: {"head", "figures", "says", "control"?}}}. You fill the slots; the order, where each figure sits, the caveat's place and the plan's place are the type's. Only for a broad answer, and it replaces `arrangement`.
@@ -1859,8 +1859,13 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, arrangement: 
         # one and may not invent one (voice.reading.slots, `figures: returned`).
         # Taken from the calls this composition is already validated against —
         # the same rows, the same meta, no second source of truth.
+        # AND THE MESSAGE ITSELF (D2, 2026-09-23), so an ask that is the
+        # question just asked is dropped before it is drawn — the owner's
+        # *"its making me ask why when i already asked why"*. The question is
+        # already here for the vocabulary check; nothing new is read for it.
         said, said_rejected = _reading.validate(
-            reading, defs, _reading.returned_numbers(calls.values()), coerced)
+            reading, defs, _reading.returned_numbers(calls.values()), coerced,
+            asked=question)
     # THE PAGE IS OFFERED, NOT MADE (composition.size.kinds.focused.offer): the
     # offer's words are a broad phrase, so tapping it is a broad question.
     offer = size_spec(answer_size, defs).get("offer")
