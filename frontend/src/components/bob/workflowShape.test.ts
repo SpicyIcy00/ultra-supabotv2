@@ -33,7 +33,9 @@ describe('the stages', () => {
     const v = workflowView(workflow(version()), []);
     expect(v.stage).toBe('never_backtested');
     expect(v.state).toContain('v3');
-    expect(v.next).toMatch(/past date/);
+    // W4.3 reverses "ask Bob to run it as of a past date": backtesting is a
+    // control on the system's own page now, so the line points at the control.
+    expect(v.next).toMatch(/Backtest it against a window that has closed/);
   });
 
   it('sends a backtested, unpromoted version to Inbox', () => {
@@ -168,5 +170,25 @@ describe('what stands between a version and running unattended', () => {
     expect(listOf(['Isaiah'])).toBe('Isaiah');
     expect(listOf(['Isaiah', 'Joy'])).toBe('Isaiah and Joy');
     expect(listOf(['Isaiah', 'Joy', 'Daniel'])).toBe('Isaiah, Joy and Daniel');
+  });
+});
+
+describe('what to do about a divergence', () => {
+  const promotedNewest = version({ id: 'v3', backtested_at: 'x', backtest_run_id: 'r', promoted_at: 'y' });
+
+  it('does not offer "promote the newest" when the newest is already promoted', () => {
+    // W4.3, seen in a frame: v2 promoted, the schedule still firing v1, and
+    // the page offering an act nobody could perform. Promoting never repoints
+    // a schedule (rule 8), so repointing is the only thing that ends it.
+    const v = workflowView(workflow(promotedNewest), [schedule({ version_id: 'v1' })]);
+    expect(v.diverges).toBe(true);
+    expect(v.next).toMatch(/Repoint it/);
+    expect(v.next).not.toMatch(/Promote the newest/);
+  });
+
+  it('is at the promotion gate, not the divergence, when the newest was never promoted', () => {
+    const newer = version({ id: 'v3', backtested_at: 'x', backtest_run_id: 'r' });
+    const v = workflowView(workflow(newer), [schedule({ version_id: 'v1' })]);
+    expect(v.stage).toBe('awaiting_promotion');
   });
 });

@@ -85,7 +85,11 @@ export function workflowView(
     return {
       stage: 'never_backtested',
       state: `v${v.version}, never backtested.`,
-      next: 'Ask Bob to run it as of a past date, and read what it would have produced.',
+      // W4.3: until this card the only way to backtest was to ask Bob to run
+      // it as of a past date, so that is what this said. The act is a control
+      // on the system's own page now, and the line points at it.
+      next: 'Backtest it against a window that has closed, below, and read what '
+        + 'it would have produced.',
       nextTo: null,
       diverges: false,
     };
@@ -94,7 +98,10 @@ export function workflowView(
     return {
       stage: 'awaiting_promotion',
       state: `v${v.version} backtested, waiting to be promoted.`,
-      next: 'Promote it in Inbox.',
+      // W4.3: "Promote it in Inbox" was the whole story while Inbox held the
+      // only button. It is on the system's own page too now, and Needs you is
+      // still the queue — `nextTo` keeps pointing there for the list.
+      next: 'It has a backtest. Promote it below, or in Needs you.',
       nextTo: '/inbox',
       diverges: false,
     };
@@ -116,8 +123,14 @@ export function workflowView(
     return {
       stage: 'scheduled',
       state: `Runs ${enabled.map(scheduleLine).join('; ')} · v${v.version} promoted.`,
+      // W4.3: when the newest is ALREADY promoted, "promote the newest" is not
+      // an act anybody can perform, and it was the line the page offered in
+      // exactly that case. Promoting never repoints a schedule (rule 8), so
+      // repointing is the only thing that ends this.
       next: diverges
-        ? 'An enabled schedule fires an older version than the newest. Promote the newest, or repoint the schedule.'
+        ? (v.promoted_at
+          ? 'An enabled schedule fires an older version than the newest. Repoint it, or leave it — promoting did not move it.'
+          : 'An enabled schedule fires an older version than the newest. Promote the newest, or repoint the schedule.')
         : 'Nothing — it runs unattended.',
       nextTo: null,
       diverges,
