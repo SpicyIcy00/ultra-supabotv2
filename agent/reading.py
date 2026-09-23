@@ -277,7 +277,8 @@ def _check(name: str, value: Any, spec: Mapping[str, Any],
 
 def validate(submitted: Any, defs: Mapping[str, Any],
              returned: Optional[set[float]] = None,
-             coerced: Optional[list[str]] = None) -> tuple[dict, list[dict]]:
+             coerced: Optional[list[str]] = None,
+             asked: Optional[str] = None) -> tuple[dict, list[dict]]:
     """
     Which slots stand, and why the others do not.
 
@@ -335,7 +336,8 @@ def validate(submitted: Any, defs: Mapping[str, Any],
                              "said": _shorten(submitted[name])})
     if ASKS in submitted:
         asks, refused = _asks(submitted[ASKS], _reading(defs).get(ASKS) or {},
-                              returned, presentation, coerced)
+                              returned, presentation, coerced,
+                              asked=asked, claim=accepted.get("claim"))
         if asks:
             accepted[ASKS] = asks
         rejected.extend(refused)
@@ -381,13 +383,58 @@ def _steps(name: str, value: Any, spec: Mapping[str, Any], returned: set[float],
     return "\n\n".join(s for s in steps if s)
 
 
+#: Words too common to say two sentences are the same thing. The room's own
+#: list (frontend/src/room/beside.ts `wordsOf`), so the two sides measure a
+#: repeat the same way.
+_SMALL = {"a", "an", "and", "are", "as", "at", "be", "by", "do", "does", "did",
+          "for", "from", "has", "have", "in", "is", "it", "its", "of", "on",
+          "or", "so", "that", "the", "this", "to", "was", "were", "what",
+          "with", "you", "your"}
+
+
+def _words_of(text: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z0-9']+", (text or "").lower())
+            if len(w) > 2 and w not in _SMALL}
+
+
+def already_asked(ask: str, others: Iterable[Optional[str]], at: float) -> bool:
+    """
+    Whether `ask` is one of `others` said again — the share of the ASK's own
+    words that the other already carries, at or above `at`.
+
+    The room measures a restated sentence exactly this way (`beside.restated`),
+    and the direction matters: it is the ask that must not be a repeat, so the
+    share is of the ask's words, not of the message's. "Why is Greenhills
+    down?" against "Why is Greenhills down?" is 1.0; against "how are we
+    doing" it is 0.
+    """
+    mine = _words_of(ask)
+    if not mine:
+        return False
+    for other in others:
+        theirs = _words_of(other or "")
+        if not theirs:
+            continue
+        if len(mine & theirs) / len(mine) >= at:
+            return True
+    return False
+
+
 def _asks(value: Any, spec: Mapping[str, Any], returned: set[float],
           presentation: int, coerced: Optional[list[str]] = None,
+          asked: Optional[str] = None, claim: Optional[str] = None,
           ) -> tuple[list[str], list[dict]]:
     """
     THE QUESTIONS HE SUGGESTS (2026-09-17): up to `max_items`, each held to the
     slot rule — bounded, and no figure a read did not return. One that fails is
     dropped with its reason and the rest stand, as a slot does.
+
+    AND NEVER THE QUESTION JUST ASKED (D2, 2026-09-23). The owner: *"i dont
+    really like thats its making me ask why when i already asked why and it
+    should provide most it for me."* An ask that is the message again, or the
+    claim the answer already makes, is dropped here — before the asks are
+    drawn — with its reason on the record. `about` has asked for this since
+    2026-09-18 and asking did not hold.
     """
     if not spec:
         return [], [{"slot": ASKS, "reason": "voice.reading.asks is not defined"}]
@@ -397,12 +444,25 @@ def _asks(value: Any, spec: Mapping[str, Any], returned: set[float],
     accepted: list[str] = []
     rejected: list[dict] = []
     most = int(spec.get("max_items") or 3)
+    at_question = spec.get("not_the_question_at")
+    at_claim = spec.get("not_the_claim_at")
+    repeats: list[tuple[str, float]] = []
+    if asked and at_question is not None:
+        repeats.append((asked, float(at_question)))
+    if claim and at_claim is not None:
+        repeats.append((claim, float(at_claim)))
+    dropped_reason = " ".join(str(spec.get("dropped_reason") or
+                                  "asks: this is the question just asked").split())
     for item in value:
         try:
             text = _check(ASKS, item, spec, returned, presentation, coerced,
                           "voice.reading.asks")
         except Rejected as why:
             rejected.append({"slot": ASKS, "reason": str(why), "said": _shorten(item)})
+            continue
+        if any(already_asked(text, [other], at) for other, at in repeats):
+            rejected.append({"slot": ASKS, "reason": dropped_reason,
+                             "said": _shorten(item)})
             continue
         if len(accepted) >= most:
             rejected.append({"slot": ASKS, "reason": f"at most {most} questions",
@@ -455,6 +515,63 @@ def was_said(answer: str, claim: Optional[str]) -> bool:
     if not claim:
         return False
     return _flatten(claim) in _flatten(answer)
+
+
+#: A sentence ends where one of these is followed by white space — the same
+#: split the room uses to find a caveat sentence the answer already carries
+#: (frontend/src/room/Reading.tsx `unsaid`).
+_SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+
+
+def caveat_unsaid(caveat: Optional[str], said: str) -> str:
+    """
+    THE CAVEAT AS THE LEFT COLUMN ACTUALLY DRAWS IT (D2, 2026-09-23).
+
+    Bob writes the caveat separately from the answer and often puts the same
+    sentence in both; the room draws only the sentences the answer does not
+    already carry (`unsaid`, Reading.tsx) and this is the same rule on this
+    side, so what the loop MEASURES is what the person SEES. Not a character
+    is rewritten — a sentence is kept whole or left out.
+    """
+    whole = (caveat or "").strip()
+    if not whole:
+        return ""
+    flat = _flatten(said)
+    keep = [x.strip() for x in _SENTENCE_END.split(whole)
+            if x.strip() and _flatten(x) not in flat]
+    return " ".join(keep)
+
+
+def drawn_left(answer: Optional[str], reading: Optional[Mapping[str, Any]]) -> str:
+    """
+    EVERYTHING OF HIS THE READER PASSES BEFORE THE FIRST FIGURE, to be counted.
+
+    The owner, 2026-09-23: *"why is there soo much text on the left i want
+    most text on the right. the left is just the bigger picture."* Measured
+    live on his own "Why is Greenhills down?" the same day: the body came back
+    at EIGHT words and the caveat above it at FORTY-SEVEN — so the bound on
+    the body was never what made that column long, and the caveat went to the
+    head of the figures instead (voice.body.caveat_drawn_with).
+
+    This is the two together, because the two together are what he reads
+    first, and it is what the eval reports. The headline is a SPAN of the body
+    (`claimAndStanding`), so it is counted once and not added again; `next` is
+    drawn last, under the figures, and is not counted here at all.
+
+    NOT WHAT THE BODY GATE MEASURES. That is the body (voice.body.
+    drawn_on_the_left) and it has to be: a gate cannot cut a caveat — cutting
+    one can drop the warning it exists for — so counting it would be a bound
+    the body could not pay for and the turn could never meet.
+    """
+    body = (answer or "").strip()
+    caveat = (reading or {}).get("caveat")
+    extra = caveat_unsaid(caveat if isinstance(caveat, str) else None, body)
+    return " ".join(x for x in (body, extra) if x)
+
+
+def drawn_left_words(answer: Optional[str], reading: Optional[Mapping[str, Any]]) -> int:
+    """How many of his words are drawn before the first figure."""
+    return len(drawn_left(answer, reading).split())
 
 
 def said_this_turn(answer: str, reading: Optional[Mapping[str, Any]],

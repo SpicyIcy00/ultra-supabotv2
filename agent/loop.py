@@ -4510,6 +4510,20 @@ async def run(
                 # THE BOUND IS THE ANSWER'S SIZE'S (composition.size, W1.1): a
                 # lookup or a focused answer has no page, so its words ARE the
                 # answer and get the room its size gives them.
+                # AND WHAT THE LEFT DRAWS IS THE BODY ALONE (D2, 2026-09-23).
+                # The owner: "i couldnt scroll down the left but there was
+                # more, i why is there soo much text on the left i want most
+                # text on the right. the left is just the bigger picture."
+                # MEASURED LIVE THE SAME DAY, on his own "Why is Greenhills
+                # down?": the body came back at EIGHT words and the caveat
+                # drawn above it at 47 — the bound here was never what made
+                # that column long. So the caveat went where the figures are
+                # (Room.tsx, `r-figures-caveats`): it qualifies the figures,
+                # UI rule 4 puts it above them, and this column is left with
+                # the point and the line under it. That is why this still
+                # counts the body and nothing else — a bound counting a slot
+                # this cannot cut, and that the body could not shrink far
+                # enough to pay for, would be a gate that can never be met.
                 max_body_words = int(compose.size_spec(answer_size, defs).get("max_words")
                                      or req(defs, "voice.body.max_words"))
                 body_words = len((answer or "").split())
@@ -4526,13 +4540,14 @@ async def run(
                         answer = ""
                         messages.append({"role": "user", "content": (
                             f"Your answer is {body_words} words and the left of the screen "
-                            f"holds {max_body_words}. The steps you composed are drawn on the "
-                            "right and carry the evidence; the reader walks them. Write only "
-                            "the conclusion — what it means, in a line or two, in the words "
-                            "the business uses. What else you would say belongs on the page "
-                            "as `say` lines of the arrangement, and what you would do in "
-                            "`next`; keep the claim, the caveat and the next exactly as they "
-                            "are.")})
+                            f"holds {max_body_words}. The left is the bigger picture: the "
+                            "point, and a line under it. The figures you composed are drawn "
+                            "on the right and carry the evidence; the reader walks them. "
+                            "Write only the conclusion — what it means, in a line or two, in "
+                            "the words the business uses. What else you would say belongs on "
+                            "the RIGHT: on the blocks' own claims and thoughts, or as `say` "
+                            "lines of the page; what you would do goes in `next`. Keep the "
+                            "claim, the caveat and the next exactly as they are.")})
                         continue
                     kept_sents: list[str] = []
                     used = 0

@@ -67,6 +67,7 @@ import { forgetBelief } from '../services/beliefsApi';
 import { dismiss as dismissItem } from '../services/dismissalsApi';
 import { arrivedSince, firstUnseen, forgetLast, lastSeen, lastThread, questionsOf,
          remember } from './history';
+import { Caveats } from './tiles';
 import type { TileActions } from './tiles';
 import { useReader } from './Mic';
 import { asksToHear, spokenClaim } from './voice';
@@ -936,7 +937,16 @@ export default function Room() {
                     chart (`thoughtsOf`); a repeat of what is on screen is not
                     drawn at all. A notice that says the data may be wrong stays
                     above the headline (UI rule 4). */}
-                <Reading part="claim" text={latest?.text} notices={drawnOnly(notices, explainsOnly)}
+                {/* AND THE NOTICES ARE NOT HERE ANY MORE (D2, 2026-09-23).
+                    They were the first thing under the question — forty words
+                    of "2,180 stock counts are below zero, the lowest -78,291"
+                    before Bob said anything — on the side the owner has just
+                    asked to be the bigger picture. A notice qualifying a read
+                    that IS drawn already rides that figure (`turnNotices`);
+                    what was left qualified no number on this side, so it goes
+                    to the head of the figures, above every number this turn
+                    drew. Still always drawn, still never the accent. */}
+                <Reading part="claim" text={latest?.text}
                          reading={latest?.reading} calls={latest?.toolCalls} onFigure={showFigure}
                          speaking={reader.speaking} headlineOnPage={headlineOnPage} />
                 {/* HIS PROSE IS THE CONCLUSION, AND IT IS HERE (2026-09-20).
@@ -949,10 +959,14 @@ export default function Room() {
                   <Reading part="rest" text={latest?.text} reading={latest?.reading}
                            calls={latest?.toolCalls} onFigure={showFigure}
                            standing={bodyOf(latest?.text, latest?.reading?.claim, latest?.reading?.next)}
-                           // ON THE PAGE WHERE HE SET IT (P7), and then not here
-                           // too: said twice it is the wall of text the owner
-                           // kept finding on this side.
-                           caveat={caveatOnPage ? '' : thoughts?.caveat} />
+                           // AND HIS CAVEAT IS NEVER HERE NOW (D2, 2026-09-23).
+                           // On the page where he set it (P7) as before; on
+                           // every other answer at the head of the figures,
+                           // because that is what it qualifies (UI rule 4).
+                           // Measured live on his own "Why is Greenhills
+                           // down?": an eight-word answer under a forty-seven
+                           // word caveat. The left is the bigger picture.
+                           caveat="" />
                 )}
                 <ReadingAsks reading={latest?.reading} busy={busy} onAsk={(q) => ask(q)} />
                 {/* WHAT HE'D DO NEXT IS UNDER THE FIGURES NOW (P6.f), with the
@@ -980,6 +994,21 @@ export default function Room() {
             })} />
 
             <FiguresArea areaRef={areaRef}>
+              {/* WHAT QUALIFIES THESE FIGURES, ABOVE THEM (UI rule 4, D2).
+                  HIS caveat first, in his own words, then the notices code
+                  placed; two or more of those fold to one line ("N notes on
+                  these figures"), which is what the owner asked for on
+                  2026-09-19 and what three on one screen on 2026-09-23 says
+                  is needed. Both were on HIS side until today. Never the
+                  accent — prominence from position (UI rule 5). */}
+              {!empty && !busy && (
+                <div className="r-figures-caveats">
+                  {!caveatOnPage && thoughts?.caveat && (
+                    <p className="r-caveat r-turn-caveat">{thoughts.caveat}</p>
+                  )}
+                  <Caveats notices={drawnOnly(notices, explainsOnly)} />
+                </div>
+              )}
               {/* THE REAL DASHBOARD (W2.4, 2026-09-22). "Build me a dashboard"
                   built a kept page — live analyses that re-run on opening —
                   so the room opens that page here, the same page /pages

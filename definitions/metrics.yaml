@@ -6604,7 +6604,15 @@ voice:
         # caveat on 2 of 7 turns once Bob investigated — a partial product
         # comparison AND frozen purchase orders is two honest things, and the
         # refusal lost the slot. A caveat is still one thing said whole.
-        max_length: 640
+        # 640 → 320 (D2, 2026-09-23), and the reason the raise was made has
+        # gone. It was raised because the bound REFUSED the slot and a refusal
+        # lost the caveat; since P2S.7 the same afternoon it is `kept_whole`,
+        # so nothing is lost by a bound being crossed — it is recorded on
+        # `meta.coerced` and drawn in full. The owner has twice now said there
+        # is too much text before the figures, and on 2026-09-23 his caveat
+        # ran to 47 words over an eight-word answer. This is the guide the
+        # prompt gives him back; it still cannot drop a word he wrote.
+        max_length: 320
         # PAST IT, KEPT WHOLE (P2S.7): a caveat is where the notices go, and
         # cutting one could drop the very warning it exists for. The bound is
         # the prompt's guide to length, recorded on meta.coerced when crossed.
@@ -6676,6 +6684,29 @@ voice:
       # Kept whole past it (P2S.7): a question cut at a word is not a question.
       over_length: kept_whole
       figures: returned
+      # =======================================================================
+      # NEVER OFFER BACK THE QUESTION JUST ASKED (D2, 2026-09-23). The owner,
+      # of the live build: *"i dont really like thats its making me ask why
+      # when i already asked why and it should provide most it for me."* On
+      # 2026-09-23 the answer to *"Why is Greenhills down?"* offered *"Why is
+      # Greenhills down?"* to tap.
+      #
+      # `about` has asked since 2026-09-18 for a question the answer does not
+      # already settle, and it did not hold — so it is ENFORCED here, the way
+      # the answer's size is. An ask sharing this much of its words with the
+      # message, or with the claim the answer makes, is DROPPED before the
+      # asks are drawn; the rest stand. It is measured the way the room
+      # measures a restated sentence (`beside.restated`): the share of the
+      # ask's own words that the message already carries, short words out.
+      #
+      # AND WHAT REPLACES IT IS NOT ANOTHER QUESTION. The obvious next step is
+      # his to carry — `next` is where it goes ("it should provide most it for
+      # me") — so a dropped ask is not backfilled with something else.
+      not_the_question_at: 0.6
+      not_the_claim_at: 0.6
+      dropped_reason: >
+        asks: this is the question just asked, in other words — the answer
+        carries it, it is not offered back (voice.reading.asks)
     # A claim nobody said is not drawn, and the loop records that it was not:
     # the gap log's own word for it, so the rate is measurable rather than
     # asserted.
@@ -6831,6 +6862,26 @@ voice:
     max_corrective_turns: 0
     over_length: cut_at_sentence
     warning_reason: body_over_length
+    # =========================================================================
+    # AND THIS IS THE BODY ALONE, BECAUSE THE CAVEAT LEFT THE COLUMN (D2,
+    # 2026-09-23). The owner: *"i couldnt scroll down the left but there was
+    # more, i why is there soo much text on the left i want most text on the
+    # right. the left is just the bigger picture."*
+    #
+    # MEASURED LIVE THE SAME DAY on his own question, "Why is Greenhills
+    # down?": the body came back at EIGHT words and the caveat drawn above it
+    # at FORTY-SEVEN. This bound was not what made that column long — his
+    # caveat was, and a bound cannot cut a caveat (cutting one can drop the
+    # warning it exists for, `over_length: kept_whole`).
+    #
+    # So the caveat went where the figures are (`surface.desk.notices`, and
+    # Room.tsx's `r-figures-caveats`): it qualifies the figures, UI rule 4
+    # puts it above them, and this column is left with the point and the line
+    # under it. What the left draws is what this measures, and that is the
+    # body. `reading.drawn_left` is the two together — everything of his the
+    # reader passes before the first number — and is what the eval reports.
+    drawn_on_the_left: [body]
+    caveat_drawn_with: figures
 
   restatement:
     introduced: "2026-09-12"
@@ -8719,7 +8770,9 @@ composition:
         max_figures: 1
         max_queries: 4
         page: false
-        max_words: 40
+        # 40 -> 25 (D2, 2026-09-23). One fact asked is one sentence; 40 words
+        # is three, and the drawn left carries the caveat on top of them.
+        max_words: 25
       focused:
         means: >
           a subject, metric, dimension or window named — a short answer and the
@@ -8729,7 +8782,17 @@ composition:
         # get_change (seven), with room for one CHECK read: twelve.
         max_queries: 12
         page: false
-        max_words: 70
+        # 70 -> 40 (D2, 2026-09-23), AND THIS IS THE REGRESSION HE FOUND. The
+        # owner: *"its still really long even for non pages we need to check
+        # that, it wasnt like that before."* He is right and the record says
+        # so: until W1.1 (2026-09-22) every answer was held to
+        # voice.body.max_words, which has been 40 since P6.h — W1.1 gave the
+        # focused answer 70, which is where a non-page answer got longer. A
+        # focused answer has NO page, so the words he does not say here go on
+        # the figures' own claims and thoughts, which is the right-hand side he
+        # asked for. Back to 40, and now measured as the DRAWN left
+        # (voice.body.counts_drawn), caveat included.
+        max_words: 40
         offer: "Make it a full page"
         # A why about one subject is get_change — VERIFY, DECOMPOSE, LOCALIZE
         # and CHECK in one call (one_call_reads.tools.get_change.ladder) — and
@@ -9410,6 +9473,18 @@ surface:
         # unchanged and still reaches the model): this is what the room DRAWS
         # and what the loop REQUIRES in his prose, nothing more.
         - low_stock_not_operational
+        # 2026-09-23 (D2), the owner for the third time: *"theres still alot of
+        # discliamers i dont really want to see them."* One of the three drawn
+        # on his 2026-09-23 turns was this, and what it SAYS is that the plan's
+        # quantities are right: purchasing.plan.negative_on_hand reads a
+        # negative count as none at that location and NEVER as a deficit, and
+        # the notice's own words are "the quantities here are not inflated by
+        # them. The raw figure is on each row as on_hand_raw." That is how the
+        # figure was measured, not a doubt about it. `replenishment_negative_
+        # on_hand` stays in the other list and must: shipment_plans DOES size
+        # its request against the raw figure, so there the drawn quantity is
+        # wrong, and it says so.
+        - purchase_plan_negative_on_hand
       data_may_be_wrong:
         - weekday_misaligned
         - reconciliation_failed
@@ -9422,7 +9497,6 @@ surface:
         - history_coverage
         - negative_on_hand
         - sales_record_silent_days
-        - purchase_plan_negative_on_hand
         - replenishment_negative_on_hand
         - replenishment_partial_run
         - replenishment_run_stale
@@ -9470,6 +9544,31 @@ surface:
         # CLAUDE.md architecture rule 8: a run diverging from a schedule's
         # pinned version says so on the record AND in the answer.
         - version_divergence
+
+      # -----------------------------------------------------------------------
+      # AND WHERE A DRAWN NOTICE GOES (D2, 2026-09-23).
+      #
+      # UI rule 4 puts a notice ABOVE THE NUMBER it qualifies, and the room
+      # already does that for a notice whose read is drawn as a figure — it
+      # rides that figure. What was left over — a notice from a read that is
+      # on no figure — was drawn at the TOP OF HIS COLUMN, above the headline.
+      # So on 2026-09-23 the first thing under the owner's question was
+      # *"2,180 stock counts are below zero, the lowest -78,291…"*, forty
+      # words of it, before Bob said anything at all; and it is on the side he
+      # has just asked to be the bigger picture, not the fine print.
+      #
+      # A notice that qualifies no figure on his side of the screen does not
+      # belong on his side of the screen. It is drawn at the HEAD OF THE
+      # FIGURES, above every number this turn drew — still always drawn, still
+      # never the accent, still before the figures it qualifies, and off the
+      # column that is meant to hold the answer.
+      #
+      # NOTHING IS HIDDEN BY THIS, and that is why it is not a list. Which
+      # kinds are drawn is the two lists above and is unchanged — every one of
+      # them is still drawn, every time. This is WHERE the leftovers land, so
+      # it is one unconditional line of the room (`Room.tsx`: the notices go
+      # to the head of the figures column, never to his) and there is nothing
+      # here for a kind to be left out of.
 
     # The business the desk lays out. FFR arrives only with an authoritative
     # source (data_availability.ffr) and is not placeholdered. Which PART of
