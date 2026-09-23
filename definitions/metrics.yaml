@@ -5616,6 +5616,249 @@ pages:
     unset_label: "As each was kept"
     no_window_says: "{analysis} reads no date range, so the page's dates do not change it; it shows what it was kept with."
 
+  # ---- What KIND of page this is (W4.1, 2026-09-23) ---------------------------
+  # The owner, of the pages in the room's sidebar — Estate Dashboard, Store
+  # Dashboard, Estate Week, AJI BARN Reorder: "next thing we need to do is make
+  # how each page style work idealy". Four kept pages doing four different
+  # jobs, drawn one way: a header and N boards packed into the same grid. A
+  # page of numbers you check every morning and a page of rows you work down
+  # are not the same page and should not read the same.
+  #
+  # WHAT A KIND IS. A kind decides how the page is DRAWN and nothing else. It
+  # never changes what is on the page, what any figure says, which reads run,
+  # or the ORDER the person put the analyses in — positions stay theirs, and
+  # Move up / Move down keep meaning exactly what they meant. The same page
+  # under another kind holds the same analyses, reading the same calls,
+  # returning the same numbers.
+  #
+  # WHAT IT MUST NEVER DO. Never compute, re-compute, round or re-word a
+  # figure — a kind cannot reach a value. Never drop an analysis, fold one
+  # away or grey one down: emphasis adds, never dims. Never take a figure's
+  # read time off it — a dashboard's compact tile still says when it was read,
+  # because a number with no time on it is a claim with no expiry. Never wear
+  # the accent: one colour means "needs you". Never change which notices are
+  # drawn or where — a notice sits above the figure it qualifies, identically
+  # in every kind. And the phone layout is the real one: wherever a kind puts
+  # analyses side by side, a phone puts them in one column.
+  #
+  # HOW A PAGE GETS ONE. The owner sets it by hand (PUT /bob/pages/{id}), or
+  # Bob sets it when he builds or edits the page (create_page's `kind`,
+  # edit_page's `set_kind`), or — when nobody has said — it is DERIVED. A
+  # derived kind is never stored and is recomputed every read, so a page whose
+  # analyses change is drawn as what it now is. `kind_set_by` says which of
+  # the three it was.
+  kinds:
+    introduced: "2026-09-23"
+    # Nobody said, nothing matched: a page that is just a set of saved answers.
+    default: collection
+    # The set the API accepts and the room draws. Closed.
+    catalogue:
+      dashboard:
+        means: numbers you check
+        when: >
+          Several readings you glance at rather than read — the estate's
+          totals, the shops' week to date, what needs you and what is on
+          order. Opened to be scanned.
+        draws:
+          # The analysis's title reads as a small caption over its figure, not
+          # as a section head: on a tile the number is the thing.
+          title_as: caption
+          # No page-level dateline: each figure carries its own read time,
+          # which is the timestamp rule, and a dashboard's tiles are read at
+          # different moments.
+          dateline: false
+          # A RUN of CONSECUTIVE analyses whose every block is a single figure
+          # sits in ONE row of stat tiles instead of one ruled section each.
+          # Consecutive, so the run never reorders anything: it groups the
+          # person's own order where it already sits together.
+          group_single_figures: true
+          # How many tiles stand side by side before the row wraps. One column
+          # on a phone, always, whatever this says.
+          max_in_a_row: 4
+          # The width each block shape takes. The shapes are the ones
+          # agent/default_composition.shape_for produces.
+          sizes:
+            figure: small
+            dumbbell: full
+            contributors: full
+            line: full
+            ranked: full
+            table: full
+            heatmap: full
+            multiples: full
+            stacked: full
+            memory: full
+          default_size: full
+          # Within ONE analysis only (see `comparisons_before_lists` below).
+          comparisons_before_lists: false
+      week:
+        means: how it went over a window
+        when: >
+          One window looked at from several sides — the estate's answer, then
+          when it moved, where, and what moved on the shelf. Read top to
+          bottom, once.
+        draws:
+          # Each analysis is a section opened by its title.
+          title_as: head
+          # The page's read time at the top, once, because every analysis on
+          # it reads the same window.
+          dateline: true
+          group_single_figures: false
+          # One column, the document rhythm.
+          max_in_a_row: 1
+          sizes:
+            figure: medium
+            dumbbell: wide
+            contributors: wide
+            line: wide
+            ranked: wide
+            table: wide
+            heatmap: wide
+            multiples: wide
+            stacked: wide
+            memory: wide
+          default_size: wide
+          # THE BLOCKS OF ONE ANALYSIS, and never the analyses themselves: a
+          # pin holding a comparison and a list draws the comparison first.
+          # The person's order of the ANALYSES is untouchable; this orders
+          # what one of them draws inside its own section. Comparisons are
+          # `dumbbell` and `contributors`; lists are `ranked` and `table`.
+          comparisons_before_lists: true
+      list:
+        means: a working page — the rows are the point
+        when: >
+          A page you work down: what to reorder, what is dead, what is on
+          hand. The table is the answer and the chart beside it is context.
+        draws:
+          title_as: head
+          dateline: false
+          group_single_figures: false
+          max_in_a_row: 1
+          # Tables take the width and are drawn un-cramped; everything beside
+          # them demotes, so a chart never takes room from the rows.
+          sizes:
+            figure: small
+            dumbbell: small
+            contributors: small
+            line: small
+            ranked: full
+            table: full
+            heatmap: small
+            multiples: small
+            stacked: small
+            memory: full
+          default_size: small
+          comparisons_before_lists: false
+      collection:
+        means: a set of saved answers
+        when: >
+          The default and the fallback: a page that is a pile of kept
+          answers with no one job. Drawn as a kept page has always been
+          drawn — each analysis as it came, nothing regrouped.
+        draws:
+          title_as: head
+          dateline: false
+          group_single_figures: false
+          max_in_a_row: 2
+          sizes:
+            figure: small
+            dumbbell: wide
+            contributors: wide
+            line: wide
+            ranked: wide
+            table: wide
+            heatmap: wide
+            multiples: wide
+            stacked: wide
+            memory: wide
+          default_size: wide
+          comparisons_before_lists: false
+
+    # ---- Deriving a kind from what the pins carry -----------------------------
+    # Read by app/services/page_kind.py. NOTHING HERE LOOKS AT A WORD. Not the
+    # page's title, not its purpose, not a pin's title, not anything a model
+    # wrote: a page called "Dashboard" full of long lists is a list. A matcher
+    # sees only the tools the page's stored calls name, the arguments those
+    # calls carry, and the shape each call will produce.
+    derivation:
+      # What shape a STORED call will produce, projected from the call alone —
+      # no read is run to derive a kind. Only two projections are honest
+      # without rows, and every other call is `unknown`, which counts neither
+      # for nor against any kind:
+      #   list   — the call asks for a bounded, ranked set of named rows (it
+      #            carries a row limit), or its tool's rows are always a list
+      #            of items whatever it is asked.
+      #   figure — a measured read with NO grouping returns one row, and one
+      #            row is a figure (agent/default_composition.shape_for).
+      # `list` is decided first: a limited top_n is a list even when it also
+      # has no grouping.
+      shapes:
+        list:
+          arguments: [top_n]
+          tools: [get_dead_stock, get_stock, get_attention, get_purchase_plan]
+        figure:
+          grouping_empty: true
+          tools: [get_sales, get_purchasing, get_stock_cover, get_movement]
+      # An analysis is of a shape when EVERY call in it projects to that
+      # shape; a single unknown call makes the analysis unknown.
+      # A page with fewer analyses than this is the default: two readings are
+      # not yet a style.
+      min_analyses: 2
+      # Ordered. The FIRST matcher whose every condition holds gives the kind;
+      # a matcher naming a condition this code does not know is a fault, not a
+      # matcher that quietly never fires.
+      matchers:
+        - name: numbers_you_check
+          gives: dashboard
+          why: >
+            Most of the analyses come back as a single figure — one number
+            each, read at a glance.
+          min_analyses: 3
+          min_share_of_figure_analyses: 0.6
+        - name: rows_are_the_point
+          gives: list
+          why: >
+            Most of the analyses are list reads — a ranked, limited set of
+            named rows — and nothing on the page is compared to a baseline.
+            A page you work down, not one you read a movement off.
+          min_analyses: 2
+          min_share_of_list_analyses: 0.6
+          no_read_is_compared: true
+        - name: one_window_compared
+          gives: week
+          why: >
+            Every read is over the same window and every read is compared to
+            a baseline: the page is one window looked at from several sides,
+            which is what a week page is. The window is the same either
+            because every call names the same date range, or because the
+            page itself carries a date window that re-runs them all over it.
+          min_analyses: 2
+          one_window_across_the_page: true
+          every_read_is_compared: true
+        - name: across_the_business
+          gives: dashboard
+          why: >
+            Several corners of the business at a glance — three or more
+            analyses reading three or more different tools. Nobody reads that
+            top to bottom.
+          min_analyses: 3
+          min_distinct_tools: 3
+        - name: the_same_read_each_metric
+          gives: dashboard
+          why: >
+            The same read at the same grouping with a different metric each
+            time — a rack of numbers you check.
+          min_analyses: 3
+          one_tool_across_the_page: true
+          one_grouping_across_the_page: true
+
+    # What the room says about how the page got its kind. Presentation words,
+    # not a notice: a kind is never a claim that a figure may be wrong.
+    set_by_says:
+      user: "You set this"
+      bob: "Bob set this"
+      derived: "From what is on the page"
+
   # ---- The claim check, exactly as for pins and workflows ---------------------
   # A page write is the third kind of thing Bob can say that changes
   # something outside the conversation. Same failure, same remedy: if the
@@ -5673,6 +5916,12 @@ pages:
       # The page's date window (W1.4): "the page now has a date filter".
       set_window: [page now has, now on the page]
       remove_window: [removed it from, removed from the page]
+      # The page's KIND (W4.1) — how it is drawn. The phrases a confirmation
+      # of it uses are listed so the check never corrects one that DID
+      # commit. They are deliberately absent from `claims` above: a page is
+      # drawn as something whether or not anybody set it, so saying what a
+      # page reads like is not by itself a claim to have changed it.
+      set_kind: [laid out as a, now reads as a]
     intents:
       - i'll create the page
       - i will create the page
@@ -8638,7 +8887,9 @@ composition:
       [A dashboard is asked for: build the REAL one — a kept page of live
       analyses, with create_page (or edit_page, if they already have one) —
       from three to six reads you run now, each with its own arguments, one
-      analysis each. The room opens that page itself, so there is no report
+      analysis each. Give it kind: "dashboard", which is how a dashboard is
+      DRAWN (pages.kinds): numbers checked at a glance, not a page read top
+      to bottom. The room opens that page itself, so there is no report
       to write and no page to lay out: confirm in one line what is on it.]
 
   arrangement:

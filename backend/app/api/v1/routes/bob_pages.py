@@ -26,6 +26,15 @@ listing does not invent a row for it; the client draws it from the pins.
 
 DELETE IS DELIBERATELY NARROW: it deletes the page ROW and moves every pin on
 it to Ungrouped. No pin is deleted by any route in this module.
+
+EVERY PAGE SHAPE CARRIES ITS KIND (W4.1) — dashboard, week, list or
+collection — and it is never null: a page always draws as something, so when
+nobody has said, the server DERIVES one from what the page's pins carry
+(app/services/page_kind.py), on every read, never stored. `kind_set_by` says
+which of "user", "bob" or "derived" it was, and `kind_draws` is the yaml's own
+drawing rules for that kind, served with the page the way the window's options
+are. PUT /{page_id} is the owner setting it by hand. A kind changes how the
+page is DRAWN and nothing else.
 """
 
 from __future__ import annotations
@@ -43,7 +52,7 @@ from app.core.database import get_db
 from app.core.deps import require_page
 from app.models.app_user import AppUser
 from app.models.bob_pin import BobPin
-from app.services import page_operations, page_window, page_writer
+from app.services import page_kind, page_operations, page_window, page_writer
 from app.services.page_writer import (
     MAX_PURPOSE_LEN,
     MAX_TITLE_LEN,
@@ -96,6 +105,10 @@ class PageCreate(BaseModel):
     # decide anything; it is what lets a kept thread find its page again.
     question: Optional[str] = None
     conversation_id: Optional[uuid.UUID] = None
+    # WHAT KIND OF PAGE IT IS (W4.1) — how it is drawn, never what is on it.
+    # Left out, nobody has said and the server derives one from the analyses
+    # the page ends up carrying.
+    kind: Optional[str] = None
 
 
 class PageUpdate(BaseModel):
@@ -121,11 +134,36 @@ class PageOut(BaseModel):
     # who set it and when, and the options — the yaml's presets, never a list
     # the client holds.
     window: Optional[dict[str, Any]] = None
+    # WHAT KIND OF PAGE THIS IS (W4.1), and therefore how the room DRAWS it:
+    # "dashboard", "week", "list" or "collection". NEVER NULL — a page always
+    # draws as something, so when nobody has said the server derives one from
+    # what the page's pins carry.
+    kind: str
+    # How it got that kind: "user" (the owner said), "bob" (he did) or
+    # "derived" (nobody has, and it is worked out on every read).
+    kind_set_by: str
+    # One line, in a person's words, of what this kind of page is.
+    kind_means: str
+    # HOW THIS KIND DRAWS, from `pages.kinds.catalogue.<kind>.draws` — the
+    # width each block shape takes, whether a run of consecutive single-figure
+    # analyses groups into one row, whether the title reads as a head or a
+    # caption, and whether the page carries a dateline. Served with the page
+    # the way the window's options are, so no component holds a copy of a
+    # layout rule (CLAUDE.md rule 3).
+    kind_draws: dict[str, Any]
 
 
 class PageWindowIn(BaseModel):
     """The window a person picked on the page: a preset, or null for each as kept."""
     preset: Optional[str] = None
+
+
+class PageKindIn(BaseModel):
+    """
+    The kind the owner set by hand: how the page is DRAWN. One of the four in
+    `pages.kinds.catalogue`; anything else is a 422 naming them.
+    """
+    kind: str
 
 
 class PageDeletedOut(BaseModel):
@@ -175,6 +213,31 @@ async def _counts(db: AsyncSession, username: str) -> dict[uuid.UUID, int]:
     return {pid: n for pid, n in rows}
 
 
+async def _calls(db: AsyncSession, username: str,
+                 page_id: Optional[uuid.UUID] = None) -> dict[uuid.UUID, list[list[dict]]]:
+    """
+    Each of the caller's pages, as its pins' STORED CALLS in page order.
+
+    What the kind is derived from (W4.1) and the only thing it is derived
+    from: a tool name and its arguments. No title, no purpose, no word
+    anybody wrote. Scoped to created_by in the statement, as every read of
+    george.pins is.
+    """
+    statement = (
+        select(BobPin.page_id, BobPin.tool_calls)
+        .where(BobPin.created_by == username, BobPin.page_id.isnot(None))
+        .order_by(BobPin.page_id, BobPin.position)
+    )
+    if page_id is not None:
+        statement = statement.where(BobPin.page_id == page_id)
+    out: dict[uuid.UUID, list[list[dict]]] = {}
+    for pid, calls in (await db.execute(statement)).all():
+        out.setdefault(pid, []).append(
+            [dict(c) for c in (calls or []) if isinstance(c, dict)]
+        )
+    return out
+
+
 def _window(stored: Any) -> Optional[dict[str, Any]]:
     """The page's window as the page draws it, with the yaml's options. Pure."""
     if not isinstance(stored, dict):
@@ -185,10 +248,23 @@ def _window(stored: Any) -> Optional[dict[str, Any]]:
             "options": page_window.options()}
 
 
-def _out(page, pins: int) -> PageOut:
+def _out(page, pins: int, analyses: Optional[list[list[dict]]] = None) -> PageOut:
+    kind, set_by = page_kind.resolve(
+        getattr(page, "kind", None), getattr(page, "kind_set_by", None), analyses or [],
+        has_date_window=getattr(page, "date_window", None) is not None,
+    )
     return PageOut(id=page.id, title=page.title, purpose=page.purpose,
                    created_at=page.created_at, updated_at=page.updated_at, pins=pins,
-                   window=_window(getattr(page, "date_window", None)))
+                   window=_window(getattr(page, "date_window", None)),
+                   kind=kind, kind_set_by=set_by, kind_means=page_kind.means(kind),
+                   kind_draws=page_kind.draws(kind))
+
+
+async def _one(db: AsyncSession, username: str, page) -> PageOut:
+    """One page with its pin count and the calls its kind is derived from."""
+    by_page = await _calls(db, username, page.id)
+    analyses = by_page.get(page.id, [])
+    return _out(page, len(analyses), analyses)
 
 
 def _from_summary(summary: dict[str, Any]) -> PageOut:
@@ -210,6 +286,12 @@ def _from_summary(summary: dict[str, Any]) -> PageOut:
         created_at=_at(summary["created_at"]), updated_at=_at(summary["updated_at"]),
         pins=int(summary["analysis_count"]),
         window=_window(summary.get("window")),
+        # The kind the service already resolved for this page (W4.1) — never
+        # derived a second time here, so the button and Bob's own sentence
+        # describe the same page the same way.
+        kind=str(summary["kind"]), kind_set_by=str(summary["kind_set_by"]),
+        kind_means=str(summary["kind_means"]),
+        kind_draws=page_kind.draws(str(summary["kind"])),
     )
 
 
@@ -224,8 +306,11 @@ async def list_pages(
 ) -> List[PageOut]:
     """The caller's pages, most recently changed first, each with its pin count."""
     pages = await page_writer.list_pages(db, user.username)
+    # One pass for the counts and one for the calls each page's KIND is
+    # derived from (W4.1) — never a query per page.
+    by_page = await _calls(db, user.username)
     counts = await _counts(db, user.username)
-    return [_out(p, counts.get(p.id, 0)) for p in pages]
+    return [_out(p, counts.get(p.id, 0), by_page.get(p.id, [])) for p in pages]
 
 
 @router.post("", response_model=PageOut, status_code=status.HTTP_201_CREATED)
@@ -256,6 +341,7 @@ async def create_page(
             question=payload.question,
             conversation_id=payload.conversation_id,
             allow_similar_page=payload.allow_similar_page,
+            kind=payload.kind,
         )
     except (PageValidationError, PinValidationError) as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
@@ -284,7 +370,7 @@ async def get_page(
         page = await page_writer.get_page(db, user.username, page_id)
     except PageNotFound as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    return _out(page, (await _counts(db, user.username)).get(page.id, 0))
+    return await _one(db, user.username, page)
 
 
 @router.patch("/{page_id}", response_model=PageOut)
@@ -317,7 +403,34 @@ async def update_page(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     except SimilarPageError as exc:
         raise _similar_page_conflict(exc) from exc
-    return _out(page, (await _counts(db, user.username)).get(page.id, 0))
+    return await _one(db, user.username, page)
+
+
+@router.put("/{page_id}", response_model=PageOut)
+async def set_page_kind(
+    page_id: uuid.UUID,
+    payload: PageKindIn,
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_page_user),
+) -> PageOut:
+    """
+    Say what KIND of page this is (W4.1) — the owner changing how it is DRAWN
+    by hand.
+
+    PRESENTATION ONLY. Nothing on the page moves: not an analysis, not its
+    position, not its calls, not a figure. The four kinds are the yaml's
+    (`pages.kinds.catalogue`) and a value that is not one of them is a 422
+    naming them. Audited as `set_kind`, before and after, with the before
+    recording what the page was already drawn as — a derived kind included.
+    """
+    try:
+        page = await page_writer.set_kind(db, owner=user.username, page_id=page_id,
+                                          kind=payload.kind)
+    except PageNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except PageValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    return await _one(db, user.username, page)
 
 
 @router.delete("/{page_id}", response_model=PageDeletedOut)
@@ -373,7 +486,7 @@ async def set_page_window(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except PageValidationError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
-    return _out(page, (await _counts(db, user.username)).get(page.id, 0))
+    return await _one(db, user.username, page)
 
 
 @router.delete("/{page_id}/window", response_model=PageOut)
@@ -387,4 +500,4 @@ async def remove_page_window(
         page = await page_writer.remove_window(db, owner=user.username, page_id=page_id)
     except PageNotFound as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    return _out(page, (await _counts(db, user.username)).get(page.id, 0))
+    return await _one(db, user.username, page)
