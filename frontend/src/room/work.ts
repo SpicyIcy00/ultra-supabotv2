@@ -195,6 +195,27 @@ export interface Step {
  * record and is not work anybody did; a label call read nothing; a refusal
  * returned no rows, so no figure can have come out of it.
  */
+/**
+ * A READ REFUSED BY A BOUND IS NOT A FAILED READ (D3, 2026-09-23).
+ *
+ * The loop refuses a read the answer does not need — past the size's budget
+ * of queries, after the one call that answers a question of this size whole,
+ * or past the convergence cap — and says which bound did it on the frame.
+ * Nothing was asked of the database and no tool declined anything: the answer
+ * was already in hand.
+ *
+ * The owner saw two of them as *"read stock over time declined · read sales
+ * declined"*, kept on screen for the rest of a turn that was working exactly
+ * as designed, and asked whether the declining was what made it slow. It was
+ * not the declining; it was the asking, and that is fixed where it happens.
+ * Here, the line goes: it is the same case as a duplicate served out of the
+ * turn's own record — work that nobody did — and drawing it as a failure was
+ * the one reading of the record that is not true.
+ */
+export function refusedByABound(call: ToolCall): boolean {
+  return Boolean(call.result?.refused_by);
+}
+
 export function readIndexes(calls: ToolCall[]): Map<number, number> {
   const out = new Map<number, number>();
   let n = 0;
@@ -239,12 +260,17 @@ function stepOf(call: ToolCall, turn: number, index: number | null): Step {
  * A DUPLICATE IS NOT A STEP. The loop serves a repeated read out of the turn's
  * own record instead of running it again (`duplicate_of`); drawing it would
  * put work on the screen that nobody did and a duration that was never spent.
+ *
+ * NEITHER IS A READ A BOUND REFUSED (`refusedByABound`), for the same reason
+ * and with one more: the trail keeps a declined step on screen for the rest of
+ * the turn, so a bound doing its job sat under the answer looking like two
+ * things that went wrong.
  */
 export function stepsOf(turn: AnswerTurn | null | undefined, index = 0): Step[] {
   if (!turn) return [];
   const numbered = readIndexes(turn.toolCalls);
   return turn.toolCalls
-    .filter((c) => c.duplicate_of === undefined)
+    .filter((c) => c.duplicate_of === undefined && !refusedByABound(c))
     .map((c) => stepOf(c, index, numbered.get(c.seq) ?? null));
 }
 

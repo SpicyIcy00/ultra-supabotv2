@@ -105,6 +105,34 @@ describe('the steps', () => {
     expect(step.declined).toContain('last_month');
   });
 
+  it('does not draw a read a bound refused as a read that declined', () => {
+    // D3, 2026-09-23. The owner saw "read stock over time declined · read
+    // sales declined" under his answer and asked whether the declining was
+    // what made it slow. Neither read reached the database: the call that
+    // answers a question of this size had already run, so the loop refused
+    // them. A bound doing its job is not work that went wrong, and the trail
+    // keeps a declined step on screen for the rest of the turn.
+    const bound = call({
+      seq: 7, tool: 'get_stock_history',
+      result: {
+        row_count: 0, source_table: null, truncated: false, duration_ms: 0,
+        error: 'Not run: get_change already read what this question needs.',
+        refused_by: 'answer_over_size',
+      },
+    });
+    const steps = stepsOf(turn({ toolCalls: [LANDED, bound] }));
+    expect(steps.map((s) => s.seq)).toEqual([0]);
+    // A tool that genuinely declined still says so.
+    const declined = call({
+      seq: 8, tool: 'get_sales',
+      result: {
+        row_count: null, source_table: null, truncated: false, duration_ms: 3,
+        error: 'this_month is still running; compare last_month instead.',
+      },
+    });
+    expect(stepsOf(turn({ toolCalls: [declined] }))[0].state).toBe('declined');
+  });
+
   it('counts no rows for a call that reads nothing', () => {
     // "arranged the workspace · 0 rows" reported an emptiness that was never
     // a finding: compose is a statement about calls, not a read.

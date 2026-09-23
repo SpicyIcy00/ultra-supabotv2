@@ -52,6 +52,7 @@ from decimal import Decimal
 from typing import Any, AsyncIterator, Callable, Optional
 
 import anthropic
+import httpx
 import psycopg
 
 from agent import prose as _prose
@@ -118,6 +119,23 @@ MODEL = provider.model()
 MAX_ITERATIONS = 15
 MAX_TOKENS = provider.max_tokens()
 EFFORT = "high"
+
+# A TURN MUST ALWAYS END (D3, 2026-09-23).
+#
+# The SDK's default is a 600-second whole-request timeout, which on a streamed
+# request means a stalled connection can hold a turn open for ten minutes with
+# nothing on the person's screen. The owner watched one for 2m 42s and
+# refreshed; the turn left five tool calls in the log and no conversation row.
+#
+# So the bound is on the GAP BETWEEN BYTES, not on the turn: a round may take
+# as long as it legitimately takes — the broad question's writing round has
+# measured 84–117 s on DeepSeek — and a stream that says nothing for
+# STREAM_STALL_S is a stall, not a long thought. It surfaces as an
+# APITimeoutError, which `_is_transient` already retries once while nothing
+# has been streamed and otherwise draws as an error frame. Either way the turn
+# ends, and the room says so.
+STREAM_CONNECT_S = 15.0
+STREAM_STALL_S = 120.0
 
 # How long the STATIC prefix — the tools array and the system prompt — is kept
 # alive after it is written. The moving breakpoint on the message tail keeps the
@@ -3370,9 +3388,25 @@ async def run(
     # Per capability, not per session: a caller with a pin writer and no
     # workflow writer gets pin_answer and not save_workflow.
     tools_schema = build_tool_schemas(defs, extra=injected_surface(write_ctx))
+    # THE READS, BY NAME — exactly the set the bounds below refuse (`more_reads`):
+    # everything offered that is not a write, a composite, a finding or compose.
+    # A metric set asked as one call (get_change, get_overview) is in here too,
+    # which is what makes it possible to take the reads away once one of them
+    # has answered the question whole. Computed once, from the same schema the
+    # model is given, so it cannot drift from what is actually offered.
+    read_tool_names = {
+        str(t.get("name")) for t in tools_schema
+        if str(t.get("name")) not in write_tools.WRITE_TOOL_FUNCTIONS
+        and str(t.get("name")) not in composite_tools.COMPOSITE_TOOL_FUNCTIONS
+        and str(t.get("name")) not in FINDING_TOOL_FUNCTIONS
+        and str(t.get("name")) != COMPOSE_TOOL
+    }
 
-    # Empty kwargs on Anthropic, so this is the client it always was.
-    client = anthropic.AsyncAnthropic(**provider.client_kwargs())
+    # Empty kwargs on Anthropic, so this is the client it always was — except
+    # for the stall bound, which is the same on both providers (D3).
+    client = anthropic.AsyncAnthropic(
+        timeout=httpx.Timeout(STREAM_STALL_S, connect=STREAM_CONNECT_S),
+        **provider.client_kwargs())
     # Context on the QUESTION, never in the system prompt. Both of these vary
     # per request, and a page name or a list of past chats in the cached prefix
     # would invalidate it on every single call.
@@ -3496,6 +3530,8 @@ async def run(
     # (composition.size.kinds.<size>.answered_by, 2026-09-22): after it, the
     # answer reads nothing more — a drill-down is the next step offered.
     answered_whole: Optional[str] = None
+    # Said once, in the round that call's results go back (D3, 2026-09-23).
+    answered_said = False
     first_of_call: dict[str, int] = {}
     corrective_turns = 0
     max_corrective = req(defs, "notices.max_corrective_turns")
@@ -3671,6 +3707,88 @@ async def run(
     # in one turn; see merge_page_evidence.
     page_evidence: Optional[dict] = None
 
+    # ------------------------------------------------------------------
+    # THE TURN'S RECORD, WRITTEN ON EVERY WAY OUT (D3, 2026-09-23).
+    #
+    # It used to be written straight-line after the try/except, which covered
+    # every exception and not the one way out that has no exception: the
+    # generator being CLOSED. When a client goes away — the owner refreshing
+    # a turn he had watched for 2m 42s — the ASGI server closes this
+    # generator, GeneratorExit is raised at whichever `yield` is live, and
+    # neither `except Exception` sees it nor does anything below run. The
+    # turn of 2026-09-23 06:44 is the proof: five tool calls in
+    # george.tool_calls under a conversation_id that has no row in
+    # george.conversations and no post in the river. From the owner's side it
+    # hung; from ours it never happened. This is the same failure the 09-19
+    # note on `_answer_payload` describes, one level up.
+    #
+    # So the record is a closure, called on the normal path AND from the
+    # abandonment handler below, and it may be called only once. It yields
+    # nothing — after a GeneratorExit a yield is a RuntimeError — so what it
+    # writes is the database, which is where a turn becomes observable.
+    # ------------------------------------------------------------------
+    _recorded: dict[str, Any] = {"written": False, "duration_ms": 0,
+                                 "iteration_ms": [], "corrections_total": 0}
+
+    def _write_the_record() -> None:
+        if _recorded["written"]:
+            return
+        _recorded["written"] = True
+        # The clock, read once, after everything the person waited for.
+        #
+        # The tail is deliberate: the last iteration's time runs from its mark
+        # to HERE, which includes the corrective gates and the surface scans
+        # that ran after the model stopped talking. Those are part of the wait,
+        # so they are part of the measurement — an iteration figure that
+        # stopped at the last API response would flatter the turn by exactly
+        # the work Phase 1 is trying to remove.
+        ended = time.monotonic()
+        edges = [*iteration_marks, ended]
+        _recorded["duration_ms"] = int(round((ended - turn_started) * 1000))
+        _recorded["iteration_ms"] = [int(round((b - a) * 1000))
+                                     for a, b in zip(edges, edges[1:])]
+        # THE ROUND TRIPS THE GATES ACTUALLY SPENT, as one number. Since P1.h
+        # the volunteering and restatement gates normally spend none — they
+        # delete the offending sentences — and appear here ONLY on the turns
+        # where deletion could not be applied without emptying the answer or
+        # taking a caveat off the screen, which is when the old rewrite is
+        # still asked for, word for word. The three write claims keep theirs
+        # because the remedy may be to CALL the tool, and the notice gate keeps
+        # its own because that round trip is the reason `notice_forced` has
+        # been 0. What was done WITHOUT a round trip is `deterministic_edits`,
+        # reported beside this.
+        corrections_total = (corrective_turns + body_edits + pin_corrections + save_corrections
+                             + page_corrections + volunteer_corrections
+                             + restate_corrections + ground_corrections)
+        _recorded["corrections_total"] = corrections_total
+
+        log.conversation(
+            user_id=user_id, asked_at=asked_at, question=question,
+            final_answer=answer or None, iterations=iterations,
+            input_tokens=usage["input"], output_tokens=usage["output"],
+            cache_read_tokens=usage["cache_read"],
+            cache_creation_tokens=usage["cache_creation"],
+            notices=pending,
+            notice_forced=notice_forced, status=status,
+            receipts=last_meta,
+            duration_ms=_recorded["duration_ms"],
+            iteration_ms=_recorded["iteration_ms"],
+            corrective_turns=_recorded["corrections_total"],
+        )
+
+        # The same turn in the river. Alongside the log row, never instead of
+        # it: the log is what the gap log and pin provenance join to, and this
+        # is the timeline a person reads.
+        log.posts(
+            user_id=user_id, asked_at=asked_at, question=question,
+            final_answer=answer or None, notices=pending, receipts=last_meta,
+            charted=charted, calls=calls_made, parent_id=parent_id,
+            page_context=page_evidence, reading=reading_recorded,
+            actions=actions_recorded,
+            composition=composition_recorded, arrangement=arrangement_recorded,
+            default_composition=default_composition_recorded, desk=desk,
+        )
+
     yield _sse("start", {"conversation_id": log.conversation_id,
                          "thread_id": log.thread_id,
                          "logging_enabled": log.enabled})
@@ -3721,7 +3839,25 @@ async def run(
             # This is the one lever that cannot touch the answer: a cache hit
             # and a miss present BYTE-IDENTICAL input to the model. It changes
             # the bill and nothing else.
-            cached_tools = [dict(t) for t in tools_schema]
+            # A REFUSAL MUST NOT COST HIM A ROUND (D3, 2026-09-23). Once the
+            # call that answers a question of this size has run
+            # (composition.size.kinds.<size>.answered_by), every further read
+            # is refused — and on 2026-09-23 06:32 the owner paid 10.8 s for
+            # the round that asked for two of them and got the refusal, on top
+            # of the 82.8 s the question took. The bound stays; what goes is
+            # the ASKING. The reads leave the schema, so there is nothing to
+            # ask for and the round that would have asked composes instead.
+            # The refusal below is now the backstop for a batch already in
+            # flight, not the normal path.
+            #
+            # It costs the tools cache prefix for the round or two that
+            # remain (~9.2k tokens re-presented once, a fraction of a wasted
+            # round trip), and the writes, the composites and compose stay —
+            # which is exactly the set the bound never refused.
+            offered = (tools_schema if answered_whole is None
+                       else [t for t in tools_schema
+                             if str(t.get("name")) not in read_tool_names])
+            cached_tools = [dict(t) for t in (offered or tools_schema)]
             cached_tools[-1]["cache_control"] = {"type": "ephemeral", "ttl": PREFIX_TTL}
 
             # Retry the whole turn on a transient fault. A turn can only be
@@ -4590,12 +4726,22 @@ async def run(
                 for b in more_reads:
                     called_tools.append(b.name)
                     yield _sse("tool_call", {"seq": seq, "tool": b.name, "arguments": b.input})
-                    payload = {"rows": [], "meta": {"error": said_no}}
+                    # A READ REFUSED BY A BOUND IS NOT A FAILED READ (D3,
+                    # 2026-09-23). Nothing was asked of the database and no
+                    # tool declined anything: the answer was already in hand.
+                    # The trail drew two of these as "read stock over time
+                    # declined · read sales declined" and kept them on screen
+                    # for the rest of the turn, so a rule working correctly
+                    # read as two things going wrong. Said on the frame, so
+                    # the room does not have to read the sentence to know.
+                    payload = {"rows": [], "meta": {"error": said_no,
+                                                    "refused_by": size_reason}}
                     log.tool_call(seq, b.name, dict(b.input), payload, 0, said_no)
                     yield _sse("tool_result", {
                         "seq": seq, "tool": b.name, "row_count": 0,
                         "source_table": None, "truncated": False,
                         "duration_ms": 0, "error": said_no,
+                        "refused_by": size_reason,
                     })
                     refused_size.append({"type": "tool_result", "tool_use_id": b.id,
                                          "content": json.dumps(payload), "is_error": True})
@@ -4652,12 +4798,15 @@ async def run(
                     )
                     called_tools.append(b.name)
                     yield _sse("tool_call", {"seq": seq, "tool": b.name, "arguments": b.input})
-                    payload = {"rows": [], "meta": {"error": reason}}
+                    # The cap is a bound too, and nothing was read (D3).
+                    payload = {"rows": [], "meta": {"error": reason,
+                                                    "refused_by": "convergence_cap"}}
                     log.tool_call(seq, b.name, dict(b.input), payload, 0, reason)
                     yield _sse("tool_result", {
                         "seq": seq, "tool": b.name, "row_count": 0,
                         "source_table": None, "truncated": False,
                         "duration_ms": 0, "error": reason,
+                        "refused_by": "convergence_cap",
                     })
                     refused.append({
                         "type": "tool_result",
@@ -5361,6 +5510,21 @@ async def run(
                         f"the reading you have given already stand."
                     )}]
 
+            # AND HE IS TOLD WHY THE READS WENT (D3, 2026-09-23). The reads
+            # leave the schema in the same breath, so this is not an
+            # instruction he can half-follow — it is the reason for a shape he
+            # can already see. Said once, in the round the answering call's
+            # results go back.
+            if answered_whole is not None and not answered_said:
+                answered_said = True
+                finish = finish + [{"type": "text", "text": (
+                    f"{answered_whole} has read what a question this size needs, and its "
+                    f"reads are drawn by their own call_seq. The reading tools are no "
+                    f"longer offered on this question: compose the answer now. A "
+                    f"drill-down into what it shows is a next step to OFFER, not a read "
+                    f"in this answer."
+                )}]
+
             # All results go back in ONE user message — splitting them trains
             # the model out of parallel tool use. The reads the cap refused in
             # this batch, if any, and its instruction to answer, ride in it.
@@ -5415,58 +5579,24 @@ async def run(
         status = "error"
         log.gap("unhandled", f"{type(exc).__name__}: {exc}"[:2000])
         yield _sse("error", {"message": _turn_failure_sentence("unhandled")})
+    except BaseException as exc:  # noqa: BLE001 - GeneratorExit, CancelledError
+        # THE TURN THE OWNER REFRESHED AWAY (D3, 2026-09-23). Nothing here
+        # tries to keep the turn alive — it is over, its consumer has gone —
+        # and nothing here yields, because after a GeneratorExit a yield is a
+        # RuntimeError. What it does is leave a record: the answer he had
+        # already waited through, the posts that give the thread an address to
+        # come back to, and a gap that says the turn was abandoned rather than
+        # silently missing. A failure that cannot be prevented is made
+        # OBSERVABLE, and the person's refresh finds his answer in the river.
+        status = "abandoned"
+        log.gap("turn_abandoned",
+                f"{type(exc).__name__} after {iterations} round(s), {seq} call(s)"[:2000])
+        _write_the_record()
+        raise
 
-    # The clock, read once, after everything the person waited for.
-    #
-    # The tail is deliberate: the last iteration's time runs from its mark to
-    # HERE, which includes the corrective gates and the surface scans that ran
-    # after the model stopped talking. Those are part of the wait, so they are
-    # part of the measurement — an iteration figure that stopped at the last
-    # API response would flatter the turn by exactly the work Phase 1 is
-    # trying to remove.
-    ended = time.monotonic()
-    duration_ms = int(round((ended - turn_started) * 1000))
-    edges = [*iteration_marks, ended]
-    iteration_ms = [int(round((b - a) * 1000)) for a, b in zip(edges, edges[1:])]
-    # THE ROUND TRIPS THE GATES ACTUALLY SPENT, as one number, and it is the
-    # number this card moves. Since P1.h the volunteering and restatement gates
-    # normally spend none — they delete the offending sentences — and appear
-    # here ONLY on the turns where deletion could not be applied without
-    # emptying the answer or taking a caveat off the screen, which is when the
-    # old rewrite is still asked for, word for word. The three write claims
-    # keep theirs because the remedy may be to CALL the tool, and the notice
-    # gate keeps its own below because that round trip is the reason
-    # `notice_forced` has been 0. What was done WITHOUT a round trip is
-    # `deterministic_edits`, reported beside this.
-    corrections_total = (corrective_turns + body_edits + pin_corrections + save_corrections
-                         + page_corrections + volunteer_corrections
-                         + restate_corrections + ground_corrections)
-
-    log.conversation(
-        user_id=user_id, asked_at=asked_at, question=question,
-        final_answer=answer or None, iterations=iterations,
-        input_tokens=usage["input"], output_tokens=usage["output"],
-        cache_read_tokens=usage["cache_read"],
-        cache_creation_tokens=usage["cache_creation"],
-        notices=pending,
-        notice_forced=notice_forced, status=status,
-        receipts=last_meta,
-        duration_ms=duration_ms, iteration_ms=iteration_ms,
-        corrective_turns=corrections_total,
-    )
-
-    # The same turn in the river. Alongside the log row, never instead of it:
-    # the log is what the gap log and pin provenance join to, and this is the
-    # timeline a person reads.
-    log.posts(
-        user_id=user_id, asked_at=asked_at, question=question,
-        final_answer=answer or None, notices=pending, receipts=last_meta,
-        charted=charted, calls=calls_made, parent_id=parent_id,
-        page_context=page_evidence, reading=reading_recorded,
-        actions=actions_recorded,
-        composition=composition_recorded, arrangement=arrangement_recorded,
-        default_composition=default_composition_recorded, desk=desk,
-    )
+    _write_the_record()
+    duration_ms, iteration_ms = _recorded["duration_ms"], _recorded["iteration_ms"]
+    corrections_total = _recorded["corrections_total"]
 
     # The ids of the two posts, so a client that is rendering the river can
     # reconcile the turn it drew optimistically with the one that was stored —
