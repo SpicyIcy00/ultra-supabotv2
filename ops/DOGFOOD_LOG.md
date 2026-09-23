@@ -83,6 +83,22 @@ on compose frame" does.
 > *"this is all the problems i could find but i bet theres alot more seeing how
 > lousy this is"*
 
+> *"how do i turn it on and what its telling me to do?"*
+
+Asked of "Morning Runout is switched off and not mine to switch on", where Bob
+says *"nothing here is waiting on me to promote, so the seven-o'clock run stays
+off until an administrator backtests version one and switches it on… Tell me who
+holds that and I will prepare it for them."* **The person asking IS the
+administrator** — `public.app_users` has exactly two logins, `admin` (role
+`admin`, his) and `warehouse` — so Bob sent the owner to find himself. Two
+defects under it: (1) Bob names the role and not the person, and never checks
+whether the person he is talking to holds it; (2) there is no way to promote
+from the Systems page that shows the version — the Promote button is only in the
+Inbox, and a version that has never been backtested (Morning Runout v1:
+`backtested_at` and `promoted_at` both null) never appears there, so the screen
+that says "an administrator promotes it" has no path to promoting it.
+Belongs with W2.2's authority work.
+
 > *"also look i keep telling it to set levels for me and alert me when it
 > reaches but its not doing anything"*
 
