@@ -239,7 +239,71 @@ async def view_of(session: AsyncSession, *, subject_kinds: tuple[str, ...],
     return None
 
 
-async def read_automations(session: AsyncSession, *, username: str) -> dict:
+async def _who_may_promote(session: AsyncSession, *, username: str,
+                           app_role: Optional[str]) -> dict:
+    """
+    WHO HOLDS THE PROMOTION, BY NAME — and whether it is the person asking.
+
+    The defect this closes (DOGFOOD 2026-09-23): asked "how do I turn it on",
+    Bob said "until an administrator backtests version one and switches it on…
+    Tell me who holds that and I will prepare it for them" — to the only
+    administrator there is. He named the office and sent the man holding it
+    away, because the read behind him carried a policy string and no people.
+
+    So the people come back with the rows. `public.app_users` is the login
+    table; the policy is metrics.yaml's (`workflows.permissions.promote`), read
+    here rather than assumed, and the sentences Bob says over this are
+    `systems.promotion` in the same file.
+
+    This grants nothing. Rule 7's gate is `workflow_writer.check_permission`
+    and a CHECK constraint, and neither has moved: saying whose hand is on a
+    gate is not opening it.
+    """
+    from tools._common import load_defs
+
+    defs = load_defs()
+    systems = (defs.get("systems") or {}).get("promotion") or {}
+    policy = str(((defs.get("workflows") or {}).get("permissions") or {})
+                 .get("promote") or "admin_only")
+
+    admins = (await session.execute(text("""
+        SELECT username, display_name, role
+        FROM public.app_users
+        WHERE active IS TRUE AND role = 'admin'
+        ORDER BY COALESCE(display_name, username)
+    """))).mappings().all()
+
+    named = [{"username": a["username"],
+              "name": a["display_name"] or a["username"]} for a in admins]
+    # The role on the row is the authority; `app_role` is what the request
+    # carried. Either says the same thing, and the row is the one that decides.
+    mine = any(a["username"] == username for a in admins) or app_role == "admin"
+    me = next((a["name"] for a in named if a["username"] == username), username)
+
+    if policy == "any_bob_user":
+        say = ("Anyone signed in may promote a version here "
+               "(workflows.permissions.promote = any_bob_user).")
+        mine = True
+    elif mine:
+        say = systems.get("you_hold_it") or ""
+    elif named:
+        say = systems.get("someone_else_holds_it") or ""
+    else:
+        say = systems.get("nobody_holds_it") or ""
+
+    return {
+        "act": systems.get("act_is"),
+        "policy": policy,
+        "administrators": [a["name"] for a in named],
+        "you_may_promote": bool(mine),
+        "you_are": me,
+        "how_to_say_it": say,
+        "never_backtested_is": systems.get("never_backtested_is"),
+    }
+
+
+async def read_automations(session: AsyncSession, *, username: str,
+                           app_role: Optional[str] = None) -> dict:
     """
     What the systems have been doing, and what is waiting on somebody.
 
@@ -249,6 +313,12 @@ async def read_automations(session: AsyncSession, *, username: str) -> dict:
 
     Every row says which of the two it is in `state`, so nothing has to be
     inferred from its shape.
+
+    WHO MAY PROMOTE COMES BACK WITH THEM (W4.3), by name, and whether it is the
+    person asking — `meta.promotion`. A version that has never been backtested
+    is a row here too: it is absent from the approval queue by design, and
+    before this read it was absent from Bob as well, so the one thing that
+    would move it on was invisible from both sides.
     """
     runs = (await session.execute(text(f"""
         SELECT w.name, r.status, r.mode, r.started_at, r.finished_at,
@@ -266,6 +336,22 @@ async def read_automations(session: AsyncSession, *, username: str) -> dict:
         JOIN george.workflows w ON w.id = v.workflow_id
         WHERE v.promoted_at IS NULL
           AND v.backtest_run_id IS NOT NULL
+          AND w.status <> 'archived'
+        ORDER BY v.created_at DESC
+        LIMIT 20
+    """))).mappings().all()
+
+    # NEVER BACKTESTED — the versions the approval queue deliberately does not
+    # carry, because nothing has been recorded against them yet. Morning Runout
+    # v1 was one of these: the screen said an administrator must promote it and
+    # no screen anywhere could, and Bob could not see it either.
+    ungated = (await session.execute(text("""
+        SELECT w.id AS workflow_id, w.name, v.version, v.created_at, v.created_by
+        FROM george.workflow_versions v
+        JOIN george.workflows w ON w.id = v.workflow_id
+        WHERE v.promoted_at IS NULL
+          AND v.backtest_run_id IS NULL
+          AND v.id = w.current_version_id
           AND w.status <> 'archived'
         ORDER BY v.created_at DESC
         LIMIT 20
@@ -389,6 +475,18 @@ async def read_automations(session: AsyncSession, *, username: str) -> dict:
             "when": v["created_at"],
             "by": "backtested, not promoted",
         })
+    for v in ungated:
+        rows.append({
+            "what": f"{v['name']} v{v['version']}",
+            # NOT "waiting on you": nothing has been recorded against it, so
+            # there is nothing for anyone to approve yet. The step that comes
+            # first is a backtest, and the row says so rather than implying a
+            # queue it is not in.
+            "state": "never backtested",
+            "when": v["created_at"],
+            "by": "backtest a closed window first, then it can be promoted",
+            "id": str(v["workflow_id"]),
+        })
     for s in schedules:
         rows.append({
             "what": s["name"],
@@ -416,14 +514,29 @@ async def read_automations(session: AsyncSession, *, username: str) -> dict:
             "watching": sum(1 for w in watching if w["enabled"]),
             "standing_on": sum(1 for q in standing if q["enabled"]),
             "waiting": len(waiting),
+            "never_backtested": len(ungated),
             "scheduled": sum(1 for s in schedules if s["enabled"]),
+            # WHO MAY PROMOTE, BY NAME (W4.3). `how_to_say_it` is the sentence
+            # from metrics.yaml systems.promotion, chosen by whether the person
+            # asking holds the act.
+            "promotion": await _who_may_promote(
+                session, username=username, app_role=app_role),
+            "where_a_system_is": (
+                "Each system has its own page, reached from Systems in the "
+                "sidebar; that is where a version is backtested and promoted "
+                "and a schedule is switched on."
+            ),
             "note": (
                 "A schedule that is switched off fires nothing, and a standing "
                 "question that is not being asked produces no answer. A watch "
                 "that is quiet looked and found nothing, which is its normal "
                 "state; one that is not switched on is not looking at all. A version "
                 "waiting on you has been backtested but not promoted, so the "
-                "schedule is still firing the older one."
+                "schedule is still firing the older one. A version that has "
+                "never been backtested cannot be promoted at all yet and is "
+                "in no queue — its first step is a backtest of a closed "
+                "window. Say WHO may promote by the names in meta.promotion, "
+                "never 'an administrator' with nobody attached."
             ),
         },
     }

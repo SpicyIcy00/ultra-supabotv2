@@ -2244,18 +2244,24 @@ def _decisions_reader():
     return read
 
 
-def _automations_reader(username: str):
+def _automations_reader(username: str, app_role: Optional[str] = None):
     """
     Bob's route to reading WHAT THE SAVED RULES HAVE BEEN DOING — what ran
     on its own, what is scheduled, what is waiting on a person. Same pattern,
     same reasons: the workflow tables are in the george schema, which george_ro
     cannot see at all.
+
+    THE ROLE TRAVELS WITH THE NAME (W4.3). Whether the person asking may
+    promote is a fact about them, and Bob was naming the office instead of the
+    person because nothing carried it. Captured here from the verified token,
+    like the username, so the model still has no argument for either.
     """
 
     async def read() -> dict:
         async with AsyncSessionLocal() as session:
             try:
-                return await self_reader.read_automations(session, username=username)
+                return await self_reader.read_automations(
+                    session, username=username, app_role=app_role)
             except SQLAlchemyError as exc:
                 raise RuntimeError(
                     f"The saved rules could not be read: {type(exc).__name__}. Tell "
@@ -2970,7 +2976,7 @@ async def ask(
             # see. Every signed-in caller gets both — they read nothing but
             # Bob's own record.
             memory_reader=_memory_reader(user.username),
-            automations_reader=_automations_reader(user.username),
+            automations_reader=_automations_reader(user.username, user.role),
             # Always: what people did with what he raised, so the agenda can
             # learn from it. Shared, so bound to nobody.
             decisions_reader=_decisions_reader(),

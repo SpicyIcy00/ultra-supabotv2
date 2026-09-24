@@ -39,6 +39,8 @@ const Room = React.lazy(() => import('./room/Room'));
 const InboxPage = React.lazy(() => import('./pages/InboxPage'));
 const PagesPage = React.lazy(() => import('./pages/PagesPage'));
 const WorkflowsPage = React.lazy(() => import('./pages/WorkflowsPage'));
+// One System, with its versions, runs, schedules and the four acts (W4.3).
+const SystemPage = React.lazy(() => import('./pages/SystemPage'));
 const StorehubImportsPage = React.lazy(() => import('./pages/StorehubImportsPage'));
 
 // The existing application. AIChatPage is the legacy NL->SQL chatbot and is
@@ -142,6 +144,7 @@ function App() {
                   <Route path="/pages" element={bob(<PagesPage />)} />
                   <Route path="/pages/:pageId" element={bob(<PagesPage />)} />
                   <Route path="/workflows" element={bob(<WorkflowsPage />)} />
+                  <Route path="/workflows/:workflowId" element={bob(<SystemPage />)} />
                   {/* The room's chrome, its OWN page key (P3.h): talking to Bob
                       does not grant writing to the procurement tables. */}
                   <Route

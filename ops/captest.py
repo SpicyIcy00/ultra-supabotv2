@@ -97,7 +97,7 @@ async def turn(question, history, thread):
         belief_store=route._belief_store(USER, thread), parent_id=None,
         page_reader=None, page_scope=None, page_references=refs,
         memory_reader=route._memory_reader(USER),
-        automations_reader=route._automations_reader(USER),
+        automations_reader=route._automations_reader(USER, ROLE),
         decisions_reader=route._decisions_reader(),
         standing_writer=route._standing_writer(USER),
         watch_writer=route._watch_writer(USER),

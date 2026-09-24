@@ -14,7 +14,9 @@
  * than the newest, the row says so, because the number in chat and the
  * number on Monday are then different numbers.
  */
-import type { Workflow, WorkflowRun, WorkflowSchedule } from '../../types/workflows';
+import type {
+  Workflow, WorkflowRun, WorkflowSchedule, WorkflowVersion,
+} from '../../types/workflows';
 
 export type Stage =
   | 'no_version'
@@ -83,7 +85,11 @@ export function workflowView(
     return {
       stage: 'never_backtested',
       state: `v${v.version}, never backtested.`,
-      next: 'Ask Bob to run it as of a past date, and read what it would have produced.',
+      // W4.3: until this card the only way to backtest was to ask Bob to run
+      // it as of a past date, so that is what this said. The act is a control
+      // on the system's own page now, and the line points at it.
+      next: 'Backtest it against a window that has closed, below, and read what '
+        + 'it would have produced.',
       nextTo: null,
       diverges: false,
     };
@@ -92,7 +98,10 @@ export function workflowView(
     return {
       stage: 'awaiting_promotion',
       state: `v${v.version} backtested, waiting to be promoted.`,
-      next: 'Promote it in Inbox.',
+      // W4.3: "Promote it in Inbox" was the whole story while Inbox held the
+      // only button. It is on the system's own page too now, and Needs you is
+      // still the queue — `nextTo` keeps pointing there for the list.
+      next: 'It has a backtest. Promote it below, or in Needs you.',
       nextTo: '/inbox',
       diverges: false,
     };
@@ -114,8 +123,14 @@ export function workflowView(
     return {
       stage: 'scheduled',
       state: `Runs ${enabled.map(scheduleLine).join('; ')} · v${v.version} promoted.`,
+      // W4.3: when the newest is ALREADY promoted, "promote the newest" is not
+      // an act anybody can perform, and it was the line the page offered in
+      // exactly that case. Promoting never repoints a schedule (rule 8), so
+      // repointing is the only thing that ends this.
       next: diverges
-        ? 'An enabled schedule fires an older version than the newest. Promote the newest, or repoint the schedule.'
+        ? (v.promoted_at
+          ? 'An enabled schedule fires an older version than the newest. Repoint it, or leave it — promoting did not move it.'
+          : 'An enabled schedule fires an older version than the newest. Promote the newest, or repoint the schedule.')
         : 'Nothing — it runs unattended.',
       nextTo: null,
       diverges,
@@ -128,6 +143,96 @@ export function workflowView(
     nextTo: null,
     diverges: false,
   };
+}
+
+/**
+ * DIVERGENCE, AS SOMETHING WITH WEIGHT (W4.3, CLAUDE.md rule 8).
+ *
+ * `workflowView` has computed `diverges` since the Workflows page was
+ * written, and every surface threw it away — folded, at most, into the tail of
+ * a sentence about what to do next. A version divergence is the record that
+ * the number in chat is not the number the schedule sends on Monday, so it is
+ * a NOTICE: it names which version a manual run uses, which each enabled
+ * schedule fires, and why the two are allowed to differ.
+ *
+ * It is never the accent (UI rule 5): a caveat takes its prominence from
+ * position — above the figures it qualifies — and never from hue.
+ */
+export interface Divergence {
+  /** The version a manual run uses: the newest. */
+  ran: number;
+  /** One line per enabled schedule firing something else. */
+  fires: { scheduleId: string; version: string; when: string }[];
+  /** Why this is allowed, and what ends it. */
+  why: string;
+}
+
+/**
+ * The divergence between what a manual run uses and what the schedules fire,
+ * or null when there is none to draw.
+ *
+ * `schedules === undefined` is NOT "no divergence" — it is not yet known, and
+ * the caller must render that as its own state rather than as silence.
+ */
+export function divergence(
+  w: Workflow,
+  schedules: WorkflowSchedule[] | undefined,
+): Divergence | null {
+  const v = w.current_version;
+  if (!v || schedules === undefined) return null;
+  const off = schedules.filter((s) => s.enabled && s.version_id !== v.id);
+  if (off.length === 0) return null;
+  return {
+    ran: v.version,
+    fires: off.map((s) => ({
+      scheduleId: s.id,
+      version: s.version_id,
+      when: scheduleLine(s),
+    })),
+    why: 'A manual run uses the newest version; a schedule fires the version it '
+      + 'was pinned to, and promoting never repoints one. Repoint the schedule, '
+      + 'or leave it — but the two are different numbers until you do.',
+  };
+}
+
+/**
+ * WHAT STANDS BETWEEN THIS VERSION AND RUNNING UNATTENDED, in the order the
+ * gate applies it, or null when it may be promoted now.
+ *
+ * Rule 7, said on the page that holds the button rather than discovered from a
+ * refusal: promotion is an administrator's act against a RECORDED backtest of
+ * a closed window. The server enforces all three; this only says which one is
+ * in the way, so the control can be disabled with its reason beside it instead
+ * of throwing the person at a 403.
+ */
+export function blocksPromotion(
+  v: WorkflowVersion | null,
+  who: { mayPromote: boolean; administrators?: string[] } | undefined,
+): string | null {
+  if (!v) return 'There is no version to promote.';
+  if (v.promoted_at) return 'Already promoted.';
+  if (!v.backtest_run_id) {
+    return 'Never backtested. Run it against a window that has closed and read '
+      + 'what it would have produced — that record is what a promotion rests on.';
+  }
+  if (who === undefined) return 'Checking who may promote…';
+  if (!who.mayPromote) {
+    // WHO, NOT WHICH OFFICE — and when this surface has not read the names,
+    // it says that rather than inventing an absence. Bob has the names
+    // (view_automations, meta.promotion) and this line sends the person to
+    // him instead of to a role nobody is attached to.
+    return who.administrators?.length
+      ? `Only ${listOf(who.administrators)} can promote a version.`
+      : 'You are not an administrator, so you cannot promote this. Ask Bob who '
+        + 'can — he names them.';
+  }
+  return null;
+}
+
+/** "Isaiah", "Isaiah and Joy", "Isaiah, Joy and Daniel". */
+export function listOf(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
 /** The newest run, in words, or the honest absence of one. */

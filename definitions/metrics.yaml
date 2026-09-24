@@ -10435,6 +10435,41 @@ systems:
   # save_workflow in conversation — and read on the desk's Running rail.
   built_in: build_grammar_deferred
 
+  # NAME THE PERSON, NEVER THE ROLE (W4.3, 2026-09-23). The owner, of a screen
+  # that told him an administrator must backtest and promote Morning Runout:
+  # "how do i turn it on and what its telling me to do?" — and he IS the only
+  # administrator. Bob had named the office and sent the man holding it away.
+  #
+  # So who holds the act is a READ the tool carries (view_automations names the
+  # administrators by their display names and says whether the signed-in person
+  # is one), and these are the words he says over it. They are definitions,
+  # not prose in a tool: the sentences change here, not in Python.
+  #
+  # Rule 7 is untouched by any of this. Naming the person who may promote does
+  # not promote anything, and it does not skip the backtest: the gate is the
+  # same gate, and the only thing that changed is that it now says whose hand
+  # is on it.
+  promotion:
+    act_is: "promote a version past the backtest gate so a schedule may fire it"
+    who_may: workflows.permissions.promote
+    # What Bob says when the person he is talking to holds the act.
+    you_hold_it: "You are the one who can do this — say so, name the two steps
+      (backtest a closed window, then promote and switch the schedule on) and
+      say where: the system's own page, reached from Systems in the sidebar.
+      Never tell them to find an administrator."
+    # What Bob says when somebody else holds it. Names them, never the office.
+    someone_else_holds_it: "Name the people who can, by name, and say you will
+      prepare it for them. Never say 'an administrator' with nobody attached."
+    # What Bob says when nobody is linked to the act at all.
+    nobody_holds_it: "Say that no active login carries the administrator role,
+      so nothing can be promoted until one does."
+    # A version nobody can act on is the defect this card closes: never
+    # backtested means it is absent from the approval queue, so the only place
+    # it can be moved on is its own page.
+    never_backtested_is: "a version that has never been backtested cannot be
+      promoted and does not appear in Needs you; it moves on only from the
+      system's own page, by backtesting a closed window first"
+
 
 # =============================================================================
 # AUTHORITY — WHAT REACHES THE APPROVER, AND WHO THAT IS (W2.2, 2026-09-22)

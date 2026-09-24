@@ -717,14 +717,27 @@ async def view_memory(*, ctx: WriteContext) -> dict:
 async def view_automations(*, ctx: WriteContext) -> dict:
     """
     Read what the saved rules have been doing: what ran on its own in the last
-    week, what is scheduled, and what has been backtested and is waiting on a
-    person to promote it. Use it to say what is running without you and what
-    needs somebody — never to claim a rule ran that this does not show.
+    week, what is scheduled, what has never been backtested, and what has been
+    backtested and is waiting on a person to promote it. Use it to say what is
+    running without you and what needs somebody — never to claim a rule ran
+    that this does not show.
+
+    "HOW DO I TURN IT ON?" IS THIS READ, and the answer NAMES A PERSON.
+    `meta.promotion` says who may promote by name, whether the person you are
+    talking to is one of them (`you_may_promote`), and the sentence to say
+    over that (`how_to_say_it`). Say it. Never tell somebody to find an
+    administrator: if they hold it, say so and give them the two steps —
+    backtest a closed window, then promote and switch the schedule on — and
+    say where, which is the system's own page under Systems in the sidebar.
+    If somebody else holds it, name them. Nothing here promotes anything: the
+    gate is unchanged, and a version still cannot run unattended until it has
+    been backtested against a window that has closed.
 
     Returns:
-        {"rows": [...], "meta": {...}}. One row per run, per version waiting and
-        per schedule, each saying which of the three it is in `state`. meta
-        counts them and notes that a switched-off schedule fires nothing.
+        {"rows": [...], "meta": {...}}. One row per run, per version waiting or
+        never backtested, and per schedule, each saying which it is in `state`.
+        meta counts them, carries `promotion`, and notes that a switched-off
+        schedule fires nothing.
     """
     if ctx.automations_reader is None:
         raise SelfReadUnavailable(

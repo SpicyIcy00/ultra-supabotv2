@@ -62,7 +62,11 @@ describe('every item opens what it names', () => {
     mount({ needsYou: 2 });
     await screen.findByText('Seikyo Purchasing');
     expect(href(/Seikyo Purchasing/)).toBe('/pages/p1');
-    expect(href(/Seikyo PO/)).toBe('/workflows');
+    // A SYSTEM ROW OPENS THAT SYSTEM (W4.3, 2026-09-23). It used to open the
+    // list — "every item opens what it names" was true of every group but this
+    // one, and the page it landed on could not run, backtest, promote or
+    // switch on the thing the row named.
+    expect(href(/Seikyo PO/)).toBe('/workflows/w1');
     expect(href(/Morning question/)).toBe('/workflows');
     expect(href(/You/)).toBe('/settings');
     expect(href('Needs you, 2 waiting')).toBe('/inbox');

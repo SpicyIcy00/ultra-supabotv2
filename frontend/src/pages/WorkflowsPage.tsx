@@ -15,10 +15,11 @@
  * as such. A hairline separates one rule from the next. No card is needed to
  * say where one workflow ends.
  *
- * NO BUILDER. Saving is Bob's (`save_workflow`, in conversation), promoting
- * is Needs you's, and running is Bob's too — so the one action here is a
- * draft dropped into Ask, for the person to read and send. Versions, runs and
- * backtests keep their existing semantics; this page only reads them.
+ * NO BUILDER, AND NO ACTS (W4.3). Saving is Bob's (`save_workflow`, in
+ * conversation). Running, backtesting, promoting and switching a schedule on
+ * are on the SYSTEM'S OWN page — `/workflows/:workflowId` — because they are
+ * acts on one system and this is a list. Every row here opens it. Versions,
+ * runs and backtests keep their existing semantics; this page only reads.
  *
  * A run's notices are drawn through the room's Caveat like every other
  * caveat on this surface — a `version_divergence` notice is the record that the number on
@@ -61,7 +62,13 @@ function WorkflowRow({ workflow }: { workflow: Workflow }) {
 
   return (
     <li className="r-item">
-      <h2 className="r-item-name">{workflow.name}</h2>
+      {/* THE NAME OPENS THE SYSTEM (W4.3). Every row on this page and every
+          row in the rail used to land here, on the list — so the one object a
+          person wanted was never reachable and the acts on it existed
+          nowhere. */}
+      <h2 className="r-item-name">
+        <Link to={`/workflows/${workflow.id}`} className="r-link">{workflow.name}</Link>
+      </h2>
 
       {/* Where it stands: the line somebody reading down the page wants. */}
       <p className="r-say" style={{ marginTop: 8, fontSize: 15 }}>{view.state}</p>
@@ -93,20 +100,24 @@ function WorkflowRow({ workflow }: { workflow: Workflow }) {
         {schedules.isError && ' · schedule could not be read'}
       </p>
 
-      {version && (
-        // STRAIGHT TO THE BOARD WITH THE QUESTION ALREADY ASKED. This used to
-        // navigate to `/ask` with a draft in the route state — and `/ask` has
-        // been a redirect to `/` since the room landed, which carries no
-        // state, so the button went to an empty board and lost the sentence.
-        <div className="r-row-acts">
+      {/* WHERE THE ACTS ARE (W4.3): on the system's own page. This row is a
+          way in, not a control panel.
+
+          The one button here used to navigate to `/` with the question in the
+          route state — and `/` is LandingRedirect, not the room, so the
+          sentence was handed to a redirect and lost. It goes to `/bob`, which
+          is where the room actually is. */}
+      <div className="r-row-acts">
+        <Link to={`/workflows/${workflow.id}`} className="r-act">Open it</Link>
+        {version && (
           <button type="button" className="r-act"
-                  onClick={() => navigate('/', {
+                  onClick={() => navigate('/bob', {
                     state: { ask: `Run the "${workflow.name}" workflow` },
                   })}>
             Ask Bob to run it
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </li>
   );
 }
@@ -121,9 +132,13 @@ export default function WorkflowsPage() {
 
   return (
     <>
+      {/* ONE NAME FOR THE OBJECT (W4.3). The rail said SYSTEMS, this said
+          "Running" and here.ts said "Systems" — three names for one thing, in
+          a room whose whole vocabulary is eight words with eight meanings.
+          The word is System. */}
       <RoomHead
-        title="Running"
-        says="The company's rules. Nothing runs unattended until an administrator promotes it."
+        title="Systems"
+        says="The company's rules. Nothing runs unattended until it has been backtested and promoted — open one to do either."
       />
 
       {/* Three states, three renderings, and the first two may never borrow
