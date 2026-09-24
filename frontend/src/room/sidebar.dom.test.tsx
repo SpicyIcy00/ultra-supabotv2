@@ -123,6 +123,9 @@ describe('no row bounces', () => {
   const KEY_OF: Record<string, string> = {
     '/dashboard': 'dashboard', '/inbox': 'bob', '/pages/p1': 'bob',
     '/workflows': 'bob', '/people': 'bob', '/storehub-imports': 'storehub_imports',
+    // W4.3 and W4.4: a row opens the thing it names, so a system row carries
+    // its id, and a watch row the anchor of its own row on the watches page.
+    '/workflows/w1': 'bob', '/watches': 'bob',
   };
 
   const hrefs = () => screen.getAllByRole('link')
@@ -137,7 +140,7 @@ describe('no row bounces', () => {
       mount();
       await screen.findByText('Seikyo Purchasing');
       for (const href of hrefs()) {
-        const key = KEY_OF[href];
+        const key = KEY_OF[href.split('#')[0]];
         expect(key, `${href} is not a destination this test knows`).toBeTruthy();
         expect(allowed, `${href} is drawn to a role without ${key}`).toContain(key);
       }

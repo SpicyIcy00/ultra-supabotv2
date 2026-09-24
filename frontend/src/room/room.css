@@ -2986,6 +2986,7 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
   /* Desktop is the phone layout with room beside it: the column does not
      grow past what a line of prose should be. */
   .r-w-grp { max-width: 72ch; }
+}
 
 
 /* ===========================================================================
