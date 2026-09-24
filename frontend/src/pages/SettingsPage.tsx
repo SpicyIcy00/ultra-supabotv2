@@ -7,9 +7,37 @@ import { updateStoreAppearance } from '../services/storesApi';
 import { updateDashboardDefaults } from '../services/dashboardDefaultsApi';
 import type { StoreFilterConfig } from '../types/storeFilters';
 import { useDashboardStore } from '../stores/dashboardStore';
+import { storesReading, type StoresReading } from './settingsReading';
+import { errorMessage } from '../services/pinsApi';
 import { useVendingStore } from '../stores/vendingStore';
 
 type TabType = 'general' | 'stores' | 'vending';
+
+/** "22 Sep, 9:04 am", in Manila — the one timezone this app thinks in. */
+function manila(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString('en-PH', {
+    day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila',
+  });
+}
+
+/**
+ * THE STORE LIST BEFORE IT IS A LIST (W4.5).
+ *
+ * Loading, failed and loaded-empty, drawn as three different things — and a
+ * failed read carries the server's own sentence, because "Loading stores..."
+ * forever was the screen telling a person the opposite of what happened.
+ */
+const StoresUnread: React.FC<{ reading: StoresReading }> = ({ reading }) => (
+  <div className="py-6 space-y-2" data-stores={reading.kind}>
+    <div className="flex items-center gap-3 text-gray-400">
+      {reading.kind === 'loading' && <RefreshCw className="w-5 h-5 animate-spin" />}
+      <span>{reading.heading}</span>
+    </div>
+    {reading.detail && <p className="text-sm text-gray-500">{reading.detail}</p>}
+  </div>
+);
 
 export const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('general');
@@ -72,23 +100,23 @@ export const SettingsPage: React.FC = () => {
 const GeneralSettings: React.FC = () => {
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [showError, setShowError] = useState(false);
+  // WHEN IT WAS REFRESHED, not that it was (UI rule 6): a claim about data
+  // with no time on it is a claim with no expiry, and this one vanished
+  // after three seconds. A refusal keeps the server's words (W4.5).
+  const [refreshedAt, setRefreshedAt] = useState<string | null>(null);
+  const [refusal, setRefusal] = useState<string | null>(null);
 
   const handleRefreshData = async () => {
     setIsRefreshing(true);
-    setShowSuccess(false);
-    setShowError(false);
+    setRefusal(null);
 
     try {
       await axios.post('/api/v1/analytics/invalidate-cache');
       await queryClient.invalidateQueries();
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
+      setRefreshedAt(new Date().toISOString());
     } catch (error) {
       console.error('Error refreshing data:', error);
-      setShowError(true);
-      setTimeout(() => setShowError(false), 5000);
+      setRefusal(errorMessage(error));
     } finally {
       setIsRefreshing(false);
     }
@@ -128,11 +156,13 @@ const GeneralSettings: React.FC = () => {
                 {isRefreshing ? 'Refreshing...' : 'Refresh Now'}
               </button>
 
-              {showSuccess && (
-                <div className="text-sm text-green-400 font-medium">Data refreshed successfully!</div>
+              {refreshedAt && !refusal && (
+                <div className="text-sm text-green-400 font-medium">
+                  Refreshed {manila(refreshedAt)}
+                </div>
               )}
-              {showError && (
-                <div className="text-sm text-red-400 font-medium">Error refreshing data.</div>
+              {refusal && (
+                <div className="text-sm text-red-400 font-medium">{refusal}</div>
               )}
             </div>
           </div>
@@ -253,7 +283,7 @@ const VendingMachineDefaults: React.FC = () => {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Failed to save vending defaults');
+      setError(errorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -354,7 +384,7 @@ const AiChatStoreFilters: React.FC = () => {
       setAvailableStores(storesData.stores);
       setHasChanges(false);
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Failed to load store filters');
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -374,7 +404,7 @@ const AiChatStoreFilters: React.FC = () => {
       setHasChanges(false);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Failed to save store filters');
+      setError(errorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -473,7 +503,8 @@ const AiChatStoreFilters: React.FC = () => {
 
 // ── Dashboard Store Defaults (formerly DashboardStoresSettings tab) ─────────
 const DashboardStoreDefaults: React.FC = () => {
-  const { stores, selectedStores, setStores, fetchStores, getStoreName } = useDashboardStore();
+  const { stores, storesRead, storesError, selectedStores, setStores, fetchStores, getStoreName } =
+    useDashboardStore();
   const [localSelected, setLocalSelected] = useState<string[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -523,19 +554,18 @@ const DashboardStoreDefaults: React.FC = () => {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Failed to save store defaults');
+      setError(errorMessage(err));
     } finally {
       setSaving(false);
     }
   };
 
-  if (stores.length === 0) {
-    return (
-      <div className="flex items-center gap-3 text-gray-400 py-6">
-        <RefreshCw className="w-5 h-5 animate-spin" />
-        <span>Loading stores...</span>
-      </div>
-    );
+  // THREE RENDERINGS, NEVER TWO (UI rule 8). `stores.length === 0` used to
+  // draw a spinner here, so a failed read and an empty list were both
+  // "Loading stores..." forever. See pages/settingsReading.ts.
+  const reading = storesReading(storesRead, stores.length, storesError);
+  if (reading.kind !== 'rows') {
+    return <StoresUnread reading={reading} />;
   }
 
   return (
@@ -602,7 +632,7 @@ const DashboardStoreDefaults: React.FC = () => {
 type StoreDraft = { display_name: string; color: string };
 
 const StoreDisplayNames: React.FC = () => {
-  const { stores, fetchStores } = useDashboardStore();
+  const { stores, storesRead, storesError, fetchStores } = useDashboardStore();
   const [drafts, setDrafts] = useState<Record<string, StoreDraft>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -649,7 +679,7 @@ const StoreDisplayNames: React.FC = () => {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || 'Failed to save');
+      setError(errorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -661,7 +691,7 @@ const StoreDisplayNames: React.FC = () => {
       await fetchStores();
       setDrafts(prev => ({ ...prev, [storeId]: { display_name: '', color: '#00d2ff' } }));
     } catch (e: any) {
-      setError(e?.message || 'Failed to reset');
+      setError(errorMessage(e));
     }
   };
 
@@ -674,13 +704,12 @@ const StoreDisplayNames: React.FC = () => {
     );
   });
 
-  if (stores.length === 0) {
-    return (
-      <div className="flex items-center gap-3 text-gray-400 py-6">
-        <RefreshCw className="w-5 h-5 animate-spin" />
-        <span>Loading stores...</span>
-      </div>
-    );
+  // THREE RENDERINGS, NEVER TWO (UI rule 8). `stores.length === 0` used to
+  // draw a spinner here, so a failed read and an empty list were both
+  // "Loading stores..." forever. See pages/settingsReading.ts.
+  const reading = storesReading(storesRead, stores.length, storesError);
+  if (reading.kind !== 'rows') {
+    return <StoresUnread reading={reading} />;
   }
 
   return (

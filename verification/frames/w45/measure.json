@@ -1,0 +1,170 @@
+{
+  "people-1440": {
+    "viewport": [
+      1440,
+      980
+    ],
+    "path": "/people",
+    "h1": "People",
+    "sideways_scroll": false,
+    "page_scrolls": false,
+    "accents": 0,
+    "people_rows": 4,
+    "names": [
+      "Daniel",
+      "Elijah",
+      "Isaiah",
+      "Joy"
+    ],
+    "logins": [
+      "no login linked",
+      "no login linked",
+      "signs in as isaiah",
+      "no login linked"
+    ],
+    "stands": "Nobody can approve anything yet: Joy approves, and no login is linked to that person. An administrator links a login to a person.",
+    "read_line": "Read Sep 23, 8:41 AM",
+    "link_controls": 4,
+    "way_to_accounts": "/admin/page-access",
+    "rail_hrefs": [
+      "/dashboard",
+      "/inbox",
+      "/pages/p1",
+      "/pages/p2",
+      "/workflows",
+      "/workflows",
+      "/people"
+    ],
+    "stores_state": null,
+    "settings_says": []
+  },
+  "people-390": {
+    "viewport": [
+      390,
+      844
+    ],
+    "path": "/people",
+    "h1": "People",
+    "sideways_scroll": false,
+    "page_scrolls": true,
+    "accents": 0,
+    "people_rows": 4,
+    "names": [
+      "Daniel",
+      "Elijah",
+      "Isaiah",
+      "Joy"
+    ],
+    "logins": [
+      "no login linked",
+      "no login linked",
+      "signs in as isaiah",
+      "no login linked"
+    ],
+    "stands": "Nobody can approve anything yet: Joy approves, and no login is linked to that person. An administrator links a login to a person.",
+    "read_line": "Read Sep 23, 8:41 AM",
+    "link_controls": 4,
+    "way_to_accounts": "/admin/page-access",
+    "rail_hrefs": [
+      "/dashboard",
+      "/inbox",
+      "/pages/p1",
+      "/pages/p2",
+      "/workflows",
+      "/workflows",
+      "/people"
+    ],
+    "stores_state": null,
+    "settings_says": []
+  },
+  "settings-stores-failed-1440": {
+    "viewport": [
+      1440,
+      980
+    ],
+    "path": "/settings",
+    "h1": "Supabot",
+    "sideways_scroll": false,
+    "page_scrolls": true,
+    "accents": 0,
+    "people_rows": 0,
+    "names": [],
+    "logins": [],
+    "stands": null,
+    "read_line": null,
+    "link_controls": 0,
+    "way_to_accounts": null,
+    "rail_hrefs": [],
+    "stores_state": "failed",
+    "settings_says": [
+      "The stores could not be read.\n\nThe store list is not readable: analytics is still starting.",
+      "The stores could not be read.\n\nThe store list is not readable: analytics is still starting."
+    ]
+  },
+  "settings-stores-failed-390": {
+    "viewport": [
+      390,
+      844
+    ],
+    "path": "/settings",
+    "h1": "Settings",
+    "sideways_scroll": false,
+    "page_scrolls": true,
+    "accents": 0,
+    "people_rows": 0,
+    "names": [],
+    "logins": [],
+    "stands": null,
+    "read_line": null,
+    "link_controls": 0,
+    "way_to_accounts": null,
+    "rail_hrefs": [],
+    "stores_state": "failed",
+    "settings_says": [
+      "The stores could not be read.\n\nThe store list is not readable: analytics is still starting.",
+      "The stores could not be read.\n\nThe store list is not readable: analytics is still starting."
+    ]
+  },
+  "settings-stores-1440": {
+    "viewport": [
+      1440,
+      980
+    ],
+    "path": "/settings",
+    "h1": "Supabot",
+    "sideways_scroll": false,
+    "page_scrolls": true,
+    "accents": 0,
+    "people_rows": 0,
+    "names": [],
+    "logins": [],
+    "stands": null,
+    "read_line": null,
+    "link_controls": 0,
+    "way_to_accounts": null,
+    "rail_hrefs": [],
+    "stores_state": null,
+    "settings_says": []
+  },
+  "settings-stores-390": {
+    "viewport": [
+      390,
+      844
+    ],
+    "path": "/settings",
+    "h1": "Settings",
+    "sideways_scroll": false,
+    "page_scrolls": true,
+    "accents": 0,
+    "people_rows": 0,
+    "names": [],
+    "logins": [],
+    "stands": null,
+    "read_line": null,
+    "link_controls": 0,
+    "way_to_accounts": null,
+    "rail_hrefs": [],
+    "stores_state": null,
+    "settings_says": []
+  }
+}

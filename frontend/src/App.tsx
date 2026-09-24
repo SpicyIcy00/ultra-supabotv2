@@ -43,6 +43,7 @@ const WorkflowsPage = React.lazy(() => import('./pages/WorkflowsPage'));
 const SystemPage = React.lazy(() => import('./pages/SystemPage'));
 // Every standing question and watch, with its slot and its switch (W4.4).
 const WatchesPage = React.lazy(() => import('./pages/WatchesPage'));
+const PeoplePage = React.lazy(() => import('./pages/PeoplePage'));
 const StorehubImportsPage = React.lazy(() => import('./pages/StorehubImportsPage'));
 
 // The existing application. AIChatPage is the legacy NL->SQL chatbot and is
@@ -148,6 +149,7 @@ function App() {
                   <Route path="/workflows" element={bob(<WorkflowsPage />)} />
                   <Route path="/workflows/:workflowId" element={bob(<SystemPage />)} />
                   <Route path="/watches" element={bob(<WatchesPage />)} />
+                  <Route path="/people" element={bob(<PeoplePage />)} />
                   {/* The room's chrome, its OWN page key (P3.h): talking to Bob
                       does not grant writing to the procurement tables. */}
                   <Route

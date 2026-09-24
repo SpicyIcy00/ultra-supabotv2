@@ -37,7 +37,7 @@ import { useHere } from '../hooks/useHere';
 import { REQUESTS_KEY } from '../hooks/useNeedsYou';
 import { RoomHead } from '../room/RoomShell';
 import {
-  decideRequest, getAuthority, linkPerson, listRequests, setLine, type DecisionAction,
+  decideRequest, getAuthority, listRequests, setLine, type DecisionAction,
 } from '../services/authorityApi';
 import { errorMessage } from '../services/pinsApi';
 import { listApprovals, promoteVersion } from '../services/workflowsApi';
@@ -254,7 +254,6 @@ function Drafts({ auth }: { auth: AuthorityState | undefined }) {
 function LineAndPeople({ auth, failed }: { auth: AuthorityState | undefined; failed: boolean }) {
   const qc = useQueryClient();
   const [amount, setAmount] = useState('');
-  const [link, setLink] = useState<Record<string, string>>({});
   const [refused, setRefused] = useState<string | null>(null);
   const done = (next: AuthorityState) => {
     setRefused(null);
@@ -266,11 +265,6 @@ function LineAndPeople({ auth, failed }: { auth: AuthorityState | undefined; fai
       said: `Set on the Needs you page: drafts over ₱${Number(amount).toLocaleString('en-PH')} need a decision.`,
     }),
     onSuccess: (next) => { setAmount(''); done(next); },
-    onError: (err) => setRefused(errorMessage(err)),
-  });
-  const linker = useMutation({
-    mutationFn: (v: { person: string; username: string | null }) => linkPerson(v.person, v.username),
-    onSuccess: done,
     onError: (err) => setRefused(errorMessage(err)),
   });
 
@@ -309,29 +303,18 @@ function LineAndPeople({ auth, failed }: { auth: AuthorityState | undefined; fai
       )}
       {refused && <p className="r-note" style={{ marginTop: 10 }}>{refused}</p>}
 
+      {/* WHO DECIDES IS THE PEOPLE'S OWN PAGE NOW (W4.5). The roster and the
+          linking control lived here, half way down a decision surface, while
+          PEOPLE in the rail opened the settings screen: two places for one
+          subject and neither of them the one named after it. What is left is
+          the sentence the server writes — an approver linked to no login means
+          nothing in this queue can ever be decided, and that belongs beside
+          the queue. */}
       <h2 className="r-item-name" style={{ marginTop: 30 }}>Who decides</h2>
-      <ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0 }}>
-        {auth.people.map((p) => (
-          <li key={p.person} className="r-row-acts" style={{ marginTop: 6 }}>
-            <span className="r-item-of" style={{ flex: 1 }}>
-              <b>{p.name}</b> — {p.says ?? p.role}
-              <span className="r-src"> · {p.linked ? `signs in as ${p.username}` : 'not linked to a login'}</span>
-            </span>
-            {auth.viewer.may_link_people && (
-              <>
-                <input className="r-field" style={{ width: 130 }} aria-label={`Login for ${p.name}`}
-                       placeholder="username" value={link[p.person] ?? ''}
-                       onChange={(e) => setLink({ ...link, [p.person]: e.target.value })} />
-                <button type="button" className="r-act" disabled={linker.isPending}
-                        onClick={() => linker.mutate({ person: p.person, username: (link[p.person] ?? '').trim() || null })}>
-                  {(link[p.person] ?? '').trim() ? 'Link' : 'Unlink'}
-                </button>
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
-      <p className="r-src" style={{ marginTop: 10 }}>{auth.assumption}</p>
+      <p className="r-note" style={{ marginTop: 8 }}>{auth.approval}</p>
+      <div className="r-row-acts">
+        <Link className="r-act" to="/people">The people</Link>
+      </div>
     </section>
   );
 }

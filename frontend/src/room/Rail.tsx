@@ -163,6 +163,10 @@ export function Rail({ busy, needsYou, onNew, estate }: RailProps) {
   // shown the group at all — a link that bounces is worse than no link — and
   // the read is not attempted, so nobody collects a 403 for opening the room.
   const mayImport = user?.allowed_pages.includes('storehub_imports') ?? false;
+  // Bob's own screens, behind Bob's own key. Everybody who can see this rail
+  // holds it — but the row is guarded anyway, so nothing here can bounce.
+  const mayBob = user?.allowed_pages.includes('bob') ?? false;
+  const mayDashboard = user?.allowed_pages.includes('dashboard') ?? false;
   const imports = useQuery({
     queryKey: ['storehub-imports'],
     queryFn: () => listImports(),
@@ -177,9 +181,13 @@ export function Rail({ busy, needsYou, onNew, estate }: RailProps) {
         <button type="button" className="r-side-collapse" title="Collapse the sidebar  ["
                 aria-label="Collapse the sidebar" onClick={() => setOpen(false)}>‹</button>
 
-        {/* THE WAY OUT, FIRST. See the header. */}
-        <NavLink to="/dashboard" className="r-side-back" title="Back to Supabot"
-                 aria-label="Back to Supabot BI">← Supabot</NavLink>
+        {/* THE WAY OUT, FIRST. See the header — and, since W4.5, only for a
+            role that may open the Dashboard: it is behind `dashboard`, so
+            for anybody else this was a link that bounced straight back. */}
+        {mayDashboard && (
+          <NavLink to="/dashboard" className="r-side-back" title="Back to Supabot"
+                   aria-label="Back to Supabot BI">← Supabot</NavLink>
+        )}
 
         <button type="button" className="r-side-name" onClick={() => navigate('/bob')}
                 title="The room" aria-label="Bob — the room">
@@ -263,18 +271,22 @@ export function Rail({ busy, needsYou, onNew, estate }: RailProps) {
           </div>
         )}
 
-        {/* PEOPLE — whoever the system already knows, which today is the person
-            signed in. Nobody else is invented to fill the list (S.6). */}
-        <div className="r-side-grp">
-          <h2 className="r-side-h">People</h2>
-          {user ? (
-            <NavLink to="/settings" className="r-side-it" title="Your account">
+        {/* PEOPLE — the people, not the settings screen (W4.5). The row used
+            to open /settings, which is store filters and a cache button, and
+            it was drawn to everybody while /settings is behind its own page
+            key: a role without it got a link that bounced. The people are
+            Bob's own screen, behind Bob's own key, so the row is drawn only
+            to somebody who can open it — the way Sources is. */}
+        {mayBob && (
+          <div className="r-side-grp">
+            <h2 className="r-side-h">People</h2>
+            <NavLink to="/people" className="r-side-it" title="Who works here, and what each may do">
               <i className="r-pip" />
-              <span>{user.display_name || user.username}</span>
-              <small>{user.role}</small>
+              <span>The people</span>
+              {user && <small>{user.display_name || user.username}</small>}
             </NavLink>
-          ) : <p className="r-side-quiet">nobody signed in</p>}
-        </div>
+          </div>
+        )}
 
         <div className="r-side-foot">
           <button type="button" className="r-side-tool" onClick={onNew} title="Clear the room"

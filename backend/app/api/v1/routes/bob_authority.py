@@ -7,6 +7,8 @@ person submits here are the same row by the same code, and the line Bob sets
 when the approver tells him is the same version the control below would make.
 
     GET    /bob/authority                  the line, its history, the people, what I may do
+                                           — and, for an administrator only, the logins
+                                             a person may be linked to (W4.5)
     PUT    /bob/authority/line             a new version of the line (approver only)
     PUT    /bob/authority/people/{key}     link a person to a login (administrator only)
     GET    /bob/authority/requests         the queue (?status=waiting|approved|rejected|changed|all)
@@ -21,10 +23,12 @@ by a person (metrics.yaml authority.keyed_into).
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.database import AsyncSessionLocal
@@ -69,18 +73,46 @@ def _refused(exc: Exception) -> HTTPException:
     return HTTPException(status.HTTP_400_BAD_REQUEST, text)
 
 
+async def _accounts(session) -> list[dict]:
+    """
+    The logins an administrator may link a person to (W4.5).
+
+    A privileged read the WEB PROCESS does, bound to the signed-in
+    administrator (CLAUDE.md rule 4) — Bob holds no credential and this never
+    reaches his schema. The passcode hash is never in the row; whether the
+    account can sign in at all is.
+    """
+    rows = (await session.execute(
+        select(AppUser).order_by(AppUser.active.desc(), AppUser.username)
+    )).scalars()
+    return [{"username": u.username, "display_name": u.display_name, "role": u.role,
+             "active": bool(u.active), "can_sign_in": bool(u.passcode_hash)}
+            for u in rows]
+
+
 async def _state(session, user: AppUser) -> dict:
     ps = await svc.people(session)
     names = {p.person_key: p.display_name for p in ps}
     v = await svc.current_version(session)
     hist = await svc.history(session)
     line = svc.version_row(v, names) if v else None
+    people = [svc.person_row(p) for p in ps]
+    who = await svc.viewer(session, user.username, user.role)
     return {
         "line": line,
         "line_means": svc.describe_line(line),
         "history": [svc.version_row(h, names) for h in hist],
-        "people": [svc.person_row(p) for p in ps],
-        "viewer": await svc.viewer(session, user.username, user.role),
+        "people": people,
+        # Whether anybody can actually approve — code's sentence, not the
+        # screen's (W4.5), because an approver linked to no login is a queue
+        # nobody can ever empty.
+        "approval": svc.describe_approval(people),
+        "viewer": who,
+        # The logins, for the administrator who may link one to a person.
+        # Nobody else is shown other people's accounts.
+        "accounts": await _accounts(session) if who["may_link_people"] else None,
+        # When this was read, so no figure on the screen is undated (UI rule 6).
+        "read_at": datetime.now(timezone.utc).isoformat(),
         "assumption": " ".join(str(svc.spec().get("assumption") or "").split()),
         "keyed_into": svc.spec().get("keyed_into"),
     }

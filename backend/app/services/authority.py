@@ -80,6 +80,54 @@ def approvers_named(people: Iterable[Mapping[str, Any]], defs: Optional[Mapping]
     return " or ".join(names) if names else "the approver"
 
 
+def role_says(role: str, defs: Optional[Mapping] = None) -> str:
+    """What a role may do, in the yaml's own words — never a component's."""
+    got = (((spec(defs).get("roles") or {}).get(role) or {}).get("says"))
+    return " ".join(str(got).split()) if got else ""
+
+
+def may_acts(role: str, defs: Optional[Mapping] = None) -> list[str]:
+    """The acts the declaration grants this role, in its own order."""
+    return [str(a) for a in (((spec(defs).get("roles") or {}).get(role) or {}).get("may") or [])]
+
+
+def business_says(key: str, defs: Optional[Mapping] = None) -> str:
+    """A business in the yaml's words, or its key if the yaml does not name it."""
+    got = ((spec(defs).get("businesses") or {}).get(key) or {}).get("says")
+    return " ".join(str(got).split()) if got else str(key)
+
+
+def _named(p: Mapping[str, Any]) -> str:
+    return str(p.get("name") or p.get("display_name") or p.get("person") or "somebody")
+
+
+def describe_approval(people: Iterable[Mapping[str, Any]],
+                      defs: Optional[Mapping] = None) -> str:
+    """
+    Whether anybody can actually approve, in a sentence code writes.
+
+    An approver nobody has linked to a login cannot sign in, so nothing in
+    the queue can ever be decided. The screen says that plainly instead of
+    drawing a list that looks complete (W4.5).
+    """
+    rows = list(people)
+    approvers = [p for p in rows if may(str(p.get("role")), "approve", defs)]
+    if not approvers:
+        return "Nobody here may approve, so no draft can be decided."
+    names = " or ".join(_named(p) for p in approvers)
+    linked = [p for p in approvers if p.get("username")]
+    if not linked:
+        who = "that person" if len(approvers) == 1 else "any of them"
+        return (f"Nobody can approve anything yet: {names} approves, and no login is "
+                f"linked to {who}. An administrator links a login to a person.")
+    said = " and ".join(f"{_named(p)} signs in as {p['username']}" for p in linked)
+    waiting = [_named(p) for p in approvers if not p.get("username")]
+    if waiting:
+        return (f"{names} approves — {said}. "
+                f"{' and '.join(waiting)} is not linked to a login yet.")
+    return f"{names} approves — {said}."
+
+
 # ---------------------------------------------------------------------------
 # The line — pure
 # ---------------------------------------------------------------------------
@@ -286,6 +334,11 @@ def person_row(p: BobPerson, defs: Optional[Mapping] = None) -> dict:
         "person": p.person_key, "name": p.display_name, "role": p.role,
         "says": ((a.get("people") or {}).get(p.person_key) or {}).get("says"),
         "businesses": list(p.businesses or []),
+        # What the role may do and which businesses those are, in the yaml's
+        # own words, so the screen never spells out a role list of its own.
+        "role_says": role_says(p.role, defs),
+        "may": may_acts(p.role, defs),
+        "businesses_say": [business_says(b, defs) for b in (p.businesses or [])],
         "linked": p.username is not None,
         "username": p.username,
     }

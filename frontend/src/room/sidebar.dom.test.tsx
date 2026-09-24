@@ -65,7 +65,8 @@ beforeEach(() => {
     { id: 14, kind: 'purchase_orders', uploaded_at: '2026-09-03T14:57:42+00:00' },
     { id: 12, kind: 'stock_transfers', uploaded_at: '2026-09-02T09:50:27+00:00' },
   ]);
-  useAuthStore.setState({ user: { id: 'u', username: 'owner', display_name: 'You', role: 'owner', allowed_pages: [] } });
+  useAuthStore.setState({ user: { id: 'u', username: 'owner', display_name: 'You', role: 'owner',
+                                  allowed_pages: ['bob', 'dashboard'] } });
 });
 afterEach(cleanup);
 
@@ -83,7 +84,8 @@ describe('every item opens what it names', () => {
     // watches at all.
     expect(href(/Seikyo PO/)).toBe('/workflows/w1');
     expect(href(/Morning question/)).toBe('/watches#question-s1');
-    expect(href(/You/)).toBe('/settings');
+    // PEOPLE opens the people, not the settings screen (W4.5).
+    expect(href(/The people/)).toBe('/people');
     expect(href('Needs you, 2 waiting')).toBe('/inbox');
     expect(href('Back to Supabot BI')).toBe('/dashboard');
   });
@@ -104,6 +106,57 @@ describe('every item opens what it names', () => {
   it('draws no console switch and no status line (row 22)', () => {
     const { container } = mount();
     expect(container.querySelector('.consw, .r-status, [data-con]')).toBeNull();
+  });
+});
+
+/**
+ * NO ROW LEADS SOMEWHERE THE PERSON CANNOT GO (W4.5).
+ *
+ * The People row used to open `/settings`, drawn to everybody while the route
+ * is `RequirePage pageKey="settings"` — so a role without that key got a link
+ * that bounced straight back, the exact failure the Sources group takes care
+ * to avoid. Every destination in the rail is now either behind Bob's own key,
+ * which everybody who can see the rail holds, or guarded like Sources.
+ */
+describe('no row bounces', () => {
+  /** Which page key each destination the rail draws sits behind (App.tsx). */
+  const KEY_OF: Record<string, string> = {
+    '/dashboard': 'dashboard', '/inbox': 'bob', '/pages/p1': 'bob',
+    '/workflows': 'bob', '/people': 'bob', '/storehub-imports': 'storehub_imports',
+  };
+
+  const hrefs = () => screen.getAllByRole('link')
+    .map((a) => a.getAttribute('href') ?? '')
+    .filter((h) => h.startsWith('/'));
+
+  it('draws only destinations the signed-in role may open', async () => {
+    for (const allowed of [['bob'], ['bob', 'dashboard'], ['bob', 'storehub_imports'],
+                           ['bob', 'dashboard', 'storehub_imports']]) {
+      useAuthStore.setState({ user: { id: 'u', username: 'owner', display_name: 'You',
+                                      role: 'owner', allowed_pages: allowed } });
+      mount();
+      await screen.findByText('Seikyo Purchasing');
+      for (const href of hrefs()) {
+        const key = KEY_OF[href];
+        expect(key, `${href} is not a destination this test knows`).toBeTruthy();
+        expect(allowed, `${href} is drawn to a role without ${key}`).toContain(key);
+      }
+      cleanup();
+    }
+  });
+
+  it('no row opens the settings screen any more', async () => {
+    mount();
+    await screen.findByText('Seikyo Purchasing');
+    expect(hrefs()).not.toContain('/settings');
+  });
+
+  it('is absent for a role that cannot open Bob at all', async () => {
+    useAuthStore.setState({ user: { id: 'u', username: 'staff', display_name: 'Staff',
+                                    role: 'warehouse_staff', allowed_pages: ['dashboard'] } });
+    mount();
+    await screen.findByText('Seikyo Purchasing');
+    expect(screen.queryByRole('link', { name: /The people/ })).toBeNull();
   });
 });
 

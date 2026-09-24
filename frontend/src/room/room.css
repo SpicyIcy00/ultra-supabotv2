@@ -2986,4 +2986,38 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
   /* Desktop is the phone layout with room beside it: the column does not
      grow past what a line of prose should be. */
   .r-w-grp { max-width: 72ch; }
+
+
+/* ===========================================================================
+   THE PEOPLE (W4.5, 2026-09-23) — /people, PeoplePage.tsx.
+
+   PEOPLE in the rail used to open /settings: store filters, display names and
+   a cache button, nothing about a person. This is the page it opens now, and
+   it is drawn like the room's other lists — one rule between rows, the name
+   in the room's sans, the yaml's sentences under it in the quiet faces that
+   already exist. NOTHING HERE WEARS THE ACCENT: linking a login to a person
+   is an administrator's act, not an approval (UI rule 5).
+
+   MOBILE-FIRST. The rows stack and the link control wraps; the column is
+   `.r-column`'s, so this file adds no width of its own.
+   =========================================================================== */
+.r-people { list-style: none; margin: 8px 0 0; padding: 0; }
+.r-people-row { padding: 20px 0; border-bottom: 1px solid var(--edge); }
+.r-people-row:last-child { border-bottom: 0; }
+/* The sentences under a name: each on its own line, close under the one above. */
+.r-people-row .r-note { margin-top: 6px; }
+.r-people-row .r-src { margin-top: 6px; }
+/* Whether anybody can actually approve, and a refusal: set off from the list
+   by position and a rule down the side — prominence, never hue. */
+.r-people-stands {
+  margin: 16px 0 0; max-width: 60ch;
+  border-left: 2px solid var(--edge-strong); padding-left: 14px;
+}
+.r-people-foot { margin-top: 22px; }
+/* The administrator's one gesture: pick a login, Link. Wraps on a phone. */
+.r-people-link { gap: 10px; }
+.r-people-link .r-field { min-width: 0; max-width: 100%; }
+@media (max-width: 560px) {
+  .r-people-link { align-items: flex-start; }
+  .r-people-link .r-field { flex: 1 1 100%; }
 }

@@ -71,8 +71,23 @@ export interface Person {
   role: string;
   says: string | null;
   businesses: string[];
+  /** What this role may do, in the yaml's words. Drawn verbatim (W4.5). */
+  role_says: string;
+  /** The acts the declaration grants: submit, approve, reject, change, set_line. */
+  may: string[];
+  /** The businesses this person answers for, in the yaml's words. */
+  businesses_say: string[];
   linked: boolean;
   username: string | null;
+}
+
+/** A login. Only an administrator is sent these; never a hash (W4.5). */
+export interface Account {
+  username: string;
+  display_name: string | null;
+  role: string;
+  active: boolean;
+  can_sign_in: boolean;
 }
 
 export interface AuthorityState {
@@ -80,7 +95,13 @@ export interface AuthorityState {
   line_means: string;
   history: LineVersion[];
   people: Person[];
+  /** Whether anybody can actually approve — the server's sentence, verbatim. */
+  approval: string;
   viewer: Viewer;
+  /** The logins an administrator may link, or null for everybody else. */
+  accounts: Account[] | null;
+  /** When the server read all of this. */
+  read_at: string;
   assumption: string;
   keyed_into: string;
 }
