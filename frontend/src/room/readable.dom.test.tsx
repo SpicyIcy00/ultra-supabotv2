@@ -155,8 +155,14 @@ describe('a figure says what it is of without being hovered', () => {
     expect(of.getAttribute('title')).toBeNull();
     // The number is still the number, and still says its figure on a touch.
     expect(container.querySelector('.r-mk-num')?.textContent).toMatch(/1,393/);
-    // UI rule 6: the read time is under it, as it always was.
-    expect(container.querySelector('.r-src')?.textContent).toMatch(/read \d\d:\d\d/);
+    // UI rule 6: the read time is under it, as it always was — WITH ITS DATE
+    // when the read was not today (data.readAt: "an hour with no day on it is
+    // a claim about this morning that may be about last week"). Written
+    // `read HH:MM` only, this passed on 2026-09-23 and failed on the 24th, the
+    // same clock trap that took two doc.dom tests on 2026-09-22; the line it
+    // read was "Product revenue · last week · read Sep 23 14:34".
+    expect(container.querySelector('.r-src')?.textContent)
+      .toMatch(/read (?:[A-Z][a-z]{2} \d{1,2} )?\d{1,2}:\d{2}/);
   });
 
   it('is the row\'s own spelling, never the block\'s subject word', () => {
