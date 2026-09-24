@@ -65,6 +65,7 @@ const ROOMS: { path: string; key: string; label: string }[] = [
   { path: '/inbox', key: 'inbox', label: 'Needs you' },
   { path: '/pages', key: 'pages', label: 'Kept pages' },
   { path: '/workflows', key: 'workflows', label: 'Systems' },
+  { path: '/watches', key: 'watches', label: 'Watches · standing questions' },
   { path: '/vending', key: 'vending', label: 'Vending' },
 ];
 
@@ -154,7 +155,7 @@ export function lineShownAt(pathname: string): boolean {
 
 /** Which chrome is under the line: Bob's rooms, or the BI app with its phone tab bar. */
 export function chromeAt(pathname: string): 'room' | 'legacy' {
-  return ['/inbox', '/pages', '/workflows', '/storehub-imports'].some(
+  return ['/inbox', '/pages', '/workflows', '/watches', '/storehub-imports'].some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)) ? 'room' : 'legacy';
 }
 

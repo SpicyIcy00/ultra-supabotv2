@@ -25,6 +25,7 @@ import { BobCtx, type BobContext } from '../components/bob/bobContext';
 import { useAuthStore } from '../stores/authStore';
 import Room from '../room/Room';
 import { KeptPage } from '../room/KeptPage';
+import WatchesPage from '../pages/WatchesPage';
 import { BobHere } from '../room/BobHere';
 import { RoomShell } from '../room/RoomShell';
 import vocabReads from '../room/__fixtures__/vocab-reads.json';
@@ -132,6 +133,75 @@ const keptRunOf = (id: string) => {
   };
 };
 
+/* --------------------------------------------- what is watching (W4.4) ---
+ *
+ * `?watching=1` mounts the REAL `WatchesPage` over a fixture that carries one
+ * of each case the card is about: a standing question switched on with an
+ * answer behind it, one born off, a watch with no backtest (which cannot be
+ * switched on and says why), a backtested one waiting for a person, and one
+ * switched on that has been quiet for eleven checks.
+ *
+ * The rail reads the same endpoint, so the fixture is served whether or not
+ * the page itself is mounted — otherwise the sidebar's group would have
+ * nothing to draw beside the page that is about it.
+ */
+const WATCHING = {
+  questions: [
+    { id: 'q1', family: 'question', asks: 'How are we doing?',
+      when: 'every day at 08:00', on: true, state: 'asked on schedule',
+      told: ['Show more of Rockwell.', 'Leave AJI CMG out of the estate line.'],
+      told_by: 'instructions',
+      slot: { kind: 'daily', hour: 8, minute: 0, days_of_week: null },
+      last_run_at: '2026-09-23T08:01:00+08:00', last_status: 'ok', last_error: null,
+      last_said: { said: 'Yesterday was ₱182,400 across the estate, a little under the usual Tuesday. Rockwell carried most of the shortfall.',
+                   at: '2026-09-23T08:01:00+08:00', read_at: '2026-09-23T08:00:00+08:00',
+                   thread_id: 't-1', post_id: 'p-1' },
+      thread_id: 't-1', checks: null, spoke: null, backtest: null,
+      backtest_at: null, backtest_window: null, switch_on_refusal: null,
+      may: { switch: true, reschedule: true, rewrite: true, remove: true } },
+    { id: 'q2', family: 'question', asks: 'What needs ordering at AJI BARN?',
+      when: 'Mon, Thu at 07:00', on: false, state: 'switched off',
+      told: [], told_by: 'instructions',
+      slot: { kind: 'weekly', hour: 7, minute: 0, days_of_week: [0, 3] },
+      last_run_at: null, last_status: null, last_error: null, last_said: null,
+      thread_id: null, checks: null, spoke: null, backtest: null,
+      backtest_at: null, backtest_window: null, switch_on_refusal: null,
+      may: { switch: true, reschedule: true, rewrite: true, remove: true } },
+  ],
+  watches: [
+    { id: 'w1', family: 'watch', asks: 'A shop’s sales drop — any shop',
+      when: 'every day at 08:00', on: false, state: 'not backtested yet',
+      told: ['A shop’s sales drop', 'only when it moves down', 'every shop'],
+      told_by: 'condition',
+      slot: { kind: 'daily', hour: 8, minute: 0, days_of_week: null },
+      last_run_at: null, last_status: null, last_error: null, last_said: null,
+      thread_id: null, checks: 0, spoke: 0, backtest: null,
+      backtest_at: null, backtest_window: null,
+      switch_on_refusal: 'This watch has not been backtested, so nobody knows how often it would speak. Back it over the last 60 days first — that says how many days it would have fired, and on which.',
+      may: { switch: true, reschedule: true, rewrite: false, remove: true } },
+    { id: 'w2', family: 'watch', asks: 'A line runs out — Rockwell, Greenhills',
+      when: 'every day at 06:30', on: false, state: 'ready — not switched on',
+      told: ['A line runs out', 'Rockwell, Greenhills'],
+      told_by: 'condition',
+      slot: { kind: 'daily', hour: 6, minute: 30, days_of_week: null },
+      last_run_at: null, last_status: null, last_error: null, last_said: null,
+      thread_id: null, checks: 0, spoke: 0, backtest: '9 of the last 60 days',
+      backtest_at: '2026-09-22T09:12:00+08:00', backtest_window: '2026-07-25 to 2026-09-22',
+      switch_on_refusal: null,
+      may: { switch: true, reschedule: true, rewrite: false, remove: true } },
+    { id: 'w3', family: 'watch', asks: 'Stock below cover — AJI BARN',
+      when: 'Mon at 08:00', on: true, state: 'watching',
+      told: ['Stock below cover', 'AJI BARN'], told_by: 'condition',
+      slot: { kind: 'weekly', hour: 8, minute: 0, days_of_week: [0] },
+      last_run_at: '2026-09-22T08:00:00+08:00', last_status: 'quiet', last_error: null,
+      last_said: null, thread_id: null, checks: 11, spoke: 0,
+      backtest: '2 of the last 60 days', backtest_at: '2026-09-08T10:00:00+08:00',
+      backtest_window: '2026-07-11 to 2026-09-08', switch_on_refusal: null,
+      may: { switch: true, reschedule: true, rewrite: false, remove: true } },
+  ],
+};
+const watching = params.get('watching');
+
 const desk = (scenes as { desk: unknown }).desk;
 axios.defaults.adapter = async (config: InternalAxiosRequestConfig): Promise<AxiosResponse> => {
   const url = config.url ?? '';
@@ -152,6 +222,9 @@ axios.defaults.adapter = async (config: InternalAxiosRequestConfig): Promise<Axi
       { data: null, status: 404, statusText: 'Not Found', headers: {}, config } as AxiosResponse);
   }
   if (url.includes('/standing/latest')) return ok(null);
+  // W4.4. Served always: the rail reads it too, and a sidebar group with
+  // nothing in it beside the page about it would be the wrong frame.
+  if (url.endsWith('/bob/watching')) return ok(WATCHING);
   // The colours Settings saved, so a frame's swatches are the live room's.
   if (url.endsWith('/analytics/stores')) return ok((scenes as { stores?: unknown[] }).stores ?? []);
   return ok([]);
@@ -229,7 +302,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={client}>
       <BobCtx.Provider value={bob}>
-        {keptPage ? (
+        {watching ? (
+          <MemoryRouter initialEntries={['/watches']}>
+            <RoomShell><WatchesPage /></RoomShell>
+          </MemoryRouter>
+        ) : keptPage ? (
           <MemoryRouter initialEntries={['/pages/page-1']}>
             <RoomShell><KeptPage pageId="page-1" onBack={noop} /></RoomShell>
           </MemoryRouter>
