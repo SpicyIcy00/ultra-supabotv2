@@ -2905,7 +2905,8 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
      order it is performed, rather than three of them crushed into a row. */
   .r-sys-sec .r-row-acts { flex-direction: column; align-items: flex-start; gap: 8px; }
   .r-sys-tag { display: block; margin: 4px 0 0; }
-=======
+}
+
 /* ============================================================== W4.4 ======
    THE WATCHES PAGE — standing questions and watches, and the switch.
 
