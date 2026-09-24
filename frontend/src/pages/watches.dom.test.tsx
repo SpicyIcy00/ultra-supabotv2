@@ -248,8 +248,14 @@ describe('what it last said, and what it was told', () => {
     // Its receipts line is built from several nodes, so read the whole line.
     const receipts = (await screen.findByText('Yesterday was steady across the estate.'))
       .parentElement?.querySelector('.r-src');
-    expect(receipts?.textContent).toMatch(/said 23 Sep/);
-    expect(receipts?.textContent).toMatch(/read 23 Sep/);
+    // A DAY-SHAPED ASSERTION IS A CLOCK (the lead, 2026-09-24). The formatter
+    // drops the date when the stamp is TODAY — "an hour with no day on it is a
+    // claim about this morning" — so a fixture dated the 23rd reads "23 Sep"
+    // today and "08:01" if the suite is ever run on the 23rd. The same trap
+    // took readable.dom.test.tsx on 2026-09-24 and two doc.dom assertions before
+    // it. What is under test is that the line CARRIES a said and a read time.
+    expect(receipts?.textContent).toMatch(/said (?:23 Sep|\d{1,2}:\d{2})/);
+    expect(receipts?.textContent).toMatch(/read (?:23 Sep|\d{1,2}:\d{2})/);
     expect(screen.getByRole('link', { name: 'open the thread' }).getAttribute('href')).toBe('/w/t1');
   });
 
